@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>tab-tab</title>
+    <link rel="stylesheet" href="newtab.css">
+  </head>
+  <body>
+    <header class="topbar" aria-label="顶部功能区">
+      <div class="topbar-spacer" aria-hidden="true"></div>
+      <button class="theme-toggle" id="themeToggleButton" type="button" aria-pressed="false" title="切换夜间模式">
+        <span class="theme-toggle-icon" aria-hidden="true">◐</span>
+      </button>
+    </header>
+
+    <main class="shell" aria-label="tab-tab 控制台">
+      <section class="panel portal-panel" aria-labelledby="portal-title">
+        <header class="panel-header">
+          <div>
+            <p class="kicker">Portals</p>
+            <h1 id="portal-title">热门推荐</h1>
+          </div>
+          <button class="icon-button subtle-action" id="togglePortalFormButton" type="button" title="添加入口" aria-label="添加入口">
+            <span aria-hidden="true">＋</span>
+          </button>
+        </header>
+
+        <form class="portal-form" id="portalForm" hidden>
+          <label>
+            <span>名称</span>
+            <input id="portalTitleInput" name="title" autocomplete="off" placeholder="例如：Notion">
+          </label>
+          <label>
+            <span>网址</span>
+            <input id="portalUrlInput" name="url" autocomplete="off" inputmode="url" placeholder="https://www.notion.so">
+          </label>
+          <label>
+            <span>归类</span>
+            <select id="portalCategorySelect" name="category"></select>
+          </label>
+          <div class="form-actions">
+            <button class="text-button" type="button" id="cancelPortalButton">取消</button>
+            <button class="text-button primary" type="submit">添加</button>
+          </div>
+          <p class="form-error" id="portalFormError" role="alert"></p>
+        </form>
+
+        <div class="portal-grid" id="portalGrid"></div>
+      </section>
+
+      <section class="panel bookmark-panel" aria-labelledby="bookmark-title">
+        <header class="panel-header bookmark-header">
+          <div>
+            <p class="kicker">Bookmarks</p>
+            <h2 id="bookmark-title">书签</h2>
+          </div>
+          <div class="header-actions">
+            <button class="icon-button subtle-action" id="refreshBookmarkFolderButton" type="button" title="刷新当前书签文件夹" aria-label="刷新当前书签文件夹">
+              <span aria-hidden="true">↻</span>
+            </button>
+            <button class="icon-button subtle-action" id="toggleBookmarkLayoutButton" type="button" title="切换为列表显示" aria-label="切换为列表显示" aria-pressed="false">
+              <span aria-hidden="true">☷</span>
+            </button>
+            <button class="icon-button subtle-action" id="chooseBookmarkFolderButton" type="button" title="选择书签文件夹" aria-label="选择书签文件夹">
+              <span aria-hidden="true">＋</span>
+            </button>
+          </div>
+        </header>
+
+        <div class="bookmark-view" id="bookmarkMainView">
+          <div class="bookmark-folder-meta" id="bookmarkFolderMeta"></div>
+          <div class="portal-grid bookmark-grid" id="bookmarkGrid"></div>
+        </div>
+
+        <div class="bookmark-picker" id="bookmarkPicker" hidden>
+          <div class="bookmark-picker-toolbar">
+            <button class="text-button" id="closeBookmarkPickerButton" type="button">返回</button>
+            <span>选择一个书签文件夹</span>
+          </div>
+          <div class="bookmark-folder-list" id="bookmarkFolderList"></div>
+        </div>
+      </section>
+
+      <section class="panel history-panel" aria-labelledby="history-title">
+        <header class="panel-header history-header">
+          <div>
+            <p class="kicker">History</p>
+            <h2 id="history-title">最近浏览</h2>
+          </div>
+          <button class="icon-button" id="refreshHistoryButton" type="button" title="刷新历史记录" aria-label="刷新历史记录">
+            <span aria-hidden="true">↻</span>
+          </button>
+        </header>
+        <div class="history-stack" aria-live="polite">
+          <section class="history-group pinned-group" aria-labelledby="pinned-title">
+            <h3 class="section-title" id="pinned-title">置顶</h3>
+            <div class="history-grid pinned-grid" id="pinnedGrid"></div>
+          </section>
+          <section class="history-group recent-group" aria-labelledby="recent-title">
+            <h3 class="section-title" id="recent-title">最近</h3>
+            <div class="history-grid" id="historyGrid"></div>
+          </section>
+        </div>
+      </section>
+    </main>
+
+    <template id="siteCardTemplate">
+      <div class="site-card">
+        <a class="site-link" target="_blank" rel="noopener noreferrer">
+          <img class="site-icon" alt="">
+          <span class="site-copy">
+            <strong class="site-title"></strong>
+          </span>
+        </a>
+        <button class="site-remove" type="button" title="删除自定义入口" aria-label="删除自定义入口">×</button>
+      </div>
+    </template>
+
+    <script src="newtab.js"></script>
+  </body>
+</html>
