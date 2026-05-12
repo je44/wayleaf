@@ -38,6 +38,8 @@ const MAX_CUSTOM_PORTALS = 48;
 const MAX_PORTAL_TITLE_LENGTH = 32;
 const MAX_PORTAL_URL_LENGTH = 512;
 const MAX_BOOKMARK_FOLDER_OPTIONS = 160;
+const MAX_PORTAL_FEATURED_ITEMS = 6;
+const MAX_PORTAL_CATEGORY_ITEMS = 4;
 const PORTAL_CATEGORY_ORDER = [
   "custom",
   "ai",
@@ -128,6 +130,7 @@ const MESSAGES = {
     topbarLabel: "顶部功能区",
     shellLabel: "tab-tab 控制台",
     portalTitle: "热门推荐",
+    portalCategoryFeatured: "常用",
     portalCategoryCustom: "自定义",
     portalCategoryShopping: "购物",
     portalCategoryAi: "AI",
@@ -180,6 +183,7 @@ const MESSAGES = {
     bookmarkRoot: "书签",
     bookmarkCount: "{count} 个网站",
     pageCount: "{count} 个页面",
+    historySitePageMeta: "{count} 个相关页面",
     historyReadFailed: "无法读取历史记录，请确认扩展已获得 history 权限。",
     noPinnedItems: "还没有置顶项目。",
     noHistoryItems: "暂无最近浏览记录。",
@@ -216,6 +220,7 @@ const MESSAGES = {
     topbarLabel: "Top bar",
     shellLabel: "tab-tab dashboard",
     portalTitle: "Popular Picks",
+    portalCategoryFeatured: "Frequent",
     portalCategoryCustom: "Custom",
     portalCategoryShopping: "Shopping",
     portalCategoryAi: "AI",
@@ -268,6 +273,7 @@ const MESSAGES = {
     bookmarkRoot: "Bookmarks",
     bookmarkCount: "{count} sites",
     pageCount: "{count} pages",
+    historySitePageMeta: "{count} related pages",
     historyReadFailed: "Could not read history. Check that the extension has history permission.",
     noPinnedItems: "No pinned items yet.",
     noHistoryItems: "No recent browsing yet.",
@@ -413,6 +419,7 @@ const portalUrlInput = document.querySelector("#portalUrlInput");
 const portalCategorySelect = document.querySelector("#portalCategorySelect");
 const portalFormError = document.querySelector("#portalFormError");
 const cancelPortalButton = document.querySelector("#cancelPortalButton");
+const mobileSectionTabs = [...document.querySelectorAll(".mobile-section-tab")];
 let bookmarkRefreshTimer = 0;
 let activeBookmarkDeleteCard = null;
 let bookmarkLayout = "grid";
@@ -526,9 +533,26 @@ function init() {
   cancelPortalButton.addEventListener("click", hidePortalForm);
   portalForm.addEventListener("submit", handlePortalSubmit);
   themeToggleButton.addEventListener("click", toggleThemeMode);
+  mobileSectionTabs.forEach((tab) => {
+    tab.addEventListener("click", () => activateMobilePanel(tab.dataset.panelTarget));
+  });
   document.addEventListener("pointerdown", handleBookmarkDeleteDismiss, true);
   document.addEventListener("keydown", handleBookmarkDeleteEscape);
   bindBookmarkChangeEvents();
+}
+
+function activateMobilePanel(panelId) {
+  if (!panelId) {
+    return;
+  }
+  mobileSectionTabs.forEach((tab) => {
+    const isActive = tab.dataset.panelTarget === panelId;
+    tab.classList.toggle("active", isActive);
+    tab.setAttribute("aria-selected", String(isActive));
+  });
+  document.querySelectorAll(".panel").forEach((panel) => {
+    panel.classList.toggle("mobile-active", panel.id === panelId);
+  });
 }
 
 async function initThemeMode() {
@@ -607,11 +631,23 @@ function applyThemeMode(theme) {
 async function renderPortals() {
   const fragment = document.createDocumentFragment();
   const customPortals = await loadCustomPortals();
+  const featuredPortals = featuredPortalItems(customPortals);
   const groups = groupPortalsByCategory([...customPortals, ...PORTALS]);
+  if (featuredPortals.length) {
+    fragment.appendChild(createPortalCategorySection({
+      category: "featured",
+      items: featuredPortals,
+      featured: true
+    }));
+  }
   groups.forEach((group) => {
     fragment.appendChild(createPortalCategorySection(group));
   });
   portalGrid.replaceChildren(fragment);
+}
+
+function featuredPortalItems(customPortals) {
+  return [...customPortals, ...PORTALS].slice(0, MAX_PORTAL_FEATURED_ITEMS);
 }
 
 function groupPortalsByCategory(portals) {
@@ -639,21 +675,41 @@ function createPortalCategorySection(group) {
   const header = document.createElement("header");
   const title = document.createElement("h3");
   const grid = document.createElement("div");
+  const details = document.createElement("details");
 
   section.className = "portal-category";
+  section.classList.toggle("featured-category", Boolean(group.featured));
   header.className = "portal-category-header";
   title.className = "portal-category-title";
   title.textContent = portalCategoryLabel(group.category);
   grid.className = "portal-category-grid";
-  group.items.forEach((portal) => {
+  group.items.slice(0, group.featured ? MAX_PORTAL_FEATURED_ITEMS : MAX_PORTAL_CATEGORY_ITEMS).forEach((portal) => {
     grid.appendChild(createSiteCard(portal));
   });
-  header.appendChild(title);
-  section.append(header, grid);
+  if (group.featured || group.items.length <= MAX_PORTAL_CATEGORY_ITEMS) {
+    header.appendChild(title);
+    section.append(header, grid);
+    return section;
+  }
+
+  const summary = document.createElement("summary");
+  const count = document.createElement("span");
+  const marker = document.createElement("span");
+  summary.className = "portal-category-summary";
+  count.className = "portal-category-count";
+  marker.className = "portal-category-marker";
+  count.textContent = String(group.items.length);
+  marker.textContent = "⌄";
+  summary.append(title, count, marker);
+  details.append(summary, grid);
+  section.append(details);
   return section;
 }
 
 function portalCategoryLabel(category) {
+  if (category === "featured") {
+    return t("portalCategoryFeatured");
+  }
   const messageKey = `portalCategory${category.charAt(0).toUpperCase()}${category.slice(1)}`;
   return t(messageKey);
 }
@@ -1182,7 +1238,7 @@ function renderHistory(groups) {
 
   const fragment = document.createDocumentFragment();
   groups.forEach((group) => {
-    fragment.appendChild(createHistorySiteGroup(group));
+    fragment.appendChild(createHistoryFeedGroup(group));
   });
 
   historyGrid.replaceChildren(fragment);
@@ -1294,6 +1350,63 @@ function createHistoryPageItem(item, options = {}) {
   });
 
   row.append(link, pinButton);
+  return row;
+}
+
+function createHistoryFeedGroup(group) {
+  const item = group.pages[0];
+  const title = normalizeText(item?.title) || historyFallbackTitle(safeUrl(group.url));
+  const row = document.createElement("article");
+  const homeLink = document.createElement("a");
+  const icon = document.createElement("img");
+  const copy = document.createElement("span");
+  const name = document.createElement("strong");
+  const page = document.createElement("a");
+  const meta = document.createElement("span");
+  const pinButton = document.createElement("button");
+
+  row.className = "history-feed-item";
+  homeLink.className = "history-feed-home";
+  homeLink.href = group.homeUrl || siteHomeUrl(group.key, group.url);
+  homeLink.target = "_blank";
+  homeLink.rel = "noopener noreferrer";
+  homeLink.title = t("openSiteHome", { name: group.name });
+  homeLink.setAttribute("aria-label", t("openSiteHome", { name: group.name }));
+  icon.className = "history-site-logo";
+  applyHistoryIcon(icon, {
+    title: group.name,
+    url: group.homeUrl || group.url
+  });
+  icon.alt = "";
+  homeLink.appendChild(icon);
+
+  copy.className = "history-feed-copy";
+  name.className = "history-site-name";
+  name.textContent = group.name;
+  page.className = "history-page-link";
+  page.href = item?.url || group.url;
+  page.target = "_blank";
+  page.rel = "noopener noreferrer";
+  page.title = title;
+  page.setAttribute("aria-label", t("openPage", { title }));
+  page.textContent = title;
+  meta.className = "history-feed-meta";
+  meta.textContent = group.pages.length > 1
+    ? t("historySitePageMeta", { count: group.pages.length })
+    : compactHistoryUrl(safeUrl(item?.url || group.url));
+  copy.append(name, page, meta);
+
+  pinButton.className = "history-page-pin";
+  pinButton.type = "button";
+  pinButton.textContent = "★";
+  pinButton.title = t("pin");
+  pinButton.setAttribute("aria-label", `${t("pin")} ${title}`);
+  pinButton.addEventListener("click", () => pinHistoryItem(item || {
+    title,
+    url: group.url
+  }));
+
+  row.append(homeLink, copy, pinButton);
   return row;
 }
 

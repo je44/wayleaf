@@ -17,8 +17,14 @@
       </button>
     </header>
 
+    <nav class="mobile-section-switcher" aria-label="切换信息分区">
+      <button class="mobile-section-tab active" type="button" data-panel-target="portalPanel" aria-controls="portalPanel" aria-selected="true">入口</button>
+      <button class="mobile-section-tab" type="button" data-panel-target="bookmarkPanel" aria-controls="bookmarkPanel" aria-selected="false">书签</button>
+      <button class="mobile-section-tab" type="button" data-panel-target="historyPanel" aria-controls="historyPanel" aria-selected="false">历史</button>
+    </nav>
+
     <main class="shell" aria-label="tab-tab 控制台">
-      <section class="panel portal-panel" aria-labelledby="portal-title">
+      <section class="panel portal-panel mobile-active" id="portalPanel" aria-labelledby="portal-title">
         <header class="panel-header">
           <div>
             <p class="kicker">Portals</p>
@@ -52,7 +58,7 @@
         <div class="portal-grid" id="portalGrid"></div>
       </section>
 
-      <section class="panel bookmark-panel" aria-labelledby="bookmark-title">
+      <section class="panel bookmark-panel" id="bookmarkPanel" aria-labelledby="bookmark-title">
         <header class="panel-header bookmark-header">
           <div>
             <p class="kicker">Bookmarks</p>
@@ -85,7 +91,7 @@
         </div>
       </section>
 
-      <section class="panel history-panel" aria-labelledby="history-title">
+      <section class="panel history-panel" id="historyPanel" aria-labelledby="history-title">
         <header class="panel-header history-header">
           <div>
             <p class="kicker">History</p>
