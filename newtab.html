@@ -14,13 +14,19 @@
       </div>
       <form class="topbar-search" id="quickSearchForm" role="search">
         <label class="visually-hidden" for="quickSearchInput">搜索或输入网址</label>
+        <label class="visually-hidden" for="quickSearchEngineSelect">搜索引擎</label>
+        <span class="search-engine-control">
+          <select class="quick-search-engine" id="quickSearchEngineSelect" name="engine" aria-label="搜索引擎"></select>
+          <span class="search-engine-caret" aria-hidden="true"></span>
+        </span>
+        <span class="topbar-search-divider" aria-hidden="true"></span>
         <span class="topbar-search-icon" aria-hidden="true">
           <svg viewBox="0 0 20 20" focusable="false">
             <circle cx="8.5" cy="8.5" r="5.25"></circle>
             <path d="m12.4 12.4 3.4 3.4"></path>
           </svg>
         </span>
-        <input id="quickSearchInput" name="q" autocomplete="off" spellcheck="false" placeholder="搜索或输入网址">
+        <input id="quickSearchInput" name="q" type="search" autocomplete="off" spellcheck="false" placeholder="搜索或输入网址">
         <button class="quick-search-submit" id="quickSearchButton" type="submit" title="搜索" aria-label="搜索">
           <svg viewBox="0 0 20 20" aria-hidden="true" focusable="false">
             <path d="M5 10h9"></path>

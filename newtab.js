@@ -32,6 +32,7 @@ const PINNED_HISTORY_STORAGE_KEY = "pinnedHistory";
 const BOOKMARK_FOLDER_STORAGE_KEY = "bookmarkFolderId";
 const BOOKMARK_LAYOUT_STORAGE_KEY = "bookmarkLayout";
 const THEME_STORAGE_KEY = "themeMode";
+const SEARCH_ENGINE_STORAGE_KEY = "quickSearchEngine";
 const MAX_HISTORY_SITE_GROUPS = 9;
 const MAX_HISTORY_PAGES_PER_SITE = 4;
 const MAX_PINNED_HISTORY_ITEMS = 6;
@@ -45,7 +46,14 @@ const MAX_BOOKMARK_HISTORY_ITEMS = 180;
 const MAX_RECENT_BOOKMARK_ITEMS = 2;
 const BOOKMARK_HISTORY_LOOKBACK_DAYS = 45;
 const DEFAULT_PORTAL_CATEGORY = "developer";
-const DEFAULT_SEARCH_URL = "https://www.google.com/search";
+const DEFAULT_SEARCH_ENGINE = "google";
+const SEARCH_ENGINES = [
+  { id: "google", label: "Google", searchUrl: "https://www.google.com/search", queryParam: "q" },
+  { id: "baidu", label: "百度", searchUrl: "https://www.baidu.com/s", queryParam: "wd" },
+  { id: "bing", label: "Bing", searchUrl: "https://www.bing.com/search", queryParam: "q" },
+  { id: "duckduckgo", label: "DuckDuckGo", searchUrl: "https://duckduckgo.com/", queryParam: "q" },
+  { id: "kagi", label: "Kagi", searchUrl: "https://kagi.com/search", queryParam: "q" }
+];
 const PORTAL_CATEGORY_ORDER = [
   "custom",
   "developer",
@@ -186,6 +194,9 @@ const MESSAGES = {
     recentTitle: "最近 · 时间流",
     quickSearchPlaceholder: "搜索或输入网址",
     quickSearch: "搜索",
+    quickSearchEngine: "搜索引擎",
+    quickSearchWith: "使用 {engine} 搜索",
+    portalCategoryItems: "{count} 个入口",
     deleteCustomPortal: "删除自定义入口",
     switchLightMode: "切换日间模式",
     switchDarkMode: "切换夜间模式",
@@ -230,6 +241,9 @@ const MESSAGES = {
     mobileHistoryTab: "歷史",
     quickSearchPlaceholder: "搜尋或輸入網址",
     quickSearch: "搜尋",
+    quickSearchEngine: "搜尋引擎",
+    quickSearchWith: "使用 {engine} 搜尋",
+    portalCategoryItems: "{count} 個入口",
     portalCategories: "智能分類",
     portalCategoryFeatured: "常用入口",
     portalCategoryRecentBookmarks: "最近加入書籤",
@@ -301,6 +315,9 @@ const MESSAGES = {
     recentTitle: "Recent timeline",
     quickSearchPlaceholder: "Search or enter URL",
     quickSearch: "Search",
+    quickSearchEngine: "Search engine",
+    quickSearchWith: "Search with {engine}",
+    portalCategoryItems: "{count} shortcuts",
     deleteCustomPortal: "Remove custom portal",
     switchLightMode: "Switch to light mode",
     switchDarkMode: "Switch to dark mode",
@@ -470,6 +487,7 @@ const themeToggleButton = document.querySelector("#themeToggleButton");
 const quickSearchForm = document.querySelector("#quickSearchForm");
 const quickSearchInput = document.querySelector("#quickSearchInput");
 const quickSearchButton = document.querySelector("#quickSearchButton");
+const quickSearchEngineSelect = document.querySelector("#quickSearchEngineSelect");
 const togglePortalFormButton = document.querySelector("#togglePortalFormButton");
 const portalForm = document.querySelector("#portalForm");
 const portalTitleInput = document.querySelector("#portalTitleInput");
@@ -482,6 +500,7 @@ let bookmarkRefreshTimer = 0;
 let activeBookmarkDeleteCard = null;
 let bookmarkLayout = "grid";
 let activePortalCategory = DEFAULT_PORTAL_CATEGORY;
+let activeSearchEngine = DEFAULT_SEARCH_ENGINE;
 
 document.addEventListener("DOMContentLoaded", init);
 
@@ -548,9 +567,10 @@ function applyLocale() {
   setButtonLabel(chooseBookmarkFolderButton, t("chooseBookmarkFolder"));
   setButtonLabel(refreshHistoryButton, t("refreshHistory"));
   setButtonLabel(themeToggleButton, t("switchDarkMode"));
-  setButtonLabel(quickSearchButton, t("quickSearch"));
+  updateQuickSearchButtonLabel();
   quickSearchInput.placeholder = t("quickSearchPlaceholder");
   quickSearchInput.setAttribute("aria-label", t("quickSearchPlaceholder"));
+  quickSearchEngineSelect.setAttribute("aria-label", t("quickSearchEngine"));
 
   const portalTitleLabel = portalTitleInput.closest("label")?.querySelector("span");
   const portalUrlLabel = portalUrlInput.closest("label")?.querySelector("span");
@@ -594,6 +614,7 @@ function setButtonLabel(button, label) {
 function init() {
   applyLocale();
   initThemeMode();
+  initQuickSearchEngine();
   renderPortals();
   initBookmarkLayout();
   renderSelectedBookmarkFolder();
@@ -605,6 +626,8 @@ function init() {
   closeBookmarkPickerButton.addEventListener("click", closeBookmarkPicker);
   refreshHistoryButton.addEventListener("click", refreshHistory);
   quickSearchForm.addEventListener("submit", handleQuickSearchSubmit);
+  quickSearchInput.addEventListener("keydown", handleQuickSearchInputKeydown);
+  quickSearchEngineSelect.addEventListener("change", handleSearchEngineChange);
   togglePortalFormButton.addEventListener("click", showPortalForm);
   cancelPortalButton.addEventListener("click", hidePortalForm);
   portalForm.addEventListener("submit", handlePortalSubmit);
@@ -645,6 +668,54 @@ async function initThemeMode() {
     console.warn("Failed to load theme mode", error);
     applyThemeMode("light");
   }
+}
+
+async function initQuickSearchEngine() {
+  populateQuickSearchEngineOptions();
+  try {
+    const result = await chrome.storage.local.get({ [SEARCH_ENGINE_STORAGE_KEY]: DEFAULT_SEARCH_ENGINE });
+    setQuickSearchEngine(result[SEARCH_ENGINE_STORAGE_KEY], { persist: false });
+  } catch (error) {
+    console.warn("Failed to load search engine", error);
+    setQuickSearchEngine(DEFAULT_SEARCH_ENGINE, { persist: false });
+  }
+}
+
+function populateQuickSearchEngineOptions() {
+  quickSearchEngineSelect.replaceChildren(...SEARCH_ENGINES.map((engine) => {
+    const option = document.createElement("option");
+    option.value = engine.id;
+    option.textContent = engine.label;
+    return option;
+  }));
+}
+
+async function handleSearchEngineChange() {
+  await setQuickSearchEngine(quickSearchEngineSelect.value, { persist: true });
+}
+
+async function setQuickSearchEngine(engineId, options = {}) {
+  const nextEngine = searchEngineById(engineId);
+  activeSearchEngine = nextEngine.id;
+  quickSearchEngineSelect.value = nextEngine.id;
+  updateQuickSearchButtonLabel();
+  if (!options.persist) {
+    return;
+  }
+  try {
+    await chrome.storage.local.set({ [SEARCH_ENGINE_STORAGE_KEY]: nextEngine.id });
+  } catch (error) {
+    console.warn("Failed to save search engine", error);
+  }
+}
+
+function updateQuickSearchButtonLabel() {
+  const engine = searchEngineById(activeSearchEngine);
+  setButtonLabel(quickSearchButton, t("quickSearchWith", { engine: engine.label }));
+}
+
+function searchEngineById(engineId) {
+  return SEARCH_ENGINES.find((engine) => engine.id === engineId) || SEARCH_ENGINES[0];
 }
 
 async function initBookmarkLayout() {
@@ -706,12 +777,24 @@ function applyThemeMode(theme) {
 
 function handleQuickSearchSubmit(event) {
   event.preventDefault();
+  submitQuickSearch();
+}
+
+function handleQuickSearchInputKeydown(event) {
+  if (event.key !== "Enter" || event.isComposing) {
+    return;
+  }
+  event.preventDefault();
+  submitQuickSearch();
+}
+
+function submitQuickSearch() {
   const query = normalizeText(quickSearchInput.value);
   if (!query) {
     quickSearchInput.focus();
     return;
   }
-  window.location.href = quickSearchDestination(query);
+  window.location.assign(quickSearchDestination(query));
 }
 
 function quickSearchDestination(query) {
@@ -724,8 +807,9 @@ function quickSearchDestination(query) {
     return directUrl;
   }
 
-  const searchUrl = new URL(DEFAULT_SEARCH_URL);
-  searchUrl.searchParams.set("q", query);
+  const engine = searchEngineById(activeSearchEngine);
+  const searchUrl = new URL(engine.searchUrl);
+  searchUrl.searchParams.set(engine.queryParam, query);
   return searchUrl.href;
 }
 
@@ -1038,17 +1122,28 @@ function createPortalCategoryTabs(groups) {
 
   groups.forEach((group) => {
     const button = document.createElement("button");
+    const marker = document.createElement("span");
+    const copy = document.createElement("span");
     const label = document.createElement("span");
+    const meta = document.createElement("span");
     const count = document.createElement("span");
     const isActive = group.category === activePortalCategory;
 
     button.className = "portal-category-tab";
+    button.dataset.category = group.category;
     button.classList.toggle("active", isActive);
     button.type = "button";
     button.setAttribute("aria-pressed", String(isActive));
+    marker.className = "portal-category-marker";
+    copy.className = "portal-category-copy";
+    label.className = "portal-category-name";
     label.textContent = portalCategoryLabel(group.category);
+    meta.className = "portal-category-meta";
+    meta.textContent = t("portalCategoryItems", { count: group.items.length });
+    count.className = "portal-category-tab-count";
     count.textContent = String(group.items.length);
-    button.append(label, count);
+    copy.append(label, meta);
+    button.append(marker, copy, count);
     button.addEventListener("click", () => {
       activePortalCategory = group.category;
       renderPortals();
