@@ -132,6 +132,9 @@ const MESSAGES = {
     topbarLabel: "顶部功能区",
     shellLabel: "tab-tab 控制台",
     portalTitle: "入口",
+    mobilePortalTab: "入口",
+    mobileBookmarkTab: "书签",
+    mobileHistoryTab: "历史",
     portalCategoryFeatured: "常用入口",
     portalCategoryCustom: "自定义",
     portalCategoryShopping: "购物",
@@ -204,6 +207,9 @@ const MESSAGES = {
   },
   "zh-TW": {
     portalTitle: "熱門推薦",
+    mobilePortalTab: "入口",
+    mobileBookmarkTab: "書籤",
+    mobileHistoryTab: "歷史",
     quickSearchPlaceholder: "搜尋或輸入網址",
     quickSearch: "搜尋",
     portalCategories: "入口分類",
@@ -234,6 +240,9 @@ const MESSAGES = {
     topbarLabel: "Top bar",
     shellLabel: "tab-tab dashboard",
     portalTitle: "Portals",
+    mobilePortalTab: "Portals",
+    mobileBookmarkTab: "Bookmarks",
+    mobileHistoryTab: "History",
     portalCategoryFeatured: "Frequent portals",
     portalCategoryCustom: "Custom",
     portalCategoryShopping: "Shopping",
@@ -500,6 +509,9 @@ function applyLocale() {
   document.querySelector("#history-title").textContent = t("historyTitle");
   document.querySelector("#pinned-title").textContent = t("pinnedTitle");
   document.querySelector("#recent-title").textContent = t("recentTitle");
+  setMobileTabLabel("portalPanel", t("mobilePortalTab"));
+  setMobileTabLabel("bookmarkPanel", t("mobileBookmarkTab"));
+  setMobileTabLabel("historyPanel", t("mobileHistoryTab"));
 
   setButtonLabel(togglePortalFormButton, t("addPortal"));
   setButtonLabel(refreshBookmarkFolderButton, t("refreshBookmarkFolder"));
@@ -532,6 +544,13 @@ function applyLocale() {
   const bookmarkPickerTitle = document.querySelector(".bookmark-picker-toolbar span");
   if (bookmarkPickerTitle) {
     bookmarkPickerTitle.textContent = t("chooseBookmarkFolderPrompt");
+  }
+}
+
+function setMobileTabLabel(panelId, label) {
+  const tab = mobileSectionTabs.find((item) => item.dataset.panelTarget === panelId);
+  if (tab) {
+    tab.textContent = label;
   }
 }
 
