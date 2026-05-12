@@ -10,13 +10,14 @@
     <header class="topbar" aria-label="顶部功能区">
       <form class="topbar-search" id="quickSearchForm" role="search">
         <label class="visually-hidden" for="quickSearchInput">搜索或输入网址</label>
-        <label class="visually-hidden" for="quickSearchEngineSelect">搜索引擎</label>
+        <span class="visually-hidden" id="quickSearchEngineLabel">搜索引擎</span>
         <span class="search-engine-control">
-          <span class="search-engine-visual" id="quickSearchEngineVisual" aria-hidden="true">
+          <button class="search-engine-button" id="quickSearchEngineButton" type="button" aria-haspopup="listbox" aria-expanded="false" aria-labelledby="quickSearchEngineLabel quickSearchEngineName">
             <img class="search-engine-logo" id="quickSearchEngineLogo" alt="">
-          </span>
-          <select class="quick-search-engine" id="quickSearchEngineSelect" name="engine" aria-label="搜索引擎"></select>
-          <span class="search-engine-caret" aria-hidden="true"></span>
+            <span class="search-engine-name" id="quickSearchEngineName">Google</span>
+            <span class="search-engine-caret" aria-hidden="true"></span>
+          </button>
+          <div class="search-engine-menu" id="quickSearchEngineMenu" role="listbox" aria-labelledby="quickSearchEngineLabel" hidden></div>
         </span>
         <span class="topbar-search-divider" aria-hidden="true"></span>
         <span class="topbar-search-icon" aria-hidden="true">
@@ -30,7 +31,7 @@
       </form>
       <div class="topbar-actions">
         <button class="theme-toggle" id="themeToggleButton" type="button" aria-pressed="false" title="切换夜间模式">
-          <span class="theme-toggle-icon" aria-hidden="true">◐</span>
+          <span class="theme-toggle-icon" aria-hidden="true"></span>
         </button>
       </div>
     </header>
@@ -48,7 +49,7 @@
             <h1 id="portal-title">热门推荐</h1>
           </div>
           <button class="icon-button subtle-action" id="togglePortalFormButton" type="button" title="添加入口" aria-label="添加入口">
-            <span aria-hidden="true">＋</span>
+            <span class="button-icon" aria-hidden="true"></span>
           </button>
         </header>
 
@@ -87,13 +88,13 @@
           </div>
           <div class="header-actions">
             <button class="icon-button subtle-action" id="refreshBookmarkFolderButton" type="button" title="刷新当前书签文件夹" aria-label="刷新当前书签文件夹">
-              <span aria-hidden="true">↻</span>
+              <span class="button-icon" aria-hidden="true"></span>
             </button>
             <button class="icon-button subtle-action" id="toggleBookmarkLayoutButton" type="button" title="切换为列表显示" aria-label="切换为列表显示" aria-pressed="false">
-              <span aria-hidden="true">☷</span>
+              <span class="button-icon" aria-hidden="true"></span>
             </button>
             <button class="icon-button subtle-action" id="chooseBookmarkFolderButton" type="button" title="选择书签文件夹" aria-label="选择书签文件夹">
-              <span aria-hidden="true">＋</span>
+              <span class="button-icon" aria-hidden="true"></span>
             </button>
           </div>
         </header>
@@ -118,7 +119,7 @@
             <h2 id="history-title">最近浏览</h2>
           </div>
           <button class="icon-button" id="refreshHistoryButton" type="button" title="刷新历史记录" aria-label="刷新历史记录">
-            <span aria-hidden="true">↻</span>
+            <span class="button-icon" aria-hidden="true"></span>
           </button>
         </header>
         <div class="history-stack" aria-live="polite">
@@ -143,7 +144,7 @@
             <span class="site-domain"></span>
           </span>
         </a>
-        <button class="site-remove" type="button" title="删除自定义入口" aria-label="删除自定义入口">×</button>
+        <button class="site-remove" type="button" title="删除自定义入口" aria-label="删除自定义入口"></button>
       </div>
     </template>
 

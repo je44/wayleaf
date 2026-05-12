@@ -32,6 +32,7 @@ const PINNED_HISTORY_STORAGE_KEY = "pinnedHistory";
 const BOOKMARK_FOLDER_STORAGE_KEY = "bookmarkFolderId";
 const BOOKMARK_LAYOUT_STORAGE_KEY = "bookmarkLayout";
 const PORTAL_SECTION_ORDER_STORAGE_KEY = "portalSectionOrder";
+const PORTAL_CATEGORIES_EXPANDED_STORAGE_KEY = "portalCategoriesExpanded";
 const THEME_STORAGE_KEY = "themeMode";
 const SEARCH_ENGINE_STORAGE_KEY = "quickSearchEngine";
 const MAX_HISTORY_SITE_GROUPS = 9;
@@ -49,6 +50,7 @@ const BOOKMARK_HISTORY_LOOKBACK_DAYS = 45;
 const DEFAULT_PORTAL_CATEGORY = "developer";
 const DEFAULT_SEARCH_ENGINE = "google";
 const DEFAULT_PORTAL_SECTION_ORDER = ["featured", "active"];
+const COLLAPSED_PORTAL_CATEGORY_COUNT = 2;
 const SEARCH_ENGINES = [
   { id: "google", label: "Google", icon: "icons/portals/google.svg", searchUrl: "https://www.google.com/search", queryParam: "q" },
   { id: "baidu", label: "百度", icon: "icons/portals/baidu.svg", searchUrl: "https://www.baidu.com/s", queryParam: "wd" },
@@ -211,6 +213,8 @@ const MESSAGES = {
     portalCategoryDesign: "设计",
     portalCategoryOther: "其他",
     portalCategories: "智能分类",
+    portalCategoriesExpand: "展开 {count} 项",
+    portalCategoriesCollapse: "收起",
     portalSourceBookmarks: "本地智能分类 · 自动合并书签",
     portalSourceFallback: "默认入口 · 授权后自动智能分类",
     addPortal: "添加入口",
@@ -253,6 +257,7 @@ const MESSAGES = {
     bookmarkEmpty: "这个文件夹里没有可显示的网站书签。",
     bookmarkReadFailed: "无法读取书签，请确认扩展已获得 bookmarks 权限。",
     deleteBookmark: "删除 {title}",
+    deleteBookmarkAction: "删除",
     deleteBookmarkFailed: "删除失败，可能已在其他位置变更。",
     loadingBookmarkFolders: "正在读取书签文件夹。",
     bookmarkFolderReadFailed: "无法读取书签文件夹。",
@@ -261,6 +266,10 @@ const MESSAGES = {
     bookmarkCount: "{count} 个网站",
     pageCount: "{count} 个页面",
     historySitePageMeta: "{count} 个相关页面",
+    historyExpandPages: "展开 {count} 个相关页面",
+    historyCollapsePages: "收起相关页面",
+    historyRelatedPages: "相关页面",
+    historyPrimaryPage: "最近页面",
     historyJustNow: "刚刚",
     historyMinutesAgo: "{count} 分钟前",
     historyHoursAgo: "{count} 小时前",
@@ -287,6 +296,8 @@ const MESSAGES = {
     quickSearchWith: "使用 {engine} 搜尋",
     portalCategoryItems: "{count} 個入口",
     portalCategories: "智能分類",
+    portalCategoriesExpand: "展開 {count} 項",
+    portalCategoriesCollapse: "收起",
     portalCategoryFeatured: "常用入口",
     portalCategoryRecentBookmarks: "最近加入書籤",
     portalSourceBookmarks: "本地智能分類 · 自動合併書籤",
@@ -311,6 +322,11 @@ const MESSAGES = {
     bookmarkRoot: "書籤",
     bookmarkMeta: "{folder} · {count} 個網站",
     bookmarkCount: "{count} 個網站",
+    deleteBookmarkAction: "刪除",
+    historyExpandPages: "展開 {count} 個相關頁面",
+    historyCollapsePages: "收起相關頁面",
+    historyRelatedPages: "相關頁面",
+    historyPrimaryPage: "最近頁面",
     unnamedPage: "未命名頁面",
     website: "網站"
   },
@@ -334,6 +350,8 @@ const MESSAGES = {
     portalCategoryDesign: "Design",
     portalCategoryOther: "Other",
     portalCategories: "Smart categories",
+    portalCategoriesExpand: "Show {count} more",
+    portalCategoriesCollapse: "Collapse",
     portalSourceBookmarks: "Local smart sorting · Bookmarks merged automatically",
     portalSourceFallback: "Default shortcuts · Smart sorting after bookmark permission",
     addPortal: "Add portal",
@@ -376,6 +394,7 @@ const MESSAGES = {
     bookmarkEmpty: "This folder has no website bookmarks to show.",
     bookmarkReadFailed: "Could not read bookmarks. Check that the extension has bookmarks permission.",
     deleteBookmark: "Remove {title}",
+    deleteBookmarkAction: "Remove",
     deleteBookmarkFailed: "Could not remove it. It may have changed elsewhere.",
     loadingBookmarkFolders: "Loading bookmark folders.",
     bookmarkFolderReadFailed: "Could not read bookmark folders.",
@@ -384,6 +403,10 @@ const MESSAGES = {
     bookmarkCount: "{count} sites",
     pageCount: "{count} pages",
     historySitePageMeta: "{count} related pages",
+    historyExpandPages: "Show {count} related pages",
+    historyCollapsePages: "Hide related pages",
+    historyRelatedPages: "Related pages",
+    historyPrimaryPage: "Latest page",
     historyJustNow: "Just now",
     historyMinutesAgo: "{count} min ago",
     historyHoursAgo: "{count} hr ago",
@@ -531,8 +554,10 @@ const themeToggleButton = document.querySelector("#themeToggleButton");
 const quickSearchForm = document.querySelector("#quickSearchForm");
 const quickSearchInput = document.querySelector("#quickSearchInput");
 const quickSearchButton = document.querySelector("#quickSearchButton");
-const quickSearchEngineSelect = document.querySelector("#quickSearchEngineSelect");
+const quickSearchEngineButton = document.querySelector("#quickSearchEngineButton");
+const quickSearchEngineMenu = document.querySelector("#quickSearchEngineMenu");
 const quickSearchEngineLogo = document.querySelector("#quickSearchEngineLogo");
+const quickSearchEngineName = document.querySelector("#quickSearchEngineName");
 const togglePortalFormButton = document.querySelector("#togglePortalFormButton");
 const portalForm = document.querySelector("#portalForm");
 const portalTitleInput = document.querySelector("#portalTitleInput");
@@ -547,6 +572,7 @@ let bookmarkLayout = "grid";
 let activePortalCategory = DEFAULT_PORTAL_CATEGORY;
 let activeSearchEngine = DEFAULT_SEARCH_ENGINE;
 let draggedPortalSectionRole = "";
+let portalCategoriesExpanded = false;
 
 document.addEventListener("DOMContentLoaded", init);
 
@@ -613,10 +639,11 @@ function applyLocale() {
   setButtonLabel(chooseBookmarkFolderButton, t("chooseBookmarkFolder"));
   setButtonLabel(refreshHistoryButton, t("refreshHistory"));
   setButtonLabel(themeToggleButton, t("switchDarkMode"));
+  setStaticButtonIcons();
   updateQuickSearchButtonLabel();
   quickSearchInput.placeholder = t("quickSearchPlaceholder");
   quickSearchInput.setAttribute("aria-label", t("quickSearchPlaceholder"));
-  quickSearchEngineSelect.setAttribute("aria-label", t("quickSearchEngine"));
+  quickSearchEngineButton?.setAttribute("title", t("quickSearchEngine"));
 
   const portalTitleLabel = portalTitleInput.closest("label")?.querySelector("span");
   const portalUrlLabel = portalUrlInput.closest("label")?.querySelector("span");
@@ -657,6 +684,13 @@ function setButtonLabel(button, label) {
   button.setAttribute("aria-label", label);
 }
 
+function setStaticButtonIcons() {
+  togglePortalFormButton.querySelector(".button-icon").innerHTML = plusIcon();
+  refreshBookmarkFolderButton.querySelector(".button-icon").innerHTML = refreshIcon();
+  chooseBookmarkFolderButton.querySelector(".button-icon").innerHTML = folderPlusIcon();
+  refreshHistoryButton.querySelector(".button-icon").innerHTML = refreshIcon();
+}
+
 function init() {
   applyLocale();
   initThemeMode();
@@ -673,7 +707,8 @@ function init() {
   refreshHistoryButton.addEventListener("click", refreshHistory);
   quickSearchForm.addEventListener("submit", handleQuickSearchSubmit);
   quickSearchInput.addEventListener("keydown", handleQuickSearchInputKeydown);
-  quickSearchEngineSelect.addEventListener("change", handleSearchEngineChange);
+  quickSearchEngineButton.addEventListener("click", toggleSearchEngineMenu);
+  quickSearchEngineButton.addEventListener("keydown", handleSearchEngineButtonKeydown);
   togglePortalFormButton.addEventListener("click", showPortalForm);
   cancelPortalButton.addEventListener("click", hidePortalForm);
   portalForm.addEventListener("submit", handlePortalSubmit);
@@ -682,7 +717,9 @@ function init() {
     tab.addEventListener("click", () => activateMobilePanel(tab.dataset.panelTarget));
   });
   document.addEventListener("pointerdown", handleBookmarkDeleteDismiss, true);
+  document.addEventListener("pointerdown", handleSearchEngineMenuDismiss, true);
   document.addEventListener("keydown", handleBookmarkDeleteEscape);
+  document.addEventListener("keydown", handleGlobalEscape);
   bindBookmarkChangeEvents();
 }
 
@@ -728,22 +765,101 @@ async function initQuickSearchEngine() {
 }
 
 function populateQuickSearchEngineOptions() {
-  quickSearchEngineSelect.replaceChildren(...SEARCH_ENGINES.map((engine) => {
-    const option = document.createElement("option");
-    option.value = engine.id;
-    option.textContent = engine.label;
+  quickSearchEngineMenu.replaceChildren(...SEARCH_ENGINES.map((engine) => {
+    const option = document.createElement("button");
+    const icon = document.createElement("img");
+    const label = document.createElement("span");
+    option.className = "search-engine-option";
+    option.type = "button";
+    option.setAttribute("role", "option");
+    option.dataset.engine = engine.id;
+    option.setAttribute("aria-selected", "false");
+    icon.src = engine.icon;
+    icon.alt = "";
+    label.textContent = engine.label;
+    option.append(icon, label);
+    option.addEventListener("click", () => selectSearchEngineFromMenu(engine.id));
+    option.addEventListener("keydown", handleSearchEngineOptionKeydown);
     return option;
   }));
 }
 
-async function handleSearchEngineChange() {
-  await setQuickSearchEngine(quickSearchEngineSelect.value, { persist: true });
+async function selectSearchEngineFromMenu(engineId) {
+  await setQuickSearchEngine(engineId, { persist: true });
+  closeSearchEngineMenu({ restoreFocus: true });
+}
+
+function toggleSearchEngineMenu() {
+  if (quickSearchEngineMenu.hidden) {
+    openSearchEngineMenu();
+    return;
+  }
+  closeSearchEngineMenu({ restoreFocus: true });
+}
+
+function openSearchEngineMenu() {
+  quickSearchEngineMenu.hidden = false;
+  quickSearchEngineButton.setAttribute("aria-expanded", "true");
+  quickSearchEngineMenu.querySelector(`[data-engine="${CSS.escape(activeSearchEngine)}"]`)?.focus();
+}
+
+function closeSearchEngineMenu(options = {}) {
+  if (quickSearchEngineMenu.hidden) {
+    return;
+  }
+  quickSearchEngineMenu.hidden = true;
+  quickSearchEngineButton.setAttribute("aria-expanded", "false");
+  if (options.restoreFocus) {
+    quickSearchEngineButton.focus({ preventScroll: true });
+  }
+}
+
+function handleSearchEngineButtonKeydown(event) {
+  if (event.key !== "ArrowDown" && event.key !== "Enter" && event.key !== " ") {
+    return;
+  }
+  event.preventDefault();
+  openSearchEngineMenu();
+}
+
+function handleSearchEngineOptionKeydown(event) {
+  const options = [...quickSearchEngineMenu.querySelectorAll(".search-engine-option")];
+  const currentIndex = options.indexOf(event.currentTarget);
+  if (event.key === "Escape") {
+    event.preventDefault();
+    closeSearchEngineMenu({ restoreFocus: true });
+    return;
+  }
+  if (event.key !== "ArrowDown" && event.key !== "ArrowUp") {
+    return;
+  }
+  event.preventDefault();
+  const offset = event.key === "ArrowDown" ? 1 : -1;
+  const nextIndex = (currentIndex + offset + options.length) % options.length;
+  options[nextIndex]?.focus();
+}
+
+function handleSearchEngineMenuDismiss(event) {
+  if (quickSearchEngineMenu.hidden) {
+    return;
+  }
+  const target = event.target;
+  if (target instanceof Element && (quickSearchEngineMenu.contains(target) || quickSearchEngineButton.contains(target))) {
+    return;
+  }
+  closeSearchEngineMenu();
+}
+
+function handleGlobalEscape(event) {
+  if (event.key !== "Escape") {
+    return;
+  }
+  closeSearchEngineMenu();
 }
 
 async function setQuickSearchEngine(engineId, options = {}) {
   const nextEngine = searchEngineById(engineId);
   activeSearchEngine = nextEngine.id;
-  quickSearchEngineSelect.value = nextEngine.id;
   updateQuickSearchButtonLabel();
   if (!options.persist) {
     return;
@@ -763,6 +879,15 @@ function updateQuickSearchButtonLabel() {
     quickSearchEngineLogo.src = engine.icon;
     quickSearchEngineLogo.alt = "";
   }
+  if (quickSearchEngineName) {
+    quickSearchEngineName.textContent = engine.label;
+  }
+  quickSearchEngineButton.title = `${t("quickSearchEngine")}: ${engine.label}`;
+  quickSearchEngineMenu?.querySelectorAll(".search-engine-option").forEach((option) => {
+    const isSelected = option.dataset.engine === engine.id;
+    option.classList.toggle("active", isSelected);
+    option.setAttribute("aria-selected", String(isSelected));
+  });
 }
 
 function searchEngineById(engineId) {
@@ -804,7 +929,7 @@ function updateBookmarkLayoutButton() {
   const label = isList ? t("switchBookmarkLayoutToGrid") : t("switchBookmarkLayoutToList");
   setButtonLabel(toggleBookmarkLayoutButton, label);
   toggleBookmarkLayoutButton.setAttribute("aria-pressed", String(isList));
-  toggleBookmarkLayoutButton.querySelector("span").textContent = isList ? "▦" : "☷";
+  toggleBookmarkLayoutButton.querySelector(".button-icon").innerHTML = isList ? gridIcon() : listIcon();
 }
 
 async function toggleThemeMode() {
@@ -823,7 +948,7 @@ function applyThemeMode(theme) {
   themeToggleButton.setAttribute("aria-pressed", String(isDark));
   themeToggleButton.title = isDark ? t("switchLightMode") : t("switchDarkMode");
   themeToggleButton.setAttribute("aria-label", isDark ? t("switchLightMode") : t("switchDarkMode"));
-  themeToggleButton.querySelector(".theme-toggle-icon").textContent = isDark ? "☼" : "◐";
+  themeToggleButton.querySelector(".theme-toggle-icon").innerHTML = isDark ? sunIcon() : moonIcon();
 }
 
 function handleQuickSearchSubmit(event) {
@@ -883,12 +1008,13 @@ async function renderPortals() {
   const featuredPortals = featuredPortalItems(portalData.items);
   const groups = groupPortalsByCategory(portalData.items);
   const sectionOrder = await loadPortalSectionOrder();
+  portalCategoriesExpanded = await loadPortalCategoriesExpanded();
   if (portalSourceText) {
     portalSourceText.textContent = t(portalData.usingBookmarks ? "portalSourceBookmarks" : "portalSourceFallback");
   }
   activePortalCategory = resolvedActivePortalCategory(groups);
   if (groups.length) {
-    fragment.appendChild(createPortalCategoryTabs(groups));
+    fragment.appendChild(createPortalCategoryTabs(groups, portalCategoriesExpanded));
   }
   const sectionByRole = new Map();
   if (featuredPortals.length) {
@@ -944,6 +1070,25 @@ async function loadPortalSectionOrder() {
 
 async function savePortalSectionOrder(order) {
   await chrome.storage.local.set({ [PORTAL_SECTION_ORDER_STORAGE_KEY]: order });
+}
+
+async function loadPortalCategoriesExpanded() {
+  try {
+    const result = await chrome.storage.local.get({ [PORTAL_CATEGORIES_EXPANDED_STORAGE_KEY]: false });
+    return Boolean(result[PORTAL_CATEGORIES_EXPANDED_STORAGE_KEY]);
+  } catch {
+    return false;
+  }
+}
+
+async function savePortalCategoriesExpanded(expanded) {
+  await chrome.storage.local.set({ [PORTAL_CATEGORIES_EXPANDED_STORAGE_KEY]: Boolean(expanded) });
+}
+
+async function togglePortalCategoriesExpanded() {
+  portalCategoriesExpanded = !portalCategoriesExpanded;
+  await savePortalCategoriesExpanded(portalCategoriesExpanded);
+  renderPortals();
 }
 
 async function swapPortalSectionOrder(sourceRole, targetRole) {
@@ -1214,17 +1359,32 @@ function resolvedActivePortalCategory(groups) {
   return groups[0]?.category || DEFAULT_PORTAL_CATEGORY;
 }
 
-function createPortalCategoryTabs(groups) {
+function createPortalCategoryTabs(groups, expanded) {
   const section = document.createElement("section");
+  const header = document.createElement("header");
   const title = document.createElement("h3");
+  const toggleButton = document.createElement("button");
   const nav = document.createElement("nav");
+  const hiddenCount = Math.max(0, groups.length - COLLAPSED_PORTAL_CATEGORY_COUNT);
+  const visibleGroups = expanded || hiddenCount === 0
+    ? groups
+    : groups.slice(0, COLLAPSED_PORTAL_CATEGORY_COUNT);
   section.className = "portal-category-switcher";
+  section.classList.toggle("collapsed", !expanded && hiddenCount > 0);
+  header.className = "portal-switcher-header";
   title.className = "portal-switcher-title";
   title.textContent = t("portalCategories");
+  toggleButton.className = "portal-switcher-toggle";
+  toggleButton.type = "button";
+  toggleButton.hidden = hiddenCount === 0;
+  toggleButton.setAttribute("aria-expanded", String(expanded));
+  toggleButton.textContent = expanded ? t("portalCategoriesCollapse") : t("portalCategoriesExpand", { count: hiddenCount });
+  toggleButton.addEventListener("click", togglePortalCategoriesExpanded);
   nav.className = "portal-category-tabs";
   nav.setAttribute("aria-label", t("portalCategories"));
+  header.append(title, toggleButton);
 
-  groups.forEach((group) => {
+  visibleGroups.forEach((group) => {
     const button = document.createElement("button");
     const marker = document.createElement("span");
     const copy = document.createElement("span");
@@ -1255,7 +1415,7 @@ function createPortalCategoryTabs(groups) {
     nav.appendChild(button);
   });
 
-  section.append(title, nav);
+  section.append(header, nav);
   return section;
 }
 
@@ -1314,6 +1474,7 @@ function createPortalCategorySection(group) {
 }
 
 function bindPortalSectionDrag(section, handle, role) {
+  let lastDropPosition = "";
   handle.addEventListener("dragstart", (event) => {
     draggedPortalSectionRole = role;
     section.classList.add("dragging");
@@ -1322,9 +1483,7 @@ function bindPortalSectionDrag(section, handle, role) {
   });
   handle.addEventListener("dragend", () => {
     draggedPortalSectionRole = "";
-    document.querySelectorAll(".portal-category.dragging, .portal-category.drag-over").forEach((node) => {
-      node.classList.remove("dragging", "drag-over");
-    });
+    clearPortalDropIndicators();
   });
   section.addEventListener("dragover", (event) => {
     if (!draggedPortalSectionRole || draggedPortalSectionRole === role) {
@@ -1332,17 +1491,40 @@ function bindPortalSectionDrag(section, handle, role) {
     }
     event.preventDefault();
     event.dataTransfer.dropEffect = "move";
+    const rect = section.getBoundingClientRect();
+    const before = event.clientY < rect.top + rect.height / 2;
+    const nextPosition = before ? "before" : "after";
+    if (section.classList.contains("drag-over") && lastDropPosition === nextPosition) {
+      return;
+    }
+    lastDropPosition = nextPosition;
+    clearPortalDropIndicators(section);
     section.classList.add("drag-over");
+    section.classList.toggle("drop-before", before);
+    section.classList.toggle("drop-after", !before);
   });
   section.addEventListener("dragleave", () => {
-    section.classList.remove("drag-over");
+    lastDropPosition = "";
+    section.classList.remove("drag-over", "drop-before", "drop-after");
   });
   section.addEventListener("drop", async (event) => {
     event.preventDefault();
     const sourceRole = event.dataTransfer.getData("text/plain") || draggedPortalSectionRole;
-    section.classList.remove("drag-over");
+    lastDropPosition = "";
+    section.classList.remove("drag-over", "drop-before", "drop-after");
     await swapPortalSectionOrder(sourceRole, role);
     renderPortals();
+  });
+}
+
+function clearPortalDropIndicators(keepNode = null) {
+  document.querySelectorAll(".portal-category.dragging, .portal-category.drag-over, .portal-category.drop-before, .portal-category.drop-after").forEach((node) => {
+    if (node !== keepNode) {
+      node.classList.remove("drag-over", "drop-before", "drop-after");
+      if (!keepNode) {
+        node.classList.remove("dragging");
+      }
+    }
   });
 }
 
@@ -1381,6 +1563,7 @@ function createSiteCard(site) {
   if (site.custom) {
     node.classList.add("custom");
     setButtonLabel(removeButton, t("deleteCustomPortal"));
+    removeButton.innerHTML = trashIcon();
     removeButton.addEventListener("click", () => removeCustomPortal(site.id));
   } else {
     removeButton.remove();
@@ -1587,7 +1770,7 @@ function createBookmarkSiteCard(site) {
   node.classList.add("bookmark-site-card");
   deleteButton.className = "bookmark-delete-button";
   deleteButton.type = "button";
-  deleteButton.textContent = "×";
+  deleteButton.innerHTML = `${trashIcon()}<span>${t("deleteBookmarkAction")}</span>`;
   deleteButton.setAttribute("aria-label", t("deleteBookmark", { title: site.title }));
   deleteButton.addEventListener("click", async (event) => {
     event.preventDefault();
@@ -1654,6 +1837,11 @@ function showBookmarkDeleteMode(node) {
   clearBookmarkDeleteMode();
   activeBookmarkDeleteCard = node;
   node.classList.add("delete-ready");
+  const deleteButton = node.querySelector(".bookmark-delete-button");
+  if (deleteButton) {
+    deleteButton.style.display = "grid";
+    deleteButton.focus({ preventScroll: true });
+  }
 }
 
 function handleBookmarkDeleteDismiss(event) {
@@ -1680,6 +1868,13 @@ function clearBookmarkDeleteMode() {
   const node = activeBookmarkDeleteCard;
   activeBookmarkDeleteCard = null;
   node.classList.remove("delete-ready");
+  if (document.activeElement instanceof Element && node.contains(document.activeElement)) {
+    document.activeElement.blur();
+  }
+  const deleteButton = node.querySelector(".bookmark-delete-button");
+  if (deleteButton) {
+    deleteButton.style.display = "";
+  }
   node.dispatchEvent(new CustomEvent("bookmark-delete-mode-clear"));
 }
 
@@ -1985,6 +2180,7 @@ function createHistoryPageItem(item, options = {}) {
   const title = normalizeText(item.title) || historyFallbackTitle(url);
   const row = document.createElement("div");
   const link = document.createElement("a");
+  const label = document.createElement("span");
   const pinButton = document.createElement("button");
   const deleteButton = document.createElement("button");
   const isPinned = Boolean(options.pinned);
@@ -1997,6 +2193,11 @@ function createHistoryPageItem(item, options = {}) {
   link.title = title;
   link.setAttribute("aria-label", t("openPage", { title }));
   link.textContent = title;
+  if (options.label) {
+    label.className = "history-page-label";
+    label.textContent = options.label;
+    link.prepend(label);
+  }
   pinButton.className = "history-page-pin";
   pinButton.classList.toggle("active", isPinned);
   pinButton.type = "button";
@@ -2032,10 +2233,23 @@ function createHistoryFeedGroup(group) {
   const name = document.createElement("strong");
   const page = document.createElement("a");
   const meta = document.createElement("span");
+  const actions = document.createElement("span");
+  const expandButton = document.createElement("button");
   const pinButton = document.createElement("button");
   const deleteButton = document.createElement("button");
+  const pageList = document.createElement("div");
+  const relatedPages = group.pages.slice(1);
+  const isExpandable = relatedPages.length > 0;
 
   row.className = "history-feed-item";
+  row.classList.toggle("expandable", isExpandable);
+  row.addEventListener("click", (event) => {
+    const target = event.target;
+    if (!isExpandable || (target instanceof Element && target.closest("a, button"))) {
+      return;
+    }
+    toggleHistoryFeedGroup(row);
+  });
   homeLink.className = "history-feed-home";
   homeLink.href = group.homeUrl || siteHomeUrl(group.key, group.url);
   homeLink.target = "_blank";
@@ -2069,6 +2283,15 @@ function createHistoryFeedGroup(group) {
   ].filter(Boolean).join(" · ");
   copy.append(name, page, meta);
 
+  expandButton.className = "history-feed-expand";
+  expandButton.type = "button";
+  expandButton.hidden = !isExpandable;
+  expandButton.innerHTML = chevronDownIcon();
+  expandButton.title = t("historyExpandPages", { count: relatedPages.length });
+  expandButton.setAttribute("aria-label", t("historyExpandPages", { count: relatedPages.length }));
+  expandButton.setAttribute("aria-expanded", "false");
+  expandButton.addEventListener("click", () => toggleHistoryFeedGroup(row));
+
   pinButton.className = "history-page-pin";
   pinButton.type = "button";
   pinButton.innerHTML = historyPinIcon(false);
@@ -2086,8 +2309,44 @@ function createHistoryFeedGroup(group) {
   deleteButton.setAttribute("aria-label", t("deleteHistory", { title: group.name }));
   deleteButton.addEventListener("click", () => deleteHistoryGroup(group));
 
-  row.append(homeLink, copy, pinButton, deleteButton);
+  pageList.className = "history-feed-pages";
+  pageList.id = `history-feed-pages-${group.key.replace(/[^a-z0-9_-]+/gi, "-")}`;
+  pageList.dataset.relatedCount = String(relatedPages.length);
+  pageList.hidden = true;
+  if (isExpandable) {
+    const listTitle = document.createElement("span");
+    listTitle.className = "history-feed-pages-title";
+    listTitle.textContent = t("historyRelatedPages");
+    pageList.appendChild(listTitle);
+    pageList.appendChild(createHistoryPageItem(item, { label: t("historyPrimaryPage") }));
+    relatedPages.forEach((relatedItem) => {
+      pageList.appendChild(createHistoryPageItem(relatedItem));
+    });
+  }
+
+  actions.className = "history-feed-actions";
+  if (isExpandable) {
+    expandButton.setAttribute("aria-controls", pageList.id);
+    actions.appendChild(expandButton);
+  }
+  actions.append(pinButton, deleteButton);
+  row.append(homeLink, copy, actions, pageList);
   return row;
+}
+
+function toggleHistoryFeedGroup(row) {
+  const isExpanded = row.classList.toggle("expanded");
+  const button = row.querySelector(".history-feed-expand");
+  const pageList = row.querySelector(".history-feed-pages");
+  if (button) {
+    const count = Number(pageList?.dataset.relatedCount || 0);
+    button.setAttribute("aria-expanded", String(isExpanded));
+    button.title = isExpanded ? t("historyCollapsePages") : t("historyExpandPages", { count });
+    button.setAttribute("aria-label", isExpanded ? t("historyCollapsePages") : t("historyExpandPages", { count }));
+  }
+  if (pageList) {
+    pageList.hidden = !isExpanded;
+  }
 }
 
 function formatHistoryTime(timestamp) {
@@ -2236,6 +2495,84 @@ function historyPinIcon(active) {
   `;
 }
 
+function plusIcon() {
+  return `
+    <svg viewBox="0 0 20 20" aria-hidden="true" focusable="false">
+      <path d="M10 4v12"></path>
+      <path d="M4 10h12"></path>
+    </svg>
+  `;
+}
+
+function refreshIcon() {
+  return `
+    <svg viewBox="0 0 20 20" aria-hidden="true" focusable="false">
+      <path d="M15.5 8a5.5 5.5 0 0 0-9.7-2.9L4 7"></path>
+      <path d="M4 3.8V7h3.2"></path>
+      <path d="M4.5 12a5.5 5.5 0 0 0 9.7 2.9L16 13"></path>
+      <path d="M16 16.2V13h-3.2"></path>
+    </svg>
+  `;
+}
+
+function listIcon() {
+  return `
+    <svg viewBox="0 0 20 20" aria-hidden="true" focusable="false">
+      <path d="M7 5h9"></path>
+      <path d="M7 10h9"></path>
+      <path d="M7 15h9"></path>
+      <path d="M4 5h.1"></path>
+      <path d="M4 10h.1"></path>
+      <path d="M4 15h.1"></path>
+    </svg>
+  `;
+}
+
+function gridIcon() {
+  return `
+    <svg viewBox="0 0 20 20" aria-hidden="true" focusable="false">
+      <rect x="4" y="4" width="5" height="5" rx="1"></rect>
+      <rect x="11" y="4" width="5" height="5" rx="1"></rect>
+      <rect x="4" y="11" width="5" height="5" rx="1"></rect>
+      <rect x="11" y="11" width="5" height="5" rx="1"></rect>
+    </svg>
+  `;
+}
+
+function folderPlusIcon() {
+  return `
+    <svg viewBox="0 0 20 20" aria-hidden="true" focusable="false">
+      <path d="M3.5 6.5h4l1.6 2H16.5v6.8a1.7 1.7 0 0 1-1.7 1.7H5.2a1.7 1.7 0 0 1-1.7-1.7V6.5Z"></path>
+      <path d="M12 10.5v4"></path>
+      <path d="M10 12.5h4"></path>
+    </svg>
+  `;
+}
+
+function sunIcon() {
+  return `
+    <svg viewBox="0 0 20 20" aria-hidden="true" focusable="false">
+      <circle cx="10" cy="10" r="3.2"></circle>
+      <path d="M10 2.8v1.5"></path>
+      <path d="M10 15.7v1.5"></path>
+      <path d="M2.8 10h1.5"></path>
+      <path d="M15.7 10h1.5"></path>
+      <path d="m4.9 4.9 1.1 1.1"></path>
+      <path d="m14 14 1.1 1.1"></path>
+      <path d="m15.1 4.9-1.1 1.1"></path>
+      <path d="m6 14-1.1 1.1"></path>
+    </svg>
+  `;
+}
+
+function moonIcon() {
+  return `
+    <svg viewBox="0 0 20 20" aria-hidden="true" focusable="false">
+      <path d="M14.8 13.8A6.2 6.2 0 0 1 6.2 5.2 6.6 6.6 0 1 0 14.8 13.8Z"></path>
+    </svg>
+  `;
+}
+
 function trashIcon() {
   return `
     <svg viewBox="0 0 20 20" aria-hidden="true" focusable="false">
@@ -2244,6 +2581,26 @@ function trashIcon() {
       <path d="m6 8 .6 7h6.8L14 8"></path>
       <path d="M9 10v3"></path>
       <path d="M11 10v3"></path>
+    </svg>
+  `;
+}
+
+function emptyStateIcon() {
+  return `
+    <svg viewBox="0 0 32 32" aria-hidden="true" focusable="false">
+      <path d="M7 10.5h18"></path>
+      <path d="M9.5 10.5 11 24h10l1.5-13.5"></path>
+      <path d="M13 10.5V8h6v2.5"></path>
+      <path d="M13.5 15.5h5"></path>
+      <path d="M13.5 19.5h3"></path>
+    </svg>
+  `;
+}
+
+function chevronDownIcon() {
+  return `
+    <svg viewBox="0 0 20 20" aria-hidden="true" focusable="false">
+      <path d="m5 8 5 5 5-5"></path>
     </svg>
   `;
 }
@@ -2481,7 +2838,7 @@ function emptyState(message) {
   return `
     <div class="empty-state">
       <div>
-        <span class="empty-mark">⌁</span>
+        <span class="empty-mark">${emptyStateIcon()}</span>
         <p>${escapeHtml(message)}</p>
       </div>
     </div>
