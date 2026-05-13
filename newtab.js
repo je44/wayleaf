@@ -686,9 +686,9 @@ function setButtonLabel(button, label) {
 
 function setStaticButtonIcons() {
   togglePortalFormButton.querySelector(".button-icon").innerHTML = plusIcon();
-  refreshBookmarkFolderButton.querySelector(".button-icon").innerHTML = reloadIcon();
+  refreshBookmarkFolderButton.querySelector(".button-icon").innerHTML = refreshIcon();
   chooseBookmarkFolderButton.querySelector(".button-icon").innerHTML = folderPlusIcon();
-  refreshHistoryButton.querySelector(".button-icon").innerHTML = reloadIcon();
+  refreshHistoryButton.querySelector(".button-icon").innerHTML = refreshIcon();
 }
 
 function init() {
@@ -2515,15 +2515,18 @@ function inlineIcon(markup) {
 function historyPinIcon(active) {
   if (active) {
     return inlineIcon(`
-      <path d="M5 19 19 5"></path>
-      <path d="M10 6 18 14"></path>
-      <path d="M14.5 10.5 10 15l-3 .5L8 17.5l2.5-2.5"></path>
+      <line x1="2" x2="22" y1="2" y2="22"></line>
+      <path d="M12 17v5"></path>
+      <path d="M9 9.76V4a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v11"></path>
+      <path d="M6 17h11"></path>
     `);
   }
   return inlineIcon(`
-    <path d="M10 5 19 14"></path>
-    <path d="M15 10 10 15l-3 .5.5-3L12.5 7.5"></path>
-    <path d="M9.5 15.5 5 20"></path>
+    <path d="M12 17v5"></path>
+    <path d="M5 17h14"></path>
+    <path d="M17 17V7l2-3H5l2 3v10"></path>
+    <path d="M9 17V7"></path>
+    <path d="M15 17V7"></path>
   `);
 }
 
@@ -2534,78 +2537,77 @@ function plusIcon() {
   `);
 }
 
-function reloadIcon() {
+function refreshIcon() {
   return inlineIcon(`
-    <path d="M7 8h9l2 2"></path>
-    <path d="M16 6v4h4"></path>
-    <path d="M17 16H8l-2-2"></path>
-    <path d="M8 18v-4H4"></path>
+    <path d="M3 12a9 9 0 0 1 15.5-6.2L21 8"></path>
+    <path d="M21 3v5h-5"></path>
+    <path d="M21 12a9 9 0 0 1-15.5 6.2L3 16"></path>
+    <path d="M3 21v-5h5"></path>
   `);
 }
 
 function listIcon() {
   return inlineIcon(`
-    <path d="M5 6.5h.01"></path>
-    <path d="M5 12h.01"></path>
-    <path d="M5 17.5h.01"></path>
-    <path d="M8.5 6.5H18"></path>
-    <path d="M8.5 12H19"></path>
-    <path d="M8.5 17.5H18"></path>
+    <line x1="8" x2="21" y1="6" y2="6"></line>
+    <line x1="8" x2="21" y1="12" y2="12"></line>
+    <line x1="8" x2="21" y1="18" y2="18"></line>
+    <line x1="3" x2="3.01" y1="6" y2="6"></line>
+    <line x1="3" x2="3.01" y1="12" y2="12"></line>
+    <line x1="3" x2="3.01" y1="18" y2="18"></line>
   `);
 }
 
 function gridIcon() {
   return inlineIcon(`
-    <path d="M5 5h5v5H5Z"></path>
-    <path d="M14 5h5v5h-5Z"></path>
-    <path d="M5 14h5v5H5Z"></path>
-    <path d="M14 14h5v5h-5Z"></path>
+    <rect width="7" height="7" x="3" y="3" rx="1"></rect>
+    <rect width="7" height="7" x="14" y="3" rx="1"></rect>
+    <rect width="7" height="7" x="14" y="14" rx="1"></rect>
+    <rect width="7" height="7" x="3" y="14" rx="1"></rect>
   `);
 }
 
 function folderPlusIcon() {
   return inlineIcon(`
-    <path d="M4 7h5l2 2h9v9H4Z"></path>
-    <path d="M15.5 12.5v4"></path>
-    <path d="M13.5 14.5h4"></path>
+    <path d="M12 10v6"></path>
+    <path d="M9 13h6"></path>
+    <path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"></path>
   `);
 }
 
 function sunIcon() {
   return inlineIcon(`
-    <path d="M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8Z"></path>
-    <path d="M12 3v2"></path>
-    <path d="M12 19v2"></path>
-    <path d="M3 12h2"></path>
-    <path d="M19 12h2"></path>
-    <path d="m5.5 5.5 1.4 1.4"></path>
-    <path d="m17.1 17.1 1.4 1.4"></path>
-    <path d="m18.5 5.5-1.4 1.4"></path>
-    <path d="m6.9 17.1-1.4 1.4"></path>
+    <circle cx="12" cy="12" r="4"></circle>
+    <path d="M12 2v2"></path>
+    <path d="M12 20v2"></path>
+    <path d="m4.93 4.93 1.41 1.41"></path>
+    <path d="m17.66 17.66 1.41 1.41"></path>
+    <path d="M2 12h2"></path>
+    <path d="M20 12h2"></path>
+    <path d="m6.34 17.66-1.41 1.41"></path>
+    <path d="m19.07 4.93-1.41 1.41"></path>
   `);
 }
 
 function moonIcon() {
   return inlineIcon(`
-    <path d="M18 15.25A7 7 0 0 1 9 6a7.5 7.5 0 1 0 9 9.25Z"></path>
+    <path d="M20.99 12.79A9 9 0 1 1 11.21 3.01 7 7 0 0 0 20.99 12.79Z"></path>
   `);
 }
 
 function trashIcon() {
   return inlineIcon(`
-    <path d="M5 7h14"></path>
-    <path d="M9 7V5h6v2"></path>
-    <path d="M7.5 10v9h9v-9"></path>
-    <path d="M10.5 12v4.5"></path>
-    <path d="M13.5 12v4.5"></path>
+    <path d="M3 6h18"></path>
+    <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+    <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"></path>
+    <path d="M10 11v6"></path>
+    <path d="M14 11v6"></path>
   `);
 }
 
 function emptyStateIcon() {
   return inlineIcon(`
-    <path d="M6 7h12l-1.25 6H14a2 2 0 0 1-4 0H7.25Z"></path>
-    <path d="M7.25 13v4h9.5v-4"></path>
-    <path d="M9.25 10h5.5"></path>
+    <path d="M22 12h-6l-2 3h-4l-2-3H2"></path>
+    <path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11Z"></path>
   `);
 }
 
