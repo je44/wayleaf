@@ -424,7 +424,8 @@ button {
 
 .panel {
   min-width: 0;
-  min-height: calc(100vh - var(--topbar-height));
+  height: calc(100vh - var(--topbar-height));
+  min-height: 0;
   padding: 18px;
   border: 0;
   border-right: 1px solid var(--line);
@@ -435,6 +436,7 @@ button {
 .history-panel {
   display: flex;
   flex-direction: column;
+  min-height: 0;
   overflow: hidden;
 }
 
@@ -1486,9 +1488,10 @@ select:focus-visible {
 .history-stack {
   display: flex;
   flex-direction: column;
-  flex: 1 1 auto;
+  flex: 1 1 0;
   gap: 14px;
   min-height: 0;
+  overflow: hidden;
 }
 
 .history-group {
@@ -1502,7 +1505,7 @@ select:focus-visible {
 .recent-group {
   display: flex;
   flex-direction: column;
-  flex: 1 1 auto;
+  flex: 1 1 0;
   overflow: hidden;
 }
 
@@ -1535,8 +1538,7 @@ select:focus-visible {
 }
 
 .recent-group .history-grid {
-  flex: 1 1 auto;
-  max-height: 100%;
+  flex: 1 1 0;
   min-height: 0;
   overflow-x: hidden;
   overflow-y: auto;
@@ -2034,6 +2036,11 @@ select:focus-visible {
 
   .panel.mobile-active {
     display: flex;
+  }
+
+  .history-panel.mobile-active {
+    min-height: 0;
+    overflow: hidden;
   }
 
   .portal-category-grid {

@@ -2280,7 +2280,7 @@ function createHistoryFeedGroup(group) {
     if (!isExpandable || (target instanceof Element && target.closest("a, button"))) {
       return;
     }
-    toggleHistoryFeedGroup(row, row);
+    toggleHistoryFeedGroup(row);
   });
   homeLink.className = "history-feed-home";
   homeLink.href = group.homeUrl || siteHomeUrl(group.key, group.url);
@@ -2322,7 +2322,7 @@ function createHistoryFeedGroup(group) {
   expandButton.title = t("historyExpandPages", { count: relatedPages.length });
   expandButton.setAttribute("aria-label", t("historyExpandPages", { count: relatedPages.length }));
   expandButton.setAttribute("aria-expanded", "false");
-  expandButton.addEventListener("click", () => toggleHistoryFeedGroup(row, expandButton));
+  expandButton.addEventListener("click", () => toggleHistoryFeedGroup(row));
 
   pinButton.className = "history-page-pin";
   pinButton.type = "button";
@@ -2368,9 +2368,7 @@ function createHistoryFeedGroup(group) {
   return row;
 }
 
-function toggleHistoryFeedGroup(row, anchor = row) {
-  const scrollParent = row.closest(".history-grid");
-  const previousTop = anchor.getBoundingClientRect().top;
+function toggleHistoryFeedGroup(row) {
   const isExpanded = row.classList.toggle("expanded");
   const button = row.querySelector(".history-feed-expand");
   const pageList = row.querySelector(".history-feed-pages");
@@ -2382,17 +2380,6 @@ function toggleHistoryFeedGroup(row, anchor = row) {
   }
   if (pageList) {
     pageList.hidden = !isExpanded;
-  }
-  if (scrollParent) {
-    const keepAnchorInPlace = () => {
-      const nextTop = anchor.getBoundingClientRect().top;
-      scrollParent.scrollTop += nextTop - previousTop;
-    };
-    keepAnchorInPlace();
-    window.requestAnimationFrame(() => {
-      keepAnchorInPlace();
-      window.requestAnimationFrame(keepAnchorInPlace);
-    });
   }
 }
 
