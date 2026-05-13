@@ -15,15 +15,19 @@
           <button class="search-engine-button" id="quickSearchEngineButton" type="button" aria-haspopup="listbox" aria-expanded="false" aria-labelledby="quickSearchEngineLabel quickSearchEngineName">
             <img class="search-engine-logo" id="quickSearchEngineLogo" alt="">
             <span class="search-engine-name" id="quickSearchEngineName">Google</span>
-            <span class="search-engine-caret" aria-hidden="true"></span>
+            <span class="search-engine-caret" aria-hidden="true">
+              <svg viewBox="0 0 24 24" focusable="false">
+                <path d="m7.5 9 4.5 4.5L16.5 9"></path>
+              </svg>
+            </span>
           </button>
           <div class="search-engine-menu" id="quickSearchEngineMenu" role="listbox" aria-labelledby="quickSearchEngineLabel" hidden></div>
         </span>
         <span class="topbar-search-divider" aria-hidden="true"></span>
         <span class="topbar-search-icon" aria-hidden="true">
-          <svg viewBox="0 0 20 20" focusable="false">
-            <circle cx="9" cy="9" r="4.5"></circle>
-            <path d="m12.5 12.5 3 3"></path>
+          <svg viewBox="0 0 24 24" focusable="false">
+            <circle cx="10.75" cy="10.75" r="5.25"></circle>
+            <path d="m14.75 14.75 4.5 4.5"></path>
           </svg>
         </span>
         <input id="quickSearchInput" name="q" type="search" autocomplete="off" spellcheck="false" placeholder="搜索或输入网址">

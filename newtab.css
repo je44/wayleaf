@@ -27,6 +27,7 @@
   --danger: #b84a42;
   --shadow: 0 12px 28px rgba(16, 32, 26, 0.08);
   --shadow-soft: 0 1px 2px rgba(16, 32, 26, 0.05);
+  --ui-icon-stroke: 1;
   color-scheme: light;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
 }
@@ -155,13 +156,13 @@ button {
 
 .search-engine-button {
   display: inline-grid;
-  grid-template-columns: 24px 6px;
-  gap: 4px;
+  grid-template-columns: 24px 10px;
+  gap: 2px;
   align-items: center;
   justify-content: center;
-  width: 42px;
+  width: 44px;
   height: 32px;
-  padding: 0 5px;
+  padding: 0 4px;
   border: 1px solid transparent;
   border-radius: 7px;
   background: var(--panel-soft);
@@ -196,13 +197,12 @@ button {
 }
 
 .search-engine-caret {
-  width: 6px;
-  height: 6px;
-  margin-top: -3px;
-  border-right: 1.4px solid var(--accent-strong);
-  border-bottom: 1.4px solid var(--accent-strong);
+  display: inline-grid;
+  width: 10px;
+  height: 10px;
+  place-items: center;
+  line-height: 0;
   pointer-events: none;
-  transform: rotate(45deg);
 }
 
 .search-engine-menu {
@@ -280,17 +280,37 @@ button {
   height: 100%;
   place-items: center;
   color: var(--faint);
+  line-height: 0;
+}
+
+.topbar-search-icon svg,
+.search-engine-caret svg,
+.theme-toggle-icon svg,
+.button-icon svg,
+.site-remove svg,
+.bookmark-delete-button svg,
+.history-feed-expand svg,
+.history-page-pin svg,
+.history-page-delete svg,
+.empty-mark svg {
+  display: block;
+  flex: none;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: var(--ui-icon-stroke);
+  vector-effect: non-scaling-stroke;
 }
 
 .topbar-search-icon svg {
   width: 15px;
   height: 15px;
-  fill: none;
-  stroke: currentColor;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-  stroke-width: 1;
-  vector-effect: non-scaling-stroke;
+}
+
+.search-engine-caret svg {
+  width: 10px;
+  height: 10px;
 }
 
 .topbar-search input {
@@ -364,19 +384,7 @@ button {
   place-items: center;
   color: var(--accent);
   font-size: 20px;
-  line-height: 1;
-}
-
-.theme-toggle-icon svg,
-.button-icon svg {
-  width: 18px;
-  height: 18px;
-  fill: none;
-  stroke: currentColor;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-  stroke-width: 1;
-  vector-effect: non-scaling-stroke;
+  line-height: 0;
 }
 
 .theme-toggle-icon svg {
@@ -488,6 +496,12 @@ h2 {
   width: 20px;
   height: 20px;
   place-items: center;
+  line-height: 0;
+}
+
+.button-icon svg {
+  width: 18px;
+  height: 18px;
 }
 
 .icon-button:hover,
@@ -1022,6 +1036,7 @@ select:focus-visible {
   top: -4px;
   right: 2px;
   display: none;
+  place-items: center;
   width: 20px;
   height: 20px;
   padding: 0;
@@ -1031,18 +1046,13 @@ select:focus-visible {
   color: var(--faint);
   cursor: pointer;
   opacity: 0;
+  line-height: 0;
   transition: opacity 160ms ease, color 160ms ease, border-color 160ms ease;
 }
 
 .site-remove svg {
   width: 12px;
   height: 12px;
-  fill: none;
-  stroke: currentColor;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-  stroke-width: 1;
-  vector-effect: non-scaling-stroke;
 }
 
 .site-card.custom .site-remove {
@@ -1215,12 +1225,6 @@ select:focus-visible {
 .bookmark-delete-button svg {
   width: 14px;
   height: 14px;
-  fill: none;
-  stroke: currentColor;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-  stroke-width: 1;
-  vector-effect: non-scaling-stroke;
 }
 
 .bookmark-delete-button:hover,
@@ -1590,7 +1594,7 @@ select:focus-visible {
   cursor: pointer;
   color: var(--accent);
   font-size: 0;
-  line-height: 1;
+  line-height: 0;
   transition: background 160ms ease, border-color 160ms ease, transform 160ms ease;
 }
 
@@ -1609,12 +1613,6 @@ select:focus-visible {
 .history-feed-expand svg {
   width: 16px;
   height: 16px;
-  fill: none;
-  stroke: currentColor;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-  stroke-width: 1;
-  vector-effect: non-scaling-stroke;
 }
 
 .history-feed-pages {
@@ -1802,19 +1800,13 @@ select:focus-visible {
   color: var(--faint);
   cursor: pointer;
   font-size: 12px;
-  line-height: 1;
+  line-height: 0;
 }
 
 .history-page-pin svg,
 .history-page-delete svg {
   width: 15px;
   height: 15px;
-  fill: none;
-  stroke: currentColor;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-  stroke-width: 1;
-  vector-effect: non-scaling-stroke;
 }
 
 .history-page-pin:hover,
@@ -1865,17 +1857,12 @@ select:focus-visible {
   place-items: center;
   margin-bottom: 8px;
   color: var(--accent);
+  line-height: 0;
 }
 
 .empty-mark svg {
   width: 30px;
   height: 30px;
-  fill: none;
-  stroke: currentColor;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-  stroke-width: 1;
-  vector-effect: non-scaling-stroke;
 }
 
 @media (max-width: 1280px) {

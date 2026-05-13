@@ -2477,132 +2477,112 @@ function renderHistoryTransientMessage(message) {
   }, 2400);
 }
 
+function inlineIcon(markup) {
+  return `<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">${markup}</svg>`;
+}
+
 function historyPinIcon(active) {
   if (active) {
-    return `
-      <svg viewBox="0 0 20 20" aria-hidden="true" focusable="false">
-        <path d="M6 6l8 8"></path>
-        <path d="M14 6 6 14"></path>
-      </svg>
-    `;
+    return inlineIcon(`
+      <path d="M4.5 19.5 19.5 4.5"></path>
+      <path d="M12.5 3.5 20.5 11.5"></path>
+      <path d="M16.5 7.5 11 13l-4 .75L10.25 17l.75-4"></path>
+      <path d="M7 17 4 20"></path>
+    `);
   }
-  return `
-    <svg viewBox="0 0 20 20" aria-hidden="true" focusable="false">
-      <path d="M10.5 4.5 15 9"></path>
-      <path d="M12.5 6.5 8 11l-2 .5 3.5 3.5.5-2 4.5-4.5"></path>
-      <path d="M5 15l-2 2"></path>
-    </svg>
-  `;
+  return inlineIcon(`
+    <path d="M12.5 3.5 20.5 11.5"></path>
+    <path d="M16.5 7.5 11 13l-4 .75L10.25 17l.75-4 5.5-5.5Z"></path>
+    <path d="M7 17 4 20"></path>
+  `);
 }
 
 function plusIcon() {
-  return `
-    <svg viewBox="0 0 20 20" aria-hidden="true" focusable="false">
-      <path d="M10 4v12"></path>
-      <path d="M4 10h12"></path>
-    </svg>
-  `;
+  return inlineIcon(`
+    <path d="M12 5v14"></path>
+    <path d="M5 12h14"></path>
+  `);
 }
 
 function refreshIcon() {
-  return `
-    <svg viewBox="0 0 20 20" aria-hidden="true" focusable="false">
-      <path d="M15 6.5V3.5h-3"></path>
-      <path d="M5 13.5v3h3"></path>
-      <path d="M6 6.5a5 5 0 0 1 8.5-1.4l.5.4"></path>
-      <path d="M14 13.5A5 5 0 0 1 5.5 15l-.5-.5"></path>
-    </svg>
-  `;
+  return inlineIcon(`
+    <path d="M20 8v-4h-4"></path>
+    <path d="M4 16v4h4"></path>
+    <path d="M19 8.5a7.5 7.5 0 0 0-12.6-3L4 8"></path>
+    <path d="M5 15.5a7.5 7.5 0 0 0 12.6 3L20 16"></path>
+  `);
 }
 
 function listIcon() {
-  return `
-    <svg viewBox="0 0 20 20" aria-hidden="true" focusable="false">
-      <path d="M7 5h9"></path>
-      <path d="M7 10h9"></path>
-      <path d="M7 15h9"></path>
-      <circle cx="4.5" cy="5" r=".5"></circle>
-      <circle cx="4.5" cy="10" r=".5"></circle>
-      <circle cx="4.5" cy="15" r=".5"></circle>
-    </svg>
-  `;
+  return inlineIcon(`
+    <path d="M8.5 6.5H19"></path>
+    <path d="M8.5 12H19"></path>
+    <path d="M8.5 17.5H19"></path>
+    <path d="M5 6.5h.01"></path>
+    <path d="M5 12h.01"></path>
+    <path d="M5 17.5h.01"></path>
+  `);
 }
 
 function gridIcon() {
-  return `
-    <svg viewBox="0 0 20 20" aria-hidden="true" focusable="false">
-      <rect x="4" y="4" width="4.5" height="4.5" rx="1"></rect>
-      <rect x="11.5" y="4" width="4.5" height="4.5" rx="1"></rect>
-      <rect x="4" y="11.5" width="4.5" height="4.5" rx="1"></rect>
-      <rect x="11.5" y="11.5" width="4.5" height="4.5" rx="1"></rect>
-    </svg>
-  `;
+  return inlineIcon(`
+    <rect x="4.5" y="4.5" width="6" height="6" rx="1.3"></rect>
+    <rect x="13.5" y="4.5" width="6" height="6" rx="1.3"></rect>
+    <rect x="4.5" y="13.5" width="6" height="6" rx="1.3"></rect>
+    <rect x="13.5" y="13.5" width="6" height="6" rx="1.3"></rect>
+  `);
 }
 
 function folderPlusIcon() {
-  return `
-    <svg viewBox="0 0 20 20" aria-hidden="true" focusable="false">
-      <path d="M3.5 6.5h4l1.7 1.8h7.3v7a1.7 1.7 0 0 1-1.7 1.7H5.2a1.7 1.7 0 0 1-1.7-1.7Z"></path>
-      <path d="M12 10.5v4"></path>
-      <path d="M10 12.5h4"></path>
-    </svg>
-  `;
+  return inlineIcon(`
+    <path d="M3.5 6.5h5l2 2H20.5v9A2.5 2.5 0 0 1 18 20H6a2.5 2.5 0 0 1-2.5-2.5Z"></path>
+    <path d="M15.5 12v5"></path>
+    <path d="M13 14.5h5"></path>
+  `);
 }
 
 function sunIcon() {
-  return `
-    <svg viewBox="0 0 20 20" aria-hidden="true" focusable="false">
-      <circle cx="10" cy="10" r="3"></circle>
-      <path d="M10 3v2"></path>
-      <path d="M10 15v2"></path>
-      <path d="M3 10h2"></path>
-      <path d="M15 10h2"></path>
-      <path d="m5.1 5.1 1.4 1.4"></path>
-      <path d="m13.5 13.5 1.4 1.4"></path>
-      <path d="m14.9 5.1-1.4 1.4"></path>
-      <path d="m6.5 13.5-1.4 1.4"></path>
-    </svg>
-  `;
+  return inlineIcon(`
+    <circle cx="12" cy="12" r="3.25"></circle>
+    <path d="M12 3.5v2"></path>
+    <path d="M12 18.5v2"></path>
+    <path d="M3.5 12h2"></path>
+    <path d="M18.5 12h2"></path>
+    <path d="m6 6 1.45 1.45"></path>
+    <path d="m16.55 16.55 1.45 1.45"></path>
+    <path d="m18 6-1.45 1.45"></path>
+    <path d="m7.45 16.55-1.45 1.45"></path>
+  `);
 }
 
 function moonIcon() {
-  return `
-    <svg viewBox="0 0 20 20" aria-hidden="true" focusable="false">
-      <path d="M13.8 14.2A6 6 0 0 1 5.9 6.2 6.8 6.8 0 1 0 13.8 14.2Z"></path>
-    </svg>
-  `;
+  return inlineIcon(`
+    <path d="M18.6 14.35A7 7 0 0 1 9.65 5.4 7.7 7.7 0 1 0 18.6 14.35Z"></path>
+  `);
 }
 
 function trashIcon() {
-  return `
-    <svg viewBox="0 0 20 20" aria-hidden="true" focusable="false">
-      <path d="M4 6h12"></path>
-      <path d="M8 6V4h4v2"></path>
-      <path d="m6.5 8 .5 7h6l.5-7"></path>
-      <path d="M9 10v4"></path>
-      <path d="M11 10v4"></path>
-    </svg>
-  `;
+  return inlineIcon(`
+    <path d="M5 7h14"></path>
+    <path d="M9 7V4.5h6V7"></path>
+    <path d="M7.25 10 8 19.5h8l.75-9.5"></path>
+    <path d="M10.5 11.5v5.5"></path>
+    <path d="M13.5 11.5v5.5"></path>
+  `);
 }
 
 function emptyStateIcon() {
-  return `
-    <svg viewBox="0 0 32 32" aria-hidden="true" focusable="false">
-      <path d="M7.5 10.5h17"></path>
-      <path d="M10 10.5 11.2 24h9.6L22 10.5"></path>
-      <path d="M13 10.5V8.5h6v2"></path>
-      <path d="M13.5 15.5h5"></path>
-      <path d="M13.5 19.5h3"></path>
-    </svg>
-  `;
+  return inlineIcon(`
+    <path d="M5 6.5h14l-1.4 7H14a2 2 0 0 1-4 0H6.4Z"></path>
+    <path d="M6.4 13.5v3A2.5 2.5 0 0 0 8.9 19h6.2a2.5 2.5 0 0 0 2.5-2.5v-3"></path>
+    <path d="M9 9.5h6"></path>
+  `);
 }
 
 function chevronDownIcon() {
-  return `
-    <svg viewBox="0 0 20 20" aria-hidden="true" focusable="false">
-      <path d="m5.5 8 4.5 4.5L14.5 8"></path>
-    </svg>
-  `;
+  return inlineIcon(`
+    <path d="m7 9.5 5 5 5-5"></path>
+  `);
 }
 
 function faviconUrl(url, size) {
