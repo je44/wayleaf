@@ -2369,6 +2369,8 @@ function createHistoryFeedGroup(group) {
 }
 
 function toggleHistoryFeedGroup(row) {
+  const scrollParent = row.closest(".history-grid");
+  const previousTop = row.getBoundingClientRect().top;
   const isExpanded = row.classList.toggle("expanded");
   const button = row.querySelector(".history-feed-expand");
   const pageList = row.querySelector(".history-feed-pages");
@@ -2380,6 +2382,10 @@ function toggleHistoryFeedGroup(row) {
   }
   if (pageList) {
     pageList.hidden = !isExpanded;
+  }
+  if (scrollParent) {
+    const nextTop = row.getBoundingClientRect().top;
+    scrollParent.scrollTop += nextTop - previousTop;
   }
 }
 
