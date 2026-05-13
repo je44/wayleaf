@@ -2262,7 +2262,7 @@ function createHistoryFeedGroup(group) {
   const icon = document.createElement("img");
   const copy = document.createElement("span");
   const name = document.createElement("strong");
-  const page = document.createElement("a");
+  const pageLink = document.createElement("a");
   const meta = document.createElement("span");
   const summary = document.createElement("div");
   const actions = document.createElement("span");
@@ -2270,6 +2270,7 @@ function createHistoryFeedGroup(group) {
   const pinButton = document.createElement("button");
   const deleteButton = document.createElement("button");
   const pageList = document.createElement("div");
+  const pageListInner = document.createElement("div");
   const relatedPages = group.pages.slice(1);
   const isExpandable = relatedPages.length > 0;
 
@@ -2299,13 +2300,13 @@ function createHistoryFeedGroup(group) {
   copy.className = "history-feed-copy";
   name.className = "history-site-name";
   name.textContent = group.name;
-  page.className = "history-page-link";
-  page.href = item?.url || group.url;
-  page.target = "_blank";
-  page.rel = "noopener noreferrer";
-  page.title = title;
-  page.setAttribute("aria-label", t("openPage", { title }));
-  page.textContent = title;
+  pageLink.className = "history-page-link history-feed-page-link";
+  pageLink.href = item?.url || group.url;
+  pageLink.target = "_blank";
+  pageLink.rel = "noopener noreferrer";
+  pageLink.title = title;
+  pageLink.setAttribute("aria-label", t("openPage", { title }));
+  pageLink.textContent = group.name;
   meta.className = "history-feed-meta";
   meta.textContent = [
     group.pages.length > 1
@@ -2313,7 +2314,7 @@ function createHistoryFeedGroup(group) {
       : compactHistoryUrl(safeUrl(item?.url || group.url)),
     formatHistoryTime(item?.lastVisitTime)
   ].filter(Boolean).join(" · ");
-  copy.append(name, page, meta);
+  copy.append(isExpandable ? name : pageLink, meta);
 
   expandButton.className = "history-feed-expand";
   expandButton.type = "button";
@@ -2344,21 +2345,27 @@ function createHistoryFeedGroup(group) {
   pageList.className = "history-feed-pages";
   pageList.id = `history-feed-pages-${group.key.replace(/[^a-z0-9_-]+/gi, "-")}`;
   pageList.dataset.relatedCount = String(relatedPages.length);
-  pageList.hidden = true;
+  pageList.setAttribute("aria-hidden", "true");
+  pageList.inert = true;
+  pageListInner.className = "history-feed-pages-inner";
+  pageList.appendChild(pageListInner);
   if (isExpandable) {
     const listTitle = document.createElement("span");
     listTitle.className = "history-feed-pages-title";
     listTitle.textContent = t("historyRelatedPages");
-    pageList.appendChild(listTitle);
-    pageList.appendChild(createHistoryPageItem(item, { label: t("historyPrimaryPage") }));
+    pageListInner.appendChild(listTitle);
+    pageListInner.appendChild(createHistoryPageItem(item, { label: t("historyPrimaryPage") }));
     relatedPages.forEach((relatedItem) => {
-      pageList.appendChild(createHistoryPageItem(relatedItem));
+      pageListInner.appendChild(createHistoryPageItem(relatedItem));
     });
   }
 
   actions.className = "history-feed-actions";
   if (isExpandable) {
     expandButton.setAttribute("aria-controls", pageList.id);
+    requestAnimationFrame(() => {
+      pageList.style.setProperty("--history-feed-pages-height", `${pageListInner.scrollHeight}px`);
+    });
     actions.appendChild(expandButton);
   }
   actions.append(pinButton, deleteButton);
@@ -2379,7 +2386,8 @@ function toggleHistoryFeedGroup(row) {
     button.setAttribute("aria-label", isExpanded ? t("historyCollapsePages") : t("historyExpandPages", { count }));
   }
   if (pageList) {
-    pageList.hidden = !isExpanded;
+    pageList.setAttribute("aria-hidden", String(!isExpanded));
+    pageList.inert = !isExpanded;
   }
 }
 
