@@ -1550,6 +1550,9 @@ select:focus-visible {
 .history-feed-item {
   position: relative;
   display: grid;
+  grid-template-areas:
+    "home copy actions"
+    "pages pages pages";
   grid-template-columns: 30px minmax(0, 1fr) auto;
   gap: 8px;
   align-items: center;
@@ -1568,6 +1571,7 @@ select:focus-visible {
 }
 
 .history-feed-item:not(.expandable) {
+  grid-template-areas: "home copy actions";
   grid-template-columns: 30px minmax(0, 1fr) auto;
 }
 
@@ -1595,6 +1599,7 @@ select:focus-visible {
 }
 
 .history-feed-home {
+  grid-area: home;
   display: inline-grid;
   width: 30px;
   height: 30px;
@@ -1604,12 +1609,14 @@ select:focus-visible {
 }
 
 .history-feed-copy {
+  grid-area: copy;
   display: grid;
   gap: 2px;
   min-width: 0;
 }
 
 .history-feed-actions {
+  grid-area: actions;
   display: inline-grid;
   grid-auto-flow: column;
   gap: 4px;
@@ -1661,8 +1668,8 @@ select:focus-visible {
 }
 
 .history-feed-pages {
+  grid-area: pages;
   display: grid;
-  grid-column: 1 / -1;
   gap: 7px;
   margin-top: 1px;
   padding: 9px 8px 8px 38px;
