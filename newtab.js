@@ -2264,6 +2264,7 @@ function createHistoryFeedGroup(group) {
   const name = document.createElement("strong");
   const page = document.createElement("a");
   const meta = document.createElement("span");
+  const summary = document.createElement("div");
   const actions = document.createElement("span");
   const expandButton = document.createElement("button");
   const pinButton = document.createElement("button");
@@ -2361,7 +2362,9 @@ function createHistoryFeedGroup(group) {
     actions.appendChild(expandButton);
   }
   actions.append(pinButton, deleteButton);
-  row.append(homeLink, copy, actions, pageList);
+  summary.className = "history-feed-summary";
+  summary.append(homeLink, copy, actions);
+  row.append(summary, pageList);
   return row;
 }
 
