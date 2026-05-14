@@ -275,8 +275,8 @@ button {
 }
 
 .topbar-search:focus-within {
-  border-color: rgba(47, 139, 214, 0.62);
-  box-shadow: 0 0 0 3px rgba(47, 139, 214, 0.14);
+  border-color: var(--line-strong);
+  box-shadow: var(--shadow-soft);
 }
 
 .topbar-search-icon {
@@ -330,6 +330,11 @@ button {
   font-size: 13px;
   line-height: 1;
   outline: none;
+}
+
+.topbar-search input:focus,
+.topbar-search input:focus-visible {
+  outline: 0;
 }
 
 .topbar-search input::placeholder {
@@ -1239,10 +1244,10 @@ select:focus-visible {
 
 .bookmark-site-card.delete-ready .site-link {
   padding-right: 92px;
-  border-color: rgba(184, 74, 66, 0.42);
-  background: rgba(184, 74, 66, 0.1);
+  border-color: rgba(184, 74, 66, 0.24);
+  background: linear-gradient(90deg, rgba(184, 74, 66, 0.045), transparent 64%), var(--panel);
   outline: 0;
-  transform: translateY(0) scale(0.98);
+  transform: translateY(0);
 }
 
 .bookmark-delete-button {
@@ -1255,14 +1260,14 @@ select:focus-visible {
   grid-template-columns: 14px auto;
   gap: 5px;
   align-items: center;
-  min-width: 62px;
-  height: 30px;
-  padding: 0 9px;
-  border: 0;
-  border-radius: 999px;
-  background: var(--danger);
-  box-shadow: 0 8px 18px rgba(184, 74, 66, 0.22);
-  color: #fffefa;
+  min-width: 58px;
+  height: 28px;
+  padding: 0 8px;
+  border: 1px solid rgba(184, 74, 66, 0.32);
+  border-radius: 8px;
+  background: rgba(184, 74, 66, 0.08);
+  box-shadow: none;
+  color: var(--danger);
   cursor: pointer;
   font-size: 11px;
   font-weight: 760;
@@ -1282,7 +1287,9 @@ select:focus-visible {
 .bookmark-delete-button:hover,
 .bookmark-delete-button:focus-visible {
   background: #9f352f;
-  outline: 2px solid rgba(184, 74, 66, 0.24);
+  border-color: #9f352f;
+  color: #fffefa;
+  outline: 2px solid rgba(184, 74, 66, 0.18);
   outline-offset: 2px;
   transform: translateY(-50%);
 }
