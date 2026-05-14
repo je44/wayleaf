@@ -1748,7 +1748,7 @@ select:focus-visible {
 }
 
 .history-feed-pages .history-page-link {
-  display: block;
+  display: flex;
 }
 
 .history-site-group {
