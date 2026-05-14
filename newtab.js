@@ -34,6 +34,7 @@ const BOOKMARK_LAYOUT_STORAGE_KEY = "bookmarkLayout";
 const PORTAL_SECTION_ORDER_STORAGE_KEY = "portalSectionOrder";
 const PORTAL_CATEGORIES_EXPANDED_STORAGE_KEY = "portalCategoriesExpanded";
 const THEME_STORAGE_KEY = "themeMode";
+const THEME_PALETTE_STORAGE_KEY = "themePalette";
 const SEARCH_ENGINE_STORAGE_KEY = "quickSearchEngine";
 const MAX_HISTORY_SITE_GROUPS = 9;
 const MAX_HISTORY_PAGES_PER_SITE = 4;
@@ -51,6 +52,15 @@ const DEFAULT_PORTAL_CATEGORY = "developer";
 const DEFAULT_SEARCH_ENGINE = "google";
 const DEFAULT_PORTAL_SECTION_ORDER = ["featured", "active"];
 const COLLAPSED_PORTAL_CATEGORY_COUNT = 2;
+const DEFAULT_THEME_MODE = "system";
+const DEFAULT_THEME_PALETTE = "forest";
+const CUSTOM_THEME_PALETTE_ID = "custom";
+const DEFAULT_CUSTOM_THEME_COLORS = Object.freeze({ light: "#0d6d59", dark: "#68c19e" });
+const THEME_PALETTES = [
+  { id: "forest", label: "松石", light: "#0d6d59", dark: "#68c19e" },
+  { id: "cobalt", label: "钴蓝", light: "#2f6fd6", dark: "#7cb7ff" },
+  { id: "rose", label: "玫瑰", light: "#b94f67", dark: "#ff9ab1" }
+];
 const SEARCH_ENGINES = [
   { id: "google", label: "Google", icon: "icons/portals/google.svg", searchUrl: "https://www.google.com/search", queryParam: "q" },
   { id: "baidu", label: "百度", icon: "icons/portals/baidu.svg", searchUrl: "https://www.baidu.com/s", queryParam: "wd" },
@@ -242,8 +252,17 @@ const MESSAGES = {
     quickSearchWith: "使用 {engine} 搜索",
     portalCategoryItems: "{count} 个入口",
     deleteCustomPortal: "删除自定义入口",
-    switchLightMode: "切换日间模式",
-    switchDarkMode: "切换夜间模式",
+    openSettings: "设置中心",
+    closeSettings: "关闭设置中心",
+    settingsTitle: "设置中心",
+    appearanceModeTitle: "外观模式",
+    themeModeSystem: "跟随",
+    themeModeLight: "日间",
+    themeModeDark: "夜间",
+    presetPaletteTitle: "默认双色",
+    customPaletteTitle: "自定义双色",
+    lightAccent: "日间",
+    darkAccent: "夜间",
     portalNameRequired: "请填写入口名称。",
     portalUrlRequired: "请输入 http 或 https 开头的网址。",
     customPortalLimit: "自定义入口最多 {count} 个。",
@@ -316,8 +335,6 @@ const MESSAGES = {
     historyTitle: "最近瀏覽",
     pinnedTitle: "釘選",
     recentTitle: "最近",
-    switchLightMode: "切換日間模式",
-    switchDarkMode: "切換夜間模式",
     unnamedFolder: "未命名資料夾",
     bookmarkRoot: "書籤",
     bookmarkMeta: "{folder} · {count} 個網站",
@@ -379,8 +396,17 @@ const MESSAGES = {
     quickSearchWith: "Search with {engine}",
     portalCategoryItems: "{count} shortcuts",
     deleteCustomPortal: "Remove custom portal",
-    switchLightMode: "Switch to light mode",
-    switchDarkMode: "Switch to dark mode",
+    openSettings: "Settings",
+    closeSettings: "Close settings",
+    settingsTitle: "Settings",
+    appearanceModeTitle: "Appearance",
+    themeModeSystem: "Follow",
+    themeModeLight: "Light",
+    themeModeDark: "Dark",
+    presetPaletteTitle: "Preset pairs",
+    customPaletteTitle: "Custom pair",
+    lightAccent: "Light",
+    darkAccent: "Dark",
     portalNameRequired: "Enter a portal name.",
     portalUrlRequired: "Enter an http or https URL.",
     customPortalLimit: "You can add up to {count} custom portals.",
@@ -435,8 +461,6 @@ const MESSAGES = {
     historyTitle: "最近の閲覧",
     pinnedTitle: "固定",
     recentTitle: "最近",
-    switchLightMode: "ライトモードに切り替え",
-    switchDarkMode: "ダークモードに切り替え",
     unnamedFolder: "名称未設定のフォルダ",
     bookmarkRoot: "ブックマーク",
     bookmarkMeta: "{folder} · {count} 件のサイト",
@@ -457,8 +481,6 @@ const MESSAGES = {
     historyTitle: "최근 방문",
     pinnedTitle: "고정",
     recentTitle: "최근",
-    switchLightMode: "라이트 모드로 전환",
-    switchDarkMode: "다크 모드로 전환",
     unnamedFolder: "이름 없는 폴더",
     bookmarkRoot: "북마크",
     bookmarkMeta: "{folder} · 사이트 {count}개",
@@ -479,8 +501,6 @@ const MESSAGES = {
     historyTitle: "Recientes",
     pinnedTitle: "Fijados",
     recentTitle: "Recientes",
-    switchLightMode: "Cambiar a modo claro",
-    switchDarkMode: "Cambiar a modo oscuro",
     unnamedFolder: "Carpeta sin título",
     bookmarkRoot: "Marcadores",
     bookmarkMeta: "{folder} · {count} sitios",
@@ -501,8 +521,6 @@ const MESSAGES = {
     historyTitle: "Navigation récente",
     pinnedTitle: "Épinglés",
     recentTitle: "Récents",
-    switchLightMode: "Passer au mode clair",
-    switchDarkMode: "Passer au mode sombre",
     unnamedFolder: "Dossier sans titre",
     bookmarkRoot: "Favoris",
     bookmarkMeta: "{folder} · {count} sites",
@@ -523,8 +541,6 @@ const MESSAGES = {
     historyTitle: "Zuletzt besucht",
     pinnedTitle: "Angeheftet",
     recentTitle: "Zuletzt",
-    switchLightMode: "Zum hellen Modus wechseln",
-    switchDarkMode: "Zum dunklen Modus wechseln",
     unnamedFolder: "Unbenannter Ordner",
     bookmarkRoot: "Lesezeichen",
     bookmarkMeta: "{folder} · {count} Websites",
@@ -550,7 +566,14 @@ const pinnedGrid = document.querySelector("#pinnedGrid");
 const historyGrid = document.querySelector("#historyGrid");
 const refreshHistoryButton = document.querySelector("#refreshHistoryButton");
 const siteCardTemplate = document.querySelector("#siteCardTemplate");
-const themeToggleButton = document.querySelector("#themeToggleButton");
+const settingsButton = document.querySelector("#settingsButton");
+const settingsPanel = document.querySelector("#settingsPanel");
+const closeSettingsButton = document.querySelector("#closeSettingsButton");
+const palettePresetGrid = document.querySelector("#palettePresetGrid");
+const lightAccentInput = document.querySelector("#lightAccentInput");
+const darkAccentInput = document.querySelector("#darkAccentInput");
+const lightAccentValue = document.querySelector("#lightAccentValue");
+const darkAccentValue = document.querySelector("#darkAccentValue");
 const quickSearchForm = document.querySelector("#quickSearchForm");
 const quickSearchInput = document.querySelector("#quickSearchInput");
 const quickSearchButton = document.querySelector("#quickSearchButton");
@@ -573,6 +596,11 @@ let activePortalCategory = DEFAULT_PORTAL_CATEGORY;
 let activeSearchEngine = DEFAULT_SEARCH_ENGINE;
 let draggedPortalSectionRole = "";
 let portalCategoriesExpanded = false;
+let activeThemeMode = DEFAULT_THEME_MODE;
+let activeThemePalette = DEFAULT_THEME_PALETTE;
+let activeCustomThemeColors = { ...DEFAULT_CUSTOM_THEME_COLORS };
+let systemThemeQuery = null;
+let settingsPanelCloseTimer = 0;
 
 document.addEventListener("DOMContentLoaded", init);
 
@@ -638,8 +666,10 @@ function applyLocale() {
   updateBookmarkLayoutButton();
   setButtonLabel(chooseBookmarkFolderButton, t("chooseBookmarkFolder"));
   setButtonLabel(refreshHistoryButton, t("refreshHistory"));
-  setButtonLabel(themeToggleButton, t("switchDarkMode"));
+  setButtonLabel(settingsButton, t("openSettings"));
+  setButtonLabel(closeSettingsButton, t("closeSettings"));
   setStaticButtonIcons();
+  applySettingsLocale();
   updateQuickSearchButtonLabel();
   quickSearchInput.placeholder = t("quickSearchPlaceholder");
   quickSearchInput.setAttribute("aria-label", t("quickSearchPlaceholder"));
@@ -689,6 +719,20 @@ function setStaticButtonIcons() {
   refreshBookmarkFolderButton.querySelector(".button-icon").innerHTML = refreshIcon();
   chooseBookmarkFolderButton.querySelector(".button-icon").innerHTML = folderPlusIcon();
   refreshHistoryButton.querySelector(".button-icon").innerHTML = refreshIcon();
+  settingsButton.querySelector(".theme-toggle-icon").innerHTML = settingsIcon();
+  closeSettingsButton.querySelector(".button-icon").innerHTML = closeIcon();
+}
+
+function applySettingsLocale() {
+  document.querySelector("#settingsTitle").textContent = t("settingsTitle");
+  document.querySelector("#appearanceModeTitle").textContent = t("appearanceModeTitle");
+  document.querySelector("#presetPaletteTitle").textContent = t("presetPaletteTitle");
+  document.querySelector("#customPaletteTitle").textContent = t("customPaletteTitle");
+  document.querySelector('[data-theme-mode="system"]').textContent = t("themeModeSystem");
+  document.querySelector('[data-theme-mode="light"]').textContent = t("themeModeLight");
+  document.querySelector('[data-theme-mode="dark"]').textContent = t("themeModeDark");
+  lightAccentInput.closest("label").querySelector("span").textContent = t("lightAccent");
+  darkAccentInput.closest("label").querySelector("span").textContent = t("darkAccent");
 }
 
 function init() {
@@ -712,12 +756,19 @@ function init() {
   togglePortalFormButton.addEventListener("click", showPortalForm);
   cancelPortalButton.addEventListener("click", hidePortalForm);
   portalForm.addEventListener("submit", handlePortalSubmit);
-  themeToggleButton.addEventListener("click", toggleThemeMode);
+  settingsButton.addEventListener("click", toggleSettingsPanel);
+  closeSettingsButton.addEventListener("click", () => closeSettingsPanel({ restoreFocus: true }));
+  document.querySelectorAll("[data-theme-mode]").forEach((button) => {
+    button.addEventListener("click", () => setThemeMode(button.dataset.themeMode, { persist: true }));
+  });
+  lightAccentInput.addEventListener("input", handleCustomThemeColorInput);
+  darkAccentInput.addEventListener("input", handleCustomThemeColorInput);
   mobileSectionTabs.forEach((tab) => {
     tab.addEventListener("click", () => activateMobilePanel(tab.dataset.panelTarget));
   });
   document.addEventListener("pointerdown", handleBookmarkDeleteDismiss, true);
   document.addEventListener("pointerdown", handleSearchEngineMenuDismiss, true);
+  document.addEventListener("pointerdown", handleSettingsPanelDismiss, true);
   document.addEventListener("keydown", handleBookmarkDeleteEscape);
   document.addEventListener("keydown", handleGlobalEscape);
   bindBookmarkChangeEvents();
@@ -738,18 +789,24 @@ function activateMobilePanel(panelId) {
 }
 
 async function initThemeMode() {
+  renderThemePalettePresets();
+  bindSystemThemeListener();
   try {
-    const result = await chrome.storage.local.get({ [THEME_STORAGE_KEY]: "" });
+    const result = await chrome.storage.local.get({
+      [THEME_STORAGE_KEY]: DEFAULT_THEME_MODE,
+      [THEME_PALETTE_STORAGE_KEY]: defaultThemePaletteSettings()
+    });
     const savedTheme = result[THEME_STORAGE_KEY];
-    if (savedTheme === "dark" || savedTheme === "light") {
-      applyThemeMode(savedTheme);
-      return;
-    }
-    const prefersDark = window.matchMedia?.("(prefers-color-scheme: dark)").matches;
-    applyThemeMode(prefersDark ? "dark" : "light");
+    const savedPalette = normalizeThemePaletteSettings(result[THEME_PALETTE_STORAGE_KEY]);
+    activeThemePalette = savedPalette.palette;
+    activeCustomThemeColors = savedPalette.custom;
+    updateCustomThemeInputs();
+    applyThemePalette();
+    applyThemeMode(savedTheme === "dark" || savedTheme === "light" || savedTheme === "system" ? savedTheme : DEFAULT_THEME_MODE);
   } catch (error) {
     console.warn("Failed to load theme mode", error);
-    applyThemeMode("light");
+    applyThemePalette();
+    applyThemeMode(DEFAULT_THEME_MODE);
   }
 }
 
@@ -855,6 +912,7 @@ function handleGlobalEscape(event) {
     return;
   }
   closeSearchEngineMenu();
+  closeSettingsPanel();
 }
 
 async function setQuickSearchEngine(engineId, options = {}) {
@@ -932,23 +990,238 @@ function updateBookmarkLayoutButton() {
   toggleBookmarkLayoutButton.querySelector(".button-icon").innerHTML = isList ? gridIcon() : listIcon();
 }
 
-async function toggleThemeMode() {
-  const nextTheme = document.documentElement.dataset.theme === "dark" ? "light" : "dark";
-  applyThemeMode(nextTheme);
+function applyThemeMode(theme) {
+  activeThemeMode = theme === "dark" || theme === "light" || theme === "system" ? theme : DEFAULT_THEME_MODE;
+  const resolvedTheme = resolvedThemeMode();
+  document.documentElement.dataset.theme = resolvedTheme;
+  updateThemeSettingsUi();
+}
+
+function resolvedThemeMode() {
+  if (activeThemeMode === "system") {
+    return systemPrefersDark() ? "dark" : "light";
+  }
+  return activeThemeMode === "dark" ? "dark" : "light";
+}
+
+function systemPrefersDark() {
+  return Boolean(systemThemeQuery?.matches || window.matchMedia?.("(prefers-color-scheme: dark)").matches);
+}
+
+async function setThemeMode(mode, options = {}) {
+  applyThemeMode(mode);
+  if (!options.persist) {
+    return;
+  }
   try {
-    await chrome.storage.local.set({ [THEME_STORAGE_KEY]: nextTheme });
+    await chrome.storage.local.set({ [THEME_STORAGE_KEY]: activeThemeMode });
   } catch (error) {
     console.warn("Failed to save theme mode", error);
   }
 }
 
-function applyThemeMode(theme) {
-  const isDark = theme === "dark";
-  document.documentElement.dataset.theme = isDark ? "dark" : "light";
-  themeToggleButton.setAttribute("aria-pressed", String(isDark));
-  themeToggleButton.title = isDark ? t("switchLightMode") : t("switchDarkMode");
-  themeToggleButton.setAttribute("aria-label", isDark ? t("switchLightMode") : t("switchDarkMode"));
-  themeToggleButton.querySelector(".theme-toggle-icon").innerHTML = isDark ? sunIcon() : moonIcon();
+function bindSystemThemeListener() {
+  if (!window.matchMedia) {
+    return;
+  }
+  systemThemeQuery = window.matchMedia("(prefers-color-scheme: dark)");
+  systemThemeQuery.addEventListener?.("change", handleSystemThemeChange);
+}
+
+function handleSystemThemeChange() {
+  if (activeThemeMode === "system") {
+    applyThemeMode("system");
+  } else {
+    updateThemeSettingsUi();
+  }
+}
+
+function defaultThemePaletteSettings() {
+  return {
+    palette: DEFAULT_THEME_PALETTE,
+    custom: { ...DEFAULT_CUSTOM_THEME_COLORS }
+  };
+}
+
+function normalizeThemePaletteSettings(value) {
+  const fallback = defaultThemePaletteSettings();
+  if (!value || typeof value !== "object") {
+    return fallback;
+  }
+  const palette = value.palette === CUSTOM_THEME_PALETTE_ID || THEME_PALETTES.some((item) => item.id === value.palette)
+    ? value.palette
+    : DEFAULT_THEME_PALETTE;
+  return {
+    palette,
+    custom: {
+      light: normalizeColor(value.custom?.light, fallback.custom.light),
+      dark: normalizeColor(value.custom?.dark, fallback.custom.dark)
+    }
+  };
+}
+
+function normalizeColor(value, fallback) {
+  return /^#[\da-f]{6}$/i.test(String(value || "")) ? String(value).toLowerCase() : fallback;
+}
+
+function renderThemePalettePresets() {
+  palettePresetGrid.replaceChildren(...THEME_PALETTES.map((palette) => {
+    const button = document.createElement("button");
+    button.className = "palette-preset-button";
+    button.type = "button";
+    button.dataset.palette = palette.id;
+    button.setAttribute("role", "radio");
+    button.innerHTML = `
+      <span class="palette-swatch-pair" aria-hidden="true">
+        <span style="background:${palette.light}"></span>
+        <span style="background:${palette.dark}"></span>
+      </span>
+      <span class="palette-preset-name">${palette.label}</span>
+    `;
+    button.addEventListener("click", () => setThemePalette(palette.id, { persist: true }));
+    return button;
+  }));
+}
+
+async function setThemePalette(paletteId, options = {}) {
+  activeThemePalette = paletteId === CUSTOM_THEME_PALETTE_ID || THEME_PALETTES.some((palette) => palette.id === paletteId)
+    ? paletteId
+    : DEFAULT_THEME_PALETTE;
+  applyThemePalette();
+  updateThemeSettingsUi();
+  if (!options.persist) {
+    return;
+  }
+  await saveThemePaletteSettings();
+}
+
+function applyThemePalette() {
+  const colors = activeThemePalette === CUSTOM_THEME_PALETTE_ID
+    ? activeCustomThemeColors
+    : themePaletteById(activeThemePalette);
+  setAccentVariables(colors.light, colors.dark);
+}
+
+function themePaletteById(paletteId) {
+  return THEME_PALETTES.find((palette) => palette.id === paletteId) || THEME_PALETTES[0];
+}
+
+function setAccentVariables(lightColor, darkColor) {
+  const rootStyle = document.documentElement.style;
+  rootStyle.setProperty("--light-accent", lightColor);
+  rootStyle.setProperty("--light-accent-strong", mixHexColors(lightColor, "#000000", 0.32));
+  rootStyle.setProperty("--light-focus", mixHexColors(lightColor, "#2f82c4", 0.48));
+  rootStyle.setProperty("--dark-accent", darkColor);
+  rootStyle.setProperty("--dark-accent-strong", mixHexColors(darkColor, "#ffffff", 0.28));
+  rootStyle.setProperty("--dark-focus", mixHexColors(darkColor, "#68b7f2", 0.4));
+}
+
+function mixHexColors(color, target, amount) {
+  const sourceRgb = hexToRgb(color);
+  const targetRgb = hexToRgb(target);
+  const mixed = sourceRgb.map((channel, index) => {
+    return Math.round(channel + (targetRgb[index] - channel) * amount);
+  });
+  return rgbToHex(mixed);
+}
+
+function hexToRgb(color) {
+  const normalized = normalizeColor(color, "#000000").slice(1);
+  return [0, 2, 4].map((start) => parseInt(normalized.slice(start, start + 2), 16));
+}
+
+function rgbToHex(channels) {
+  return `#${channels.map((channel) => channel.toString(16).padStart(2, "0")).join("")}`;
+}
+
+async function handleCustomThemeColorInput() {
+  activeThemePalette = CUSTOM_THEME_PALETTE_ID;
+  activeCustomThemeColors = {
+    light: normalizeColor(lightAccentInput.value, DEFAULT_CUSTOM_THEME_COLORS.light),
+    dark: normalizeColor(darkAccentInput.value, DEFAULT_CUSTOM_THEME_COLORS.dark)
+  };
+  updateCustomThemeInputs();
+  applyThemePalette();
+  updateThemeSettingsUi();
+  await saveThemePaletteSettings();
+}
+
+function updateCustomThemeInputs() {
+  lightAccentInput.value = activeCustomThemeColors.light;
+  darkAccentInput.value = activeCustomThemeColors.dark;
+  lightAccentValue.value = activeCustomThemeColors.light;
+  darkAccentValue.value = activeCustomThemeColors.dark;
+}
+
+async function saveThemePaletteSettings() {
+  try {
+    await chrome.storage.local.set({
+      [THEME_PALETTE_STORAGE_KEY]: {
+        palette: activeThemePalette,
+        custom: activeCustomThemeColors
+      }
+    });
+  } catch (error) {
+    console.warn("Failed to save theme palette", error);
+  }
+}
+
+function updateThemeSettingsUi() {
+  document.querySelectorAll("[data-theme-mode]").forEach((button) => {
+    const isActive = button.dataset.themeMode === activeThemeMode;
+    button.classList.toggle("active", isActive);
+    button.setAttribute("aria-pressed", String(isActive));
+  });
+  palettePresetGrid.querySelectorAll(".palette-preset-button").forEach((button) => {
+    const isActive = button.dataset.palette === activeThemePalette;
+    button.classList.toggle("active", isActive);
+    button.setAttribute("aria-checked", String(isActive));
+  });
+}
+
+function toggleSettingsPanel() {
+  if (settingsPanel.hidden) {
+    openSettingsPanel();
+    return;
+  }
+  closeSettingsPanel({ restoreFocus: true });
+}
+
+function openSettingsPanel() {
+  closeSearchEngineMenu();
+  window.clearTimeout(settingsPanelCloseTimer);
+  settingsPanel.hidden = false;
+  settingsPanel.dataset.open = "true";
+  settingsButton.setAttribute("aria-expanded", "true");
+  updateThemeSettingsUi();
+}
+
+function closeSettingsPanel(options = {}) {
+  if (settingsPanel.hidden && settingsPanel.dataset.open !== "true") {
+    return;
+  }
+  window.clearTimeout(settingsPanelCloseTimer);
+  settingsPanel.dataset.open = "false";
+  settingsButton.setAttribute("aria-expanded", "false");
+  settingsPanelCloseTimer = window.setTimeout(() => {
+    if (settingsPanel.dataset.open !== "true") {
+      settingsPanel.hidden = true;
+    }
+  }, 180);
+  if (options.restoreFocus) {
+    settingsButton.focus({ preventScroll: true });
+  }
+}
+
+function handleSettingsPanelDismiss(event) {
+  if (settingsPanel.hidden) {
+    return;
+  }
+  const target = event.target;
+  if (target instanceof Element && (settingsPanel.contains(target) || settingsButton.contains(target))) {
+    return;
+  }
+  closeSettingsPanel();
 }
 
 function handleQuickSearchSubmit(event) {
@@ -2148,10 +2421,11 @@ function groupHistoryBySite(items, options = {}) {
       });
     }
     const group = groups.get(key);
-    const deleteKey = normalizeHistoryKey(item.url);
+    const deleteUrl = normalizeHistoryDeleteUrl(item.url);
+    const deleteKey = deleteUrl;
     if (deleteKey && !group.deleteUrlKeys.has(deleteKey)) {
       group.deleteUrlKeys.add(deleteKey);
-      group.deleteUrls.push(deleteKey);
+      group.deleteUrls.push(deleteUrl);
     }
     const pageKey = historyPageKey(item, url, key);
     if (!group.pageKeys.has(pageKey) && group.pages.length < maxPagesPerSite) {
@@ -2225,14 +2499,24 @@ function createHistoryPageItem(item, options = {}) {
   const url = safeUrl(item.url);
   const title = normalizeText(item.title) || historyFallbackTitle(url);
   const row = document.createElement("div");
+  const time = document.createElement("time");
+  const timelineCard = document.createElement("span");
   const link = document.createElement("a");
   const label = document.createElement("span");
   const actions = document.createElement("span");
   const pinButton = document.createElement("button");
   const deleteButton = document.createElement("button");
   const isPinned = Boolean(options.pinned);
+  const showTimeline = Boolean(options.timeline);
 
   row.className = "history-page-item";
+  row.classList.toggle("timeline", showTimeline);
+  if (showTimeline) {
+    time.className = "history-page-time";
+    time.dateTime = historyDateTimeAttribute(item.lastVisitTime);
+    time.textContent = formatHistoryAnchorTime(item.lastVisitTime);
+    time.title = formatHistoryFullTime(item.lastVisitTime);
+  }
   link.className = "history-page-link";
   link.href = item.url;
   link.target = "_blank";
@@ -2268,7 +2552,13 @@ function createHistoryPageItem(item, options = {}) {
 
   actions.className = "history-page-actions";
   actions.append(pinButton, deleteButton);
-  row.append(link, actions);
+  if (showTimeline) {
+    timelineCard.className = "history-page-card";
+    timelineCard.append(link, actions);
+    row.append(time, timelineCard);
+  } else {
+    row.append(link, actions);
+  }
   return row;
 }
 
@@ -2374,9 +2664,12 @@ function createHistoryFeedGroup(group) {
     listTitle.className = "history-feed-pages-title";
     listTitle.textContent = t("historyRelatedPages");
     pageListInner.appendChild(listTitle);
-    pageListInner.appendChild(createHistoryPageItem(item, { label: t("historyPrimaryPage") }));
+    pageListInner.appendChild(createHistoryPageItem(item, {
+      label: t("historyPrimaryPage"),
+      timeline: true
+    }));
     relatedPages.forEach((relatedItem) => {
-      pageListInner.appendChild(createHistoryPageItem(relatedItem));
+      pageListInner.appendChild(createHistoryPageItem(relatedItem, { timeline: true }));
     });
   }
 
@@ -2434,6 +2727,38 @@ function formatHistoryTime(timestamp) {
   }).format(visitDate);
 }
 
+function formatHistoryAnchorTime(timestamp) {
+  const time = Number(timestamp);
+  if (!Number.isFinite(time) || time <= 0) {
+    return "--:--";
+  }
+  return new Intl.DateTimeFormat(LOCALE, {
+    hour: "2-digit",
+    minute: "2-digit"
+  }).format(new Date(time));
+}
+
+function formatHistoryFullTime(timestamp) {
+  const time = Number(timestamp);
+  if (!Number.isFinite(time) || time <= 0) {
+    return "";
+  }
+  return new Intl.DateTimeFormat(LOCALE, {
+    month: "numeric",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit"
+  }).format(new Date(time));
+}
+
+function historyDateTimeAttribute(timestamp) {
+  const time = Number(timestamp);
+  if (!Number.isFinite(time) || time <= 0) {
+    return "";
+  }
+  return new Date(time).toISOString();
+}
+
 async function loadPinnedHistory() {
   try {
     const result = await chrome.storage.local.get({ [PINNED_HISTORY_STORAGE_KEY]: [] });
@@ -2489,28 +2814,28 @@ async function unpinHistoryItem(url) {
 }
 
 async function deleteHistoryItem(url) {
-  const key = normalizeHistoryKey(url);
-  if (!key) {
+  const deleteUrl = normalizeHistoryDeleteUrl(url);
+  if (!deleteUrl) {
     return;
   }
-  await deleteHistoryUrls([key]);
+  await deleteHistoryUrls([deleteUrl]);
 }
 
 async function deleteHistoryGroup(group) {
   const urls = Array.isArray(group.deleteUrls) && group.deleteUrls.length
     ? group.deleteUrls
-    : group.pages.map((item) => normalizeHistoryKey(item.url)).filter(Boolean);
+    : group.pages.map((item) => normalizeHistoryDeleteUrl(item.url)).filter(Boolean);
   await deleteHistoryUrls(urls, group.key);
 }
 
 async function deleteHistoryUrls(urls, siteKey = "") {
-  const uniqueUrls = [...new Set(urls.map(normalizeHistoryKey).filter(Boolean))];
+  const uniqueUrls = [...new Set(urls.map(normalizeHistoryDeleteUrl).filter(Boolean))];
   if (!uniqueUrls.length) {
     return;
   }
   try {
     await Promise.all(uniqueUrls.map((url) => chrome.history.deleteUrl({ url })));
-    const deletedKeys = new Set(uniqueUrls);
+    const deletedKeys = new Set(uniqueUrls.map(normalizeHistoryKey).filter(Boolean));
     const nextPinnedItems = (await loadPinnedHistory()).filter((item) => {
       if (deletedKeys.has(normalizeHistoryKey(item.url))) {
         return false;
@@ -2602,23 +2927,17 @@ function folderPlusIcon() {
   `);
 }
 
-function sunIcon() {
+function settingsIcon() {
   return inlineIcon(`
-    <circle cx="12" cy="12" r="4"></circle>
-    <path d="M12 2v2"></path>
-    <path d="M12 20v2"></path>
-    <path d="m4.93 4.93 1.41 1.41"></path>
-    <path d="m17.66 17.66 1.41 1.41"></path>
-    <path d="M2 12h2"></path>
-    <path d="M20 12h2"></path>
-    <path d="m6.34 17.66-1.41 1.41"></path>
-    <path d="m19.07 4.93-1.41 1.41"></path>
+    <path d="M9.671 4.136a2.34 2.34 0 0 1 4.659 0 2.34 2.34 0 0 0 3.319 1.915 2.34 2.34 0 0 1 2.33 4.033 2.34 2.34 0 0 0 0 3.831 2.34 2.34 0 0 1-2.33 4.033 2.34 2.34 0 0 0-3.319 1.915 2.34 2.34 0 0 1-4.659 0 2.34 2.34 0 0 0-3.32-1.915 2.34 2.34 0 0 1-2.33-4.033 2.34 2.34 0 0 0 0-3.831A2.34 2.34 0 0 1 6.35 6.051a2.34 2.34 0 0 0 3.319-1.915"></path>
+    <circle cx="12" cy="12" r="3"></circle>
   `);
 }
 
-function moonIcon() {
+function closeIcon() {
   return inlineIcon(`
-    <path d="M20.99 12.79A9 9 0 1 1 11.21 3.01 7 7 0 0 0 20.99 12.79Z"></path>
+    <path d="M18 6 6 18"></path>
+    <path d="m6 6 12 12"></path>
   `);
 }
 
@@ -2819,6 +3138,14 @@ function normalizeHistoryKey(value) {
     return "";
   }
   url.hash = "";
+  return url.href;
+}
+
+function normalizeHistoryDeleteUrl(value) {
+  const url = safeUrl(value);
+  if (!url || !/^https?:$/.test(url.protocol)) {
+    return "";
+  }
   return url.href;
 }
 

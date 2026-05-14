@@ -34,7 +34,7 @@
         <button class="quick-search-submit" id="quickSearchButton" type="submit" title="搜索" aria-label="搜索">搜索</button>
       </form>
       <div class="topbar-actions">
-        <button class="theme-toggle" id="themeToggleButton" type="button" aria-pressed="false" title="切换夜间模式">
+        <button class="theme-toggle settings-toggle" id="settingsButton" type="button" aria-haspopup="dialog" aria-controls="settingsPanel" aria-expanded="false" title="设置中心">
           <span class="theme-toggle-icon" aria-hidden="true"></span>
         </button>
       </div>
@@ -138,6 +138,55 @@
         </div>
       </section>
     </main>
+
+    <section class="settings-panel" id="settingsPanel" role="dialog" aria-modal="false" aria-labelledby="settingsTitle" hidden>
+      <header class="settings-header">
+        <div>
+          <h2 id="settingsTitle">设置中心</h2>
+        </div>
+        <button class="icon-button subtle-action" id="closeSettingsButton" type="button" title="关闭设置中心" aria-label="关闭设置中心">
+          <span class="button-icon" aria-hidden="true"></span>
+        </button>
+      </header>
+
+      <div class="settings-body">
+        <section class="settings-group" aria-labelledby="appearanceModeTitle">
+          <div class="settings-group-heading">
+            <h3 id="appearanceModeTitle">外观模式</h3>
+          </div>
+          <div class="segmented-control" role="group" aria-label="外观模式">
+            <button class="segmented-option" type="button" data-theme-mode="system">跟随</button>
+            <button class="segmented-option" type="button" data-theme-mode="light">日间</button>
+            <button class="segmented-option" type="button" data-theme-mode="dark">夜间</button>
+          </div>
+        </section>
+
+        <section class="settings-group" aria-labelledby="presetPaletteTitle">
+          <div class="settings-group-heading">
+            <h3 id="presetPaletteTitle">默认双色</h3>
+          </div>
+          <div class="palette-preset-grid" id="palettePresetGrid" role="radiogroup" aria-labelledby="presetPaletteTitle"></div>
+        </section>
+
+        <section class="settings-group" aria-labelledby="customPaletteTitle">
+          <div class="settings-group-heading">
+            <h3 id="customPaletteTitle">自定义双色</h3>
+          </div>
+          <div class="color-picker-grid">
+            <label class="color-picker-row">
+              <span>日间</span>
+              <input id="lightAccentInput" type="color" value="#0d6d59">
+              <output id="lightAccentValue">#0d6d59</output>
+            </label>
+            <label class="color-picker-row">
+              <span>夜间</span>
+              <input id="darkAccentInput" type="color" value="#68c19e">
+              <output id="darkAccentValue">#68c19e</output>
+            </label>
+          </div>
+        </section>
+      </div>
+    </section>
 
     <template id="siteCardTemplate">
       <div class="site-card">
