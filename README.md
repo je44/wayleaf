@@ -22,10 +22,7 @@
 ### 下载
 
 - 最新版本：[GitHub Releases](https://github.com/je44/tab-tab-chrome-extension/releases/latest)
-- v1.1 页面：[v1.1 Release](https://github.com/je44/tab-tab-chrome-extension/releases/tag/v1.1)
-- v1.1 安装包：[tab-tab-v1.1.0.zip](https://github.com/je44/tab-tab-chrome-extension/releases/download/v1.1/tab-tab-v1.1.0.zip)
-- v1.0 页面：[v1.0 Release](https://github.com/je44/tab-tab-chrome-extension/releases/tag/v1.0)
-- v1.0 安装包：[tab-tab-v1.0.0.zip](https://github.com/je44/tab-tab-chrome-extension/releases/download/v1.0/tab-tab-v1.0.0.zip)
+- 当前安装包：[tab-tab-v1.1.0.zip](https://github.com/je44/tab-tab-chrome-extension/releases/download/v1.1/tab-tab-v1.1.0.zip)
 
 ### v1.1 更新
 
