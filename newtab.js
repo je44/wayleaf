@@ -33,6 +33,7 @@ const BOOKMARK_FOLDER_STORAGE_KEY = "bookmarkFolderId";
 const BOOKMARK_LAYOUT_STORAGE_KEY = "bookmarkLayout";
 const PORTAL_SECTION_ORDER_STORAGE_KEY = "portalSectionOrder";
 const PORTAL_CATEGORIES_EXPANDED_STORAGE_KEY = "portalCategoriesExpanded";
+const FEATURED_PORTALS_EXPANDED_STORAGE_KEY = "featuredPortalsExpanded";
 const THEME_STORAGE_KEY = "themeMode";
 const THEME_PALETTE_STORAGE_KEY = "themePalette";
 const SEARCH_ENGINE_STORAGE_KEY = "quickSearchEngine";
@@ -44,6 +45,7 @@ const MAX_PORTAL_TITLE_LENGTH = 32;
 const MAX_PORTAL_URL_LENGTH = 512;
 const MAX_BOOKMARK_FOLDER_OPTIONS = 160;
 const MAX_PORTAL_FEATURED_ITEMS = 6;
+const COLLAPSED_FEATURED_PORTAL_ITEMS = 3;
 const MAX_BOOKMARK_PORTAL_ITEMS = 120;
 const MAX_BOOKMARK_HISTORY_ITEMS = 180;
 const MAX_RECENT_BOOKMARK_ITEMS = 2;
@@ -377,6 +379,8 @@ const MESSAGES = {
     portalCategories: "智能分类",
     portalCategoriesExpand: "展开 {count} 项",
     portalCategoriesCollapse: "收起",
+    featuredPortalsExpand: "展开",
+    featuredPortalsCollapse: "收起",
     portalSourceBookmarks: "本地智能分类 · 自动合并书签",
     portalSourceFallback: "默认入口 · 授权后自动智能分类",
     addPortal: "添加入口",
@@ -469,6 +473,8 @@ const MESSAGES = {
     portalCategories: "智能分類",
     portalCategoriesExpand: "展開 {count} 項",
     portalCategoriesCollapse: "收起",
+    featuredPortalsExpand: "展开",
+    featuredPortalsCollapse: "收起",
     portalCategoryFeatured: "常用入口",
     portalCategoryRecentBookmarks: "最近加入書籤",
     portalSourceBookmarks: "本地智能分類 · 自動合併書籤",
@@ -521,6 +527,8 @@ const MESSAGES = {
     portalCategories: "Smart categories",
     portalCategoriesExpand: "Show {count} more",
     portalCategoriesCollapse: "Collapse",
+    featuredPortalsExpand: "Expand",
+    featuredPortalsCollapse: "Collapse",
     portalSourceBookmarks: "Local smart sorting · Bookmarks merged automatically",
     portalSourceFallback: "Default shortcuts · Smart sorting after bookmark permission",
     addPortal: "Add portal",
@@ -748,6 +756,7 @@ let activePortalCategory = DEFAULT_PORTAL_CATEGORY;
 let activeSearchEngine = DEFAULT_SEARCH_ENGINE;
 let draggedPortalSectionRole = "";
 let portalCategoriesExpanded = false;
+let featuredPortalsExpanded = true;
 let activeThemeMode = DEFAULT_THEME_MODE;
 let activeThemePalette = DEFAULT_THEME_PALETTE;
 let activeCustomThemeColors = { ...DEFAULT_CUSTOM_THEME_COLORS };
@@ -1503,6 +1512,7 @@ async function renderPortals() {
   const groups = groupPortalsByCategory(portalData.items);
   const sectionOrder = await loadPortalSectionOrder();
   portalCategoriesExpanded = await loadPortalCategoriesExpanded();
+  featuredPortalsExpanded = await loadFeaturedPortalsExpanded();
   if (portalSourceText) {
     portalSourceText.textContent = t(portalData.usingBookmarks ? "portalSourceBookmarks" : "portalSourceFallback");
   }
@@ -1516,6 +1526,7 @@ async function renderPortals() {
       category: "featured",
       items: featuredPortals,
       featured: true,
+      expanded: featuredPortalsExpanded,
       reorderRole: "featured"
     }));
   }
@@ -1579,6 +1590,19 @@ async function savePortalCategoriesExpanded(expanded) {
   await chrome.storage.local.set({ [PORTAL_CATEGORIES_EXPANDED_STORAGE_KEY]: Boolean(expanded) });
 }
 
+async function loadFeaturedPortalsExpanded() {
+  try {
+    const result = await chrome.storage.local.get({ [FEATURED_PORTALS_EXPANDED_STORAGE_KEY]: true });
+    return Boolean(result[FEATURED_PORTALS_EXPANDED_STORAGE_KEY]);
+  } catch {
+    return true;
+  }
+}
+
+async function saveFeaturedPortalsExpanded(expanded) {
+  await chrome.storage.local.set({ [FEATURED_PORTALS_EXPANDED_STORAGE_KEY]: Boolean(expanded) });
+}
+
 async function togglePortalCategoriesExpanded() {
   portalCategoriesExpanded = !portalCategoriesExpanded;
   applyPortalCategoryExpansionState(portalCategoriesExpanded);
@@ -1599,6 +1623,30 @@ function applyPortalCategoryExpansionState(expanded) {
   toggleButton.querySelector(".portal-switcher-toggle-label").textContent = expanded
     ? t("portalCategoriesCollapse")
     : t("portalCategoriesExpand", { count: hiddenCount });
+}
+
+async function toggleFeaturedPortalsExpanded(section) {
+  featuredPortalsExpanded = !featuredPortalsExpanded;
+  applyFeaturedPortalsExpansionState(section, featuredPortalsExpanded);
+  await saveFeaturedPortalsExpanded(featuredPortalsExpanded);
+}
+
+function applyFeaturedPortalsExpansionState(section, expanded) {
+  if (!section) {
+    return;
+  }
+  const toggleButton = section.querySelector(".portal-category-toggle");
+  const hiddenCount = Number(section.dataset.hiddenCount || 0);
+  const isCollapsible = hiddenCount > 0;
+  section.classList.toggle("expanded", expanded || !isCollapsible);
+  section.classList.toggle("collapsed", !expanded && isCollapsible);
+  if (!toggleButton) {
+    return;
+  }
+  toggleButton.setAttribute("aria-expanded", String(expanded || !isCollapsible));
+  toggleButton.querySelector(".portal-category-toggle-label").textContent = expanded || !isCollapsible
+    ? t("featuredPortalsCollapse")
+    : t("featuredPortalsExpand");
 }
 
 async function swapPortalSectionOrder(sourceRole, targetRole) {
@@ -1973,12 +2021,23 @@ function createPortalCategorySection(group) {
   const header = document.createElement("header");
   const title = document.createElement("h3");
   const count = document.createElement("span");
+  const headingActions = document.createElement("span");
   const grid = document.createElement("div");
+  const visibleItems = group.featured
+    ? group.items.slice(0, MAX_PORTAL_FEATURED_ITEMS)
+    : group.items;
+  const hiddenCount = group.featured
+    ? Math.max(0, visibleItems.length - COLLAPSED_FEATURED_PORTAL_ITEMS)
+    : 0;
+  const isExpanded = group.expanded !== false || hiddenCount === 0;
 
   section.className = "portal-category";
   section.classList.toggle("featured-category", Boolean(group.featured));
+  section.classList.toggle("expanded", isExpanded);
+  section.classList.toggle("collapsed", Boolean(group.featured) && !isExpanded);
   section.classList.toggle("active-category", Boolean(group.active));
   section.classList.toggle("recent-bookmark-category", Boolean(group.recent));
+  section.dataset.hiddenCount = String(hiddenCount);
   header.className = "portal-category-header";
   if (group.reorderRole) {
     section.dataset.portalSectionRole = group.reorderRole;
@@ -1990,10 +2049,38 @@ function createPortalCategorySection(group) {
   count.className = "portal-category-count";
   count.textContent = String(group.items.length);
   grid.className = "portal-category-grid";
-  group.items.slice(0, group.featured ? MAX_PORTAL_FEATURED_ITEMS : group.items.length).forEach((portal) => {
-    grid.appendChild(createSiteCard(portal));
+  if (group.featured) {
+    grid.id = "featuredPortalGrid";
+  }
+  visibleItems.forEach((portal, index) => {
+    const card = createSiteCard(portal);
+    if (group.featured && index >= COLLAPSED_FEATURED_PORTAL_ITEMS) {
+      card.dataset.overflow = "true";
+    }
+    grid.appendChild(card);
   });
-  header.append(title, count);
+  headingActions.className = "portal-category-actions";
+  headingActions.appendChild(count);
+  if (group.featured && hiddenCount > 0) {
+    const toggleButton = document.createElement("button");
+    const toggleLabel = document.createElement("span");
+    const toggleIcon = document.createElement("span");
+    toggleButton.className = "portal-category-toggle";
+    toggleButton.type = "button";
+    toggleButton.setAttribute("aria-controls", grid.id);
+    toggleButton.setAttribute("aria-expanded", String(isExpanded));
+    toggleLabel.className = "portal-category-toggle-label";
+    toggleLabel.textContent = isExpanded
+      ? t("featuredPortalsCollapse")
+      : t("featuredPortalsExpand");
+    toggleIcon.className = "portal-category-toggle-icon";
+    toggleIcon.setAttribute("aria-hidden", "true");
+    toggleIcon.innerHTML = chevronDownIcon();
+    toggleButton.append(toggleLabel, toggleIcon);
+    toggleButton.addEventListener("click", () => toggleFeaturedPortalsExpanded(section));
+    headingActions.appendChild(toggleButton);
+  }
+  header.append(title, headingActions);
   section.append(header, grid);
   return section;
 }
