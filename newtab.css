@@ -75,6 +75,7 @@
   --search-engine-selected-border: #b45309;
   --panel-header-line: var(--line);
   --site-icon-tile: #ffffff;
+  --monochrome-site-icon-tile: #ffffff;
   --custom-site-icon-shadow: inset 0 0 0 1px rgb(20 27 24 / 0.12);
   --coral: #cf6f62;
   --coral-rgb: 207 111 98;
@@ -120,6 +121,7 @@
   --on-accent: var(--dark-on-accent);
   --search-engine-selected-border: #f59e0b;
   --panel-header-line: rgba(239, 232, 220, 0.08);
+  --monochrome-site-icon-tile: #000000;
   --custom-site-icon-shadow: inset 0 0 0 1px rgb(244 250 247 / 0.16);
   --coral: #ff8f7f;
   --coral-rgb: 255 143 127;
@@ -216,7 +218,7 @@ body.surface-open .surface-launchers {
 
 .home-stage {
   display: grid;
-  grid-template-rows: auto auto;
+  grid-template-rows: minmax(178px, auto) minmax(268px, auto);
   align-content: center;
   justify-items: center;
   row-gap: 86px;
@@ -233,6 +235,7 @@ body.surface-open .surface-launchers {
   justify-items: center;
   width: min(760px, calc(100vw - 48px));
   --search-box-height: 64px;
+  min-height: 178px;
   padding-top: calc(var(--search-box-height) + 2px);
   transform-origin: center top;
 }
@@ -246,7 +249,7 @@ body.surface-open .surface-launchers {
   border: 1px solid var(--line);
   border-radius: 12px;
   background: var(--input-bg);
-  transform-origin: center;
+  transform-origin: center top;
   transition:
     border-color 180ms ease,
     transform 240ms cubic-bezier(0.22, 1, 0.36, 1);
@@ -484,20 +487,6 @@ body.surface-open .surface-launchers {
   transform: scale(1.055, 1.12);
 }
 
-.search-workbench.search-active:has(.topbar-search input:not(:placeholder-shown)) .search-panel {
-  transform: none;
-}
-
-.search-workbench.search-active.suggestions-open .search-panel,
-.search-workbench.search-active.suggestions-closing .search-panel {
-  transform: none;
-}
-
-.search-workbench.search-active[data-ai-active] .search-panel,
-.search-workbench.search-active[data-ai-exiting] .search-panel {
-  transform: none;
-}
-
 .search-engine-search-icon svg,
 .quick-search-settings svg,
 .portal-category-toggle-icon svg,
@@ -600,11 +589,24 @@ body.surface-open .surface-launchers {
   display: none;
 }
 
+.favorite-add-button[data-hydrating="true"] {
+  visibility: hidden;
+}
+
+.favorite-add-button[data-hydrating="false"] {
+  transition-delay: 0s;
+}
+
 .favorite-add-button[data-state="visible"] {
   animation: favoriteAddEnter 220ms cubic-bezier(0.22, 1, 0.36, 1) both;
   pointer-events: auto;
-  transition-delay: 0s;
   visibility: visible;
+}
+
+.favorite-add-button:not([data-hydrating="false"])[data-state="visible"] {
+  animation: none;
+  opacity: 0.72;
+  transform: translateY(0) scaleY(1);
 }
 
 .search-workbench.search-active .favorite-add-button[data-state="visible"],
@@ -681,6 +683,10 @@ body.surface-open .surface-launchers {
     transform 240ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
+.favorite-strip[data-hydrating="true"] {
+  visibility: hidden;
+}
+
 .search-workbench.search-active .favorite-strip {
   opacity: 0.58;
   pointer-events: none;
@@ -690,10 +696,12 @@ body.surface-open .surface-launchers {
 
 .recent-folders {
   display: grid;
+  grid-template-rows: auto minmax(184px, auto);
   gap: 10px;
   width: min(1120px, calc(100vw - 72px));
+  min-height: 211px;
   margin-top: 0;
-  transform: translateY(40%);
+  transform: translateY(84px);
 }
 
 .recent-folders-header {
@@ -719,11 +727,12 @@ body.surface-open .surface-launchers {
   gap: 18px;
   align-items: start;
   min-width: 0;
+  min-height: 184px;
 }
 
 .recent-folder-grid .empty-state {
   grid-column: 1 / -1;
-  min-height: 48px;
+  min-height: 184px;
   padding: 12px;
   border-radius: 8px;
   font-size: 11px;
@@ -1227,7 +1236,7 @@ body.surface-open .surface-launchers {
   opacity: 0;
   pointer-events: none;
   transform-origin: top center;
-  transform: translateY(-4px);
+  transform: none;
   transition:
     max-height 220ms cubic-bezier(0.22, 1, 0.36, 1),
     padding 220ms cubic-bezier(0.22, 1, 0.36, 1),
@@ -1242,7 +1251,7 @@ body.surface-open .surface-launchers {
   padding: 8px 8px 10px;
   opacity: 1;
   pointer-events: auto;
-  transform: translateY(0);
+  transform: none;
 }
 
 .search-workbench.suggestions-closing .search-suggestions {
@@ -1252,7 +1261,7 @@ body.surface-open .surface-launchers {
   padding-bottom: 0;
   opacity: 0;
   pointer-events: none;
-  transform: translateY(-4px);
+  transform: none;
 }
 
 .search-suggestions[hidden] {

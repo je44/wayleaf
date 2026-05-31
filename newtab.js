@@ -421,6 +421,7 @@ const SITE_GROUP_SUFFIXES = [
   "linkedin.com",
   "npmjs.com",
   "notion.so",
+  "pinterest.com",
   "stackoverflow.com",
   "taobao.com",
   "twitter.com",
@@ -701,6 +702,7 @@ const SITE_ICON_TILE_COLOR_BY_SITE_KEY = Object.freeze({
   "notion.so": "#000000",
   "openai.com": "#412991",
   "perplexity.ai": "#1fb8cd",
+  "pinterest.com": "#000000",
   "reddit.com": "#ff4500",
   "slack.com": "#4a154b",
   "spotify.com": "#1ed760",
@@ -712,13 +714,6 @@ const SITE_ICON_TILE_COLOR_BY_SITE_KEY = Object.freeze({
   "xiaohongshu.com": "#ff2442",
   "youtube.com": "#ff0000",
   "zhihu.com": "#0084ff"
-});
-const LIGHT_ICON_TILE_BY_SITE_KEY = Object.freeze({
-  "apple.com": "#f3f5f2",
-  "github.com": "#f3f5f2",
-  "notion.so": "#f3f5f2",
-  "vercel.com": "#f3f5f2",
-  "x.com": "#f3f5f2"
 });
 const PORTAL_CATEGORY_BY_SITE_KEY = Object.freeze(Object.fromEntries(PORTALS.map((portal) => {
   const url = new URL(portal.url);
@@ -1356,6 +1351,7 @@ let mediaFeedRefreshSeed = 0;
 let activeMediaFeedFeedback = normalizeMediaFeedFeedback();
 let activeMediaFeedActionMenu = null;
 let pendingRecentPreviousKeys = null;
+let favoriteSitesHydrated = false;
 const whiteSvgIconDataUrlCache = new Map();
 const mediaFeedLoadMoreSentinel = document.createElement("div");
 mediaFeedLoadMoreSentinel.className = "media-feed-load-more";
@@ -1953,6 +1949,7 @@ function applyThemeMode(theme) {
   activeThemeMode = theme === "dark" || theme === "light" || theme === "system" ? theme : DEFAULT_THEME_MODE;
   const resolvedTheme = resolvedThemeMode();
   document.documentElement.dataset.theme = resolvedTheme;
+  refreshMonochromeSiteIcons();
   updateThemeSettingsUi();
 }
 
@@ -3413,13 +3410,24 @@ async function renderFavoriteSites() {
   clearFavoriteDeleteMode();
   const favorites = await loadFavoriteSites();
   const previousRects = measureFavoriteRects();
+  const shouldAnimateReorder = favoriteSitesHydrated;
   const fragment = document.createDocumentFragment();
-  favorites.forEach((site, index) => {
-    fragment.appendChild(createFavoriteSite(site, index));
-  });
+  const favoriteNodes = await Promise.all(favorites.map((site, index) => createFavoriteSite(site, index, {
+    awaitDisplayIcon: !favoriteSitesHydrated
+  })));
+  favoriteNodes.forEach((node) => fragment.appendChild(node));
   favoriteStrip.replaceChildren(fragment);
   updateFavoriteAddButtonState(favorites.length);
-  animateFavoriteReorder(previousRects);
+  if (!favoriteSitesHydrated) {
+    favoriteSitesHydrated = true;
+    requestAnimationFrame(() => {
+      favoriteStrip.dataset.hydrating = "false";
+      favoriteAddButton.dataset.hydrating = "false";
+    });
+  }
+  if (shouldAnimateReorder) {
+    animateFavoriteReorder(previousRects);
+  }
 }
 
 function updateFavoriteAddButtonState(favoriteCount) {
@@ -3434,7 +3442,7 @@ function updateFavoriteAddButtonState(favoriteCount) {
   }
 }
 
-function createFavoriteSite(site, index) {
+async function createFavoriteSite(site, index, options = {}) {
   const node = favoriteSiteTemplate.content.firstElementChild.cloneNode(true);
   const link = node.querySelector(".favorite-link");
   const icon = node.querySelector(".favorite-icon");
@@ -3443,7 +3451,11 @@ function createFavoriteSite(site, index) {
   link.href = site.url;
   link.title = site.title || compactSiteDomain(site.url);
   link.setAttribute("aria-label", site.title || compactSiteDomain(site.url));
-  applySiteIcon(icon, site);
+  if (options.awaitDisplayIcon) {
+    await applySiteIcon(icon, site, { awaitDisplayIcon: true });
+  } else {
+    applySiteIcon(icon, site);
+  }
   icon.alt = "";
   setButtonLabel(removeButton, t("deleteFavoriteSite"));
   removeButton.innerHTML = closeIcon();
@@ -3881,16 +3893,26 @@ function compactSiteDomain(url) {
   return parsedUrl.hostname.replace(/^www\./, "");
 }
 
-function applySiteIcon(icon, site) {
+function applySiteIcon(icon, site, options = {}) {
   const localIcon = normalizedSiteIconPath(site);
   storeIconSiteContext(icon, site);
   applySiteIconTile(icon, site, localIcon);
   if (localIcon) {
-    icon.src = displayIconSource(icon, localIcon);
-    icon.removeAttribute("srcset");
-    bindFaviconFallback(icon, site, 128);
+    const displayIcon = displayIconSource(icon, localIcon, options);
+    const setIconSource = (source) => {
+      icon.dataset.iconSource = localIcon;
+      icon.src = source;
+      icon.removeAttribute("srcset");
+      bindFaviconFallback(icon, site, 128, { skipLocalIcon: true });
+    };
+    if (displayIcon instanceof Promise) {
+      return displayIcon.then((source) => setIconSource(source));
+    }
+    setIconSource(displayIcon);
+    return undefined;
   } else {
     applyFaviconIcon(icon, site, 128);
+    return undefined;
   }
 }
 
@@ -3913,9 +3935,9 @@ function applyHistoryIcon(icon, site) {
   storeIconSiteContext(icon, site);
   applySiteIconTile(icon, site, localIcon);
   if (localIcon) {
+    icon.dataset.iconSource = localIcon;
     icon.src = displayIconSource(icon, localIcon);
     icon.removeAttribute("srcset");
-    bindFaviconFallback(icon, site, 64);
   } else {
     applyFaviconIcon(icon, site, 64);
   }
@@ -3966,31 +3988,52 @@ function applySiteIconTile(icon, site, iconPath = "") {
   const parsedUrl = safeUrl(site.url);
   const siteKey = siteGroupKey(parsedUrl);
   const tileColor = siteKey ? SITE_ICON_TILE_COLOR_BY_SITE_KEY[siteKey] || "" : "";
-  const tileMode = siteKey && LIGHT_ICON_TILE_BY_SITE_KEY[siteKey] ? "light" : (tileColor ? "brand" : "plain");
+  const tileMode = darkIconTileColor(tileColor) ? "monochrome" : (tileColor ? "brand" : "plain");
   icon.dataset.iconTile = tileMode;
-  icon.style.setProperty("--site-icon-tile", iconTileColorForSiteKey(siteKey, tileColor));
+  icon.style.setProperty("--site-icon-tile", iconTileColor(tileColor));
   icon.classList.toggle("site-icon-local", Boolean(iconPath));
-  applyIconTileToShell(icon, siteKey, tileMode, tileColor);
+  applyIconTileToShell(icon, tileMode, tileColor);
 }
 
-function iconTileColorForSiteKey(siteKey, tileColor) {
-  return siteKey && LIGHT_ICON_TILE_BY_SITE_KEY[siteKey]
-    ? LIGHT_ICON_TILE_BY_SITE_KEY[siteKey]
+function iconTileColor(tileColor) {
+  return darkIconTileColor(tileColor)
+    ? "var(--monochrome-site-icon-tile)"
     : (tileColor || "#ffffff");
 }
 
-function applyIconTileToShell(icon, siteKey, tileMode, tileColor) {
+function darkIconTileColor(tileColor) {
+  const color = String(tileColor || "").trim();
+  const match = color.match(/^#([0-9a-f]{6})$/i);
+  if (!match) {
+    return false;
+  }
+  const value = match[1];
+  const red = parseInt(value.slice(0, 2), 16);
+  const green = parseInt(value.slice(2, 4), 16);
+  const blue = parseInt(value.slice(4, 6), 16);
+  const maxChannel = Math.max(red, green, blue);
+  const minChannel = Math.min(red, green, blue);
+  return maxChannel < 96 && (maxChannel - minChannel) < 32 && (red * 0.2126 + green * 0.7152 + blue * 0.0722) < 56;
+}
+
+function applyIconTileToShell(icon, tileMode, tileColor) {
   const shell = icon.closest(".favorite-icon-shell");
   if (!shell) {
     return;
   }
   shell.dataset.iconTile = tileMode;
-  shell.style.setProperty("--site-icon-tile", iconTileColorForSiteKey(siteKey, tileColor));
+  shell.style.setProperty("--site-icon-tile", iconTileColor(tileColor));
 }
 
-function displayIconSource(icon, source) {
-  if (icon.dataset.iconTile !== "brand" || !source.endsWith(".svg")) {
+function displayIconSource(icon, source, options = {}) {
+  if ((icon.dataset.iconTile !== "brand" && icon.dataset.iconTile !== "monochrome") || !source.endsWith(".svg")) {
     return source;
+  }
+  if (icon.dataset.iconTile === "monochrome" && document.documentElement.dataset.theme !== "dark") {
+    return source;
+  }
+  if (options.awaitDisplayIcon) {
+    return whiteSvgIconSource(source);
   }
   whiteSvgIconSource(source).then((displaySource) => {
     if (icon.dataset.iconCandidate === source || icon.src.endsWith(source) || icon.getAttribute("src") === source) {
@@ -3998,6 +4041,15 @@ function displayIconSource(icon, source) {
     }
   });
   return source;
+}
+
+function refreshMonochromeSiteIcons() {
+  document.querySelectorAll('img[data-icon-tile="monochrome"][data-icon-source]').forEach((icon) => {
+    const source = icon.dataset.iconSource || "";
+    if (source) {
+      icon.src = displayIconSource(icon, source);
+    }
+  });
 }
 
 function whiteSvgIconSource(source) {
@@ -4030,22 +4082,22 @@ function normalizeSvgGlyphColor(svg) {
 
 function bindFaviconFallback(icon, site, size) {
   icon.addEventListener("error", () => {
-    applyFaviconIcon(icon, site, size);
+    applyFaviconIcon(icon, site, size, { skipLocalIcon: true });
   }, { once: true });
 }
 
-function applyFaviconIcon(icon, site, size) {
+function applyFaviconIcon(icon, site, size, options = {}) {
   icon.removeAttribute("srcset");
   storeIconSiteContext(icon, site);
-  const candidates = extensionIconFallbackChain(site.url, size);
+  const candidates = extensionIconFallbackChain(site.url, size, options);
   applyIconCandidate(icon, candidates, 0);
 }
 
-function extensionIconFallbackChain(url, size) {
+function extensionIconFallbackChain(url, size, options = {}) {
   const parsedUrl = safeUrl(url);
   const candidates = [];
   const localIcon = localIconForUrl(url);
-  if (localIcon) {
+  if (localIcon && !options.skipLocalIcon) {
     candidates.push(localIcon);
   }
   if (parsedUrl?.href) {
@@ -4065,7 +4117,18 @@ function applyIconCandidate(icon, candidates, index) {
   }
   icon.dataset.iconMissing = "false";
   icon.dataset.iconCandidate = nextIcon;
-  icon.classList.toggle("site-icon-local", nextIcon.startsWith("icons/"));
+  const isLocalIcon = nextIcon.startsWith("icons/");
+  icon.classList.toggle("site-icon-local", isLocalIcon);
+  if (isLocalIcon) {
+    icon.dataset.iconSource = nextIcon;
+  } else {
+    delete icon.dataset.iconSource;
+  }
+  if (!isLocalIcon) {
+    icon.dataset.iconTile = "plain";
+    icon.style.setProperty("--site-icon-tile", "#ffffff");
+    applyIconTileToShell(icon, "plain", "");
+  }
   icon.src = displayIconSource(icon, nextIcon);
   icon.addEventListener("error", () => {
     applyIconCandidate(icon, candidates, index + 1);

@@ -47,7 +47,7 @@
           </form>
           <div class="search-suggestions" id="searchSuggestions" role="listbox" aria-label="搜索建议" hidden></div>
         </div>
-        <button class="favorite-add-button" id="favoriteAddButton" type="button" aria-haspopup="dialog" aria-controls="favoriteForm" aria-expanded="false" aria-hidden="true" data-state="hidden" tabindex="-1" disabled hidden>
+        <button class="favorite-add-button" id="favoriteAddButton" type="button" aria-haspopup="dialog" aria-controls="favoriteForm" aria-expanded="false" aria-hidden="true" data-state="hidden" data-hydrating="true" tabindex="-1" disabled hidden>
           <span class="button-icon" aria-hidden="true"></span>
         </button>
         <form class="favorite-form" id="favoriteForm" hidden>
@@ -61,7 +61,7 @@
           </div>
           <p class="form-error" id="favoriteFormError" role="alert"></p>
         </form>
-        <div class="favorite-strip" id="favoriteStrip" aria-label="自定义常用网站"></div>
+        <div class="favorite-strip" id="favoriteStrip" aria-label="自定义常用网站" data-hydrating="true"></div>
       </section>
       <section class="recent-folders" aria-labelledby="recent-folders-title">
         <div class="recent-folders-header">
