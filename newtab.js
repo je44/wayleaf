@@ -179,6 +179,66 @@ const MAX_MEDIA_FEED_FEEDBACK_KEYS = 120;
 const MEDIA_FEED_LARGE_CARD_INTERVAL = 5;
 const RECENT_CARD_DELETE_EXIT_MS = 140;
 const RECENT_CARD_ENTER_MS = 150;
+const REDUCED_MOTION_QUERY = "(prefers-reduced-motion: reduce)";
+let gsapPluginsRegistered = false;
+
+function getGsap() {
+  const gsap = window.gsap;
+  if (!gsap) {
+    return null;
+  }
+  if (!gsapPluginsRegistered) {
+    if (window.Flip) {
+      gsap.registerPlugin(window.Flip);
+    }
+    gsapPluginsRegistered = true;
+  }
+  return gsap;
+}
+
+function getGsapFlip() {
+  const gsap = getGsap();
+  const Flip = window.Flip;
+  return gsap && Flip ? { gsap, Flip } : null;
+}
+
+function prefersReducedMotion() {
+  return Boolean(window.matchMedia?.(REDUCED_MOTION_QUERY).matches);
+}
+
+function gsapDuration(milliseconds) {
+  return prefersReducedMotion() ? 0 : milliseconds / 1000;
+}
+
+function animatePageRefreshEntry() {
+  const gsap = getGsap();
+  if (!gsap || prefersReducedMotion()) {
+    document.documentElement.classList.remove("refresh-enter");
+    return;
+  }
+  const targets = [
+    document.querySelector(".topbar"),
+    document.querySelector(".home-stage")
+  ].filter(Boolean);
+  if (!targets.length) {
+    document.documentElement.classList.remove("refresh-enter");
+    return;
+  }
+  gsap.to(targets, {
+    autoAlpha: 1,
+    y: 0,
+    duration: 0.24,
+    ease: "power2.out",
+    stagger: 0.018,
+    onStart() {
+      document.documentElement.classList.remove("refresh-enter");
+    },
+    onComplete() {
+      gsap.set(targets, { clearProps: "opacity,visibility,transform" });
+    }
+  });
+}
+
 const LOW_VALUE_MEDIA_FEED_PATTERNS = [
   /早报|晚报|日报|周报|一周|盘点|合集|汇总|速览|快讯|活动|直播|中奖|优惠|招聘|促销|广告|发布会邀请/,
   /newsletter|roundup|daily brief|weekly recap|sponsored|webinar|event|hiring|coupon|deal/i
@@ -1708,6 +1768,7 @@ function init() {
   document.addEventListener("keydown", handleBookmarkDeleteEscape);
   document.addEventListener("keydown", handleGlobalEscape);
   bindBookmarkChangeEvents();
+  requestAnimationFrame(animatePageRefreshEntry);
 }
 
 function activatePortalView(view) {
@@ -3409,7 +3470,7 @@ function createSiteCard(site) {
 async function renderFavoriteSites() {
   clearFavoriteDeleteMode();
   const favorites = await loadFavoriteSites();
-  const previousRects = measureFavoriteRects();
+  const previousState = captureFavoriteReorderState();
   const shouldAnimateReorder = favoriteSitesHydrated;
   const fragment = document.createDocumentFragment();
   const favoriteNodes = await Promise.all(favorites.map((site, index) => createFavoriteSite(site, index, {
@@ -3426,7 +3487,7 @@ async function renderFavoriteSites() {
     });
   }
   if (shouldAnimateReorder) {
-    animateFavoriteReorder(previousRects);
+    animateFavoriteReorder(previousState);
   }
 }
 
@@ -3448,6 +3509,7 @@ async function createFavoriteSite(site, index, options = {}) {
   const icon = node.querySelector(".favorite-icon");
   const removeButton = node.querySelector(".favorite-remove");
   node.dataset.favoriteId = site.id;
+  node.dataset.flipId = `favorite-${site.id}`;
   link.href = site.url;
   link.title = site.title || compactSiteDomain(site.url);
   link.setAttribute("aria-label", site.title || compactSiteDomain(site.url));
@@ -3474,19 +3536,40 @@ async function createFavoriteSite(site, index, options = {}) {
   return node;
 }
 
-function measureFavoriteRects() {
+function captureFavoriteReorderState() {
+  const flip = getGsapFlip();
+  if (flip && favoriteStrip.querySelector(".favorite-site")) {
+    return {
+      type: "flip",
+      state: flip.Flip.getState([...favoriteStrip.querySelectorAll(".favorite-site")])
+    };
+  }
   return new Map([...favoriteStrip.querySelectorAll(".favorite-site")].map((node) => [
     node.dataset.favoriteId,
     node.getBoundingClientRect()
   ]));
 }
 
-function animateFavoriteReorder(previousRects) {
-  if (!previousRects.size) {
+function animateFavoriteReorder(previousState) {
+  if (!previousState || (!previousState.state && !previousState.size)) {
+    return;
+  }
+  const flip = getGsapFlip();
+  if (flip && previousState.type === "flip") {
+    flip.Flip.from(previousState.state, {
+      duration: gsapDuration(FAVORITE_REORDER_MS),
+      ease: "power3.out",
+      absolute: true,
+      simple: true,
+      stagger: 0.018,
+      onComplete() {
+        flip.gsap.set(".favorite-site", { clearProps: "transform" });
+      }
+    });
     return;
   }
   favoriteStrip.querySelectorAll(".favorite-site").forEach((node) => {
-    const previous = previousRects.get(node.dataset.favoriteId);
+    const previous = previousState.get(node.dataset.favoriteId);
     if (!previous) {
       return;
     }
@@ -3818,7 +3901,6 @@ async function removeFavoriteSite(id, node) {
   if (node?.classList.contains("removing")) {
     return;
   }
-  const previousRects = measureFavoriteRects();
   if (node) {
     if (activeFavoriteDeleteCard === node) {
       activeFavoriteDeleteCard = null;
@@ -3850,6 +3932,24 @@ async function animateFavoriteTearAway(node) {
   layer.append(topPiece, bottomPiece);
   document.body.appendChild(layer);
   shell.style.visibility = "hidden";
+  const gsap = getGsap();
+  if (gsap) {
+    await new Promise((resolve) => {
+      const midpointDuration = gsapDuration(FAVORITE_DELETE_EXIT_MS * 0.42);
+      const exitDuration = gsapDuration(FAVORITE_DELETE_EXIT_MS * 0.58);
+      gsap.timeline({
+        defaults: { ease: "power3.out" },
+        onComplete: resolve
+      })
+        .set([topPiece, bottomPiece], { autoAlpha: 1, x: 0, y: 0, rotation: 0, scale: 0.82 })
+        .to(topPiece, { x: -3, y: -7, rotation: -4, scale: 0.78, duration: midpointDuration }, 0)
+        .to(bottomPiece, { x: 4, y: 8, rotation: 5, scale: 0.78, duration: midpointDuration }, 0)
+        .to(topPiece, { autoAlpha: 0, x: -18, y: -34, rotation: -18, scale: 0.46, duration: exitDuration }, midpointDuration)
+        .to(bottomPiece, { autoAlpha: 0, x: 22, y: 36, rotation: 20, scale: 0.44, duration: exitDuration }, midpointDuration);
+    });
+    layer.remove();
+    return;
+  }
   const timing = {
     duration: FAVORITE_DELETE_EXIT_MS,
     easing: "cubic-bezier(0.22, 1, 0.36, 1)",
@@ -4296,12 +4396,65 @@ function groupBookmarkSitesByInitial(sites) {
 }
 
 function bookmarkInitialForSite(site) {
-  return firstAsciiLetter(site.title) || "#";
+  return firstBookmarkTitleInitial(site.title) || "#";
 }
 
-function firstAsciiLetter(value) {
-  const match = normalizeText(value).match(/[a-z]/i);
-  return match ? match[0].toUpperCase() : "";
+function firstBookmarkTitleInitial(value) {
+  for (const character of normalizeText(value)) {
+    if (isAsciiLetter(character)) {
+      return character.toUpperCase();
+    }
+    if (isHanCharacter(character)) {
+      return chinesePinyinInitial(character);
+    }
+  }
+  return "";
+}
+
+function isAsciiLetter(character) {
+  return /^[a-z]$/i.test(character);
+}
+
+function isHanCharacter(character) {
+  return /[\u3400-\u9FFF\uF900-\uFAFF]/u.test(character);
+}
+
+const CHINESE_PINYIN_INITIAL_BOUNDARIES = Object.freeze([
+  ["A", "阿"],
+  ["B", "八"],
+  ["C", "嚓"],
+  ["D", "搭"],
+  ["E", "讹"],
+  ["F", "发"],
+  ["G", "噶"],
+  ["H", "哈"],
+  ["J", "击"],
+  ["K", "喀"],
+  ["L", "垃"],
+  ["M", "妈"],
+  ["N", "拿"],
+  ["O", "哦"],
+  ["P", "啪"],
+  ["Q", "期"],
+  ["R", "然"],
+  ["S", "撒"],
+  ["T", "他"],
+  ["W", "挖"],
+  ["X", "昔"],
+  ["Y", "压"],
+  ["Z", "匝"]
+]);
+const CHINESE_PINYIN_COLLATOR = new Intl.Collator("zh-Hans-u-co-pinyin", { sensitivity: "base" });
+
+function chinesePinyinInitial(character) {
+  let initial = "#";
+  for (const [letter, boundary] of CHINESE_PINYIN_INITIAL_BOUNDARIES) {
+    if (CHINESE_PINYIN_COLLATOR.compare(character, boundary) < 0) {
+      break;
+    }
+    initial = letter;
+  }
+  return initial;
 }
 
 function bookmarkInitialSortValue(initial) {
@@ -6196,7 +6349,11 @@ function createRecentFolderItem(group) {
     }
 
     if (activePageAnimation) {
-      activePageAnimation.cancel();
+      if (typeof activePageAnimation.kill === "function") {
+        activePageAnimation.kill();
+      } else {
+        activePageAnimation.cancel();
+      }
       activePageAnimation = null;
     }
     inner.querySelectorAll(".recent-folder-face-snapshot").forEach((node) => node.remove());
@@ -6212,6 +6369,31 @@ function createRecentFolderItem(group) {
     const vector = direction === "next" ? 1 : -1;
     const easing = "cubic-bezier(0.22, 1, 0.36, 1)";
     const duration = 520;
+    const gsap = getGsap();
+    if (gsap) {
+      const cleanUp = () => {
+        snapshot.remove();
+        gsap.set(face, { clearProps: "opacity,visibility,transform" });
+        if (activePageAnimation === timeline) {
+          activePageAnimation = null;
+        }
+      };
+      const timeline = gsap.timeline({
+        defaults: { ease: "power3.out" },
+        onComplete: cleanUp
+      });
+      timeline
+        .fromTo(face,
+          { autoAlpha: 0.18, x: vector * 54, scale: 0.995 },
+          { autoAlpha: 1, x: 0, scale: 1, duration: gsapDuration(duration) },
+          0)
+        .fromTo(snapshot,
+          { autoAlpha: 1, x: 0, scale: 1 },
+          { autoAlpha: 0, x: -vector * 46, scale: 0.995, duration: gsapDuration(440) },
+          0);
+      activePageAnimation = timeline;
+      return;
+    }
     const incoming = face.animate(
       [
         {

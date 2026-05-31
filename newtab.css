@@ -195,6 +195,12 @@ button {
   overflow: visible;
 }
 
+html.refresh-enter .topbar,
+html.refresh-enter .home-stage {
+  opacity: 0.88;
+  transform: translate3d(0, 6px, 0);
+}
+
 .surface-launchers {
   display: flex;
   gap: 8px;
