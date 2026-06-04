@@ -2,7 +2,7 @@
   <img src="icons/wayleaf-flat-1024.png" width="96" height="96" alt="Wayleaf icon">
 </p>
 
-<h1 align="center">Wayleaf Chrome 扩展</h1>
+<h1 align="center">Wayleaf</h1>
 
 <p align="center">
   中文 | <a href="README.en.md">English</a>
@@ -39,11 +39,11 @@
 
 ## 下载和安装
 
-推荐从 [Releases 页面](https://github.com/je44/tab-tab-chrome-extension/releases/latest) 下载最新打包产物。
+推荐从 [Releases 页面](https://github.com/je44/wayleaf/releases/latest) 下载最新打包产物。
 
-当前版本安装包：[wayleaf-v1.1.0.zip](https://github.com/je44/tab-tab-chrome-extension/releases/download/v1.1/wayleaf-v1.1.0.zip)
+当前版本安装包：[wayleaf-v1.2.0.zip](https://github.com/je44/wayleaf/releases/download/v1.2/wayleaf-v1.2.0.zip)
 
-1. 下载 `wayleaf-v1.1.0.zip` 并解压。
+1. 下载 `wayleaf-v1.2.0.zip` 并解压。
 2. 打开 Chrome 的 `chrome://extensions/`。
 3. 打开右上角「开发者模式」。
 4. 点击「加载已解压的扩展程序」。
@@ -159,8 +159,8 @@ node --check ai-submit.js
 
 ```sh
 mkdir -p dist
-zip -r -X dist/wayleaf-v1.1.0.zip manifest.json newtab.html newtab.css newtab.js ai-submit.js icons vendor -x '*/._*' '._*' '*.DS_Store' '*/.DS_Store'
-unzip -t dist/wayleaf-v1.1.0.zip
+zip -r -X dist/wayleaf-v1.2.0.zip manifest.json newtab.html newtab.css newtab.js ai-submit.js icons vendor docs -x '*/._*' '._*' '*.DS_Store' '*/.DS_Store'
+unzip -t dist/wayleaf-v1.2.0.zip
 ```
 
 ## 发布清单
@@ -191,7 +191,7 @@ unzip -t dist/wayleaf-v1.1.0.zip
 
 ## 维护状态
 
-当前版本：`1.1.0`。项目以轻量本地扩展为目标，优先保持无构建步骤、可直接加载、权限解释清楚和核心体验稳定。
+当前版本：`1.2.0`。项目以轻量本地扩展为目标，优先保持无构建步骤、可直接加载、权限解释清楚和核心体验稳定。
 
 ## 相关文档
 

@@ -39,6 +39,7 @@ const THEME_STORAGE_KEY = "themeMode";
 const THEME_PALETTE_STORAGE_KEY = "themePalette";
 const AI_DIRECT_PROMPT_STORAGE_KEY = "aiDirectPrompts";
 const SYNC_META_STORAGE_KEY = "syncMeta";
+const ONBOARDING_GUIDE_STORAGE_KEY = "onboardingGuideDismissed";
 const AI_DIRECT_PROMPT_TOKEN_PARAM = "_wayleaf_prompt";
 const AI_DIRECT_PROMPT_TTL_MS = 2 * 60 * 1000;
 const MAX_HISTORY_SITE_GROUPS = 9;
@@ -67,6 +68,7 @@ const MAX_PORTAL_FEATURED_ITEMS = 6;
 const MAX_BOOKMARK_PORTAL_ITEMS = 120;
 const MAX_BOOKMARK_HISTORY_ITEMS = 180;
 const BOOKMARK_HISTORY_LOOKBACK_DAYS = 45;
+const ISSUE_FEEDBACK_URL = "https://github.com/je44/wayleaf/issues";
 const MEDIA_FEED_SOURCES = [
   { id: "infoq-cn", title: "InfoQ 中文", language: "zh", url: "https://www.infoq.cn/feed" },
   { id: "solidot", title: "Solidot", language: "zh", url: "https://www.solidot.org/index.rss" },
@@ -676,6 +678,7 @@ const EXTENDED_SITE_ICON_BY_SITE_KEY = Object.freeze({
   "audible.com": "icons/sites/audible.svg",
   "aws.amazon.com": "icons/sites/aws.svg",
   "azure.microsoft.com": "icons/sites/azure.svg",
+  "b.ai": "icons/sites/bai.png",
   "baidu.com": "icons/sites/baidu.ico",
   "bbc.com": "icons/sites/bbc.svg",
   "bing.com": "icons/sites/bing.ico",
@@ -688,6 +691,7 @@ const EXTENDED_SITE_ICON_BY_SITE_KEY = Object.freeze({
   "dailymotion.com": "icons/sites/dailymotion.svg",
   "datadoghq.com": "icons/sites/datadog.svg",
   "discord.com": "icons/sites/discord.svg",
+  "docs.b.ai": "icons/sites/baidocs.svg",
   "docs.google.com": "icons/sites/googledocs.svg",
   "douyin.com": "icons/sites/douyin.ico",
   "duckduckgo.com": "icons/sites/duckduckgo.svg",
@@ -738,6 +742,7 @@ const EXTENDED_SITE_ICON_BY_SITE_KEY = Object.freeze({
   "tailwindcss.com": "icons/sites/tailwindcss.svg",
   "teams.microsoft.com": "icons/sites/microsoftteams.ico",
   "tmall.com": "icons/sites/tmall.png",
+  "trip.com": "icons/sites/tripdotcom.svg",
   "twitter.com": "icons/sites/twitter.svg",
   "ubuntu.com": "icons/sites/ubuntu.svg",
   "unity.com": "icons/sites/unity.svg",
@@ -966,6 +971,24 @@ const MESSAGES = {
     syncSettingsDone: "刚刚写入同步区",
     syncSettingsDoneDetail: "Chrome 会自动分发到同账号设备。",
     syncSettingsNow: "手动同步",
+    onboardingKicker: "第一次使用",
+    onboardingTitle: "先花一分钟了解 Wayleaf",
+    onboardingIntro: "Wayleaf 会把新标签页变成你的本地工作台。下面这些点能帮你安全、顺手地开始。",
+    onboardingPrivacyTitle: "本地优先",
+    onboardingPrivacyBody: "历史、书签、入口和主题保存在浏览器扩展存储里，Wayleaf 没有后端账号。",
+    onboardingPermissionTitle: "权限用来完成页面功能",
+    onboardingPermissionBody: "history 用于最近浏览，bookmarks 用于自选书签，tabs 和 scripting 用于打开搜索结果和 AI 页面辅助。",
+    onboardingSyncTitle: "配置会尽量跟随 Chrome 同步",
+    onboardingSyncBody: "同一 Google 账号会自动恢复偏好；如果当前浏览器不支持同步，设置仍会保留在本机。",
+    onboardingAiTitle: "AI 指令有兜底",
+    onboardingAiBody: "输入 /gpt、/claude、/gemini 或 /grok 可跳转并尝试填入问题；若对方网站要求登录或改版，请手动粘贴暂存问题。",
+    onboardingStartTitle: "从两个动作开始",
+    onboardingStartBody: "添加一个常用网站，再到导航中枢选择一个书签文件夹。你可以随时在设置中心调整主题和同步。",
+    onboardingFeedbackTitle: "遇到问题直接反馈",
+    onboardingFeedbackBody: "反馈时带上浏览器、Wayleaf 版本和失败场景，最容易定位。",
+    onboardingFeedback: "反馈问题",
+    onboardingDone: "开始使用",
+    closeOnboarding: "关闭指引",
     customPaletteTitle: "自定义强调色",
     lightAccent: "日间",
     darkAccent: "夜间",
@@ -1227,6 +1250,24 @@ const MESSAGES = {
     syncSettingsDone: "Written to sync storage",
     syncSettingsDoneDetail: "Chrome will distribute it to signed-in devices.",
     syncSettingsNow: "Sync now",
+    onboardingKicker: "First run",
+    onboardingTitle: "Take one minute to understand Wayleaf",
+    onboardingIntro: "Wayleaf turns your new tab into a local workspace. These notes help you start safely and smoothly.",
+    onboardingPrivacyTitle: "Local-first",
+    onboardingPrivacyBody: "History, bookmarks, shortcuts, and theme settings stay in Chrome extension storage. Wayleaf has no backend account.",
+    onboardingPermissionTitle: "Permissions power the page",
+    onboardingPermissionBody: "history drives recent browsing, bookmarks powers selected folders, tabs and scripting open results and assist AI page handoff.",
+    onboardingSyncTitle: "Settings try to follow Chrome sync",
+    onboardingSyncBody: "The same Google account can restore preferences. If sync is unavailable, settings still stay on this device.",
+    onboardingAiTitle: "AI commands have a fallback",
+    onboardingAiBody: "Type /gpt, /claude, /gemini, or /grok to open and try filling a prompt. If the AI site needs login or changes, paste the saved prompt manually.",
+    onboardingStartTitle: "Start with two actions",
+    onboardingStartBody: "Add one favorite site, then choose a bookmark folder from the navigation hub. Theme and sync stay in Settings.",
+    onboardingFeedbackTitle: "Report issues directly",
+    onboardingFeedbackBody: "Include your browser, Wayleaf version, and the failed scenario so the issue is easy to reproduce.",
+    onboardingFeedback: "Report issue",
+    onboardingDone: "Start using",
+    closeOnboarding: "Close guide",
     customPaletteTitle: "Custom accents",
     lightAccent: "Light",
     darkAccent: "Dark",
@@ -1437,6 +1478,10 @@ const favoriteForm = document.querySelector("#favoriteForm");
 const favoriteUrlInput = document.querySelector("#favoriteUrlInput");
 const favoriteFormError = document.querySelector("#favoriteFormError");
 const cancelFavoriteButton = document.querySelector("#cancelFavoriteButton");
+const onboardingGuide = document.querySelector("#onboardingGuide");
+const onboardingCloseButton = document.querySelector("#onboardingCloseButton");
+const onboardingDoneButton = document.querySelector("#onboardingDoneButton");
+const onboardingFeedbackLink = document.querySelector("#onboardingFeedbackLink");
 const togglePortalFormButton = document.querySelector("#togglePortalFormButton");
 const portalForm = document.querySelector("#portalForm");
 const portalTitleInput = document.querySelector("#portalTitleInput");
@@ -1492,7 +1537,22 @@ function ensureChromeApiFallback() {
   if (globalThis.chrome?.storage?.local && globalThis.chrome?.history && globalThis.chrome?.bookmarks) {
     return;
   }
-  const memoryStore = {};
+  const fallbackStorageKey = "__wayleaf_preview_storage__";
+  const readFallbackStore = () => {
+    try {
+      return JSON.parse(localStorage.getItem(fallbackStorageKey) || "{}");
+    } catch (error) {
+      console.warn("Failed to read preview storage", error);
+      return {};
+    }
+  };
+  const writeFallbackStore = (values) => {
+    try {
+      localStorage.setItem(fallbackStorageKey, JSON.stringify(values));
+    } catch (error) {
+      console.warn("Failed to write preview storage", error);
+    }
+  };
   const emptyEvent = { addListener: () => {}, removeListener: () => {} };
   globalThis.chrome = {
     ...globalThis.chrome,
@@ -1502,10 +1562,10 @@ function ensureChromeApiFallback() {
       ...globalThis.chrome?.storage,
       local: globalThis.chrome?.storage?.local || {
         async get(defaults = {}) {
-          return { ...defaults, ...memoryStore };
+          return { ...defaults, ...readFallbackStore() };
         },
         async set(values = {}) {
-          Object.assign(memoryStore, values);
+          writeFallbackStore({ ...readFallbackStore(), ...values });
         }
       }
     },
@@ -1701,9 +1761,34 @@ function applyLocale() {
   favoriteUrlInput.placeholder = t("portalUrlPlaceholder");
   cancelFavoriteButton.textContent = t("cancel");
   favoriteForm.querySelector('button[type="submit"]').textContent = t("add");
+  applyOnboardingLocale();
   applyMediaFeedFormLocale();
   setButtonLabel(closeBookmarkPickerButton, t("back"));
   bookmarkPickerTitle.textContent = t("chooseBookmarkFolderPrompt");
+}
+
+function applyOnboardingLocale() {
+  if (!onboardingGuide) {
+    return;
+  }
+  document.querySelector("#onboardingKicker").textContent = t("onboardingKicker");
+  document.querySelector("#onboardingTitle").textContent = t("onboardingTitle");
+  document.querySelector("#onboardingIntro").textContent = t("onboardingIntro");
+  document.querySelector("#onboardingPrivacyTitle").textContent = t("onboardingPrivacyTitle");
+  document.querySelector("#onboardingPrivacyBody").textContent = t("onboardingPrivacyBody");
+  document.querySelector("#onboardingPermissionTitle").textContent = t("onboardingPermissionTitle");
+  document.querySelector("#onboardingPermissionBody").textContent = t("onboardingPermissionBody");
+  document.querySelector("#onboardingSyncTitle").textContent = t("onboardingSyncTitle");
+  document.querySelector("#onboardingSyncBody").textContent = t("onboardingSyncBody");
+  document.querySelector("#onboardingAiTitle").textContent = t("onboardingAiTitle");
+  document.querySelector("#onboardingAiBody").textContent = t("onboardingAiBody");
+  document.querySelector("#onboardingStartTitle").textContent = t("onboardingStartTitle");
+  document.querySelector("#onboardingStartBody").textContent = t("onboardingStartBody");
+  document.querySelector("#onboardingFeedbackTitle").textContent = t("onboardingFeedbackTitle");
+  document.querySelector("#onboardingFeedbackBody").textContent = t("onboardingFeedbackBody");
+  onboardingFeedbackLink.textContent = t("onboardingFeedback");
+  onboardingDoneButton.textContent = t("onboardingDone");
+  setButtonLabel(onboardingCloseButton, t("closeOnboarding"));
 }
 
 function setMobileTabLabel(panelId, label) {
@@ -1812,6 +1897,8 @@ async function init() {
   favoriteAddButton.addEventListener("click", toggleFavoriteForm);
   cancelFavoriteButton.addEventListener("click", hideFavoriteForm);
   favoriteForm.addEventListener("submit", handleFavoriteSubmit);
+  onboardingCloseButton?.addEventListener("click", dismissOnboardingGuide);
+  onboardingDoneButton?.addEventListener("click", dismissOnboardingGuide);
   settingsButton.addEventListener("click", toggleSettingsPanel);
   closeSettingsButton.addEventListener("click", () => closeSettingsPanel({ restoreFocus: true }));
   syncSettingsNowButton?.addEventListener("click", handleManualSyncSettings);
@@ -1831,6 +1918,7 @@ async function init() {
   document.addEventListener("keydown", handleBookmarkDeleteEscape);
   document.addEventListener("keydown", handleGlobalEscape);
   bindBookmarkChangeEvents();
+  requestOnboardingGuide();
   requestAnimationFrame(animatePageRefreshEntry);
 }
 
@@ -1961,6 +2049,11 @@ function renderSearchEngineIcon(target, engine) {
 
 function handleGlobalEscape(event) {
   if (event.key !== "Escape") {
+    return;
+  }
+  if (onboardingGuide && !onboardingGuide.hidden) {
+    event.preventDefault();
+    dismissOnboardingGuide();
     return;
   }
   exitAiQuickSearchMode();
@@ -2420,6 +2513,45 @@ function closeSettingsPanel(options = {}) {
   if (options.restoreFocus) {
     settingsButton.focus({ preventScroll: true });
   }
+}
+
+async function requestOnboardingGuide() {
+  if (!onboardingGuide) {
+    return;
+  }
+  try {
+    const stored = await chrome.storage.local.get({ [ONBOARDING_GUIDE_STORAGE_KEY]: false });
+    if (stored[ONBOARDING_GUIDE_STORAGE_KEY]) {
+      return;
+    }
+    openOnboardingGuide();
+  } catch (error) {
+    console.warn("Failed to read onboarding guide state", error);
+  }
+}
+
+function openOnboardingGuide() {
+  if (!onboardingGuide) {
+    return;
+  }
+  closeSettingsPanel();
+  onboardingFeedbackLink.href = ISSUE_FEEDBACK_URL;
+  onboardingCloseButton.querySelector(".button-icon").innerHTML = closeIcon();
+  onboardingGuide.hidden = false;
+  onboardingDoneButton.focus({ preventScroll: true });
+}
+
+async function dismissOnboardingGuide() {
+  if (!onboardingGuide || onboardingGuide.hidden) {
+    return;
+  }
+  onboardingGuide.hidden = true;
+  try {
+    await chrome.storage.local.set({ [ONBOARDING_GUIDE_STORAGE_KEY]: true });
+  } catch (error) {
+    console.warn("Failed to save onboarding guide state", error);
+  }
+  quickSearchInput.focus({ preventScroll: true });
 }
 
 function handleSettingsPanelDismiss(event) {

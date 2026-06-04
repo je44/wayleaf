@@ -1740,6 +1740,111 @@ body.surface-open .surface-launchers {
   pointer-events: none;
 }
 
+.onboarding-guide {
+  position: fixed;
+  inset: 0;
+  z-index: 320;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: rgb(20 27 24 / 0.34);
+  backdrop-filter: blur(10px);
+}
+
+.onboarding-guide[hidden] {
+  display: none;
+}
+
+.onboarding-card {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  width: min(760px, calc(100vw - 32px));
+  max-height: min(760px, calc(100vh - 32px));
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel);
+  box-shadow: 0 18px 60px rgb(20 27 24 / 0.22);
+}
+
+.onboarding-header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 16px;
+  padding: 22px 22px 16px;
+  border-bottom: 1px solid var(--line);
+  background: var(--glass-panel);
+}
+
+.onboarding-kicker {
+  margin: 0 0 8px;
+  color: var(--accent);
+  font-size: 11px;
+  font-weight: 760;
+  letter-spacing: 0;
+}
+
+.onboarding-header h2 {
+  margin: 0;
+  color: var(--ink);
+  font-size: clamp(22px, 3vw, 30px);
+  letter-spacing: 0;
+  line-height: 1.08;
+}
+
+.onboarding-header p:last-child {
+  max-width: 580px;
+  margin: 10px 0 0;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.onboarding-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1px;
+  overflow-y: auto;
+  background: var(--line);
+}
+
+.onboarding-item {
+  min-height: 128px;
+  padding: 18px;
+  background: var(--panel);
+}
+
+.onboarding-item strong {
+  display: block;
+  color: var(--ink);
+  font-size: 14px;
+  letter-spacing: 0;
+  line-height: 1.28;
+}
+
+.onboarding-item p {
+  margin: 8px 0 0;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+.onboarding-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+  padding: 16px 22px 20px;
+  border-top: 1px solid var(--line);
+  background: var(--panel-soft);
+}
+
+.onboarding-actions .text-button {
+  display: inline-grid;
+  min-height: 36px;
+  align-items: center;
+  text-decoration: none;
+}
+
 .color-picker-grid {
   display: grid;
   gap: 8px;
@@ -4435,6 +4540,35 @@ a.history-page-link:hover {
   .settings-panel {
     top: calc(var(--topbar-height) + 8px);
     right: 12px;
+  }
+
+  .onboarding-guide {
+    align-items: end;
+    padding: 12px;
+  }
+
+  .onboarding-card {
+    width: 100%;
+    max-height: calc(100vh - 24px);
+  }
+
+  .onboarding-header {
+    padding: 18px 16px 14px;
+  }
+
+  .onboarding-grid {
+    display: block;
+    background: var(--panel);
+  }
+
+  .onboarding-item {
+    min-height: 0;
+    padding: 14px 16px;
+    border-top: 1px solid var(--line);
+  }
+
+  .onboarding-actions {
+    padding: 14px 16px 16px;
   }
 
   .mobile-section-switcher {

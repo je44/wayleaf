@@ -243,6 +243,51 @@
       </div>
     </section>
 
+    <section class="onboarding-guide" id="onboardingGuide" role="dialog" aria-modal="true" aria-labelledby="onboardingTitle" aria-describedby="onboardingIntro" hidden>
+      <div class="onboarding-card">
+        <header class="onboarding-header">
+          <div>
+            <p class="onboarding-kicker" id="onboardingKicker">第一次使用</p>
+            <h2 id="onboardingTitle">先花一分钟了解 Wayleaf</h2>
+            <p id="onboardingIntro">Wayleaf 会把新标签页变成你的本地工作台。下面这些点能帮你安全、顺手地开始。</p>
+          </div>
+          <button class="icon-button subtle-action" id="onboardingCloseButton" type="button" title="关闭指引" aria-label="关闭指引">
+            <span class="button-icon" aria-hidden="true"></span>
+          </button>
+        </header>
+        <div class="onboarding-grid">
+          <article class="onboarding-item">
+            <strong id="onboardingPrivacyTitle">本地优先</strong>
+            <p id="onboardingPrivacyBody">历史、书签、入口和主题保存在浏览器扩展存储里，Wayleaf 没有后端账号。</p>
+          </article>
+          <article class="onboarding-item">
+            <strong id="onboardingPermissionTitle">权限用来完成页面功能</strong>
+            <p id="onboardingPermissionBody">history 用于最近浏览，bookmarks 用于自选书签，tabs 和 scripting 用于打开搜索结果和 AI 页面辅助。</p>
+          </article>
+          <article class="onboarding-item">
+            <strong id="onboardingSyncTitle">配置会尽量跟随 Chrome 同步</strong>
+            <p id="onboardingSyncBody">同一 Google 账号会自动恢复偏好；如果当前浏览器不支持同步，设置仍会保留在本机。</p>
+          </article>
+          <article class="onboarding-item">
+            <strong id="onboardingAiTitle">AI 指令有兜底</strong>
+            <p id="onboardingAiBody">输入 /gpt、/claude、/gemini 或 /grok 可跳转并尝试填入问题；若对方网站要求登录或改版，请手动粘贴暂存问题。</p>
+          </article>
+          <article class="onboarding-item">
+            <strong id="onboardingStartTitle">从两个动作开始</strong>
+            <p id="onboardingStartBody">添加一个常用网站，再到导航中枢选择一个书签文件夹。你可以随时在设置中心调整主题和同步。</p>
+          </article>
+          <article class="onboarding-item">
+            <strong id="onboardingFeedbackTitle">遇到问题直接反馈</strong>
+            <p id="onboardingFeedbackBody">反馈时带上浏览器、Wayleaf 版本和失败场景，最容易定位。</p>
+          </article>
+        </div>
+        <footer class="onboarding-actions">
+          <a class="text-button" id="onboardingFeedbackLink" href="https://github.com/je44/wayleaf/issues" target="_blank" rel="noreferrer">反馈问题</a>
+          <button class="text-button primary" id="onboardingDoneButton" type="button">开始使用</button>
+        </footer>
+      </div>
+    </section>
+
     <template id="siteCardTemplate">
       <div class="site-card">
         <a class="site-link">
