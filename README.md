@@ -124,9 +124,11 @@
 ├── newtab.css           # 布局、主题、响应式规则和动效
 ├── newtab.js            # Chrome API 读取、状态保存、渲染和交互
 ├── ai-submit.js         # AI 页面直达后的输入辅助脚本
-├── icons/               # 扩展图标和常用网站图标
+├── icons/               # 扩展图标和常用网站图标，站点图标由 icons/sites/index.json 统一登记
 └── docs/                # 预览图
 ```
+
+扩展主图标、安装页图标和工具栏图标均使用最新的 `icons/wayleaf-flat-16.png`、`32.png`、`48.png`、`128.png` 和 `1024.png` 资源；发布包会直接包含这些 PNG 和 `icons/sites/` 本地站点图标资源。
 
 ## 本地开发
 

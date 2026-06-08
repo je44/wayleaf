@@ -3,6 +3,9 @@
 
 .vscode/
 .idea/
+.codex/
+.omx/
+.playwright-mcp/
 
 .env
 .env.*
@@ -13,11 +16,15 @@ yarn-error.log*
 pnpm-debug.log*
 
 node_modules/
+.venv/
 
 dist/
 build/
 out/
 coverage/
+audit/
+outputs/
+tmp/
 *.crx
 *.pem
 *.zip

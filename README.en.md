@@ -124,9 +124,11 @@ This is a Chrome Manifest V3 extension with no build step. Chrome can load the f
 ├── newtab.css           # Layout, theme, responsive rules, and motion
 ├── newtab.js            # Chrome API reads, state persistence, rendering, and interaction
 ├── ai-submit.js         # Helper script for AI page handoff
-├── icons/               # Extension icons and site icons
+├── icons/               # Extension icons and site icons registered through icons/sites/index.json
 └── docs/                # Preview images
 ```
+
+The extension icon, install-page icon, and toolbar icon all use the latest `icons/wayleaf-flat-16.png`, `32.png`, `48.png`, `128.png`, and `1024.png` assets. Release packages include those PNG files and the local `icons/sites/` site icon catalog.
 
 ## Local Development
 
