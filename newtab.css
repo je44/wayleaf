@@ -73,6 +73,7 @@
   --focus-wash-soft: rgb(var(--focus-rgb) / 0.045);
   --focus-ring: rgb(var(--focus-rgb) / 0.12);
   --search-engine-selected-border: #b45309;
+  --search-engine-selected-glow-rgb: 180 83 9;
   --panel-header-line: var(--line);
   --site-icon-tile: #ffffff;
   --site-icon-tile-light: #ffffff;
@@ -127,6 +128,7 @@
   --focus-rgb: var(--dark-focus-rgb);
   --on-accent: var(--dark-on-accent);
   --search-engine-selected-border: #f59e0b;
+  --search-engine-selected-glow-rgb: 245 158 11;
   --panel-header-line: rgba(239, 232, 220, 0.08);
   --custom-site-icon-shadow: inset 0 0 0 1px rgb(244 250 247 / 0.16);
   --coral: #ff8f7f;
@@ -1316,9 +1318,12 @@ body.surface-open .surface-backdrop {
 }
 
 .search-suggestions {
+  --search-suggestions-height: 0px;
+  --search-suggestions-max-height: min(360px, calc(100vh - 260px));
   display: grid;
   width: 100%;
-  max-height: 0;
+  height: 0;
+  max-height: var(--search-suggestions-max-height);
   gap: 4px;
   overflow: hidden;
   padding: 0 8px;
@@ -1329,32 +1334,34 @@ body.surface-open .surface-backdrop {
   opacity: 0;
   pointer-events: none;
   transform-origin: top center;
-  transform: none;
+  transform: translate3d(0, -4px, 0);
   transition:
-    max-height 220ms cubic-bezier(0.22, 1, 0.36, 1),
-    padding 220ms cubic-bezier(0.22, 1, 0.36, 1),
+    height 260ms cubic-bezier(0.16, 1, 0.3, 1),
+    padding 260ms cubic-bezier(0.16, 1, 0.3, 1),
     opacity 150ms ease,
-    transform 200ms cubic-bezier(0.22, 1, 0.36, 1);
+    transform 260ms cubic-bezier(0.16, 1, 0.3, 1);
+  will-change: height, opacity, transform;
+  contain: layout paint;
 }
 
 .search-workbench.suggestions-open .search-suggestions {
   border-color: transparent;
-  max-height: min(360px, calc(100vh - 260px));
+  height: min(var(--search-suggestions-height), var(--search-suggestions-max-height));
   overflow-y: auto;
   padding: 8px 8px 10px;
   opacity: 1;
   pointer-events: auto;
-  transform: none;
+  transform: translate3d(0, 0, 0);
 }
 
 .search-workbench.suggestions-closing .search-suggestions {
-  max-height: 0;
+  height: 0;
   overflow: hidden;
   padding-top: 0;
   padding-bottom: 0;
   opacity: 0;
   pointer-events: none;
-  transform: none;
+  transform: translate3d(0, -4px, 0);
 }
 
 .search-suggestions[hidden] {
@@ -1476,7 +1483,32 @@ body.surface-open .surface-backdrop {
 }
 
 .search-engine-choice[aria-pressed="true"] img {
-  border-color: var(--search-engine-selected-border);
+  border-color: transparent;
+  filter:
+    drop-shadow(0 0 3px rgb(var(--search-engine-selected-glow-rgb) / 0.5))
+    drop-shadow(0 0 8px rgb(var(--search-engine-selected-glow-rgb) / 0.34));
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .search-engine-choice[aria-pressed="true"] img {
+    animation: searchEngineOuterGlowBreath 1800ms ease-in-out infinite;
+    will-change: filter;
+  }
+}
+
+@keyframes searchEngineOuterGlowBreath {
+  0%,
+  100% {
+    filter:
+      drop-shadow(0 0 2px rgb(var(--search-engine-selected-glow-rgb) / 0.26))
+      drop-shadow(0 0 5px rgb(var(--search-engine-selected-glow-rgb) / 0.18));
+  }
+
+  50% {
+    filter:
+      drop-shadow(0 0 5px rgb(var(--search-engine-selected-glow-rgb) / 0.76))
+      drop-shadow(0 0 12px rgb(var(--search-engine-selected-glow-rgb) / 0.48));
+  }
 }
 
 .search-engine-choice img {
@@ -4883,7 +4915,7 @@ a.history-page-link:hover {
   }
 
   .search-suggestions {
-    max-height: min(360px, calc(100vh - 220px));
+    --search-suggestions-max-height: min(360px, calc(100vh - 220px));
   }
 
   .ai-engine-pill {

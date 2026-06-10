@@ -68,7 +68,8 @@ const SITE_ICON_CACHE_TTL_MS = 30 * 24 * 60 * 60 * 1000;
 const FAVORITE_REORDER_MS = 260;
 const FAVORITE_DELETE_EXIT_MS = 360;
 const FAVORITE_DELETE_CANCEL_MS = 280;
-const SEARCH_SUGGESTIONS_EXIT_MS = 220;
+const SEARCH_SUGGESTIONS_EXIT_MS = 260;
+const SEARCH_SUGGESTIONS_OPEN_PADDING_Y = 18;
 const MAX_BOOKMARK_FOLDER_OPTIONS = 160;
 const MAX_PORTAL_FEATURED_ITEMS = 6;
 const MAX_BOOKMARK_PORTAL_ITEMS = 120;
@@ -706,6 +707,7 @@ const SITE_ICON_TILE_COLOR_BY_SITE_KEY = Object.freeze({
   "zhihu.com": "#0084ff"
 });
 const MULTICOLOR_BRAND_ICON_SITE_KEYS = new Set([
+  "bing.com",
   "calendar.google.com",
   "docs.google.com",
   "drive.google.com",
@@ -2785,9 +2787,11 @@ async function renderLocalSearchSuggestions(query, options = {}) {
 function showSearchSuggestions() {
   window.clearTimeout(searchSuggestionsHideTimer);
   cancelAnimationFrame(searchSuggestionsShowFrame);
-  searchWorkbench?.classList.remove("suggestions-closing");
   searchSuggestions.hidden = false;
+  updateSearchSuggestionsHeight();
   searchSuggestionsShowFrame = requestAnimationFrame(() => {
+    updateSearchSuggestionsHeight();
+    searchWorkbench?.classList.remove("suggestions-closing");
     searchWorkbench?.classList.add("suggestions-open");
   });
 }
@@ -2796,6 +2800,18 @@ function finishHideSearchSuggestions() {
   searchWorkbench?.classList.remove("suggestions-closing");
   searchSuggestions.hidden = true;
   searchSuggestions.replaceChildren();
+  searchSuggestions.style.setProperty("--search-suggestions-height", "0px");
+}
+
+function updateSearchSuggestionsHeight() {
+  const styles = window.getComputedStyle(searchSuggestions);
+  const currentPaddingY = (Number.parseFloat(styles.paddingTop) || 0)
+    + (Number.parseFloat(styles.paddingBottom) || 0);
+  const contentHeight = Math.max(0, searchSuggestions.scrollHeight - currentPaddingY);
+  searchSuggestions.style.setProperty(
+    "--search-suggestions-height",
+    `${Math.ceil(contentHeight + SEARCH_SUGGESTIONS_OPEN_PADDING_Y)}px`
+  );
 }
 
 function createSearchEngineSuggestion(query) {
@@ -3179,8 +3195,10 @@ function hideSearchSuggestions() {
   if (searchSuggestions.hidden && !searchWorkbench?.classList.contains("suggestions-open")) {
     searchWorkbench?.classList.remove("suggestions-closing");
     searchSuggestions.replaceChildren();
+    searchSuggestions.style.setProperty("--search-suggestions-height", "0px");
     return;
   }
+  updateSearchSuggestionsHeight();
   searchWorkbench?.classList.remove("suggestions-open");
   searchWorkbench?.classList.add("suggestions-closing");
   searchSuggestionsHideTimer = window.setTimeout(finishHideSearchSuggestions, SEARCH_SUGGESTIONS_EXIT_MS);
