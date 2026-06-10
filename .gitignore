@@ -25,6 +25,7 @@ coverage/
 audit/
 outputs/
 tmp/
+icons/generated-wayleaf-corgi-appicon-imagegen-*/
 *.crx
 *.pem
 *.zip
