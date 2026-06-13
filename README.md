@@ -161,7 +161,7 @@ unzip -t dist/wayleaf-v1.3.0.zip
 4. 确认 zip 根目录直接包含 `manifest.json`。
 5. 在 GitHub Release 上传 `dist/wayleaf-vX.Y.Z.zip`。
 
-README 顶部、扩展主图标、安装页图标和工具栏图标都使用当前的 `icons/wayleaf-flat-128.png` 主图标；`manifest.json` 中仍按 `16/32/48/128` 声明，让 Chrome 从 128px 源图缩放以提升小尺寸清晰度。发布包会包含 `icons/wayleaf-flat-16.png`、`32.png`、`48.png`、`128.png`、`1024.png` 和 `icons/sites/` 本地站点图标资源。
+README 顶部使用当前的 `icons/wayleaf-flat-128.png` 主图标；`manifest.json` 按 `16/32/48/128` 指向对应的原生尺寸图标，避免 Chrome 运行时再缩放。发布包会包含 `icons/wayleaf-flat-16.png`、`32.png`、`48.png`、`128.png`、`1024.png` 和 `icons/sites/` 本地站点图标资源。
 
 </details>
 

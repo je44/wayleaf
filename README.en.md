@@ -161,7 +161,7 @@ Release checklist:
 4. Confirm that `manifest.json` is at the zip root.
 5. Upload `dist/wayleaf-vX.Y.Z.zip` to the GitHub Release.
 
-The README header, extension icon, install-page icon, and toolbar icon all use the current `icons/wayleaf-flat-128.png` primary icon. `manifest.json` still declares `16/32/48/128` entries so Chrome scales from the 128px source for clearer small icons. Release packages include `icons/wayleaf-flat-16.png`, `32.png`, `48.png`, `128.png`, `1024.png`, and the local `icons/sites/` site icon catalog.
+The README header uses the current `icons/wayleaf-flat-128.png` primary icon. `manifest.json` points `16/32/48/128` entries at their matching native-size icon files so Chrome does not rescale them at runtime. Release packages include `icons/wayleaf-flat-16.png`, `32.png`, `48.png`, `128.png`, `1024.png`, and the local `icons/sites/` site icon catalog.
 
 </details>
 
