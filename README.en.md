@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="icons/wayleaf-flat-1024.png" width="96" height="96" alt="Wayleaf icon">
+  <img src="icons/wayleaf-flat-128.png" width="96" height="96" alt="Wayleaf icon">
 </p>
 
 <h1 align="center">Wayleaf Chrome Extension</h1>
@@ -39,10 +39,11 @@ Most new-tab sessions start with the same small set of actions: open a frequent 
 | Search or open a site | The search box supports local history/bookmarks, full URLs, Google, Baidu, Bing, and aggregate Google+Bing search. |
 | Manage frequent destinations | Built-in categories cover search, social, shopping, developer, productivity, media, design, and AI sites; custom shortcuts are supported. |
 | Continue recent browsing | Recent pages are grouped by repeat visits per site, with pin and delete actions for important or noisy pages. |
-| Show a bookmark folder | Pick one Chrome bookmark folder and Wayleaf displays its sites grouped by title initial. |
+| Show a bookmark folder | Pick one Chrome bookmark folder; Wayleaf highlights sites added in the last 3 days and groups the rest by title initial. |
+| Collect high-frequency sites | Favorite sites are deduplicated, and sites from the active bookmark folder can be added directly to favorites. |
 | Send a prompt to AI | Use `/gpt`, `/claude`, `/gemini`, or `/grok` to open the matching AI site and try to fill the prompt. |
 | Read tech feeds | Built-in Chinese and English tech sources are included, and custom RSS/JSON sources can be added. |
-| Tune appearance and sync | System/light/dark themes, accent colors, custom light/dark colors, and `chrome.storage.sync` preference sync are supported. |
+| Tune appearance and sync | System/light/dark themes, preset color pairs, custom light/dark primary and secondary colors, and `chrome.storage.sync` preference sync are supported. |
 
 The interface follows the browser language for Chinese, English, Japanese, Korean, Spanish, French, or German.
 
@@ -160,7 +161,7 @@ Release checklist:
 4. Confirm that `manifest.json` is at the zip root.
 5. Upload `dist/wayleaf-vX.Y.Z.zip` to the GitHub Release.
 
-The extension icon, install-page icon, and toolbar icon still declare `16/32/48/128` entries in `manifest.json`, but they all point to `icons/wayleaf-flat-128.png` at runtime so Chrome scales from the 128px source for clearer small icons. Release packages include `icons/wayleaf-flat-16.png`, `32.png`, `48.png`, `128.png`, `1024.png`, and the local `icons/sites/` site icon catalog.
+The README header, extension icon, install-page icon, and toolbar icon all use the current `icons/wayleaf-flat-128.png` primary icon. `manifest.json` still declares `16/32/48/128` entries so Chrome scales from the 128px source for clearer small icons. Release packages include `icons/wayleaf-flat-16.png`, `32.png`, `48.png`, `128.png`, `1024.png`, and the local `icons/sites/` site icon catalog.
 
 </details>
 

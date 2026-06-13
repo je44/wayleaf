@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="icons/wayleaf-flat-1024.png" width="96" height="96" alt="Wayleaf icon">
+  <img src="icons/wayleaf-flat-128.png" width="96" height="96" alt="Wayleaf icon">
 </p>
 
 <h1 align="center">Wayleaf</h1>
@@ -39,10 +39,11 @@
 | 搜索或打开网页 | 搜索框支持本地历史/书签、完整 URL、Google、百度、Bing 和 Google+Bing 聚合搜索。 |
 | 管理常用入口 | 内置搜索、社交、购物、开发、效率、影音、设计和 AI 分类；也可以添加自定义入口。 |
 | 继续刚才的浏览 | 最近浏览按站点聚合重复访问页面，重要页面可以置顶或删除。 |
-| 展示书签文件夹 | 选择一个 Chrome 书签文件夹，Wayleaf 会按名称首字母分组展示其中的网站。 |
+| 展示书签文件夹 | 选择一个 Chrome 书签文件夹，Wayleaf 会突出显示 3 天内新加入的网站，并按名称首字母分组。 |
+| 收集高频网站 | 常用入口支持去重；在书签视图里也可以把当前文件夹中的网站直接加入常用入口。 |
 | 把问题发给 AI | 用 `/gpt`、`/claude`、`/gemini`、`/grok` 直达对应 AI 页面并尝试填入问题。 |
 | 看技术资讯 | 内置中英文技术资讯源，也支持自定义 RSS/JSON 信息源。 |
-| 调整外观和同步 | 支持系统/日间/夜间主题、强调色、自定义日夜颜色和 `chrome.storage.sync` 偏好同步。 |
+| 调整外观和同步 | 支持系统/日间/夜间主题、预设双色、自定义日夜主辅色和 `chrome.storage.sync` 偏好同步。 |
 
 界面会根据浏览器语言显示中文、英文、日文、韩文、西班牙文、法文或德文。
 
@@ -160,7 +161,7 @@ unzip -t dist/wayleaf-v1.3.0.zip
 4. 确认 zip 根目录直接包含 `manifest.json`。
 5. 在 GitHub Release 上传 `dist/wayleaf-vX.Y.Z.zip`。
 
-扩展主图标、安装页图标和工具栏图标在 `manifest.json` 中按 `16/32/48/128` 声明，但运行时统一指向 `icons/wayleaf-flat-128.png`，让 Chrome 从 128px 源图缩放以提升小尺寸清晰度；发布包会包含 `icons/wayleaf-flat-16.png`、`32.png`、`48.png`、`128.png`、`1024.png` 和 `icons/sites/` 本地站点图标资源。
+README 顶部、扩展主图标、安装页图标和工具栏图标都使用当前的 `icons/wayleaf-flat-128.png` 主图标；`manifest.json` 中仍按 `16/32/48/128` 声明，让 Chrome 从 128px 源图缩放以提升小尺寸清晰度。发布包会包含 `icons/wayleaf-flat-16.png`、`32.png`、`48.png`、`128.png`、`1024.png` 和 `icons/sites/` 本地站点图标资源。
 
 </details>
 

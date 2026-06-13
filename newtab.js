@@ -75,6 +75,7 @@ const MAX_PORTAL_FEATURED_ITEMS = 6;
 const MAX_BOOKMARK_PORTAL_ITEMS = 120;
 const MAX_BOOKMARK_HISTORY_ITEMS = 180;
 const BOOKMARK_HISTORY_LOOKBACK_DAYS = 45;
+const RECENT_BOOKMARK_LOOKBACK_MS = 3 * 24 * 60 * 60 * 1000;
 const ISSUE_FEEDBACK_URL = "https://github.com/je44/wayleaf/issues";
 const MEDIA_FEED_SOURCES = [
   { id: "infoq-cn", title: "InfoQ 中文", language: "zh", url: "https://www.infoq.cn/feed" },
@@ -188,6 +189,7 @@ const MAX_MEDIA_FEED_FEEDBACK_KEYS = 120;
 const MEDIA_FEED_LARGE_CARD_INTERVAL = 5;
 const RECENT_CARD_DELETE_EXIT_MS = 140;
 const RECENT_CARD_ENTER_MS = 150;
+const RECENT_CARD_DRAWER_CLOSE_DELAY_MS = 180;
 const REDUCED_MOTION_QUERY = "(prefers-reduced-motion: reduce)";
 const FAVICON_BACKGROUND_SAMPLE_SIZE = 32;
 const FAVICON_BACKGROUND_ALPHA_MIN = 0.35;
@@ -284,7 +286,12 @@ const DEFAULT_SEARCH_ENGINE = "local";
 const DEFAULT_THEME_MODE = "system";
 const DEFAULT_THEME_PALETTE = "sage";
 const CUSTOM_THEME_PALETTE_ID = "custom";
-const DEFAULT_CUSTOM_THEME_COLORS = Object.freeze({ light: "#3f7f68", dark: "#86b9a4" });
+const DEFAULT_CUSTOM_THEME_COLORS = Object.freeze({
+  light: "#3f7f68",
+  lightStrong: "#2b5f4d",
+  dark: "#86b9a4",
+  darkStrong: "#b3d7c8"
+});
 const THEME_PALETTES = [
   {
     id: "sage",
@@ -832,8 +839,10 @@ const MESSAGES = {
     localSearchBookmark: "书签",
     localSearchNoResults: "没有匹配的历史或书签。",
     addFavoriteSite: "添加常用网站",
+    addBookmarkToFavorites: "将 {title} 添加到常用网站",
     deleteFavoriteSite: "删除常用网站",
     favoriteSiteLimit: "常用网站最多 {count} 个。",
+    favoriteSiteExists: "{title} 已在常用网站中。",
     portalCategoryItems: "{count} 个入口",
     deleteCustomPortal: "删除自定义入口",
     openSettings: "设置中心",
@@ -870,7 +879,7 @@ const MESSAGES = {
     onboardingFeedback: "反馈问题",
     onboardingDone: "开始使用",
     closeOnboarding: "关闭指引",
-    customPaletteTitle: "自定义强调色",
+    customPaletteTitle: "自定义主题",
     lightAccent: "日间",
     darkAccent: "夜间",
     portalNameRequired: "请填写入口名称。",
@@ -883,6 +892,8 @@ const MESSAGES = {
     bookmarkFolderMissing: "已选文件夹不存在，请重新选择。",
     unnamedFolder: "未命名文件夹",
     bookmarkMeta: "{folder} · {count} 个网站",
+    bookmarkRecentTitle: "最近加入",
+    bookmarkRecentMeta: "3 天内",
     bookmarkEmpty: "这个文件夹里没有可显示的网站书签。",
     bookmarkReadFailed: "无法读取书签，请确认扩展已获得 bookmarks 权限。",
     deleteBookmark: "删除 {title}",
@@ -996,14 +1007,18 @@ const MESSAGES = {
     unnamedFolder: "未命名資料夾",
     bookmarkRoot: "書籤",
     bookmarkMeta: "{folder} · {count} 個網站",
+    bookmarkRecentTitle: "最近加入",
+    bookmarkRecentMeta: "3 天內",
     bookmarkCount: "{count} 個網站",
     quickSearchLocal: "打開",
     localSearchHistory: "歷史",
     localSearchBookmark: "書籤",
     localSearchNoResults: "沒有匹配的歷史或書籤。",
     addFavoriteSite: "新增常用網站",
+    addBookmarkToFavorites: "將 {title} 新增到常用網站",
     deleteFavoriteSite: "刪除常用網站",
     favoriteSiteLimit: "常用網站最多 {count} 個。",
+    favoriteSiteExists: "{title} 已在常用網站中。",
     deleteBookmarkAction: "刪除",
     historyExpandPages: "展開 {count} 個相關頁面",
     historyCollapsePages: "收起相關頁面",
@@ -1112,8 +1127,10 @@ const MESSAGES = {
     localSearchBookmark: "Bookmark",
     localSearchNoResults: "No matching history or bookmarks.",
     addFavoriteSite: "Add favorite site",
+    addBookmarkToFavorites: "Add {title} to favorite sites",
     deleteFavoriteSite: "Remove favorite site",
     favoriteSiteLimit: "Up to {count} favorite sites.",
+    favoriteSiteExists: "{title} is already in favorite sites.",
     portalCategoryItems: "{count} shortcuts",
     deleteCustomPortal: "Remove custom portal",
     openSettings: "Settings",
@@ -1150,7 +1167,7 @@ const MESSAGES = {
     onboardingFeedback: "Report issue",
     onboardingDone: "Start using",
     closeOnboarding: "Close guide",
-    customPaletteTitle: "Custom accents",
+    customPaletteTitle: "Custom theme",
     lightAccent: "Light",
     darkAccent: "Dark",
     portalNameRequired: "Enter a portal name.",
@@ -1163,6 +1180,8 @@ const MESSAGES = {
     bookmarkFolderMissing: "The selected folder no longer exists. Choose another folder.",
     unnamedFolder: "Untitled folder",
     bookmarkMeta: "{folder} · {count} sites",
+    bookmarkRecentTitle: "Recently added",
+    bookmarkRecentMeta: "Last 3 days",
     bookmarkEmpty: "This folder has no website bookmarks to show.",
     bookmarkReadFailed: "Could not read bookmarks. Check that the extension has bookmarks permission.",
     deleteBookmark: "Remove {title}",
@@ -1213,6 +1232,8 @@ const MESSAGES = {
     unnamedFolder: "名称未設定のフォルダ",
     bookmarkRoot: "ブックマーク",
     bookmarkMeta: "{folder} · {count} 件のサイト",
+    bookmarkRecentTitle: "最近追加",
+    bookmarkRecentMeta: "3日以内",
     bookmarkCount: "{count} 件のサイト",
     unnamedPage: "名称未設定のページ",
     website: "Website"
@@ -1233,6 +1254,8 @@ const MESSAGES = {
     unnamedFolder: "이름 없는 폴더",
     bookmarkRoot: "북마크",
     bookmarkMeta: "{folder} · 사이트 {count}개",
+    bookmarkRecentTitle: "최근 추가",
+    bookmarkRecentMeta: "최근 3일",
     bookmarkCount: "사이트 {count}개",
     unnamedPage: "제목 없는 페이지",
     website: "Website"
@@ -1253,6 +1276,8 @@ const MESSAGES = {
     unnamedFolder: "Carpeta sin título",
     bookmarkRoot: "Marcadores",
     bookmarkMeta: "{folder} · {count} sitios",
+    bookmarkRecentTitle: "Añadidos recientemente",
+    bookmarkRecentMeta: "Últimos 3 días",
     bookmarkCount: "{count} sitios",
     unnamedPage: "Página sin título",
     website: "Website"
@@ -1273,6 +1298,8 @@ const MESSAGES = {
     unnamedFolder: "Dossier sans titre",
     bookmarkRoot: "Favoris",
     bookmarkMeta: "{folder} · {count} sites",
+    bookmarkRecentTitle: "Ajouts récents",
+    bookmarkRecentMeta: "3 derniers jours",
     bookmarkCount: "{count} sites",
     unnamedPage: "Page sans titre",
     website: "Website"
@@ -1293,6 +1320,8 @@ const MESSAGES = {
     unnamedFolder: "Unbenannter Ordner",
     bookmarkRoot: "Lesezeichen",
     bookmarkMeta: "{folder} · {count} Websites",
+    bookmarkRecentTitle: "Neu hinzugefügt",
+    bookmarkRecentMeta: "Letzte 3 Tage",
     bookmarkCount: "{count} Websites",
     unnamedPage: "Unbenannte Seite",
     website: "Website"
@@ -1319,6 +1348,7 @@ const bookmarkFolderList = document.querySelector("#bookmarkFolderList");
 const chooseBookmarkFolderButton = document.querySelector("#chooseBookmarkFolderButton");
 const refreshBookmarkFolderButton = document.querySelector("#refreshBookmarkFolderButton");
 const toggleBookmarkLayoutButton = document.querySelector("#toggleBookmarkLayoutButton");
+const bookmarkFavoriteAddButton = document.querySelector("#bookmarkFavoriteAddButton");
 const closeBookmarkPickerButton = document.querySelector("#closeBookmarkPickerButton");
 const bookmarkPickerTitle = document.querySelector("#bookmarkPickerTitle");
 const pinnedGrid = document.querySelector("#pinnedGrid");
@@ -1340,6 +1370,8 @@ const mediaFeedTypeTabs = document.querySelector("#mediaFeedTypeTabs");
 const mediaFeedTypeButtons = [...document.querySelectorAll("[data-media-feed-type]")];
 const siteCardTemplate = document.querySelector("#siteCardTemplate");
 const settingsButton = document.querySelector("#settingsButton");
+const settingsBackdrop = document.querySelector("#settingsBackdrop");
+const settingsShell = document.querySelector("#settingsShell");
 const settingsPanel = document.querySelector("#settingsPanel");
 const closeSettingsButton = document.querySelector("#closeSettingsButton");
 const palettePresetGrid = document.querySelector("#palettePresetGrid");
@@ -1348,7 +1380,9 @@ const syncSettingsStatus = document.querySelector("#syncSettingsStatus");
 const syncSettingsDetail = document.querySelector("#syncSettingsDetail");
 const syncSettingsNowButton = document.querySelector("#syncSettingsNowButton");
 const lightAccentInput = document.querySelector("#lightAccentInput");
+const lightAccentStrongInput = document.querySelector("#lightAccentStrongInput");
 const darkAccentInput = document.querySelector("#darkAccentInput");
+const darkAccentStrongInput = document.querySelector("#darkAccentStrongInput");
 const lightAccentValue = document.querySelector("#lightAccentValue");
 const darkAccentValue = document.querySelector("#darkAccentValue");
 const quickSearchForm = document.querySelector("#quickSearchForm");
@@ -1380,6 +1414,7 @@ const portalFormError = document.querySelector("#portalFormError");
 const cancelPortalButton = document.querySelector("#cancelPortalButton");
 const mobileSectionTabs = [...document.querySelectorAll(".mobile-section-tab")];
 let bookmarkRefreshTimer = 0;
+let recentBookmarkExpiryTimer = 0;
 let activeBookmarkDeleteCard = null;
 let activeFavoriteDeleteCard = null;
 let localSearchRequestId = 0;
@@ -1641,10 +1676,13 @@ function applyLocale() {
   setButtonLabel(togglePortalFormButton, t("addPortal"));
   setButtonLabel(refreshBookmarkFolderButton, t("refreshBookmarkFolder"));
   updateBookmarkLayoutButton();
+  setButtonLabel(bookmarkFavoriteAddButton, t("addFavoriteSite"));
   setButtonLabel(chooseBookmarkFolderButton, t("chooseBookmarkFolder"));
   setButtonLabel(refreshHistoryButton, t("refreshHistory"));
   setButtonLabel(settingsButton, t("openSettings"));
+  setButtonLabel(settingsBackdrop, t("closeSettings"));
   setButtonLabel(closeSettingsButton, t("closeSettings"));
+  settingsShell?.setAttribute("aria-label", t("settingsTitle"));
   setButtonLabel(favoriteAddButton, t("addFavoriteSite"));
   setStaticButtonIcons();
   applySettingsLocale();
@@ -1725,6 +1763,7 @@ function setStaticButtonIcons() {
   togglePortalFormButton.querySelector(".button-icon").innerHTML = plusIcon();
   document.querySelector(".portal-category-trigger-icon").innerHTML = chevronDownIcon();
   refreshBookmarkFolderButton.querySelector(".button-icon").innerHTML = refreshIcon();
+  bookmarkFavoriteAddButton.querySelector(".button-icon").innerHTML = plusIcon();
   chooseBookmarkFolderButton.querySelector(".button-icon").innerHTML = folderPlusIcon();
   closeBookmarkPickerButton.querySelector(".button-icon").innerHTML = arrowLeftIcon();
   refreshHistoryButton.querySelector(".button-icon").innerHTML = refreshIcon();
@@ -1790,6 +1829,7 @@ async function init() {
   chooseBookmarkFolderButton.addEventListener("click", openBookmarkPicker);
   refreshBookmarkFolderButton.addEventListener("click", renderSelectedBookmarkFolder);
   toggleBookmarkLayoutButton.addEventListener("click", toggleBookmarkLayout);
+  bookmarkFavoriteAddButton?.addEventListener("click", toggleFavoriteForm);
   closeBookmarkPickerButton.addEventListener("click", closeBookmarkPicker);
   refreshHistoryButton.addEventListener("click", refreshHistory);
   portalSurfaceButton.addEventListener("click", () => toggleSurfacePanel("portalPanel"));
@@ -1817,13 +1857,16 @@ async function init() {
   onboardingCloseButton?.addEventListener("click", dismissOnboardingGuide);
   onboardingDoneButton?.addEventListener("click", dismissOnboardingGuide);
   settingsButton.addEventListener("click", toggleSettingsPanel);
+  settingsBackdrop?.addEventListener("click", () => closeSettingsPanel({ restoreFocus: true }));
   closeSettingsButton.addEventListener("click", () => closeSettingsPanel({ restoreFocus: true }));
   syncSettingsNowButton?.addEventListener("click", handleManualSyncSettings);
   document.querySelectorAll("[data-theme-mode]").forEach((button) => {
     button.addEventListener("click", () => setThemeMode(button.dataset.themeMode, { persist: true }));
   });
   lightAccentInput.addEventListener("input", handleCustomThemeColorInput);
+  lightAccentStrongInput.addEventListener("input", handleCustomThemeColorInput);
   darkAccentInput.addEventListener("input", handleCustomThemeColorInput);
+  darkAccentStrongInput.addEventListener("input", handleCustomThemeColorInput);
   mobileSectionTabs.forEach((tab) => {
     tab.addEventListener("click", () => activateMobilePanel(tab.dataset.panelTarget));
   });
@@ -1893,12 +1936,11 @@ function setActiveSurfacePanel(panelId) {
   secondaryShell.dataset.previousSurface = previousPanelId || "";
   secondaryShell.classList.toggle("surface-open", hasActiveSurfacePanel);
   secondaryShell.classList.toggle("surface-closing", Boolean(!activeSurfacePanelId && previousPanelId));
-  document.body.classList.toggle("surface-open", hasActiveSurfacePanel);
   if (surfaceBackdrop) {
     surfaceBackdrop.hidden = !activeSurfacePanelId && !previousPanelId;
     surfaceBackdrop.setAttribute("aria-hidden", String(!activeSurfacePanelId));
   }
-  setHomeSurfaceIsolation(hasActiveSurfacePanel);
+  syncSurfaceChromeState();
   document.querySelectorAll(".panel").forEach((panel) => {
     const isActive = panel.id === activeSurfacePanelId;
     const isClosing = !activeSurfacePanelId && panel.id === previousPanelId;
@@ -1928,6 +1970,7 @@ function setActiveSurfacePanel(panelId) {
         document.querySelectorAll(".panel.surface-closing").forEach((panel) => {
           panel.classList.remove("surface-closing");
         });
+        syncSurfaceChromeState();
         if (previousPanelId === "portalPanel") {
           portalSurfaceButton.focus({ preventScroll: true });
         }
@@ -1949,6 +1992,14 @@ function setHomeSurfaceIsolation(isIsolated) {
     node.removeAttribute("aria-hidden");
     node.inert = false;
   });
+}
+
+function syncSurfaceChromeState() {
+  const hasSurfacePanel = Boolean(activeSurfacePanelId);
+  const hasSettingsDrawer = settingsShell?.classList.contains("surface-open");
+  const isSurfaceChromeVisible = Boolean(hasSurfacePanel || hasSettingsDrawer);
+  document.body.classList.toggle("surface-open", isSurfaceChromeVisible);
+  setHomeSurfaceIsolation(isSurfaceChromeVisible);
 }
 
 function focusActiveSurfacePanel(panelId) {
@@ -2202,17 +2253,34 @@ function normalizeThemePaletteSettings(value) {
   const palette = value.palette === CUSTOM_THEME_PALETTE_ID || THEME_PALETTES.some((item) => item.id === value.palette)
     ? value.palette
     : DEFAULT_THEME_PALETTE;
+  const light = normalizeColor(value.custom?.light, fallback.custom.light);
+  const dark = normalizeColor(value.custom?.dark, fallback.custom.dark);
   return {
     palette,
     custom: {
-      light: normalizeColor(value.custom?.light, fallback.custom.light),
-      dark: normalizeColor(value.custom?.dark, fallback.custom.dark)
+      light,
+      lightStrong: normalizeColor(
+        value.custom?.lightStrong,
+        value.custom?.lightAccentStrong,
+        mixHexColors(light, "#000000", 0.32)
+      ),
+      dark,
+      darkStrong: normalizeColor(
+        value.custom?.darkStrong,
+        value.custom?.darkAccentStrong,
+        mixHexColors(dark, "#ffffff", 0.28)
+      )
     }
   };
 }
 
-function normalizeColor(value, fallback) {
-  return /^#[\da-f]{6}$/i.test(String(value || "")) ? String(value).toLowerCase() : fallback;
+function normalizeColor(...values) {
+  for (const value of values) {
+    if (/^#[\da-f]{6}$/i.test(String(value || ""))) {
+      return String(value).toLowerCase();
+    }
+  }
+  return "#000000";
 }
 
 function renderThemePalettePresets() {
@@ -2256,13 +2324,13 @@ function applyThemePalette() {
         light: {
           ...basePalette.modes.light,
           accent: activeCustomThemeColors.light,
-          accentStrong: mixHexColors(activeCustomThemeColors.light, "#000000", 0.32),
+          accentStrong: activeCustomThemeColors.lightStrong,
           focus: mixHexColors(activeCustomThemeColors.light, "#2f82c4", 0.48)
         },
         dark: {
           ...basePalette.modes.dark,
           accent: activeCustomThemeColors.dark,
-          accentStrong: mixHexColors(activeCustomThemeColors.dark, "#ffffff", 0.28),
+          accentStrong: activeCustomThemeColors.darkStrong,
           focus: mixHexColors(activeCustomThemeColors.dark, "#68b7f2", 0.4),
           onAccent: readableTextColor(activeCustomThemeColors.dark)
         }
@@ -2354,7 +2422,9 @@ async function handleCustomThemeColorInput() {
   activeThemePalette = CUSTOM_THEME_PALETTE_ID;
   activeCustomThemeColors = {
     light: normalizeColor(lightAccentInput.value, DEFAULT_CUSTOM_THEME_COLORS.light),
-    dark: normalizeColor(darkAccentInput.value, DEFAULT_CUSTOM_THEME_COLORS.dark)
+    lightStrong: normalizeColor(lightAccentStrongInput.value, DEFAULT_CUSTOM_THEME_COLORS.lightStrong),
+    dark: normalizeColor(darkAccentInput.value, DEFAULT_CUSTOM_THEME_COLORS.dark),
+    darkStrong: normalizeColor(darkAccentStrongInput.value, DEFAULT_CUSTOM_THEME_COLORS.darkStrong)
   };
   updateCustomThemeInputs();
   applyThemePalette();
@@ -2364,9 +2434,17 @@ async function handleCustomThemeColorInput() {
 
 function updateCustomThemeInputs() {
   lightAccentInput.value = activeCustomThemeColors.light;
+  lightAccentStrongInput.value = activeCustomThemeColors.lightStrong;
   darkAccentInput.value = activeCustomThemeColors.dark;
-  lightAccentValue.value = activeCustomThemeColors.light;
-  darkAccentValue.value = activeCustomThemeColors.dark;
+  darkAccentStrongInput.value = activeCustomThemeColors.darkStrong;
+  lightAccentValue.value = `${activeCustomThemeColors.light} / ${activeCustomThemeColors.lightStrong}`;
+  lightAccentValue.textContent = lightAccentValue.value;
+  darkAccentValue.value = `${activeCustomThemeColors.dark} / ${activeCustomThemeColors.darkStrong}`;
+  darkAccentValue.textContent = darkAccentValue.value;
+  lightAccentInput.closest(".color-picker-row")?.style.setProperty("--color-picker-primary", activeCustomThemeColors.light);
+  lightAccentInput.closest(".color-picker-row")?.style.setProperty("--color-picker-secondary", activeCustomThemeColors.lightStrong);
+  darkAccentInput.closest(".color-picker-row")?.style.setProperty("--color-picker-primary", activeCustomThemeColors.dark);
+  darkAccentInput.closest(".color-picker-row")?.style.setProperty("--color-picker-secondary", activeCustomThemeColors.darkStrong);
 }
 
 async function saveThemePaletteSettings() {
@@ -2452,34 +2530,66 @@ async function handleManualSyncSettings() {
 }
 
 function toggleSettingsPanel() {
-  if (settingsPanel.hidden) {
+  if (!isSettingsPanelVisible()) {
     openSettingsPanel();
     return;
   }
   closeSettingsPanel({ restoreFocus: true });
 }
 
+function isSettingsPanelVisible() {
+  return Boolean(settingsShell && !settingsShell.hidden && settingsPanel.dataset.open === "true");
+}
+
+function focusSettingsPanel() {
+  window.requestAnimationFrame(() => {
+    if (!isSettingsPanelVisible()) {
+      return;
+    }
+    settingsPanel.focus({ preventScroll: true });
+  });
+}
+
 function openSettingsPanel() {
   window.clearTimeout(settingsPanelCloseTimer);
-  settingsPanel.hidden = false;
+  settingsShell.hidden = false;
+  settingsBackdrop.hidden = false;
+  settingsBackdrop.setAttribute("aria-hidden", "false");
+  settingsBackdrop.getBoundingClientRect();
   settingsPanel.dataset.open = "true";
+  settingsShell.classList.remove("surface-closing");
+  settingsPanel.classList.remove("surface-closing");
+  settingsShell.classList.add("surface-open");
+  settingsPanel.classList.add("surface-active");
   settingsButton.setAttribute("aria-expanded", "true");
   updateThemeSettingsUi();
   updateSyncSettingsUi();
+  syncSurfaceChromeState();
+  focusSettingsPanel();
 }
 
 function closeSettingsPanel(options = {}) {
-  if (settingsPanel.hidden && settingsPanel.dataset.open !== "true") {
+  if (!isSettingsPanelVisible() && !settingsShell.classList.contains("surface-closing")) {
     return;
   }
   window.clearTimeout(settingsPanelCloseTimer);
   settingsPanel.dataset.open = "false";
+  settingsShell.classList.remove("surface-open");
+  settingsPanel.classList.remove("surface-active");
+  settingsShell.classList.add("surface-closing");
+  settingsPanel.classList.add("surface-closing");
+  settingsBackdrop.setAttribute("aria-hidden", "true");
   settingsButton.setAttribute("aria-expanded", "false");
+  syncSurfaceChromeState();
   settingsPanelCloseTimer = window.setTimeout(() => {
     if (settingsPanel.dataset.open !== "true") {
-      settingsPanel.hidden = true;
+      settingsShell.hidden = true;
+      settingsBackdrop.hidden = true;
+      settingsShell.classList.remove("surface-closing");
+      settingsPanel.classList.remove("surface-closing");
+      syncSurfaceChromeState();
     }
-  }, 180);
+  }, 340);
   if (options.restoreFocus) {
     settingsButton.focus({ preventScroll: true });
   }
@@ -2525,11 +2635,11 @@ async function dismissOnboardingGuide() {
 }
 
 function handleSettingsPanelDismiss(event) {
-  if (settingsPanel.hidden) {
+  if (!isSettingsPanelVisible()) {
     return;
   }
   const target = event.target;
-  if (target instanceof Element && (settingsPanel.contains(target) || settingsButton.contains(target))) {
+  if (target instanceof Element && (settingsShell.contains(target) || settingsButton.contains(target) || settingsBackdrop?.contains(target))) {
     return;
   }
   closeSettingsPanel();
@@ -3230,19 +3340,24 @@ function localhostUrl(value) {
 async function renderPortals() {
   const fragment = document.createDocumentFragment();
   const customPortals = await loadCustomPortals();
-  const portalData = await loadBookmarkDrivenPortals(customPortals);
+  const [portalData, favoriteSites] = await Promise.all([
+    loadBookmarkDrivenPortals(customPortals),
+    loadFavoriteSites()
+  ]);
+  const favoriteKeys = favoriteSiteKeySet(favoriteSites);
   const featuredPortals = featuredPortalItems(portalData.items);
   const groups = groupPortalsByCategory(portalData.items);
   portalCategoryState = await loadPortalCategoryState(groups);
   if (featuredPortals.length) {
     fragment.appendChild(createPortalCategorySection({
       category: "featured",
-      items: featuredPortals,
-      featured: true
+      favoriteKeys,
+      featured: true,
+      items: featuredPortals
     }));
   }
   if (groups.length) {
-    fragment.appendChild(createPortalClassificationModule(groups));
+    fragment.appendChild(createPortalClassificationModule(groups, favoriteKeys));
   }
   portalGrid.replaceChildren(fragment);
 }
@@ -3519,7 +3634,7 @@ function mergePortalItems(priorityItems, secondaryItems) {
   return merged;
 }
 
-function createPortalClassificationModule(groups) {
+function createPortalClassificationModule(groups, favoriteKeys = new Set()) {
   const module = document.createElement("section");
   module.className = "portal-classification-module";
   groups.forEach((group) => {
@@ -3528,7 +3643,8 @@ function createPortalClassificationModule(groups) {
       ...group,
       collapsible: group.items.length > 0,
       classification: true,
-      expanded: isExpanded
+      expanded: isExpanded,
+      favoriteKeys
     });
     module.appendChild(section);
   });
@@ -3591,7 +3707,7 @@ function createPortalCategorySection(group) {
     grid.id = `portalCategoryGrid-${group.category}`;
   }
   visibleItems.forEach((portal, index) => {
-    const card = createSiteCard(portal);
+    const card = createSiteCard(portal, { favoriteKeys: group.favoriteKeys });
     grid.appendChild(card);
   });
   headingActions.className = "portal-category-actions";
@@ -3765,7 +3881,7 @@ function handlePortalCategoryPickerDismiss(event) {
   closePortalCategoryPicker();
 }
 
-function createSiteCard(site) {
+function createSiteCard(site, options = {}) {
   const node = siteCardTemplate.content.firstElementChild.cloneNode(true);
   const link = node.querySelector(".site-link");
   const icon = node.querySelector(".site-icon");
@@ -3784,7 +3900,26 @@ function createSiteCard(site) {
   } else {
     removeButton.remove();
   }
+  appendFavoriteTargetButton(node, site, options.favoriteKeys);
   return node;
+}
+
+function appendFavoriteTargetButton(node, site, favoriteKeys = new Set()) {
+  if (!canAddBookmarkSiteToFavorites(site, favoriteKeys)) {
+    return;
+  }
+  const favoriteButton = document.createElement("button");
+  favoriteButton.className = "site-favorite-button";
+  favoriteButton.type = "button";
+  favoriteButton.innerHTML = plusIcon();
+  setButtonLabel(favoriteButton, t("addBookmarkToFavorites", { title: site.title }));
+  favoriteButton.addEventListener("click", async (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    await addBookmarkSiteToFavorites(site);
+  });
+  node.classList.add("favorite-target-available");
+  node.appendChild(favoriteButton);
 }
 
 async function renderFavoriteSites() {
@@ -3811,6 +3946,18 @@ async function renderFavoriteSites() {
   }
 }
 
+async function renderFavoriteDependentSurfaces(options = {}) {
+  await renderFavoriteSites();
+  await renderPortals();
+  if (bookmarkPicker?.hidden) {
+    if (options.preserveBookmarkScroll) {
+      await rerenderBookmarkGridPreservingScroll();
+    } else if (activePortalView === "bookmarks" || activeSurfacePanelId === "portalPanel") {
+      await renderSelectedBookmarkFolder();
+    }
+  }
+}
+
 function updateFavoriteAddButtonState(favoriteCount) {
   const isFull = favoriteCount >= MAX_FAVORITE_SITES;
   favoriteAddButton.disabled = isFull;
@@ -3818,6 +3965,12 @@ function updateFavoriteAddButtonState(favoriteCount) {
   favoriteAddButton.tabIndex = isFull ? -1 : 0;
   favoriteAddButton.dataset.state = isFull ? "hidden" : "visible";
   favoriteAddButton.hidden = isFull;
+  if (bookmarkFavoriteAddButton) {
+    bookmarkFavoriteAddButton.hidden = true;
+    bookmarkFavoriteAddButton.disabled = true;
+    bookmarkFavoriteAddButton.setAttribute("aria-hidden", "true");
+    bookmarkFavoriteAddButton.tabIndex = -1;
+  }
   if (isFull && !favoriteForm.hidden) {
     hideFavoriteForm();
   }
@@ -4002,6 +4155,17 @@ async function handleFavoriteSubmit(event) {
     return;
   }
   const favorites = await loadFavoriteSites();
+  const favoriteKey = favoriteSiteKey(url);
+  if (!favoriteKey) {
+    favoriteFormError.textContent = t("portalUrlRequired");
+    favoriteUrlInput.focus();
+    return;
+  }
+  if (favoriteSiteKeySet(favorites).has(favoriteKey)) {
+    favoriteFormError.textContent = t("favoriteSiteExists", { title: favoriteSiteTitleFromUrl(url) });
+    favoriteUrlInput.focus();
+    return;
+  }
   if (favorites.length >= MAX_FAVORITE_SITES) {
     favoriteFormError.textContent = t("favoriteSiteLimit", { count: MAX_FAVORITE_SITES });
     return;
@@ -4009,12 +4173,12 @@ async function handleFavoriteSubmit(event) {
   favorites.push({
     id: String(Date.now()),
     title: favoriteSiteTitleFromUrl(url),
-    url,
-    icon: await discoverFavoriteSiteIcon(url)
+    url: favoriteKey,
+    icon: await discoverFavoriteSiteIcon(favoriteKey)
   });
   await saveFavoriteSites(favorites);
   hideFavoriteForm();
-  renderFavoriteSites();
+  await renderFavoriteDependentSurfaces();
 }
 
 async function loadFavoriteSites() {
@@ -4610,6 +4774,18 @@ function favoriteSiteTitleFromUrl(url) {
   return siteDisplayName(parsedUrl, "").slice(0, MAX_PORTAL_TITLE_LENGTH) || compactSiteDomain(url);
 }
 
+function favoriteSiteKey(url) {
+  return normalizePortalUrl(url);
+}
+
+function favoriteSiteKeySet(sites = []) {
+  return new Set(
+    sites
+      .map((site) => favoriteSiteKey(site?.url))
+      .filter(Boolean)
+  );
+}
+
 async function removeFavoriteSite(id, node) {
   if (node?.classList.contains("removing")) {
     return;
@@ -4624,7 +4800,7 @@ async function removeFavoriteSite(id, node) {
   }
   const nextSites = (await loadFavoriteSites()).filter((site) => site.id !== id);
   await saveFavoriteSites(nextSites);
-  await renderFavoriteSites();
+  await renderFavoriteDependentSurfaces({ preserveBookmarkScroll: true });
 }
 
 function wait(duration) {
@@ -6180,6 +6356,7 @@ async function removeCustomPortal(id) {
 async function renderSelectedBookmarkFolder() {
   try {
     clearBookmarkDeleteMode();
+    clearRecentBookmarkExpiryTimer();
     const folderId = await loadSelectedBookmarkFolderId();
     if (!folderId) {
       renderBookmarkEmptyState(t("bookmarkNoFolder"));
@@ -6199,8 +6376,10 @@ async function renderSelectedBookmarkFolder() {
       .map((item) => ({
         bookmarkId: item.id,
         title: siteDisplayName(safeUrl(item.url), item.title),
-        url: item.url
+        url: item.url,
+        dateAdded: Number(item.dateAdded || 0)
       }));
+    const favoriteKeys = favoriteSiteKeySet(await loadFavoriteSites());
 
     bookmarkFolderMeta.textContent = t("bookmarkMeta", {
       folder: folder.title || t("unnamedFolder"),
@@ -6211,9 +6390,14 @@ async function renderSelectedBookmarkFolder() {
       return;
     }
 
+    const { recentSites, groupedSites } = partitionRecentBookmarkSites(sites);
     const fragment = document.createDocumentFragment();
-    groupBookmarkSitesByInitial(sites).forEach((group) => {
-      fragment.appendChild(createBookmarkInitialSection(group));
+    if (recentSites.length) {
+      fragment.appendChild(createRecentBookmarkSection(recentSites, favoriteKeys));
+      scheduleRecentBookmarkExpiry(recentSites);
+    }
+    groupBookmarkSitesByInitial(groupedSites).forEach((group) => {
+      fragment.appendChild(createBookmarkInitialSection(group, favoriteKeys));
     });
     bookmarkGrid.replaceChildren(fragment);
   } catch (error) {
@@ -6223,8 +6407,67 @@ async function renderSelectedBookmarkFolder() {
 }
 
 function renderBookmarkEmptyState(message) {
+  clearRecentBookmarkExpiryTimer();
   bookmarkFolderMeta.textContent = "";
   bookmarkGrid.innerHTML = emptyState(message);
+}
+
+function partitionRecentBookmarkSites(sites) {
+  const recentCutoff = Date.now() - RECENT_BOOKMARK_LOOKBACK_MS;
+  return sites.reduce((groups, site) => {
+    if (isRecentBookmarkSite(site, recentCutoff)) {
+      groups.recentSites.push(site);
+    } else {
+      groups.groupedSites.push(site);
+    }
+    return groups;
+  }, { recentSites: [], groupedSites: [] });
+}
+
+function isRecentBookmarkSite(site, recentCutoff) {
+  return Number.isFinite(site.dateAdded)
+    && site.dateAdded > recentCutoff
+    && site.dateAdded <= Date.now();
+}
+
+function createRecentBookmarkSection(sites, favoriteKeys) {
+  return createBookmarkSection({
+    className: "bookmark-recent-section",
+    title: t("bookmarkRecentTitle"),
+    meta: t("bookmarkRecentMeta"),
+    items: sites.slice().sort(compareRecentBookmarkSites),
+    favoriteKeys
+  });
+}
+
+function compareRecentBookmarkSites(siteA, siteB) {
+  return Number(siteB.dateAdded || 0) - Number(siteA.dateAdded || 0)
+    || compareBookmarkSites(siteA, siteB);
+}
+
+function scheduleRecentBookmarkExpiry(recentSites) {
+  clearRecentBookmarkExpiryTimer();
+  const nextExpiry = recentSites.reduce((earliest, site) => {
+    const expiresAt = Number(site.dateAdded || 0) + RECENT_BOOKMARK_LOOKBACK_MS;
+    if (!Number.isFinite(expiresAt) || expiresAt <= Date.now()) {
+      return earliest;
+    }
+    return Math.min(earliest, expiresAt);
+  }, Number.POSITIVE_INFINITY);
+  if (!Number.isFinite(nextExpiry)) {
+    return;
+  }
+  recentBookmarkExpiryTimer = window.setTimeout(() => {
+    renderSelectedBookmarkFolder();
+  }, Math.max(1000, nextExpiry - Date.now() + 250));
+}
+
+function clearRecentBookmarkExpiryTimer() {
+  if (!recentBookmarkExpiryTimer) {
+    return;
+  }
+  clearTimeout(recentBookmarkExpiryTimer);
+  recentBookmarkExpiryTimer = 0;
 }
 
 function groupBookmarkSitesByInitial(sites) {
@@ -6319,31 +6562,49 @@ function compareBookmarkSites(siteA, siteB) {
     || compactSiteDomain(siteA.url).localeCompare(compactSiteDomain(siteB.url), "en", { sensitivity: "base" });
 }
 
-function createBookmarkInitialSection(group) {
+function createBookmarkInitialSection(group, favoriteKeys) {
+  return createBookmarkSection({
+    className: "bookmark-letter-section",
+    initial: group.initial,
+    title: group.initial,
+    items: group.items,
+    favoriteKeys
+  });
+}
+
+function createBookmarkSection({ className, initial = "", title, meta = "", items, favoriteKeys = new Set() }) {
   const section = document.createElement("section");
   const header = document.createElement("header");
-  const title = document.createElement("h3");
+  const heading = document.createElement("h3");
   const divider = document.createElement("span");
   const grid = document.createElement("div");
 
-  section.className = "bookmark-letter-section";
-  section.dataset.initial = group.initial;
+  section.className = className;
+  if (initial) {
+    section.dataset.initial = initial;
+  }
   header.className = "bookmark-letter-header";
-  title.className = "bookmark-letter-title";
-  title.textContent = group.initial;
+  heading.className = "bookmark-letter-title";
+  heading.textContent = title;
   divider.className = "bookmark-letter-line";
   divider.setAttribute("aria-hidden", "true");
   grid.className = "bookmark-letter-grid";
-  group.items.forEach((site) => {
-    grid.appendChild(createBookmarkSiteCard(site));
+  items.forEach((site) => {
+    grid.appendChild(createBookmarkSiteCard(site, favoriteKeys));
   });
-  header.append(title, divider);
+  header.append(heading, divider);
+  if (meta) {
+    const metaNode = document.createElement("span");
+    metaNode.className = "bookmark-section-meta";
+    metaNode.textContent = meta;
+    header.appendChild(metaNode);
+  }
   section.append(header, grid);
   return section;
 }
 
-function createBookmarkSiteCard(site) {
-  const node = createSiteCard(site);
+function createBookmarkSiteCard(site, favoriteKeys = new Set()) {
+  const node = createSiteCard(site, { favoriteKeys });
   const deleteButton = document.createElement("button");
 
   node.classList.add("bookmark-site-card");
@@ -6359,6 +6620,47 @@ function createBookmarkSiteCard(site) {
   node.appendChild(deleteButton);
   bindBookmarkLongPress(node, site);
   return node;
+}
+
+function canAddBookmarkSiteToFavorites(site, favoriteKeys = new Set()) {
+  const favoriteKey = favoriteSiteKey(site?.url);
+  return Boolean(
+    site?.bookmarkId
+      && favoriteKey
+      && favoriteKeys.size < MAX_FAVORITE_SITES
+      && !favoriteKeys.has(favoriteKey)
+  );
+}
+
+async function addBookmarkSiteToFavorites(site) {
+  const favoriteKey = favoriteSiteKey(site?.url);
+  if (!favoriteKey) {
+    return;
+  }
+
+  const favorites = await loadFavoriteSites();
+  const favoriteKeys = favoriteSiteKeySet(favorites);
+  if (favoriteKeys.has(favoriteKey) || favorites.length >= MAX_FAVORITE_SITES) {
+    await renderFavoriteDependentSurfaces({ preserveBookmarkScroll: true });
+    return;
+  }
+
+  favorites.push({
+    id: String(Date.now()),
+    title: normalizeText(site?.title).slice(0, MAX_PORTAL_TITLE_LENGTH) || favoriteSiteTitleFromUrl(favoriteKey),
+    url: favoriteKey,
+    icon: await discoverFavoriteSiteIcon(favoriteKey)
+  });
+  await saveFavoriteSites(favorites);
+  await renderFavoriteDependentSurfaces({ preserveBookmarkScroll: true });
+}
+
+async function rerenderBookmarkGridPreservingScroll() {
+  const scrollTop = bookmarkGrid?.scrollTop || 0;
+  await renderSelectedBookmarkFolder();
+  if (bookmarkGrid) {
+    bookmarkGrid.scrollTop = scrollTop;
+  }
 }
 
 function bindBookmarkLongPress(node, site) {
@@ -8186,6 +8488,34 @@ function createRecentFolderItem(group) {
   bottomBar.setAttribute("aria-hidden", "true");
 
   let activePageAnimation = null;
+  let hoverCloseTimer = 0;
+
+  const clearDrawerCloseTimer = () => {
+    if (!hoverCloseTimer) {
+      return;
+    }
+    window.clearTimeout(hoverCloseTimer);
+    hoverCloseTimer = 0;
+  };
+
+  const openDrawerHoverState = () => {
+    if (!hasPageDrawer) {
+      return;
+    }
+    clearDrawerCloseTimer();
+    card.classList.add("drawer-hover");
+  };
+
+  const scheduleDrawerClose = () => {
+    if (!hasPageDrawer) {
+      return;
+    }
+    clearDrawerCloseTimer();
+    hoverCloseTimer = window.setTimeout(() => {
+      card.classList.remove("drawer-hover");
+      hoverCloseTimer = 0;
+    }, RECENT_CARD_DRAWER_CLOSE_DELAY_MS);
+  };
 
   const animatePageTurn = (direction) => {
     if (!direction || pages.length < 2) {
@@ -8324,6 +8654,20 @@ function createRecentFolderItem(group) {
     animateRecentFolderExit(card);
     window.setTimeout(() => deleteHistoryGroup(group), RECENT_CARD_DELETE_EXIT_MS);
   });
+
+  if (hasPageDrawer) {
+    card.addEventListener("pointerenter", openDrawerHoverState);
+    card.addEventListener("pointerleave", scheduleDrawerClose);
+    card.addEventListener("focusin", openDrawerHoverState);
+    card.addEventListener("focusout", () => {
+      window.setTimeout(() => {
+        if (card.contains(document.activeElement)) {
+          return;
+        }
+        scheduleDrawerClose();
+      }, 0);
+    });
+  }
 
   copy.append(name, pageTitle, domain);
   face.append(icon, copy);
@@ -8797,109 +9141,117 @@ function inlineIcon(markup) {
 
 function searchEngineSearchIcon() {
   return inlineIcon(`
-    <circle cx="10.75" cy="10.75" r="5.25"></circle>
-    <path d="m14.75 14.75 4.5 4.5"></path>
+    <path d="M3 10a7 7 0 1 0 14 0a7 7 0 1 0-14 0m18 11l-6-6"></path>
   `);
 }
 
 function historyPinIcon(active) {
   if (active) {
     return inlineIcon(`
-      <path d="M12 17v5"></path>
-      <path d="M15 9.34V7a1 1 0 0 1 1-1 2 2 0 0 0 0-4H7.89"></path>
-      <path d="m2 2 20 20"></path>
-      <path d="M9 9v1.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24V16a1 1 0 0 0 1 1h11"></path>
+      <path d="m3 3 18 18"></path>
+      <path d="M15 4.5 11.751 7.749"></path>
+      <path d="m9.181 9.182-2.181.818-1.5 1.5 7 7L14 17l.82-2.186"></path>
+      <path d="M16.25 12.25 19.5 9"></path>
+      <path d="M9 15 4.5 19.5"></path>
+      <path d="M14.5 4 20 9.5"></path>
     `);
   }
   return inlineIcon(`
-    <path d="M12 17v5"></path>
-    <path d="M9 10.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24V16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V7a1 1 0 0 1 1-1 2 2 0 0 0 0-4H8a2 2 0 0 0 0 4 1 1 0 0 1 1 1z"></path>
+    <path d="M9 4v6"></path>
+    <path d="m7 14 2-4"></path>
+    <path d="M7 16h10"></path>
+    <path d="m15 10 2 4"></path>
+    <path d="M12 16v5"></path>
+    <path d="M8 4h8"></path>
   `);
 }
 
 function plusIcon() {
   return inlineIcon(`
-    <path d="M12 5v14"></path>
-    <path d="M5 12h14"></path>
+    <path stroke="none" d="M0 0h24v24H0z" fill="none"></path>
+    <path d="M12 5l0 14"></path>
+    <path d="M5 12l14 0"></path>
   `);
 }
 
 function refreshIcon() {
   return inlineIcon(`
-    <path d="M3 12a9 9 0 0 1 15.5-6.2L21 8"></path>
-    <path d="M21 3v5h-5"></path>
-    <path d="M21 12a9 9 0 0 1-15.5 6.2L3 16"></path>
-    <path d="M3 21v-5h5"></path>
+    <path d="M20 11A8.1 8.1 0 0 0 4.5 9"></path>
+    <path d="M4 5v4h4"></path>
+    <path d="M4 13a8.1 8.1 0 0 0 15.5 2"></path>
+    <path d="M20 19v-4h-4"></path>
   `);
 }
 
 function listIcon() {
   return inlineIcon(`
-    <line x1="8" x2="21" y1="6" y2="6"></line>
-    <line x1="8" x2="21" y1="12" y2="12"></line>
-    <line x1="8" x2="21" y1="18" y2="18"></line>
-    <line x1="3" x2="3.01" y1="6" y2="6"></line>
-    <line x1="3" x2="3.01" y1="12" y2="12"></line>
-    <line x1="3" x2="3.01" y1="18" y2="18"></line>
+    <path d="M9 6h11"></path>
+    <path d="M9 12h11"></path>
+    <path d="M9 18h11"></path>
+    <path d="M5 6v.01"></path>
+    <path d="M5 12v.01"></path>
+    <path d="M5 18v.01"></path>
   `);
 }
 
 function gridIcon() {
   return inlineIcon(`
-    <rect width="7" height="7" x="3" y="3" rx="1"></rect>
-    <rect width="7" height="7" x="14" y="3" rx="1"></rect>
-    <rect width="7" height="7" x="14" y="14" rx="1"></rect>
-    <rect width="7" height="7" x="3" y="14" rx="1"></rect>
+    <path d="M4 5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v4a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1z"></path>
+    <path d="M14 5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v4a1 1 0 0 1-1 1h-4a1 1 0 0 1-1-1z"></path>
+    <path d="M4 15a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v4a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1z"></path>
+    <path d="M14 15a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v4a1 1 0 0 1-1 1h-4a1 1 0 0 1-1-1z"></path>
   `);
 }
 
 function historyIcon() {
   return inlineIcon(`
-    <path d="M3 12a9 9 0 1 0 3-6.7"></path>
-    <path d="M3 4v5h5"></path>
-    <path d="M12 7v5l3 2"></path>
+    <path d="M12 8v4l2 2"></path>
+    <path d="M3.05 11a9 9 0 1 1 .5 4"></path>
+    <path d="M3.05 20v-5h5"></path>
   `);
 }
 
 function folderPlusIcon() {
   return inlineIcon(`
-    <path d="M12 10v6"></path>
-    <path d="M9 13h6"></path>
-    <path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"></path>
+    <path d="M12 19H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h4l3 3h7a2 2 0 0 1 2 2v3.5"></path>
+    <path d="M16 19h6"></path>
+    <path d="M19 16v6"></path>
   `);
 }
 
 function arrowLeftIcon() {
   return inlineIcon(`
-    <path d="m12 19-7-7 7-7"></path>
-    <path d="M19 12H5"></path>
+    <path d="M5 12h14"></path>
+    <path d="m5 12 6 6"></path>
+    <path d="m5 12 6-6"></path>
   `);
 }
 
 function chevronLeftIcon() {
   return inlineIcon(`
-    <path d="M15 7 10 12l5 5"></path>
+    <path d="m15 6-6 6 6 6"></path>
   `);
 }
 
 function chevronRightIcon() {
   return inlineIcon(`
-    <path d="m9 7 5 5-5 5"></path>
+    <path d="m9 6 6 6-6 6"></path>
   `);
 }
 
 function newspaperIcon() {
   return inlineIcon(`
-    <path d="M4 6.5h16"></path>
-    <path d="M4 12h11"></path>
-    <path d="M4 17.5h8"></path>
+    <path d="M16 6h3a1 1 0 0 1 1 1v11a2 2 0 0 1-4 0V5a1 1 0 0 0-1-1H5a1 1 0 0 0-1 1v12a3 3 0 0 0 3 3h11"></path>
+    <path d="M8 8h4"></path>
+    <path d="M8 12h4"></path>
+    <path d="M8 16h4"></path>
   `);
 }
 
 function settingsIcon() {
   return inlineIcon(`
-    <path d="M9.671 4.136a2.34 2.34 0 0 1 4.659 0 2.34 2.34 0 0 0 3.319 1.915 2.34 2.34 0 0 1 2.33 4.033 2.34 2.34 0 0 0 0 3.831 2.34 2.34 0 0 1-2.33 4.033 2.34 2.34 0 0 0-3.319 1.915 2.34 2.34 0 0 1-4.659 0 2.34 2.34 0 0 0-3.32-1.915 2.34 2.34 0 0 1-2.33-4.033 2.34 2.34 0 0 0 0-3.831A2.34 2.34 0 0 1 6.35 6.051a2.34 2.34 0 0 0 3.319-1.915"></path>
-    <circle cx="12" cy="12" r="3"></circle>
+    <path d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 0 0 2.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 0 0 1.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 0 0-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 0 0-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 0 0-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 0 0-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 0 0 1.066-2.573c-.94-1.543.826-3.31 2.37-2.37 1 .608 2.296.07 2.572-1.065"></path>
+    <path d="M9 12a3 3 0 1 0 6 0 3 3 0 0 0-6 0"></path>
   `);
 }
 
@@ -8912,38 +9264,39 @@ function closeIcon() {
 
 function trashIcon() {
   return inlineIcon(`
+    <path d="M4 7h16"></path>
     <path d="M10 11v6"></path>
     <path d="M14 11v6"></path>
-    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"></path>
-    <path d="M3 6h18"></path>
-    <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+    <path d="m5 7 1 12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2l1-12"></path>
+    <path d="M9 7V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v3"></path>
   `);
 }
 
 function emptyStateIcon() {
   return inlineIcon(`
-    <path d="M22 12h-6l-2 3h-4l-2-3H2"></path>
-    <path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11Z"></path>
+    <path d="M3 6a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2 2 2 0 0 1-2 2H5a2 2 0 0 1-2-2"></path>
+    <path d="M5 8v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8"></path>
+    <path d="M10 12h4"></path>
   `);
 }
 
 function chevronDownIcon() {
   return inlineIcon(`
-    <path d="m7 9.5 5 5 5-5"></path>
+    <path d="m6 9 6 6 6-6"></path>
   `);
 }
 
 function chevronUpIcon() {
   return inlineIcon(`
-    <path d="m7 14.5 5-5 5 5"></path>
+    <path d="m6 15 6-6 6 6"></path>
   `);
 }
 
 function moreHorizontalIcon() {
   return inlineIcon(`
-    <circle cx="12" cy="12" r="1"></circle>
-    <circle cx="19" cy="12" r="1"></circle>
-    <circle cx="5" cy="12" r="1"></circle>
+    <path d="M4 12a1 1 0 1 0 2 0 1 1 0 1 0-2 0"></path>
+    <path d="M11 12a1 1 0 1 0 2 0 1 1 0 1 0-2 0"></path>
+    <path d="M18 12a1 1 0 1 0 2 0 1 1 0 1 0-2 0"></path>
   `);
 }
 

@@ -29,8 +29,7 @@
             <span class="search-engine-control">
               <span class="search-engine-search-icon" aria-hidden="true">
                 <svg viewBox="0 0 24 24" focusable="false">
-                  <circle cx="10.75" cy="10.75" r="5.25"></circle>
-                  <path d="m14.75 14.75 4.5 4.5"></path>
+                  <path d="M3 10a7 7 0 1 0 14 0a7 7 0 1 0-14 0m18 11l-6-6"></path>
                 </svg>
               </span>
               <div class="ai-engine-pill" id="aiEnginePill" hidden aria-hidden="true"></div>
@@ -139,6 +138,9 @@
               <button class="icon-button subtle-action" id="toggleBookmarkLayoutButton" type="button" aria-label="切换为列表显示" aria-pressed="false">
                 <span class="button-icon" aria-hidden="true"></span>
               </button>
+              <button class="icon-button subtle-action" id="bookmarkFavoriteAddButton" type="button" aria-label="添加常用网站" aria-hidden="true" hidden>
+                <span class="button-icon" aria-hidden="true"></span>
+              </button>
               <button class="icon-button subtle-action" id="chooseBookmarkFolderButton" type="button" aria-label="选择书签文件夹">
                 <span class="button-icon" aria-hidden="true"></span>
               </button>
@@ -189,69 +191,91 @@
       </section>
     </aside>
 
-    <section class="settings-panel" id="settingsPanel" role="dialog" aria-modal="false" aria-labelledby="settingsTitle" hidden>
-      <header class="settings-header">
-        <div>
-          <h2 id="settingsTitle">设置中心</h2>
+    <button class="surface-backdrop settings-backdrop" id="settingsBackdrop" type="button" aria-label="关闭设置中心" hidden></button>
+
+    <aside class="shell settings-shell" id="settingsShell" aria-label="Wayleaf 设置中心" hidden>
+      <section class="settings-panel" id="settingsPanel" role="dialog" aria-modal="false" aria-labelledby="settingsTitle" tabindex="-1">
+        <header class="settings-header">
+          <div>
+            <h2 id="settingsTitle">设置中心</h2>
+          </div>
+          <button class="icon-button subtle-action" id="closeSettingsButton" type="button" aria-label="关闭设置中心">
+            <span class="button-icon" aria-hidden="true"></span>
+          </button>
+        </header>
+
+        <div class="settings-body">
+          <section class="settings-group" aria-labelledby="appearanceModeTitle">
+            <div class="settings-group-heading">
+              <h3 id="appearanceModeTitle">外观模式</h3>
+            </div>
+            <div class="segmented-control theme-mode-control" role="group" aria-label="外观模式" data-active-index="0">
+              <button class="segmented-option" type="button" data-theme-mode="system">跟随</button>
+              <button class="segmented-option" type="button" data-theme-mode="light">日间</button>
+              <button class="segmented-option" type="button" data-theme-mode="dark">夜间</button>
+            </div>
+          </section>
+
+          <section class="settings-group" aria-labelledby="presetPaletteTitle">
+            <div class="settings-group-heading">
+              <h3 id="presetPaletteTitle">默认双色</h3>
+            </div>
+            <div class="palette-preset-grid" id="palettePresetGrid" role="radiogroup" aria-labelledby="presetPaletteTitle"></div>
+          </section>
+
+          <section class="settings-group" aria-labelledby="syncSettingsTitle">
+            <div class="settings-group-heading">
+              <h3 id="syncSettingsTitle">云端同步</h3>
+            </div>
+            <div class="sync-settings-row" id="syncSettingsRow" data-status="ready">
+              <span class="sync-settings-copy">
+                <strong id="syncSettingsStatus">配置会跟随 Chrome 账号同步</strong>
+                <span id="syncSettingsDetail">同一 Google 账号安装后会自动恢复。</span>
+              </span>
+              <button class="icon-button subtle-action sync-settings-action" id="syncSettingsNowButton" type="button" aria-label="手动同步">
+                <span class="button-icon" aria-hidden="true"></span>
+              </button>
+            </div>
+          </section>
+
+          <section class="settings-group" aria-labelledby="customPaletteTitle">
+            <div class="settings-group-heading">
+              <h3 id="customPaletteTitle">自定义主题</h3>
+            </div>
+            <div class="color-picker-grid">
+              <label class="color-picker-row">
+                <span>日间</span>
+                <span class="color-picker-swatch">
+                  <span class="color-picker-swatch-half">
+                    <span class="color-picker-swatch-fill color-picker-swatch-primary" aria-hidden="true"></span>
+                    <input id="lightAccentInput" type="color" value="#3f7f68" aria-label="日间主色">
+                  </span>
+                  <span class="color-picker-swatch-half">
+                    <span class="color-picker-swatch-fill color-picker-swatch-secondary" aria-hidden="true"></span>
+                    <input id="lightAccentStrongInput" type="color" value="#2b5f4d" aria-label="日间辅色">
+                  </span>
+                </span>
+                <output id="lightAccentValue">#3f7f68 / #2b5f4d</output>
+              </label>
+              <label class="color-picker-row">
+                <span>夜间</span>
+                <span class="color-picker-swatch">
+                  <span class="color-picker-swatch-half">
+                    <span class="color-picker-swatch-fill color-picker-swatch-primary" aria-hidden="true"></span>
+                    <input id="darkAccentInput" type="color" value="#86b9a4" aria-label="夜间主色">
+                  </span>
+                  <span class="color-picker-swatch-half">
+                    <span class="color-picker-swatch-fill color-picker-swatch-secondary" aria-hidden="true"></span>
+                    <input id="darkAccentStrongInput" type="color" value="#b3d7c8" aria-label="夜间辅色">
+                  </span>
+                </span>
+                <output id="darkAccentValue">#86b9a4 / #b3d7c8</output>
+              </label>
+            </div>
+          </section>
         </div>
-        <button class="icon-button subtle-action" id="closeSettingsButton" type="button" aria-label="关闭设置中心">
-          <span class="button-icon" aria-hidden="true"></span>
-        </button>
-      </header>
-
-      <div class="settings-body">
-        <section class="settings-group" aria-labelledby="appearanceModeTitle">
-          <div class="settings-group-heading">
-            <h3 id="appearanceModeTitle">外观模式</h3>
-          </div>
-          <div class="segmented-control theme-mode-control" role="group" aria-label="外观模式" data-active-index="0">
-            <button class="segmented-option" type="button" data-theme-mode="system">跟随</button>
-            <button class="segmented-option" type="button" data-theme-mode="light">日间</button>
-            <button class="segmented-option" type="button" data-theme-mode="dark">夜间</button>
-          </div>
-        </section>
-
-        <section class="settings-group" aria-labelledby="presetPaletteTitle">
-          <div class="settings-group-heading">
-            <h3 id="presetPaletteTitle">默认双色</h3>
-          </div>
-          <div class="palette-preset-grid" id="palettePresetGrid" role="radiogroup" aria-labelledby="presetPaletteTitle"></div>
-        </section>
-
-        <section class="settings-group" aria-labelledby="syncSettingsTitle">
-          <div class="settings-group-heading">
-            <h3 id="syncSettingsTitle">云端同步</h3>
-          </div>
-          <div class="sync-settings-row" id="syncSettingsRow" data-status="ready">
-            <span class="sync-settings-copy">
-              <strong id="syncSettingsStatus">配置会跟随 Chrome 账号同步</strong>
-              <span id="syncSettingsDetail">同一 Google 账号安装后会自动恢复。</span>
-            </span>
-            <button class="icon-button subtle-action sync-settings-action" id="syncSettingsNowButton" type="button" aria-label="手动同步">
-              <span class="button-icon" aria-hidden="true"></span>
-            </button>
-          </div>
-        </section>
-
-        <section class="settings-group" aria-labelledby="customPaletteTitle">
-          <div class="settings-group-heading">
-            <h3 id="customPaletteTitle">自定义双色</h3>
-          </div>
-          <div class="color-picker-grid">
-            <label class="color-picker-row">
-              <span>日间</span>
-              <input id="lightAccentInput" type="color" value="#0d6d59">
-              <output id="lightAccentValue">#0d6d59</output>
-            </label>
-            <label class="color-picker-row">
-              <span>夜间</span>
-              <input id="darkAccentInput" type="color" value="#68c19e">
-              <output id="darkAccentValue">#68c19e</output>
-            </label>
-          </div>
-        </section>
-      </div>
-    </section>
+      </section>
+    </aside>
 
     <section class="onboarding-guide" id="onboardingGuide" role="dialog" aria-modal="true" aria-labelledby="onboardingTitle" aria-describedby="onboardingIntro" hidden>
       <div class="onboarding-card">
