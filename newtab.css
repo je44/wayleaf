@@ -77,6 +77,9 @@
   --focus-wash: rgb(var(--focus-rgb) / 0.08);
   --focus-wash-soft: rgb(var(--focus-rgb) / 0.045);
   --focus-ring: rgb(var(--focus-rgb) / 0.12);
+  --favorite-form-bg: color-mix(in srgb, var(--panel) 90%, var(--paper));
+  --favorite-form-input-bg: color-mix(in srgb, var(--input-bg) 78%, var(--panel-soft));
+  --favorite-form-input-border: color-mix(in srgb, var(--line-strong) 72%, var(--accent-border));
   --search-engine-selected-border: #b45309;
   --search-engine-selected-glow-rgb: 180 83 9;
   --panel-header-line: var(--line);
@@ -148,6 +151,9 @@
   --surface-glass-scrim: rgb(16 21 18 / 0.288);
   --surface-glass-saturation: 1.112;
   --surface-panel-edge-glow: rgb(0 0 0 / 0.08);
+  --favorite-form-bg: color-mix(in srgb, var(--panel) 82%, var(--panel-soft));
+  --favorite-form-input-bg: color-mix(in srgb, var(--input-bg) 54%, var(--panel-soft));
+  --favorite-form-input-border: color-mix(in srgb, var(--line-strong) 72%, var(--accent-border));
   color-scheme: dark;
 }
 
@@ -723,16 +729,18 @@ body.surface-open .surface-backdrop {
 
 .favorite-form {
   position: absolute;
-  top: calc(100% - 28px);
+  top: calc(100% + 8px);
+  left: 50%;
   z-index: 30;
   display: grid;
   width: min(460px, 86%);
-  gap: 9px;
-  padding: 0;
-  border: 0;
-  border-radius: 0;
-  background: transparent;
+  gap: 8px;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--favorite-form-bg);
   box-shadow: none;
+  transform: translateX(-50%);
 }
 
 .favorite-form[hidden] {
@@ -747,18 +755,27 @@ body.surface-open .surface-backdrop {
 }
 
 .favorite-form input {
+  appearance: none;
+  -webkit-appearance: none;
   min-height: 36px;
   padding: 0 10px;
-  border: 1px solid var(--line);
+  border: 1px solid var(--favorite-form-input-border);
   border-radius: 7px;
-  background: var(--input-bg);
+  background: var(--favorite-form-input-bg);
+  background-clip: padding-box;
   color: var(--ink);
   outline: 0;
+  transition: background 160ms ease, border-color 160ms ease, color 160ms ease;
+}
+
+.favorite-form input::placeholder {
+  color: var(--faint);
 }
 
 .favorite-form input:focus,
 .favorite-form input:focus-visible {
-  border-color: var(--line-strong);
+  border-color: var(--focus-border-strong);
+  background: var(--input-bg);
   outline: 0;
 }
 
