@@ -12,7 +12,7 @@
 <p align="center">
   中文 | <a href="README.en.md">English</a> ·
   <a href="https://github.com/je44/wayleaf/releases/latest">Releases</a> ·
-  <a href="https://github.com/je44/wayleaf/releases/download/v1.3/wayleaf-v1.3.0.zip">下载 v1.3.0</a>
+  <a href="https://github.com/je44/wayleaf/releases/download/v1.4/wayleaf-v1.4.0.zip">下载 v1.4.0</a>
 </p>
 
 ## 预览
@@ -49,9 +49,9 @@
 
 ## 快速安装
 
-当前版本：`1.3.0`
+当前版本：`1.4.0`
 
-1. 下载 [wayleaf-v1.3.0.zip](https://github.com/je44/wayleaf/releases/download/v1.3/wayleaf-v1.3.0.zip) 并解压。
+1. 下载 [wayleaf-v1.4.0.zip](https://github.com/je44/wayleaf/releases/download/v1.4/wayleaf-v1.4.0.zip) 并解压。
 2. 打开 Chrome 的 `chrome://extensions/`。
 3. 打开右上角「开发者模式」。
 4. 点击「加载已解压的扩展程序」。
@@ -149,8 +149,8 @@ node --check ai-submit.js
 
 ```sh
 mkdir -p dist
-zip -r -X dist/wayleaf-v1.3.0.zip manifest.json newtab.html newtab.css newtab.js ai-submit.js icons vendor docs -x '*/._*' '._*' '*.DS_Store' '*/.DS_Store'
-unzip -t dist/wayleaf-v1.3.0.zip
+zip -r -X dist/wayleaf-v1.4.0.zip manifest.json newtab.html newtab.css newtab.js ai-submit.js icons vendor docs -x '*/._*' '._*' '*.DS_Store' '*/.DS_Store'
+unzip -t dist/wayleaf-v1.4.0.zip
 ```
 
 发布清单：
