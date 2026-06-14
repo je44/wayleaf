@@ -24,6 +24,7 @@ out/
 coverage/
 audit/
 outputs/
+pulled-assets/
 tmp/
 icons/generated-wayleaf-corgi-appicon-imagegen-*/
 *.crx

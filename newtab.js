@@ -65,6 +65,7 @@ const SITE_ICON_DISCOVERY_TARGET_SIZE = 128;
 const SITE_ICON_DISCOVERY_CANDIDATE_LIMIT = 12;
 const SITE_ICON_DISCOVERY_MEMORY_CACHE_LIMIT = 96;
 const SITE_ICON_CACHE_TTL_MS = 30 * 24 * 60 * 60 * 1000;
+const REMOTE_BRAND_ICON_MISSING_TTL_MS = 30 * 24 * 60 * 60 * 1000;
 const FAVORITE_REORDER_MS = 260;
 const FAVORITE_DELETE_EXIT_MS = 360;
 const FAVORITE_DELETE_CANCEL_MS = 280;
@@ -629,7 +630,7 @@ const SITE_ICON_FILE_BY_SITE_KEY = Object.freeze({
   "feishu.cn": "feishu.png",
   "gemini.google.com": "googlegemini.svg",
   "itch.io": "itchdotio.svg",
-  "jd.com": "jd.ico",
+  "jd.com": "jd.svg",
   "larksuite.com": "larksuite.ico",
   "maps.google.com": "googlemaps.svg",
   "meet.google.com": "googlemeet.svg",
@@ -648,6 +649,40 @@ const SITE_ICON_FILE_BY_SITE_KEY = Object.freeze({
   "uizard.io": "uizard.ico",
   "vuejs.org": "vuedotjs.svg",
   "yandex.com": "yandex.ico"
+});
+const REMOTE_BRAND_ICON_PROVIDERS = Object.freeze([
+  {
+    id: "simple-icons-cdn",
+    urlForSlug: (slug) => `https://cdn.simpleicons.org/${encodeURIComponent(slug)}?viewbox=auto`
+  },
+  {
+    id: "iconify",
+    urlForSlug: (slug) => `https://api.iconify.design/simple-icons/${encodeURIComponent(slug)}.svg`
+  }
+]);
+const REMOTE_BRAND_ICON_SLUGS_BY_SITE_KEY = Object.freeze({
+  "atlassian.net": ["atlassian", "jira"],
+  "calendar.google.com": ["googlecalendar", "google"],
+  "code.visualstudio.com": ["visualstudiocode"],
+  "developer.mozilla.org": ["mdnwebdocs", "mdn"],
+  "docs.google.com": ["googledocs", "google"],
+  "drive.google.com": ["googledrive", "google"],
+  "gmail.com": ["gmail", "google"],
+  "maps.google.com": ["googlemaps", "google"],
+  "meet.google.com": ["googlemeet", "google"],
+  "music.163.com": ["neteasecloudmusic"],
+  "nextjs.org": ["nextdotjs", "nextjs"],
+  "nodejs.org": ["nodedotjs", "nodejs"],
+  "npmjs.com": ["npm"],
+  "office.com": ["microsoftoffice", "microsoft"],
+  "proton.me": ["protonmail", "proton"],
+  "react.dev": ["react"],
+  "stackoverflow.com": ["stackoverflow"],
+  "teams.microsoft.com": ["microsoftteams", "microsoft"],
+  "trip.com": ["tripdotcom"],
+  "twitter.com": ["x", "twitter"],
+  "vuejs.org": ["vuedotjs", "vue"],
+  "x.com": ["x", "twitter"]
 });
 const SITE_ICON_TILE_COLOR_BY_SITE_KEY = Object.freeze({
   "1688.com": "#ff6000",
@@ -4215,9 +4250,8 @@ async function discoverFavoriteSiteIcon(url) {
 
 async function loadCachedSiteIcon(siteKey) {
   try {
-    const cache = await loadSiteIconCache();
-    const entry = cache[siteKey];
-    if (!entry || Date.now() - Number(entry.updatedAt || 0) > SITE_ICON_CACHE_TTL_MS) {
+    const entry = await loadCachedSiteIconEntry(siteKey);
+    if (!siteIconCacheEntryIsFresh(entry)) {
       return "";
     }
     return normalizeStoredSiteIcon(entry.icon);
@@ -4226,18 +4260,55 @@ async function loadCachedSiteIcon(siteKey) {
   }
 }
 
-async function cacheSiteIcon(siteKey, icon) {
+async function loadCachedSiteIconEntry(siteKey) {
+  if (!siteKey) {
+    return null;
+  }
+  const cache = await loadSiteIconCache();
+  const entry = cache[siteKey];
+  return entry && typeof entry === "object" && !Array.isArray(entry) ? entry : null;
+}
+
+function siteIconCacheEntryIsFresh(entry, ttl = SITE_ICON_CACHE_TTL_MS) {
+  return Boolean(entry && Date.now() - Number(entry.updatedAt || 0) <= ttl);
+}
+
+async function cacheSiteIcon(siteKey, icon, metadata = {}) {
   const normalizedIcon = normalizeStoredSiteIcon(icon);
   if (!siteKey || !normalizedIcon) {
     return;
   }
+  const tileColor = embeddedSvgBrandColor(normalizedIcon) || "";
+  const strategy = remoteBrandSvgCacheStrategy(normalizedIcon);
   const cache = await loadSiteIconCache();
   cache[siteKey] = {
     icon: normalizedIcon,
+    tileColor,
+    source: metadata.source || (tileColor ? "remote-brand" : "site-icon"),
+    ...(strategy ? { strategy } : {}),
+    missing: false,
     updatedAt: Date.now()
   };
+  await saveSiteIconCache(cache);
+}
+
+async function cacheRemoteBrandIconMiss(siteKey) {
+  if (!siteKey) {
+    return;
+  }
+  const cache = await loadSiteIconCache();
+  cache[siteKey] = {
+    icon: "",
+    missing: true,
+    source: "remote-brand",
+    updatedAt: Date.now()
+  };
+  await saveSiteIconCache(cache);
+}
+
+async function saveSiteIconCache(cache) {
   const entries = Object.entries(cache)
-    .filter(([, entry]) => normalizeStoredSiteIcon(entry?.icon))
+    .filter(([, entry]) => normalizeStoredSiteIcon(entry?.icon) || entry?.missing)
     .sort(([, a], [, b]) => Number(b.updatedAt || 0) - Number(a.updatedAt || 0))
     .slice(0, MAX_CACHED_SITE_ICONS);
   await setStoredValues({ [SITE_ICON_CACHE_STORAGE_KEY]: Object.fromEntries(entries) });
@@ -4293,6 +4364,10 @@ function rememberSiteIconDiscoveryRequest(cacheKey, request) {
 }
 
 async function fetchBestSiteIconDataUrl(parsedUrl) {
+  const remoteBrandIcon = await discoverRemoteBrandIconDataUrl(parsedUrl.href);
+  if (remoteBrandIcon) {
+    return remoteBrandIcon;
+  }
   const candidates = await discoverSiteIconCandidates(parsedUrl);
   for (const candidate of candidates.slice(0, SITE_ICON_DISCOVERY_CANDIDATE_LIMIT)) {
     try {
@@ -4305,6 +4380,508 @@ async function fetchBestSiteIconDataUrl(parsedUrl) {
     }
   }
   return "";
+}
+
+async function discoverRemoteBrandIconDataUrl(url) {
+  const parsedUrl = safeUrl(url);
+  const siteKey = siteGroupKey(parsedUrl);
+  if (!siteKey || localIconForUrl(parsedUrl.href)) {
+    return "";
+  }
+  const cachedEntry = await loadCachedSiteIconEntry(siteKey);
+  if (siteIconCacheEntryIsFresh(cachedEntry)) {
+    const cachedIcon = normalizeStoredSiteIcon(cachedEntry.icon);
+    if (cachedIcon && cachedSiteIconEntryIsRemoteBrand(cachedEntry)) {
+      return cachedIcon;
+    }
+  }
+  if (remoteBrandIconMissCacheIsFresh(cachedEntry)) {
+    return "";
+  }
+  const cacheKey = `remote-brand:${siteKey}`;
+  if (siteIconDiscoveryCache.has(cacheKey)) {
+    return siteIconDiscoveryCache.get(cacheKey);
+  }
+  const request = fetchRemoteBrandIconDataUrl(parsedUrl)
+    .then((iconDataUrl) => {
+      if (iconDataUrl) {
+        cacheSiteIcon(siteKey, iconDataUrl, { source: "remote-brand" }).catch(() => {});
+      } else {
+        cacheRemoteBrandIconMiss(siteKey).catch(() => {});
+      }
+      return iconDataUrl;
+    })
+    .catch(() => {
+      cacheRemoteBrandIconMiss(siteKey).catch(() => {});
+      return "";
+    });
+  rememberSiteIconDiscoveryRequest(cacheKey, request);
+  return request;
+}
+
+function cachedSiteIconEntryIsRemoteBrand(entry) {
+  return entry?.source === "remote-brand" || Boolean(embeddedSvgBrandColor(entry?.icon || ""));
+}
+
+function remoteBrandIconMissCacheIsFresh(entry) {
+  return Boolean(entry?.missing
+    && entry?.source === "remote-brand"
+    && siteIconCacheEntryIsFresh(entry, REMOTE_BRAND_ICON_MISSING_TTL_MS));
+}
+
+function remoteBrandSvgCacheStrategy(icon) {
+  const descriptor = remoteBrandSvgDescriptorFromSource(icon);
+  if (!descriptor) {
+    return null;
+  }
+  return {
+    kind: "remote-brand-svg",
+    brandColor: descriptor.brandColor,
+    renderMode: descriptor.renderMode,
+    isMonochrome: descriptor.isMonochrome,
+    tileLight: descriptor.tileLight,
+    tileDark: descriptor.tileDark,
+    glyphLight: descriptor.glyphLight,
+    glyphDark: descriptor.glyphDark,
+    qualityScore: descriptor.qualityScore
+  };
+}
+
+async function fetchRemoteBrandIconDataUrl(parsedUrl) {
+  const candidates = remoteBrandIconSlugCandidates(parsedUrl);
+  const siteKey = siteGroupKey(parsedUrl);
+  for (const candidate of candidates) {
+    for (const provider of REMOTE_BRAND_ICON_PROVIDERS) {
+      try {
+        const iconDataUrl = await fetchRemoteBrandSvgDataUrl(provider.urlForSlug(candidate.slug), {
+          candidate,
+          providerId: provider.id,
+          siteKey
+        });
+        if (iconDataUrl) {
+          return iconDataUrl;
+        }
+      } catch {
+        // Try the next remote brand source or slug.
+      }
+    }
+  }
+  return "";
+}
+
+async function fetchRemoteBrandSvgDataUrl(url, options = {}) {
+  const siteKey = options.siteKey || "";
+  const response = await withTimeout(fetch(url, {
+    cache: "force-cache",
+    credentials: "omit",
+    redirect: "follow"
+  }), SITE_ICON_FETCH_TIMEOUT_MS, "Remote brand icon request timed out.");
+  if (!response.ok) {
+    throw new Error(`Remote brand icon request failed: ${response.status}`);
+  }
+  const contentType = response.headers.get("content-type") || "";
+  if (!remoteBrandSvgResponseMayContainSvg(contentType, response.url || url)) {
+    return "";
+  }
+  const svg = await response.text();
+  const quality = remoteBrandSvgQuality(svg, options);
+  if (!quality.accepted) {
+    return "";
+  }
+  const brandColor = remoteBrandSvgBrandColor(svg, options);
+  return svgTextDataUrl(prepareRemoteBrandSvg(svg, {
+    brandColor,
+    qualityScore: quality.score,
+    siteKey
+  }));
+}
+
+function remoteBrandSvgQuality(svg, options = {}) {
+  const text = String(svg || "").trim();
+  const candidateScore = Number(options.candidate?.score || 0);
+  if (!remoteBrandSvgLooksUsable(svg) || candidateScore < 50) {
+    return { accepted: false, score: 0 };
+  }
+  if (/<(?:foreignObject|iframe|object|embed|image)\b/i.test(text)
+    || /\son[a-z]+\s*=/i.test(text)
+    || /\s(?:href|xlink:href)\s*=\s*(["'])https?:\/\//i.test(text)) {
+    return { accepted: false, score: 0 };
+  }
+  const geometry = remoteBrandSvgGeometry(text);
+  if (!geometry.valid) {
+    return { accepted: false, score: 0 };
+  }
+  const shapeCount = remoteBrandSvgShapeCount(text);
+  if (shapeCount <= 0 || shapeCount > 220) {
+    return { accepted: false, score: 0 };
+  }
+  let score = 100;
+  if (candidateScore < 70) {
+    score -= 20;
+  }
+  if (shapeCount > 80) {
+    score -= 18;
+  }
+  if (geometry.aspectRatio > 10 || geometry.aspectRatio < 0.1) {
+    score -= 25;
+  }
+  if (remoteBrandSvgHasComplexPaint(text)) {
+    score -= 8;
+  }
+  return {
+    accepted: score >= 60,
+    score
+  };
+}
+
+function remoteBrandSvgResponseMayContainSvg(contentType, url = "") {
+  const mime = normalizeSiteIconMime(contentType);
+  if (mime === "image/svg+xml") {
+    return true;
+  }
+  if (mime && !/^(?:application\/octet-stream|text\/plain)$/i.test(mime)) {
+    return false;
+  }
+  return /\.svg(?:[?#].*)?$/i.test(String(url || ""));
+}
+
+function remoteBrandSvgLooksUsable(svg) {
+  const text = String(svg || "").trim();
+  return text.length > 0
+    && text.length <= MAX_CACHED_SITE_ICON_BYTES
+    && remoteBrandSvgHasRootElement(text)
+    && !/<script\b/i.test(text);
+}
+
+function remoteBrandSvgHasRootElement(svg) {
+  return /^(?:\s*<\?xml[^>]*>\s*)?(?:\s*<!doctype[^>]*>\s*)?<svg\b/i.test(String(svg || ""));
+}
+
+function remoteBrandSvgGeometry(svg) {
+  const viewBoxMatch = String(svg || "").match(/\sviewBox=(["'])\s*([-+.\deE]+)[,\s]+([-+.\deE]+)[,\s]+([-+.\deE]+)[,\s]+([-+.\deE]+)\s*\1/i);
+  if (viewBoxMatch) {
+    const width = Number(viewBoxMatch[4]);
+    const height = Number(viewBoxMatch[5]);
+    return remoteBrandSvgGeometryResult(width, height);
+  }
+  const width = remoteBrandSvgLengthAttribute(svg, "width");
+  const height = remoteBrandSvgLengthAttribute(svg, "height");
+  return remoteBrandSvgGeometryResult(width, height);
+}
+
+function remoteBrandSvgLengthAttribute(svg, name) {
+  const match = String(svg || "").match(new RegExp(`\\s${name}=(["'])\\s*([0-9.]+)(?:px)?\\s*\\1`, "i"));
+  return match ? Number(match[2]) : 0;
+}
+
+function remoteBrandSvgGeometryResult(width, height) {
+  if (!Number.isFinite(width) || !Number.isFinite(height) || width <= 0 || height <= 0) {
+    return { valid: false, aspectRatio: 1 };
+  }
+  const aspectRatio = width / height;
+  return {
+    valid: aspectRatio >= 0.05 && aspectRatio <= 20,
+    aspectRatio
+  };
+}
+
+function remoteBrandSvgShapeCount(svg) {
+  return (String(svg || "").match(/<(?:path|circle|rect|polygon|polyline|line|ellipse)\b/gi) || []).length;
+}
+
+function prepareRemoteBrandSvg(svg, options = {}) {
+  const descriptor = remoteBrandSvgDescriptor(svg, options);
+  const color = descriptor.brandColor;
+  const isMonochrome = descriptor.isMonochrome;
+  let output = String(svg || "").trim();
+  output = output.replace(/<\?xml[^>]*>\s*/i, "");
+  output = output.replace(/<!doctype[^>]*>\s*/i, "");
+  if (color && isMonochrome) {
+    output = applySvgGlyphColor(output, color, { onlyCurrentColor: true });
+  }
+  output = output.replace(/<svg\b([^>]*)>/i, (match, attrs) => {
+    const cleanedAttrs = attrs
+      .replace(/\sdata-wayleaf-brand-color=(["'])[^"']*\1/gi, "")
+      .replace(/\sdata-wayleaf-monochrome=(["'])[^"']*\1/gi, "")
+      .replace(/\sdata-wayleaf-remote-brand=(["'])[^"']*\1/gi, "")
+      .replace(/\sdata-wayleaf-render-mode=(["'])[^"']*\1/gi, "")
+      .replace(/\sdata-wayleaf-tile-light=(["'])[^"']*\1/gi, "")
+      .replace(/\sdata-wayleaf-tile-dark=(["'])[^"']*\1/gi, "")
+      .replace(/\sdata-wayleaf-glyph-light=(["'])[^"']*\1/gi, "")
+      .replace(/\sdata-wayleaf-glyph-dark=(["'])[^"']*\1/gi, "")
+      .replace(/\sdata-wayleaf-quality=(["'])[^"']*\1/gi, "");
+    const brandAttr = color ? ` data-wayleaf-brand-color="${color}"` : "";
+    const metadataAttrs = [
+      `data-wayleaf-remote-brand="true"`,
+      `data-wayleaf-monochrome="${isMonochrome ? "true" : "false"}"`,
+      `data-wayleaf-render-mode="${descriptor.renderMode}"`,
+      `data-wayleaf-tile-light="${descriptor.tileLight}"`,
+      `data-wayleaf-tile-dark="${descriptor.tileDark}"`,
+      `data-wayleaf-glyph-light="${descriptor.glyphLight || "original"}"`,
+      `data-wayleaf-glyph-dark="${descriptor.glyphDark || "original"}"`,
+      `data-wayleaf-quality="${descriptor.qualityScore}"`
+    ];
+    return `<svg${cleanedAttrs} ${metadataAttrs.join(" ")}${brandAttr}>`;
+  });
+  return output;
+}
+
+function remoteBrandSvgDescriptor(svg, options = {}) {
+  const brandColor = normalizeHexColor(options.brandColor || "") || "";
+  const isMonochrome = remoteBrandSvgIsMonochrome(svg);
+  const renderMode = isMonochrome ? "mask" : "original";
+  const tileColors = remoteBrandDescriptorTileColors(brandColor, renderMode);
+  return {
+    brandColor,
+    isMonochrome,
+    renderMode,
+    tileLight: tileColors.light,
+    tileDark: tileColors.dark,
+    glyphLight: renderMode === "mask" ? remoteBrandGlyphColorForTile(tileColors.light, brandColor) : "",
+    glyphDark: renderMode === "mask" ? remoteBrandGlyphColorForTile(tileColors.dark, brandColor) : "",
+    qualityScore: Math.max(0, Math.min(100, Math.round(Number(options.qualityScore || 0))))
+  };
+}
+
+function remoteBrandDescriptorTileColors(brandColor, renderMode = "mask") {
+  const color = normalizeHexColor(brandColor);
+  if (renderMode === "original") {
+    return {
+      light: "#ffffff",
+      dark: "#f8fafc"
+    };
+  }
+  if (!color) {
+    return {
+      light: "#ffffff",
+      dark: "#f8fafc"
+    };
+  }
+  if (nearWhiteBrandColor(color)) {
+    return {
+      light: "#000000",
+      dark: "#f8fafc"
+    };
+  }
+  return {
+    light: color,
+    dark: "#f8fafc"
+  };
+}
+
+function svgTextDataUrl(svg) {
+  return `data:image/svg+xml,${encodeURIComponent(String(svg || ""))}`;
+}
+
+function remoteBrandSvgDescriptorFromSource(source) {
+  if (!isSvgDataUrl(source)) {
+    return null;
+  }
+  const svg = decodeSvgDataUrl(source);
+  if (!/\sdata-wayleaf-remote-brand=(["'])true\1/i.test(svg)) {
+    return null;
+  }
+  const attr = (name) => remoteBrandSvgDataAttribute(svg, name);
+  return {
+    brandColor: normalizeHexColor(attr("brand-color")),
+    isMonochrome: attr("monochrome") === "true",
+    renderMode: attr("render-mode") || "mask",
+    tileLight: normalizeHexColor(attr("tile-light")),
+    tileDark: normalizeHexColor(attr("tile-dark")),
+    glyphLight: remoteBrandSvgGlyphAttribute(attr("glyph-light")),
+    glyphDark: remoteBrandSvgGlyphAttribute(attr("glyph-dark")),
+    qualityScore: Number(attr("quality") || 0)
+  };
+}
+
+function remoteBrandSvgDataAttribute(svg, name) {
+  const match = String(svg || "").match(new RegExp(`\\sdata-wayleaf-${name}=(["'])([^"']*)\\1`, "i"));
+  return match?.[2] || "";
+}
+
+function remoteBrandSvgGlyphAttribute(value) {
+  return value === "original" ? "" : normalizeHexColor(value);
+}
+
+function embeddedSvgBrandColor(value) {
+  const svg = decodeSvgDataUrl(value) || String(value || "");
+  const match = svg.match(/\sdata-wayleaf-brand-color=(["'])(#[0-9a-f]{6})\1/i);
+  return normalizeHexColor(match?.[2] || "");
+}
+
+function extractSvgBrandColor(svg) {
+  return extractSvgColorPalette(svg)[0] || "";
+}
+
+function remoteBrandSvgBrandColor(svg, options = {}) {
+  const embeddedColor = embeddedSvgBrandColor(svg);
+  if (embeddedColor) {
+    return embeddedColor;
+  }
+  const palette = extractSvgColorPalette(svg);
+  const localColor = normalizeHexColor(SITE_ICON_TILE_COLOR_BY_SITE_KEY[options.siteKey] || "");
+  if (options.providerId === "simple-icons-cdn" && palette[0]) {
+    return remoteBrandProviderColorLooksDrifted(palette[0], localColor) ? localColor : palette[0];
+  }
+  const expressiveColor = palette.find((color) => !remoteBrandColorLooksNeutral(color));
+  return expressiveColor || localColor || "";
+}
+
+function remoteBrandProviderColorLooksDrifted(providerColor, localColor) {
+  const provider = normalizeHexColor(providerColor);
+  const local = normalizeHexColor(localColor);
+  if (!provider || !local || remoteBrandColorLooksNeutral(provider)) {
+    return false;
+  }
+  const [providerRed, providerGreen, providerBlue] = hexToRgb(provider);
+  const [localRed, localGreen, localBlue] = hexToRgb(local);
+  const distance = Math.hypot(providerRed - localRed, providerGreen - localGreen, providerBlue - localBlue);
+  return distance > 96 && contrastRatio(provider, local) > 1.35;
+}
+
+function remoteBrandColorLooksNeutral(color) {
+  const normalized = normalizeHexColor(color);
+  if (!normalized) {
+    return true;
+  }
+  const [red, green, blue] = hexToRgb(normalized).map((channel) => channel / 255);
+  const max = Math.max(red, green, blue);
+  const min = Math.min(red, green, blue);
+  const luminance = relativeLuminance(normalized);
+  return max - min < 0.06 || luminance < 0.04 || luminance > 0.94;
+}
+
+function remoteBrandSvgIsMonochrome(svg) {
+  if (remoteBrandSvgHasComplexPaint(svg)) {
+    return false;
+  }
+  const palette = extractSvgColorPalette(svg);
+  return palette.length <= 1;
+}
+
+function remoteBrandSvgHasComplexPaint(svg) {
+  const text = String(svg || "");
+  return /<(?:linearGradient|radialGradient|meshgradient|pattern|filter|mask)\b/i.test(text)
+    || /\s(?:fill|stroke)\s*=\s*(["'])\s*url\(/i.test(text)
+    || /(?:fill|stroke)\s*:\s*url\(/i.test(text);
+}
+
+function extractSvgColorPalette(svg) {
+  const palette = [];
+  const seen = new Set();
+  const pushColor = (value) => {
+    const color = normalizeSvgHexColor(value);
+    if (!color || seen.has(color)) {
+      return;
+    }
+    seen.add(color);
+    palette.push(color);
+  };
+  const text = String(svg || "");
+  const colorAttributeMatches = text.matchAll(/\s(?:fill|stroke|color)\s*=\s*(["'])(#[0-9a-f]{3,8})\1/gi);
+  for (const match of colorAttributeMatches) {
+    pushColor(match[2]);
+  }
+  const inlineStyleMatches = text.matchAll(/(?:^|["'{;\s])(?:fill|stroke|color)\s*:\s*(#[0-9a-f]{3,8})\b/gi);
+  for (const match of inlineStyleMatches) {
+    pushColor(match[1]);
+  }
+  return palette;
+}
+
+function normalizeSvgHexColor(value) {
+  const color = String(value || "").trim().toLowerCase();
+  if (/^#[0-9a-f]{6}$/i.test(color)) {
+    return color;
+  }
+  if (/^#[0-9a-f]{8}$/i.test(color)) {
+    return color.slice(7, 9) === "00" ? "" : color.slice(0, 7);
+  }
+  if (/^#[0-9a-f]{3}$/i.test(color)) {
+    return `#${[...color.slice(1)].map((character) => character + character).join("")}`;
+  }
+  if (/^#[0-9a-f]{4}$/i.test(color)) {
+    const [red, green, blue, alpha] = [...color.slice(1)];
+    if (alpha === "0") {
+      return "";
+    }
+    return `#${red}${red}${green}${green}${blue}${blue}`;
+  }
+  return "";
+}
+
+function decodeSvgDataUrl(value) {
+  const source = String(value || "");
+  if (!/^data:image\/svg\+xml[,;]/i.test(source)) {
+    return "";
+  }
+  const commaIndex = source.indexOf(",");
+  if (commaIndex < 0) {
+    return "";
+  }
+  const metadata = source.slice(0, commaIndex).toLowerCase();
+  const payload = source.slice(commaIndex + 1);
+  try {
+    return metadata.includes(";base64")
+      ? atob(payload)
+      : decodeURIComponent(payload);
+  } catch {
+    return "";
+  }
+}
+
+function remoteBrandIconSlugCandidates(parsedUrl) {
+  const siteKey = siteGroupKey(parsedUrl);
+  const candidates = [];
+  const addCandidate = (value, score, source) => {
+    const slug = remoteBrandIconSlug(value);
+    if (!slug || (slug.length < 2 && slug !== "x")) {
+      return;
+    }
+    candidates.push({ slug, score, source });
+  };
+  (REMOTE_BRAND_ICON_SLUGS_BY_SITE_KEY[siteKey] || []).forEach((slug, index) => {
+    addCandidate(slug, index === 0 ? 100 : 88, "alias");
+  });
+  const host = normalizeHostname(siteKey);
+  const labels = host.split(".").filter(Boolean);
+  if (labels.length) {
+    const registrableLabels = remoteBrandIconRegistrableLabels(labels);
+    addCandidate(registrableLabels.join(""), 92, "registrable");
+    addCandidate(labels.join(""), 74, "host");
+    addCandidate(labels[0], 68, "host-label");
+  }
+  addCandidate(SITE_NAME_BY_KEY[siteKey] || "", 64, "site-name");
+  return remoteBrandIconRankedCandidates(candidates).slice(0, 8);
+}
+
+function remoteBrandIconRankedCandidates(candidates) {
+  const bestBySlug = new Map();
+  for (const candidate of candidates) {
+    const existing = bestBySlug.get(candidate.slug);
+    if (!existing || candidate.score > existing.score) {
+      bestBySlug.set(candidate.slug, candidate);
+    }
+  }
+  return [...bestBySlug.values()].sort((a, b) => b.score - a.score || a.slug.localeCompare(b.slug));
+}
+
+function remoteBrandIconRegistrableLabels(labels) {
+  if (labels.length <= 2) {
+    return labels.slice(0, 1);
+  }
+  const suffix = labels.slice(-2).join(".");
+  const labelCount = MULTIPART_PUBLIC_SUFFIXES.has(suffix) ? 3 : 2;
+  return labels.slice(0, -labelCount + 1);
+}
+
+function remoteBrandIconSlug(value) {
+  return normalizeText(value)
+    .toLowerCase()
+    .replace(/&/g, "and")
+    .replace(/\+/g, "plus")
+    .replace(/\./g, "dot")
+    .replace(/[^a-z0-9]+/g, "");
 }
 
 async function discoverSiteIconCandidateUrls(url) {
@@ -4765,6 +5342,7 @@ function normalizeStoredSiteIcon(icon) {
     return "";
   }
   return /^data:image\/(?:png|jpe?g|webp|svg\+xml|x-icon|vnd\.microsoft\.icon);base64,/i.test(value)
+    || /^data:image\/svg\+xml(?:;charset=[^,;]+)?(?:;utf8)?[,;]/i.test(value)
     ? value
     : "";
 }
@@ -4886,8 +5464,9 @@ function applySiteIcon(icon, site, options = {}) {
   const localIcon = localIconForUrl(site.url);
   const siteIcon = normalizeStoredSiteIcon(site.icon || "");
   const iconSource = localIcon || siteIcon;
+  const tileIconSource = localIcon || (remoteBrandSvgDescriptorFromSource(siteIcon) ? siteIcon : "");
   storeIconSiteContext(icon, site);
-  applySiteIconTile(icon, site, localIcon);
+  applySiteIconTile(icon, site, tileIconSource);
   if (iconSource) {
     const displayIcon = displayIconSource(icon, iconSource, options);
     const setIconSource = (source) => {
@@ -4896,7 +5475,7 @@ function applySiteIcon(icon, site, options = {}) {
       delete icon.dataset.iconDefaultRescue;
       delete icon.dataset.iconDefaultProbe;
       icon.classList.remove("site-icon-generic-fallback");
-      if (!localIcon) {
+      if (!localIcon && !remoteBrandSvgDescriptorFromSource(iconSource)) {
         icon.addEventListener("load", () => {
           if (iconStillRenderingCandidate(icon, iconSource)) {
             applyFaviconMatchedTile(icon);
@@ -4914,8 +5493,54 @@ function applySiteIcon(icon, site, options = {}) {
     return undefined;
   } else {
     applyFaviconIcon(icon, site, 128);
+    refreshRemoteBrandIcon(icon, site);
     return undefined;
   }
+}
+
+function refreshRemoteBrandIcon(icon, site) {
+  const parsedUrl = safeUrl(site.url);
+  const siteKey = siteGroupKey(parsedUrl);
+  if (!parsedUrl || !siteKey || localIconForUrl(site.url)) {
+    return;
+  }
+  const requestToken = `${siteKey}:${parsedUrl.href}`;
+  icon.dataset.remoteBrandIconRequest = requestToken;
+  discoverRemoteBrandIconDataUrl(parsedUrl.href).then((iconDataUrl) => {
+    if (
+      !iconDataUrl
+      || !icon.isConnected
+      || icon.dataset.remoteBrandIconRequest !== requestToken
+      || siteGroupKey(safeUrl(icon.dataset.siteUrl)) !== siteKey
+    ) {
+      return;
+    }
+    applyRemoteBrandIcon(icon, site, iconDataUrl);
+  }).catch(() => {});
+}
+
+function applyRemoteBrandIcon(icon, site, iconDataUrl) {
+  icon.removeAttribute("srcset");
+  storeIconSiteContext(icon, site);
+  icon.dataset.iconMissing = "false";
+  icon.dataset.iconCandidate = iconDataUrl;
+  icon.dataset.iconSource = iconDataUrl;
+  delete icon.dataset.iconDefaultRescue;
+  delete icon.dataset.iconDefaultRescueCandidate;
+  delete icon.dataset.iconDefaultProbe;
+  icon.classList.remove("site-icon-generic-fallback");
+  applySiteIconTile(icon, site, iconDataUrl);
+  const displayIcon = displayIconSource(icon, iconDataUrl);
+  if (displayIcon instanceof Promise) {
+    icon.src = iconDataUrl;
+    displayIcon.then((source) => {
+      if (iconStillRenderingCandidate(icon, iconDataUrl)) {
+        icon.src = source;
+      }
+    });
+    return;
+  }
+  icon.src = displayIcon;
 }
 
 function localIconForUrl(url) {
@@ -5006,12 +5631,35 @@ function applySiteIconTile(icon, site, iconPath = "") {
   const parsedUrl = safeUrl(site.url);
   const siteKey = siteGroupKey(parsedUrl);
   icon.dataset.siteKey = siteKey || "";
-  const tileColor = siteKey ? SITE_ICON_TILE_COLOR_BY_SITE_KEY[siteKey] || "" : "";
+  const tileColor = siteIconBrandColor(siteKey, iconPath);
   const tileMode = iconPath ? "brand" : "plain";
-  const tileColors = iconPath && tileColor
-    ? brandIconTileColors(tileColor, siteKey, iconPath)
-    : genericIconTileColors(parsedUrl?.hostname || site.url || site.title);
-  applyIconTile(icon, tileMode, tileColors, Boolean(iconPath));
+  const remoteDescriptor = remoteBrandSvgDescriptorFromSource(iconPath);
+  const isLocalIconSource = String(iconPath || "").startsWith("icons/");
+  let tileColors = genericIconTileColors(parsedUrl?.hostname || site.url || site.title);
+  if (remoteDescriptor) {
+    tileColors = remoteBrandDescriptorDisplayTileColors(remoteDescriptor);
+  } else if (iconPath && tileColor) {
+    tileColors = brandIconTileColors(tileColor, siteKey, iconPath);
+  }
+  applyIconTile(icon, tileMode, tileColors, isLocalIconSource);
+}
+
+function siteIconBrandColor(siteKey = "", iconPath = "") {
+  const remoteDescriptor = remoteBrandSvgDescriptorFromSource(iconPath);
+  if (remoteDescriptor) {
+    return remoteDescriptor.brandColor;
+  }
+  return normalizeHexColor(siteKey ? SITE_ICON_TILE_COLOR_BY_SITE_KEY[siteKey] || "" : "")
+    || embeddedSvgBrandColor(iconPath);
+}
+
+function remoteBrandDescriptorDisplayTileColors(descriptor) {
+  const light = normalizeHexColor(descriptor?.tileLight || "");
+  const dark = normalizeHexColor(descriptor?.tileDark || "");
+  if (!light || !dark) {
+    return remoteBrandDescriptorTileColors(descriptor?.brandColor || "", descriptor?.renderMode || "mask");
+  }
+  return { light, dark };
 }
 
 function brandIconTileColors(tileColor, siteKey = "", iconPath = "") {
@@ -5044,7 +5692,39 @@ function brandIconTileColors(tileColor, siteKey = "", iconPath = "") {
 }
 
 function keepsBrandIconOriginal(siteKey, iconPath = "") {
-  return !String(iconPath || "").endsWith(".svg") || MULTICOLOR_BRAND_ICON_SITE_KEYS.has(siteKey);
+  if (MULTICOLOR_BRAND_ICON_SITE_KEYS.has(siteKey)) {
+    return true;
+  }
+  const remoteDescriptor = remoteBrandSvgDescriptorFromSource(iconPath);
+  if (remoteDescriptor) {
+    return remoteDescriptor.renderMode === "original";
+  }
+  if (!siteIconSourceLooksLikeSvg(iconPath)) {
+    return true;
+  }
+  return isSvgDataUrl(iconPath) && !remoteBrandSvgSourceIsMaskable(iconPath);
+}
+
+function siteIconSourceLooksLikeSvg(source) {
+  const value = String(source || "");
+  return value.endsWith(".svg") || isSvgDataUrl(value);
+}
+
+function isSvgDataUrl(source) {
+  return /^data:image\/svg\+xml[,;]/i.test(String(source || ""));
+}
+
+function remoteBrandSvgSourceIsMaskable(source) {
+  const descriptor = remoteBrandSvgDescriptorFromSource(source);
+  if (descriptor) {
+    return descriptor.renderMode === "mask";
+  }
+  const svg = decodeSvgDataUrl(source);
+  if (!svg || !embeddedSvgBrandColor(source)) {
+    return false;
+  }
+  const match = svg.match(/\sdata-wayleaf-monochrome=(["'])(true|false)\1/i);
+  return match ? match[2] === "true" : remoteBrandSvgIsMonochrome(svg);
 }
 
 function nativeRoundedBrandIcon(siteKey) {
@@ -5089,19 +5769,20 @@ function applyIconTileToShell(icon, tileMode, tileColors) {
 }
 
 function displayIconSource(icon, source, options = {}) {
-  if (icon.dataset.iconTile !== "brand" || !source.endsWith(".svg")) {
+  if (icon.dataset.iconTile !== "brand" || !siteIconSourceLooksLikeSvg(source)) {
     return source;
   }
   if (icon.dataset.iconTile === "brand" && !shouldInvertBrandSvg(icon, source)) {
     return source;
   }
-  if (icon.dataset.iconTile === "brand" && !iconTileNeedsWhiteGlyph(currentIconTileColor(icon))) {
+  const glyphColor = iconGlyphColorForCurrentTile(icon, source);
+  if (!glyphColor) {
     return source;
   }
   if (options.awaitDisplayIcon) {
-    return whiteSvgIconSource(source);
+    return coloredSvgIconSource(source, glyphColor);
   }
-  whiteSvgIconSource(source).then((displaySource) => {
+  coloredSvgIconSource(source, glyphColor).then((displaySource) => {
     if (icon.dataset.iconCandidate === source || icon.src.endsWith(source) || icon.getAttribute("src") === source) {
       icon.src = displaySource;
     }
@@ -5129,8 +5810,130 @@ function shouldInvertBrandSvg(icon, source) {
   if (keepsBrandIconOriginal(siteKey, source)) {
     return false;
   }
-  const tileColor = siteKey ? normalizeHexColor(SITE_ICON_TILE_COLOR_BY_SITE_KEY[siteKey] || "") : "";
+  const tileColor = siteIconBrandColor(siteKey, source);
   return Boolean(tileColor);
+}
+
+function iconGlyphColorForCurrentTile(icon, source = "") {
+  const tileColor = normalizeHexColor(currentIconTileColor(icon));
+  if (!tileColor) {
+    return "";
+  }
+  const siteKey = icon.dataset.siteKey || siteGroupKey(safeUrl(icon.dataset.siteUrl));
+  const brandColor = siteIconBrandColor(siteKey, source);
+  if (isSvgDataUrl(source)) {
+    const descriptorGlyph = remoteBrandDescriptorGlyphColorForCurrentTheme(icon, source);
+    if (descriptorGlyph !== null) {
+      return descriptorGlyph;
+    }
+    return remoteBrandGlyphColorForTile(tileColor, brandColor);
+  }
+  if (brandColor && tileColor === brandColor) {
+    return localBrandGlyphColor(tileColor);
+  }
+  if (iconTileShouldUseOriginalGlyph(tileColor)) {
+    return "";
+  }
+  return readableIconGlyphColor(tileColor);
+}
+
+function remoteBrandDescriptorGlyphColorForCurrentTheme(icon, source) {
+  const descriptor = remoteBrandSvgDescriptorFromSource(source);
+  if (!descriptor || descriptor.renderMode !== "mask") {
+    return null;
+  }
+  return document.documentElement.dataset.theme === "dark"
+    ? descriptor.glyphDark
+    : descriptor.glyphLight;
+}
+
+function localBrandGlyphColor(tileColor) {
+  const color = normalizeHexColor(tileColor);
+  if (!color) {
+    return "";
+  }
+  return nearWhiteBrandColor(color) ? readableIconGlyphColor(color) : "#ffffff";
+}
+
+function remoteBrandGlyphColorForTile(tileColor, brandColor = "") {
+  const tile = normalizeHexColor(tileColor);
+  const brand = normalizeHexColor(brandColor);
+  if (!tile) {
+    return "";
+  }
+  if (brand && tile !== brand && contrastRatio(tile, brand) >= 3) {
+    return "";
+  }
+  return remoteBrandGlyphColor(tile);
+}
+
+function remoteBrandGlyphColor(tileColor) {
+  const color = normalizeHexColor(tileColor);
+  if (!color) {
+    return "";
+  }
+  return remoteBrandTilePrefersDarkGlyph(color) ? "#102019" : "#ffffff";
+}
+
+function remoteBrandTilePrefersDarkGlyph(tileColor) {
+  const stats = hexColorStats(tileColor);
+  if (!stats) {
+    return false;
+  }
+  if (nearWhiteBrandColor(tileColor)) {
+    return true;
+  }
+  const whiteIsTooWeak = stats.lightContrast < 2.85 && stats.darkContrast >= 3;
+  const warmBright = stats.hue >= 30 && stats.hue <= 95 && stats.luminance >= 0.38;
+  const vividBright = stats.luminance >= 0.46 && stats.darkContrast >= stats.lightContrast + 2;
+  return whiteIsTooWeak || warmBright || vividBright;
+}
+
+function hexColorStats(tileColor) {
+  const color = normalizeHexColor(tileColor);
+  if (!color) {
+    return null;
+  }
+  const [red, green, blue] = hexToRgb(color).map((channel) => channel / 255);
+  const max = Math.max(red, green, blue);
+  const min = Math.min(red, green, blue);
+  const delta = max - min;
+  let hue = 0;
+  if (delta) {
+    if (max === red) {
+      hue = 60 * (((green - blue) / delta) % 6);
+    } else if (max === green) {
+      hue = 60 * ((blue - red) / delta + 2);
+    } else {
+      hue = 60 * ((red - green) / delta + 4);
+    }
+    if (hue < 0) {
+      hue += 360;
+    }
+  }
+  return {
+    hue,
+    luminance: relativeLuminance(color),
+    lightContrast: contrastRatio(color, "#ffffff"),
+    darkContrast: contrastRatio(color, "#102019")
+  };
+}
+
+function iconTileShouldUseOriginalGlyph(tileColor) {
+  const color = normalizeHexColor(tileColor);
+  return !color || contrastRatio(color, "#102019") >= 8;
+}
+
+function readableIconGlyphColor(tileColor) {
+  const color = normalizeHexColor(tileColor);
+  if (!color) {
+    return "";
+  }
+  const darkGlyph = "#102019";
+  const lightGlyph = "#ffffff";
+  const lightContrast = contrastRatio(color, lightGlyph);
+  const darkContrast = contrastRatio(color, darkGlyph);
+  return lightContrast >= 3 || lightContrast >= darkContrast ? lightGlyph : darkGlyph;
 }
 
 function nearWhiteBrandColor(tileColor) {
@@ -5151,7 +5954,7 @@ function iconTileNeedsWhiteGlyph(tileColor) {
   if (!hex) {
     return false;
   }
-  return !nearWhiteBrandColor(hex);
+  return readableIconGlyphColor(hex) === "#ffffff";
 }
 
 function refreshAdaptiveSiteIcons() {
@@ -5173,29 +5976,57 @@ function refreshAdaptiveSiteIcons() {
   });
 }
 
-function whiteSvgIconSource(source) {
-  if (whiteSvgIconDataUrlCache.has(source)) {
-    return whiteSvgIconDataUrlCache.get(source);
+function coloredSvgIconSource(source, glyphColor) {
+  const color = normalizeHexColor(glyphColor);
+  if (!color) {
+    return Promise.resolve(source);
   }
-  const request = fetch(source)
-    .then((response) => {
-      if (!response.ok) {
-        throw new Error(`Icon request failed: ${response.status}`);
-      }
-      return response.text();
-    })
-    .then((svg) => `data:image/svg+xml,${encodeURIComponent(normalizeSvgGlyphColor(svg))}`)
-    .catch(() => source);
-  whiteSvgIconDataUrlCache.set(source, request);
+  const cacheKey = `${color}:${source}`;
+  if (whiteSvgIconDataUrlCache.has(cacheKey)) {
+    return whiteSvgIconDataUrlCache.get(cacheKey);
+  }
+  const request = isSvgDataUrl(source)
+    ? Promise.resolve(svgTextDataUrl(applySvgGlyphColor(decodeSvgDataUrl(source), color)))
+    : fetch(source)
+      .then((response) => {
+        if (!response.ok) {
+          throw new Error(`Icon request failed: ${response.status}`);
+        }
+        return response.text();
+      })
+      .then((svg) => svgTextDataUrl(applySvgGlyphColor(svg, color)))
+      .catch(() => source);
+  whiteSvgIconDataUrlCache.set(cacheKey, request);
   return request;
 }
 
 function normalizeSvgGlyphColor(svg) {
+  return applySvgGlyphColor(svg, "#ffffff");
+}
+
+function applySvgGlyphColor(svg, glyphColor, options = {}) {
+  const color = normalizeHexColor(glyphColor);
+  if (!color) {
+    return String(svg || "");
+  }
   let output = String(svg || "");
-  output = output.replace(/\sfill=(["'])(?!none\1)[^"']*\1/gi, ' fill="#ffffff"');
-  output = output.replace(/\sstroke=(["'])(?!none\1)[^"']*\1/gi, ' stroke="#ffffff"');
+  const replaceColorAttribute = (attributeName, match, quote, value) => {
+    if (/^(?:none|transparent)$/i.test(value) || (options.onlyCurrentColor && !/^currentColor$/i.test(value))) {
+      return match;
+    }
+    return ` ${attributeName}=${quote}${color}${quote}`;
+  };
+  output = output.replace(/\sfill=(["'])([^"']*)\1/gi, (match, quote, value) => (
+    replaceColorAttribute("fill", match, quote, value)
+  ));
+  output = output.replace(/\sstroke=(["'])([^"']*)\1/gi, (match, quote, value) => (
+    replaceColorAttribute("stroke", match, quote, value)
+  ));
+  output = output.replace(/\scolor=(["'])([^"']*)\1/gi, (match, quote, value) => (
+    replaceColorAttribute("color", match, quote, value)
+  ));
   output = output.replace(/<svg\b([^>]*)>/i, (match, attrs) => (
-    /\sfill=/i.test(attrs) ? `<svg${attrs}>` : `<svg${attrs} fill="#ffffff">`
+    /\sfill=/i.test(attrs) ? `<svg${attrs}>` : `<svg${attrs} fill="${color}">`
   ));
   return output;
 }
@@ -5279,7 +6110,9 @@ function iconStillRenderingCandidate(icon, candidateToken) {
 }
 
 function applyFaviconMatchedTile(icon, options = {}) {
-  if (icon.dataset.iconTile !== "plain" || icon.dataset.iconCandidate?.startsWith("icons/")) {
+  if (icon.dataset.iconTile !== "plain"
+    || icon.dataset.iconCandidate?.startsWith("icons/")
+    || remoteBrandSvgDescriptorFromSource(icon.dataset.iconCandidate || "")) {
     return;
   }
   const sample = sampleFaviconImageData(icon);
@@ -8147,7 +8980,7 @@ async function refreshHistory() {
       .filter((item) => !pinnedKeys.has(normalizeHistoryKey(item.url)));
     renderPinnedHistory(pinnedItems);
     const recentGroups = groupHistoryBySite(recentItems, {
-      maxPagesPerSite: MAX_HISTORY_PAGES_PER_SITE + 1
+      maxPagesPerSite: MAX_HISTORY_PAGES_PER_SITE
     });
     renderRecentFolders(recentGroups);
     renderHistory(recentGroups);
@@ -8448,6 +9281,7 @@ function createRecentFolderItem(group) {
   const controls = document.createElement("div");
   const previousButton = document.createElement("button");
   const nextButton = document.createElement("button");
+  const pageIndicator = document.createElement("div");
   const bottomBar = document.createElement("span");
   const hasPageDrawer = pages.length > 1;
 
@@ -8484,6 +9318,8 @@ function createRecentFolderItem(group) {
   nextButton.type = "button";
   nextButton.innerHTML = chevronRightIcon();
   nextButton.setAttribute("aria-label", t("historyNextPage"));
+  pageIndicator.className = "recent-card-page-indicator";
+  pageIndicator.setAttribute("aria-hidden", "true");
   bottomBar.className = "recent-card-bottom-bar";
   bottomBar.setAttribute("aria-hidden", "true");
 
@@ -8622,6 +9458,9 @@ function createRecentFolderItem(group) {
     pageTitle.textContent = activeTitle;
     previousButton.disabled = pageCount < 2;
     nextButton.disabled = pageCount < 2;
+    pageIndicator.querySelectorAll(".recent-card-page-dot").forEach((dot, dotIndex) => {
+      dot.classList.toggle("active", dotIndex === index);
+    });
     animatePageTurn(direction);
   };
 
@@ -8671,9 +9510,15 @@ function createRecentFolderItem(group) {
 
   copy.append(name, pageTitle, domain);
   face.append(icon, copy);
+  pages.forEach((_, pageIndex) => {
+    const dot = document.createElement("span");
+    dot.className = "recent-card-page-dot";
+    dot.dataset.pageIndex = String(pageIndex);
+    pageIndicator.append(dot);
+  });
   controls.append(previousButton, nextButton);
   inner.append(face, deleteButton);
-  bottomBar.append(controls);
+  bottomBar.append(pageIndicator, controls);
   card.append(inner, bottomBar);
   setActivePage(0);
   return card;
