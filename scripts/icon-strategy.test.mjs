@@ -3,11 +3,34 @@ import { readFileSync } from "node:fs";
 
 const source = readFileSync(new URL("../newtab.js", import.meta.url), "utf8");
 const siteIconIndex = JSON.parse(readFileSync(new URL("../icons/sites/index.json", import.meta.url), "utf8"));
+const zhihuSvgSource = readFileSync(new URL("../icons/sites/zhihu.svg", import.meta.url), "utf8");
+const linkedInSvgSource = readFileSync(new URL("../icons/sites/linkedin.svg", import.meta.url), "utf8");
 const availableSiteIconFiles = new Set(siteIconIndex);
+const LOCAL_BRAND_CARRIER_CONTRAST_MIN = 2.75;
+const SITE_ICON_TILE_COLOR_BY_SITE_KEY_FOR_TEST = Object.freeze({
+  "1688.com": "#ff6000",
+  "b.ai": "#111827",
+  "baidu.com": "#2932e1",
+  "bilibili.com": "#00a1d6",
+  "developer.mozilla.org": "#15141a",
+  "google.com": "#4285f4",
+  "jd.com": "#ff0000",
+  "linkedin.com": "#0a66c2",
+  "raycast.com": "#ff6363",
+  "spotify.com": "#1ed760",
+  "zhihu.com": "#0084ff"
+});
+const MULTICOLOR_BRAND_ICON_SITE_KEYS_FOR_TEST = new Set([
+  "google.com"
+]);
+const ORIGINAL_ARTWORK_BRAND_TILE_SITE_KEYS_FOR_TEST = new Set([
+  "developer.mozilla.org",
+  "jd.com"
+]);
 
 assert.match(source, /viewbox=auto/, "Simple Icons CDN requests should normalize the SVG viewBox.");
 assert.match(source, /return remoteBrandGlyphColorForTile\(tileColor, brandColor\);/, "Remote SVG data URLs must use the cloud glyph strategy.");
-assert.match(source, /return localBrandGlyphColor\(tileColor\);/, "Local brand icons must keep the local glyph strategy.");
+assert.match(source, /return localBrandGlyphColorForTile\(tileColor, brandColor\);/, "Local brand icons must keep the local glyph strategy with known VI color recovery.");
 assert.match(source, /function remoteBrandSvgHasComplexPaint/, "Remote SVG classification must reject complex paint sources.");
 assert.match(source, /function remoteBrandSvgQuality/, "Remote SVGs must pass a quality gate before being cached.");
 assert.match(source, /function remoteBrandIconRankedCandidates/, "Remote slug candidates must be ranked before fetching.");
@@ -20,8 +43,13 @@ assert.match(source, /function remoteBrandIconMissCacheIsFresh/, "Provider misse
 assert.match(source, /function remoteBrandProviderColorLooksDrifted/, "Provider color drift must be detected against known local VI colors.");
 assert.match(source, /remoteBrandSvgBrandColor\(svg, options\)/, "Fetched provider SVGs must derive brand color through the provider trust gate.");
 assert.match(source, /SITE_ICON_TILE_COLOR_BY_SITE_KEY\[options\.siteKey\]/, "Provider color drift checks must compare against known local VI colors.");
+assert.match(source, /function keepsBrandIconOriginalOnBrandTile/, "Local SVGs with an embedded VI carrier can preserve original artwork on a brand tile.");
+assert.match(zhihuSvgSource, /<path\b/i, "Zhihu local SVG keeps a maskable path resource.");
+assert.match(linkedInSvgSource, /fill:\s*rgb\(0,\s*0,\s*0\)/i, "LinkedIn local SVG exercises inline style recoloring.");
 assert.match(source, /function discoverRemoteBrandIconDataUrl[\s\S]*localIconForUrl\(parsedUrl\.href\)[\s\S]*return "";/, "Remote provider discovery must short-circuit for deployed local icons.");
 assert.match(source, /function refreshRemoteBrandIcon[\s\S]*localIconForUrl\(site\.url\)[\s\S]*return;/, "Async remote refresh must short-circuit for deployed local icons.");
+assert.match(source, /const GENERIC_SITE_FALLBACK_ICON = `\$\{SITE_ICON_DIRECTORY\}\/fallback\.svg`;/, "No-site-ico fallback should use the full SVG asset instead of the old PNG tile.");
+assert.doesNotMatch(source, /generic-site-fallback\.png/, "Runtime fallback rendering must not use the legacy PNG asset.");
 
 function normalizeHexColor(tileColor) {
   const color = String(tileColor || "").trim();
@@ -81,6 +109,21 @@ function localBrandGlyphColor(tileColor) {
     return "";
   }
   return nearWhiteBrandColor(color) ? readableIconGlyphColor(color) : "#ffffff";
+}
+
+function localBrandGlyphColorForTile(tileColor, brandColor = "") {
+  const tile = normalizeHexColor(tileColor);
+  const brand = normalizeHexColor(brandColor);
+  if (!tile) {
+    return "";
+  }
+  if (!brand || tile === brand) {
+    return localBrandGlyphColor(tile);
+  }
+  if (contrastRatio(tile, brand) >= LOCAL_BRAND_CARRIER_CONTRAST_MIN) {
+    return brand;
+  }
+  return readableIconGlyphColor(tile);
 }
 
 function hexColorStats(tileColor) {
@@ -190,7 +233,10 @@ function remoteBrandIconSlugCandidatesForTest(siteKey, siteName = "", aliases = 
 }
 
 const SITE_ICON_FILE_BY_SITE_KEY_FOR_TEST = Object.freeze({
+  "1688.com": "1688.ico",
+  "b.ai": "bai.png",
   "calendar.google.com": "googlecalendar.svg",
+  "developer.mozilla.org": "mdn.svg",
   "docs.google.com": "googledocs.svg",
   "drive.google.com": "googledrive.svg",
   "gemini.google.com": "googlegemini.svg",
@@ -200,7 +246,7 @@ const SITE_ICON_FILE_BY_SITE_KEY_FOR_TEST = Object.freeze({
   "npmjs.com": "npm.svg",
   "office.com": "microsoftoffice.svg",
   "stackoverflow.com": "stackoverflow.svg",
-  "teams.microsoft.com": "microsoftteams.ico"
+  "teams.microsoft.com": "microsoftteams.svg"
 });
 
 function localIconForSiteKeyForTest(siteKey) {
@@ -517,8 +563,913 @@ function remoteBrandProviderColorLooksDrifted(providerColor, localColor) {
   return distance > 96 && contrastRatio(provider, local) > 1.35;
 }
 
+const FAVICON_BACKGROUND_ALPHA_MIN = 0.35;
+const FAVICON_BACKGROUND_COLOR_DISTANCE = 58;
+const FAVICON_BACKGROUND_CONFIDENCE_MIN = 0.32;
+const FAVICON_FOREGROUND_COLOR_DISTANCE = 12;
+const FAVICON_LOW_CONTRAST_FOREGROUND_COVERAGE_MIN = 0.018;
+const FAVICON_LOW_CONTRAST_AVERAGE_MAX = 1.32;
+const FAVICON_LOW_CONTRAST_PEAK_MAX = 1.65;
+const FAVICON_TRANSPARENT_GLYPH_COVERAGE_MAX = 0.48;
+const FAVICON_TRANSPARENT_GLYPH_COVERAGE_MIN = 0.01;
+const FAVICON_TRANSPARENT_GLYPH_EDGE_CONFIDENCE_MAX = 0.22;
+const FAVICON_TRANSPARENT_GLYPH_CANDIDATE_RATIO_MIN = 0.58;
+const FAVICON_NEAR_WHITE_GLYPH_LUMINANCE_MIN = 0.82;
+const FAVICON_NEAR_WHITE_GLYPH_FOREGROUND_COVERAGE_MAX = 0.035;
+const FAVICON_EDGE_CARRIER_CONFIDENCE_MIN = 0.48;
+const FAVICON_EMBEDDED_TILE_EDGE_CONFIDENCE_MAX = 0.24;
+const FAVICON_EMBEDDED_TILE_INNER_CONFIDENCE_MIN = 0.34;
+const FAVICON_EMBEDDED_TILE_CONTRAST_MIN = 1.35;
+const FAVICON_EMBEDDED_TILE_CONTRAST_MAX_MIX = 0.42;
+const FAVICON_READABLE_CARRIER_CONTRAST_MIN = 3;
+const FAVICON_READABLE_CARRIER_MAX_MIX = 0.72;
+const GENERIC_SITE_FALLBACK_TILE_COLOR = "#f04424";
+
+function rgbaSample(size, painter) {
+  const data = new Uint8ClampedArray(size * size * 4);
+  for (let y = 0; y < size; y += 1) {
+    for (let x = 0; x < size; x += 1) {
+      const index = (y * size + x) * 4;
+      const pixel = painter(x, y, size) || [0, 0, 0, 0];
+      data[index] = pixel[0] || 0;
+      data[index + 1] = pixel[1] || 0;
+      data[index + 2] = pixel[2] || 0;
+      data[index + 3] = pixel[3] || 0;
+    }
+  }
+  return { data, size };
+}
+
+function hexChannels(color) {
+  return [...hexToRgb(color), 255];
+}
+
+function rgbChannelsToHex(red, green, blue) {
+  return `#${[red, green, blue].map((channel) => Math.round(Math.max(0, Math.min(255, channel)))
+    .toString(16)
+    .padStart(2, "0")).join("")}`;
+}
+
+function rgbToHex(channels) {
+  return `#${channels.map((channel) => channel.toString(16).padStart(2, "0")).join("")}`;
+}
+
+function mixHexColors(color, target, amount) {
+  const sourceRgb = hexToRgb(color);
+  const targetRgb = hexToRgb(target);
+  return rgbToHex(sourceRgb.map((channel, index) => {
+    return Math.round(channel + (targetRgb[index] - channel) * amount);
+  }));
+}
+
+function iconBackgroundSampleWeight(x, y, size) {
+  const edgeDistance = Math.min(x, y, size - 1 - x, size - 1 - y);
+  if (edgeDistance <= 1) {
+    return 3;
+  }
+  if (edgeDistance <= 3) {
+    return 2;
+  }
+  if (edgeDistance <= 5) {
+    return 1;
+  }
+  return 0.35;
+}
+
+function faviconColorBucketKey(red, green, blue) {
+  return [
+    Math.round(red / 16),
+    Math.round(green / 16),
+    Math.round(blue / 16)
+  ].join(":");
+}
+
+function faviconAverageColorBucket(bucket) {
+  return {
+    red: bucket.red / bucket.weight,
+    green: bucket.green / bucket.weight,
+    blue: bucket.blue / bucket.weight,
+    weight: bucket.weight
+  };
+}
+
+function colorDistanceSquared(first, second) {
+  return (first.red - second.red) ** 2
+    + (first.green - second.green) ** 2
+    + (first.blue - second.blue) ** 2;
+}
+
+function colorChannelSpread(red, green, blue) {
+  return Math.max(red, green, blue) - Math.min(red, green, blue);
+}
+
+function analyzeFaviconImageColors(data, size) {
+  const pixels = [];
+  const buckets = new Map();
+  let edgeSampleWeight = 0;
+  let opaqueWeight = 0;
+  for (let index = 0; index < data.length; index += 4) {
+    const pixelIndex = index / 4;
+    const x = pixelIndex % size;
+    const y = Math.floor(pixelIndex / size);
+    const edgeWeight = iconBackgroundSampleWeight(x, y, size);
+    edgeSampleWeight += edgeWeight;
+    const alpha = data[index + 3] / 255;
+    if (alpha < FAVICON_BACKGROUND_ALPHA_MIN) {
+      continue;
+    }
+    const red = data[index];
+    const green = data[index + 1];
+    const blue = data[index + 2];
+    opaqueWeight += alpha;
+    const pixel = { x, y, red, green, blue, weight: alpha, edgeWeight: alpha * edgeWeight };
+    pixels.push(pixel);
+    const bucketKey = faviconColorBucketKey(red, green, blue);
+    const bucket = buckets.get(bucketKey) || { red: 0, green: 0, blue: 0, weight: 0 };
+    bucket.red += red * alpha;
+    bucket.green += green * alpha;
+    bucket.blue += blue * alpha;
+    bucket.weight += alpha;
+    buckets.set(bucketKey, bucket);
+  }
+  return { pixels, buckets, totalWeight: size * size, opaqueWeight, edgeSampleWeight };
+}
+
+function selectFaviconBackgroundCandidate(analysis, size) {
+  if (!analysis.pixels.length || !analysis.buckets.size) {
+    return null;
+  }
+  const baseBuckets = [...analysis.buckets.values()]
+    .filter((bucket) => bucket.weight)
+    .map(faviconAverageColorBucket)
+    .sort((a, b) => b.weight - a.weight)
+    .slice(0, 14);
+  const candidates = baseBuckets
+    .map((bucket) => faviconBackgroundCandidateFromBucket(bucket, analysis, size))
+    .filter(Boolean)
+    .sort((a, b) => b.score - a.score || b.confidence - a.confidence);
+  const candidate = (candidates[0]?.confidence || 0) >= FAVICON_BACKGROUND_CONFIDENCE_MIN
+    ? candidates[0]
+    : faviconTransparentGlyphCandidateFromBucket(baseBuckets[0], analysis);
+  if (!candidate?.confidence) {
+    return null;
+  }
+  const selectedColor = {
+    red: Math.round(candidate.carrierRed ?? candidate.red),
+    green: Math.round(candidate.carrierGreen ?? candidate.green),
+    blue: Math.round(candidate.carrierBlue ?? candidate.blue)
+  };
+  return {
+    ...selectedColor,
+    paletteRed: Math.round(candidate.red),
+    paletteGreen: Math.round(candidate.green),
+    paletteBlue: Math.round(candidate.blue),
+    confidence: candidate.confidence,
+    coverage: candidate.coverage,
+    opaqueCoverage: analysis.opaqueWeight / analysis.totalWeight,
+    edgeConfidence: candidate.edgeConfidence,
+    innerTileConfidence: candidate.innerTileConfidence,
+    matchMode: faviconBackgroundMatchMode(candidate),
+    foreground: faviconForegroundStatsForCandidate(selectedColor, analysis, size)
+  };
+}
+
+function faviconTransparentGlyphCandidateFromBucket(bucket, analysis) {
+  if (!bucket?.weight || !analysis.opaqueWeight || !analysis.totalWeight) {
+    return null;
+  }
+  const colorDistanceLimit = FAVICON_BACKGROUND_COLOR_DISTANCE ** 2;
+  let red = 0;
+  let green = 0;
+  let blue = 0;
+  let weight = 0;
+  let edgeWeight = 0;
+  for (const pixel of analysis.pixels) {
+    if (colorDistanceSquared(pixel, bucket) > colorDistanceLimit) {
+      continue;
+    }
+    red += pixel.red * pixel.weight;
+    green += pixel.green * pixel.weight;
+    blue += pixel.blue * pixel.weight;
+    weight += pixel.weight;
+    edgeWeight += pixel.edgeWeight;
+  }
+  if (!weight) {
+    return null;
+  }
+  const opaqueCoverage = analysis.opaqueWeight / analysis.totalWeight;
+  const coverage = weight / analysis.totalWeight;
+  const edgeConfidence = edgeWeight / Math.max(1, analysis.edgeSampleWeight);
+  if (
+    opaqueCoverage < FAVICON_TRANSPARENT_GLYPH_COVERAGE_MIN
+    || opaqueCoverage > FAVICON_TRANSPARENT_GLYPH_COVERAGE_MAX
+    || coverage / opaqueCoverage < FAVICON_TRANSPARENT_GLYPH_CANDIDATE_RATIO_MIN
+    || edgeConfidence > FAVICON_TRANSPARENT_GLYPH_EDGE_CONFIDENCE_MAX
+  ) {
+    return null;
+  }
+  return {
+    red: red / weight,
+    green: green / weight,
+    blue: blue / weight,
+    confidence: FAVICON_BACKGROUND_CONFIDENCE_MIN,
+    coverage,
+    edgeConfidence,
+    innerTileConfidence: 0,
+    score: FAVICON_BACKGROUND_CONFIDENCE_MIN
+  };
+}
+
+function faviconForegroundStatsForCandidate(candidate, analysis, size) {
+  const colorDistanceLimit = FAVICON_FOREGROUND_COLOR_DISTANCE ** 2;
+  const background = { red: candidate.red, green: candidate.green, blue: candidate.blue };
+  const backgroundHex = rgbChannelsToHex(candidate.red, candidate.green, candidate.blue);
+  let weight = 0;
+  let contrastWeight = 0;
+  let maxContrast = 0;
+  let minX = Infinity;
+  let minY = Infinity;
+  let maxX = -1;
+  let maxY = -1;
+  for (const pixel of analysis.pixels) {
+    if (colorDistanceSquared(pixel, background) <= colorDistanceLimit) {
+      continue;
+    }
+    const contrast = contrastRatio(backgroundHex, rgbChannelsToHex(pixel.red, pixel.green, pixel.blue));
+    weight += pixel.weight;
+    contrastWeight += contrast * pixel.weight;
+    maxContrast = Math.max(maxContrast, contrast);
+    minX = Math.min(minX, pixel.x);
+    minY = Math.min(minY, pixel.y);
+    maxX = Math.max(maxX, pixel.x);
+    maxY = Math.max(maxY, pixel.y);
+  }
+  if (!weight || maxX < minX || maxY < minY) {
+    return { coverage: 0, averageContrast: 0, maxContrast: 0, spansCenter: false, span: 0 };
+  }
+  const bounds = { minX, minY, maxX, maxY };
+  return {
+    coverage: weight / Math.max(1, analysis.totalWeight),
+    averageContrast: contrastWeight / weight,
+    maxContrast,
+    spansCenter: faviconCandidateSpansCenter(bounds, size),
+    span: Math.max(maxX - minX + 1, maxY - minY + 1) / size
+  };
+}
+
+function faviconBackgroundCandidateFromBucket(bucket, analysis, size) {
+  const colorDistanceLimit = FAVICON_BACKGROUND_COLOR_DISTANCE ** 2;
+  const samples = [];
+  let red = 0;
+  let green = 0;
+  let blue = 0;
+  let weight = 0;
+  let edgeWeight = 0;
+  let carrierEdgeWeight = 0;
+  let edgeRed = 0;
+  let edgeGreen = 0;
+  let edgeBlue = 0;
+  let minX = size;
+  let minY = size;
+  let maxX = -1;
+  let maxY = -1;
+  for (const pixel of analysis.pixels) {
+    if (colorDistanceSquared(pixel, bucket) > colorDistanceLimit) {
+      continue;
+    }
+    samples.push(pixel);
+    red += pixel.red * pixel.weight;
+    green += pixel.green * pixel.weight;
+    blue += pixel.blue * pixel.weight;
+    weight += pixel.weight;
+    edgeWeight += pixel.edgeWeight;
+    if (pixel.edgeWeight > 0.35) {
+      carrierEdgeWeight += pixel.edgeWeight;
+      edgeRed += pixel.red * pixel.edgeWeight;
+      edgeGreen += pixel.green * pixel.edgeWeight;
+      edgeBlue += pixel.blue * pixel.edgeWeight;
+    }
+    minX = Math.min(minX, pixel.x);
+    minY = Math.min(minY, pixel.y);
+    maxX = Math.max(maxX, pixel.x);
+    maxY = Math.max(maxY, pixel.y);
+  }
+  if (!weight || maxX < minX || maxY < minY) {
+    return null;
+  }
+  const bounds = { minX, minY, maxX, maxY };
+  const coverage = weight / analysis.totalWeight;
+  const edgeConfidence = edgeWeight / analysis.edgeSampleWeight;
+  const innerTileConfidence = faviconInnerTileConfidence(samples, bounds, size, coverage);
+  const confidence = Math.min(1, Math.max(edgeConfidence, innerTileConfidence));
+  if (!confidence) {
+    return null;
+  }
+  const edgeCarrierColor = edgeConfidence >= FAVICON_EDGE_CARRIER_CONFIDENCE_MIN && carrierEdgeWeight > 0
+    ? {
+      carrierRed: edgeRed / carrierEdgeWeight,
+      carrierGreen: edgeGreen / carrierEdgeWeight,
+      carrierBlue: edgeBlue / carrierEdgeWeight
+    }
+    : {};
+  return {
+    red: red / weight,
+    green: green / weight,
+    blue: blue / weight,
+    ...edgeCarrierColor,
+    confidence,
+    coverage,
+    edgeConfidence,
+    innerTileConfidence,
+    score: confidence + coverage * 0.18 + Math.min(0.12, edgeConfidence * 0.2)
+  };
+}
+
+function faviconBackgroundMatchMode(candidate) {
+  const innerTileConfidence = candidate.innerTileConfidence || 0;
+  const edgeConfidence = candidate.edgeConfidence || 0;
+  if (
+    innerTileConfidence >= FAVICON_EMBEDDED_TILE_INNER_CONFIDENCE_MIN
+    && edgeConfidence <= FAVICON_EMBEDDED_TILE_EDGE_CONFIDENCE_MAX
+    && innerTileConfidence >= edgeConfidence * 1.25
+  ) {
+    return "embedded-tile";
+  }
+  return "full-surface";
+}
+
+function faviconInnerTileConfidence(samples, bounds, size, coverage) {
+  const width = bounds.maxX - bounds.minX + 1;
+  const height = bounds.maxY - bounds.minY + 1;
+  const span = Math.min(width / size, height / size);
+  if (coverage < 0.14 || span < 0.38 || !faviconCandidateSpansCenter(bounds, size)) {
+    return 0;
+  }
+  const density = samples.reduce((sum, sample) => sum + sample.weight, 0) / (width * height);
+  if (density < 0.42) {
+    return 0;
+  }
+  const sideSupport = faviconCandidateSideSupport(samples, bounds);
+  if (sideSupport.supportedSides < 3 && sideSupport.average < 0.34) {
+    return 0;
+  }
+  const gridSupport = faviconCandidateGridSupport(samples, bounds);
+  if (gridSupport.supportedCells < 10 || gridSupport.average < 0.28) {
+    return 0;
+  }
+  const surfaceSupport = faviconCandidateSurfaceSupport(samples, bounds);
+  if (surfaceSupport.rowRatio < 0.52 || surfaceSupport.columnRatio < 0.52) {
+    return 0;
+  }
+  return Math.min(
+    1,
+    coverage * 1.1
+      + density * 0.14
+      + sideSupport.average * 0.14
+      + gridSupport.average * 0.22
+      + surfaceSupport.average * 0.28
+  );
+}
+
+function faviconCandidateSpansCenter(bounds, size) {
+  const centerMin = Math.floor(size * 0.38);
+  const centerMax = Math.ceil(size * 0.62);
+  return bounds.minX <= centerMin
+    && bounds.maxX >= centerMax
+    && bounds.minY <= centerMin
+    && bounds.maxY >= centerMax;
+}
+
+function faviconCandidateSideSupport(samples, bounds) {
+  const bandSize = 2;
+  const width = bounds.maxX - bounds.minX + 1;
+  const height = bounds.maxY - bounds.minY + 1;
+  const sideWeights = { top: 0, right: 0, bottom: 0, left: 0 };
+  for (const sample of samples) {
+    if (sample.y <= bounds.minY + bandSize - 1) {
+      sideWeights.top += sample.weight;
+    }
+    if (sample.y >= bounds.maxY - bandSize + 1) {
+      sideWeights.bottom += sample.weight;
+    }
+    if (sample.x <= bounds.minX + bandSize - 1) {
+      sideWeights.left += sample.weight;
+    }
+    if (sample.x >= bounds.maxX - bandSize + 1) {
+      sideWeights.right += sample.weight;
+    }
+  }
+  const top = Math.min(1, sideWeights.top / Math.max(1, width * bandSize));
+  const bottom = Math.min(1, sideWeights.bottom / Math.max(1, width * bandSize));
+  const left = Math.min(1, sideWeights.left / Math.max(1, height * bandSize));
+  const right = Math.min(1, sideWeights.right / Math.max(1, height * bandSize));
+  const values = [top, right, bottom, left];
+  return {
+    average: values.reduce((sum, value) => sum + value, 0) / values.length,
+    supportedSides: values.filter((value) => value >= 0.24).length
+  };
+}
+
+function faviconCandidateGridSupport(samples, bounds) {
+  const gridSize = 4;
+  const width = bounds.maxX - bounds.minX + 1;
+  const height = bounds.maxY - bounds.minY + 1;
+  const cells = Array.from({ length: gridSize * gridSize }, () => 0);
+  for (const sample of samples) {
+    const column = Math.min(gridSize - 1, Math.floor(((sample.x - bounds.minX) / width) * gridSize));
+    const row = Math.min(gridSize - 1, Math.floor(((sample.y - bounds.minY) / height) * gridSize));
+    cells[row * gridSize + column] += sample.weight;
+  }
+  const cellArea = width * height / cells.length;
+  const normalizedCells = cells.map((weight) => Math.min(1, weight / Math.max(1, cellArea)));
+  return {
+    average: normalizedCells.reduce((sum, value) => sum + value, 0) / normalizedCells.length,
+    supportedCells: normalizedCells.filter((value) => value >= 0.18).length
+  };
+}
+
+function faviconCandidateSurfaceSupport(samples, bounds) {
+  const width = bounds.maxX - bounds.minX + 1;
+  const height = bounds.maxY - bounds.minY + 1;
+  const rowWeights = Array.from({ length: height }, () => 0);
+  const columnWeights = Array.from({ length: width }, () => 0);
+  for (const sample of samples) {
+    rowWeights[sample.y - bounds.minY] += sample.weight;
+    columnWeights[sample.x - bounds.minX] += sample.weight;
+  }
+  const rowFill = rowWeights.map((weight) => Math.min(1, weight / width));
+  const columnFill = columnWeights.map((weight) => Math.min(1, weight / height));
+  const rowRatio = rowFill.filter((fill) => fill >= 0.58).length / Math.max(1, rowFill.length);
+  const columnRatio = columnFill.filter((fill) => fill >= 0.58).length / Math.max(1, columnFill.length);
+  return { average: (rowRatio + columnRatio) / 2, rowRatio, columnRatio };
+}
+
+function dominantFaviconSampleBackgroundColor(sample) {
+  return selectFaviconBackgroundCandidate(analyzeFaviconImageColors(sample.data, sample.size), sample.size);
+}
+
+function faviconCandidateHasLowContrastForeground(color) {
+  const foreground = color.foreground || {};
+  return (foreground.coverage || 0) >= FAVICON_LOW_CONTRAST_FOREGROUND_COVERAGE_MIN
+    && (foreground.averageContrast || 0) <= FAVICON_LOW_CONTRAST_AVERAGE_MAX
+    && (foreground.maxContrast || 0) <= FAVICON_LOW_CONTRAST_PEAK_MAX;
+}
+
+function faviconCandidateLooksLikeTransparentGlyph(color, tileColor) {
+  const background = normalizeHexColor(tileColor);
+  if (!background) {
+    return false;
+  }
+  const opaqueCoverage = color.opaqueCoverage || 0;
+  if (
+    opaqueCoverage <= 0
+    || opaqueCoverage > FAVICON_TRANSPARENT_GLYPH_COVERAGE_MAX
+    || (color.coverage || 0) / opaqueCoverage < FAVICON_TRANSPARENT_GLYPH_CANDIDATE_RATIO_MIN
+    || (color.edgeConfidence || 0) > FAVICON_TRANSPARENT_GLYPH_EDGE_CONFIDENCE_MAX
+  ) {
+    return false;
+  }
+  return true;
+}
+
+function faviconCandidateLooksLikeNearWhiteGlyph(color, tileColor) {
+  const background = normalizeHexColor(tileColor);
+  if (!background || relativeLuminance(background) < FAVICON_NEAR_WHITE_GLYPH_LUMINANCE_MIN) {
+    return false;
+  }
+  const foreground = color.foreground || {};
+  return (foreground.coverage || 0) <= FAVICON_NEAR_WHITE_GLYPH_FOREGROUND_COVERAGE_MAX
+    || faviconCandidateHasLowContrastForeground(color);
+}
+
+function faviconCandidateNeedsReadableCarrier(color, tileColor) {
+  return faviconCandidateLooksLikeTransparentGlyph(color, tileColor)
+    || faviconCandidateLooksLikeNearWhiteGlyph(color, tileColor);
+}
+
+function faviconMatchedTileColors(color) {
+  if (!faviconColorShouldUseOriginalTile(color)) {
+    return null;
+  }
+  const tileColor = rgbChannelsToHex(color.red, color.green, color.blue);
+  if (color.matchMode === "embedded-tile") {
+    return faviconSeparatedTileColors(tileColor, color);
+  }
+  return faviconSurfaceTileColors(tileColor, color);
+}
+
+function faviconSurfaceTileColors(tileColor, color) {
+  const preferReadableCarrier = faviconCandidateNeedsReadableCarrier(color, tileColor);
+  return {
+    light: faviconCarrierTileColor(tileColor, "light", { preferReadableCarrier }),
+    dark: faviconCarrierTileColor(tileColor, "dark", { preferReadableCarrier })
+  };
+}
+
+function faviconSeparatedTileColors(tileColor, color) {
+  const preferReadableCarrier = faviconCandidateNeedsReadableCarrier(color, tileColor);
+  return {
+    light: faviconCarrierTileColor(tileColor, "light", { preferReadableCarrier, separate: true }),
+    dark: faviconCarrierTileColor(tileColor, "dark", { preferReadableCarrier, separate: true })
+  };
+}
+
+function faviconCarrierTileColor(tileColor, mode, options = {}) {
+  const color = normalizeHexColor(tileColor);
+  if (!color) {
+    return tileColor;
+  }
+  if (options.preferReadableCarrier) {
+    return faviconReadableCarrierTileColor(color, mode);
+  }
+  if (!options.separate) {
+    return color;
+  }
+  const luminance = relativeLuminance(color);
+  const target = luminance < (mode === "dark" ? 0.48 : 0.58) ? "#ffffff" : "#000000";
+  const initialAmount = mode === "dark" ? 0.18 : 0.24;
+  return mixColorUntilContrast(color, target, FAVICON_EMBEDDED_TILE_CONTRAST_MIN, initialAmount);
+}
+
+function faviconReadableCarrierTileColor(color, mode) {
+  const luminance = relativeLuminance(color);
+  const target = luminance < 0.5 ? "#ffffff" : "#000000";
+  const [red, green, blue] = hexToRgb(color);
+  const neutral = colorChannelSpread(red, green, blue) <= 18;
+  if (neutral && luminance >= 0.88) {
+    return "#000000";
+  }
+  if (neutral && luminance <= 0.04) {
+    return "#ffffff";
+  }
+  const initialAmount = mode === "dark" ? 0.34 : 0.42;
+  const mixed = mixColorUntilContrast(
+    color,
+    target,
+    FAVICON_READABLE_CARRIER_CONTRAST_MIN,
+    initialAmount,
+    FAVICON_READABLE_CARRIER_MAX_MIX
+  );
+  if (contrastRatio(color, mixed) >= FAVICON_READABLE_CARRIER_CONTRAST_MIN) {
+    return mixed;
+  }
+  const inverted = invertHexColor(color);
+  return contrastRatio(color, inverted) >= contrastRatio(color, mixed) ? inverted : mixed;
+}
+
+function mixColorUntilContrast(color, target, minimumContrast, initialAmount, maxMix = FAVICON_EMBEDDED_TILE_CONTRAST_MAX_MIX) {
+  for (let amount = initialAmount; amount <= maxMix; amount += 0.04) {
+    const mixed = mixHexColors(color, target, amount);
+    if (contrastRatio(color, mixed) >= minimumContrast) {
+      return mixed;
+    }
+  }
+  return mixHexColors(color, target, maxMix);
+}
+
+function faviconColorShouldUseOriginalTile(color) {
+  return color.confidence >= FAVICON_BACKGROUND_CONFIDENCE_MIN;
+}
+
+function invertHexColor(color) {
+  return rgbToHex(hexToRgb(color).map((channel) => 255 - channel));
+}
+
+function genericSiteFallbackTileColors() {
+  return {
+    light: GENERIC_SITE_FALLBACK_TILE_COLOR,
+    dark: GENERIC_SITE_FALLBACK_TILE_COLOR
+  };
+}
+
+function decodeSvgDataUrl(source) {
+  const value = String(source || "");
+  if (!/^data:image\/svg\+xml[,;]/i.test(value)) {
+    return "";
+  }
+  const commaIndex = value.indexOf(",");
+  if (commaIndex < 0) {
+    return "";
+  }
+  const payload = value.slice(commaIndex + 1);
+  if (/^data:image\/svg\+xml[^,]*;base64,/i.test(value)) {
+    return Buffer.from(payload, "base64").toString("utf8");
+  }
+  return decodeURIComponent(payload);
+}
+
+function embeddedSvgBrandColorForTest(value) {
+  const svg = decodeSvgDataUrl(value) || String(value || "");
+  const match = svg.match(/\sdata-wayleaf-brand-color=(["'])(#[0-9a-f]{6})\1/i);
+  return normalizeHexColor(match?.[2] || "");
+}
+
+function siteKeyForUrlForTest(url) {
+  const parsedUrl = new URL(url);
+  return parsedUrl.hostname.replace(/^www\./, "").toLowerCase();
+}
+
+function localIconForUrlForTest(url) {
+  return localIconForSiteKeyForTest(siteKeyForUrlForTest(url));
+}
+
+function siteIconSourceLooksLikeSvgForTest(source) {
+  const value = String(source || "");
+  return value.endsWith(".svg") || /^data:image\/svg\+xml[,;]/i.test(value);
+}
+
+function remoteBrandSvgSourceIsMaskableForTest(source) {
+  const descriptor = remoteBrandSvgDescriptorFromSource(source);
+  if (descriptor) {
+    return descriptor.renderMode === "mask";
+  }
+  const svg = decodeSvgDataUrl(source);
+  if (!svg || !embeddedSvgBrandColorForTest(source)) {
+    return false;
+  }
+  const match = svg.match(/\sdata-wayleaf-monochrome=(["'])(true|false)\1/i);
+  return match ? match[2] === "true" : remoteBrandSvgIsMonochrome(svg);
+}
+
+function siteIconBrandColorForTest(siteKey = "", iconPath = "") {
+  const remoteDescriptor = remoteBrandSvgDescriptorFromSource(iconPath);
+  if (remoteDescriptor) {
+    return remoteDescriptor.brandColor;
+  }
+  return normalizeHexColor(siteKey ? SITE_ICON_TILE_COLOR_BY_SITE_KEY_FOR_TEST[siteKey] || "" : "")
+    || embeddedSvgBrandColorForTest(iconPath);
+}
+
+function remoteBrandDescriptorDisplayTileColorsForTest(descriptor) {
+  const light = normalizeHexColor(descriptor?.tileLight || "");
+  const dark = normalizeHexColor(descriptor?.tileDark || "");
+  return light && dark
+    ? { light, dark }
+    : remoteBrandDescriptorTileColors(descriptor?.brandColor || "", descriptor?.renderMode || "mask");
+}
+
+function keepsBrandIconOriginalForTest(siteKey, iconPath = "") {
+  if (keepsBrandIconOriginalOnBrandTileForTest(siteKey, iconPath)) {
+    return true;
+  }
+  if (MULTICOLOR_BRAND_ICON_SITE_KEYS_FOR_TEST.has(siteKey)) {
+    return true;
+  }
+  const remoteDescriptor = remoteBrandSvgDescriptorFromSource(iconPath);
+  if (remoteDescriptor) {
+    return remoteDescriptor.renderMode === "original";
+  }
+  if (!siteIconSourceLooksLikeSvgForTest(iconPath)) {
+    return true;
+  }
+  return /^data:image\/svg\+xml[,;]/i.test(iconPath) && !remoteBrandSvgSourceIsMaskableForTest(iconPath);
+}
+
+function keepsBrandIconOriginalOnBrandTileForTest(siteKey, iconPath = "") {
+  return ORIGINAL_ARTWORK_BRAND_TILE_SITE_KEYS_FOR_TEST.has(siteKey)
+    && String(iconPath || "").startsWith("icons/")
+    && siteIconSourceLooksLikeSvgForTest(iconPath);
+}
+
+function brandIconTileColorsForTest(tileColor, siteKey = "", iconPath = "") {
+  const color = normalizeHexColor(tileColor);
+  if (!color) {
+    return { light: "#ffffff", dark: "#202922" };
+  }
+  if (keepsBrandIconOriginalOnBrandTileForTest(siteKey, iconPath)) {
+    return { light: color, dark: color };
+  }
+  if (keepsBrandIconOriginalForTest(siteKey, iconPath)) {
+    return { light: "#ffffff", dark: "#f8fafc" };
+  }
+  if (nearWhiteBrandColor(color)) {
+    return { light: "#000000", dark: "#f8fafc" };
+  }
+  return { light: color, dark: "#f8fafc" };
+}
+
+class TestStyle {
+  #values = new Map();
+
+  setProperty(name, value) {
+    this.#values.set(name, String(value));
+  }
+
+  getPropertyValue(name) {
+    return this.#values.get(name) || "";
+  }
+}
+
+class TestClassList {
+  #values = new Set();
+
+  toggle(name, force) {
+    if (force) {
+      this.#values.add(name);
+    } else {
+      this.#values.delete(name);
+    }
+  }
+
+  contains(name) {
+    return this.#values.has(name);
+  }
+}
+
+class TestIcon {
+  constructor() {
+    this.dataset = {};
+    this.style = new TestStyle();
+    this.classList = new TestClassList();
+    this.src = "";
+  }
+
+  removeAttribute(name) {
+    if (name === "srcset") {
+      this.srcset = "";
+    }
+  }
+}
+
+let testTheme = "light";
+
+function currentIconTileColorForTest(icon) {
+  if (testTheme === "dark") {
+    return icon.style.getPropertyValue("--site-icon-tile-dark").trim();
+  }
+  return icon.style.getPropertyValue("--site-icon-tile").trim()
+    || icon.style.getPropertyValue("--site-icon-tile-light").trim();
+}
+
+function applyIconTileForTest(icon, tileMode, tileColors, hasLocalIcon) {
+  icon.dataset.iconTile = tileMode;
+  icon.style.setProperty("--site-icon-tile", tileColors.light);
+  icon.style.setProperty("--site-icon-tile-light", tileColors.light);
+  icon.style.setProperty("--site-icon-tile-dark", tileColors.dark);
+  icon.classList.toggle("site-icon-local", Boolean(hasLocalIcon));
+}
+
+function applySiteIconTileForTest(icon, site, iconPath = "") {
+  const siteKey = siteKeyForUrlForTest(site.url);
+  icon.dataset.siteKey = siteKey || "";
+  const tileColor = siteIconBrandColorForTest(siteKey, iconPath);
+  const tileMode = iconPath ? "brand" : "plain";
+  const remoteDescriptor = remoteBrandSvgDescriptorFromSource(iconPath);
+  const isLocalIconSource = String(iconPath || "").startsWith("icons/");
+  let tileColors = { light: "#ffffff", dark: "#202922" };
+  if (remoteDescriptor) {
+    tileColors = remoteBrandDescriptorDisplayTileColorsForTest(remoteDescriptor);
+  } else if (iconPath && tileColor) {
+    tileColors = brandIconTileColorsForTest(tileColor, siteKey, iconPath);
+  }
+  applyIconTileForTest(icon, tileMode, tileColors, isLocalIconSource);
+}
+
+function shouldInvertBrandSvgForTest(icon, source) {
+  const siteKey = icon.dataset.siteKey || siteKeyForUrlForTest(icon.dataset.siteUrl);
+  if (keepsBrandIconOriginalForTest(siteKey, source)) {
+    return false;
+  }
+  return Boolean(siteIconBrandColorForTest(siteKey, source));
+}
+
+function remoteBrandDescriptorGlyphColorForCurrentThemeForTest(source) {
+  const descriptor = remoteBrandSvgDescriptorFromSource(source);
+  if (!descriptor || descriptor.renderMode !== "mask") {
+    return null;
+  }
+  return testTheme === "dark" ? descriptor.glyphDark : descriptor.glyphLight;
+}
+
+function iconGlyphColorForCurrentTileForTest(icon, source = "") {
+  const tileColor = normalizeHexColor(currentIconTileColorForTest(icon));
+  if (!tileColor) {
+    return "";
+  }
+  const siteKey = icon.dataset.siteKey || siteKeyForUrlForTest(icon.dataset.siteUrl);
+  const brandColor = siteIconBrandColorForTest(siteKey, source);
+  if (/^data:image\/svg\+xml[,;]/i.test(source)) {
+    const descriptorGlyph = remoteBrandDescriptorGlyphColorForCurrentThemeForTest(source);
+    if (descriptorGlyph !== null) {
+      return descriptorGlyph;
+    }
+    return remoteBrandGlyphColorForTile(tileColor, brandColor);
+  }
+  if (brandColor) {
+    return localBrandGlyphColorForTile(tileColor, brandColor);
+  }
+  return readableIconGlyphColor(tileColor);
+}
+
+function applySvgGlyphColorForTest(svg, glyphColor) {
+  const color = normalizeHexColor(glyphColor);
+  if (!color) {
+    return String(svg || "");
+  }
+  let output = String(svg || "");
+  output = output.replace(/\sfill=(["'])([^"']*)\1/gi, (match, quote, value) => (
+    /^(?:none|transparent)$/i.test(value) ? match : ` fill=${quote}${color}${quote}`
+  ));
+  output = output.replace(/\sstroke=(["'])([^"']*)\1/gi, (match, quote, value) => (
+    /^(?:none|transparent)$/i.test(value) ? match : ` stroke=${quote}${color}${quote}`
+  ));
+  output = output.replace(/\scolor=(["'])([^"']*)\1/gi, (match, quote, value) => (
+    /^(?:none|transparent)$/i.test(value) ? match : ` color=${quote}${color}${quote}`
+  ));
+  output = output.replace(/\sstyle=(["'])([^"']*)\1/gi, (match, quote, value) => {
+    const nextValue = String(value).replace(/(^|;)(\s*)(fill|stroke|color)(\s*:\s*)([^;]+)/gi, (
+      declaration,
+      prefix,
+      spacing,
+      property,
+      separator,
+      rawValue
+    ) => {
+      const normalizedValue = String(rawValue || "").trim();
+      return /^(?:none|transparent)$/i.test(normalizedValue)
+        ? declaration
+        : `${prefix}${spacing}${property}${separator}${color}`;
+    });
+    return ` style=${quote}${nextValue}${quote}`;
+  });
+  output = output.replace(/<svg\b([^>]*)>/i, (match, attrs) => (
+    /\sfill=/i.test(attrs) ? `<svg${attrs}>` : `<svg${attrs} fill="${color}">`
+  ));
+  return output;
+}
+
+const LOCAL_SVG_SOURCE_BY_PATH_FOR_TEST = Object.freeze({
+  "icons/sites/baidu.svg": '<svg viewBox="0 0 24 24"><path fill="currentColor" d="M0 0h24v24H0z"/></svg>',
+  "icons/sites/bilibili.svg": '<svg fill="#00a1d6" viewBox="0 0 24 24"><path d="M0 0h24v24H0z"/></svg>',
+  "icons/sites/google.svg": '<svg viewBox="0 0 24 24"><path fill="#4285f4"/><path fill="#ea4335"/></svg>',
+  "icons/sites/linkedin.svg": linkedInSvgSource,
+  "icons/sites/zhihu.svg": zhihuSvgSource
+});
+
+function coloredSvgIconSourceForTest(source, glyphColor) {
+  const svg = /^data:image\/svg\+xml[,;]/i.test(source)
+    ? decodeSvgDataUrl(source)
+    : LOCAL_SVG_SOURCE_BY_PATH_FOR_TEST[source] || '<svg viewBox="0 0 24 24"><path fill="currentColor"/></svg>';
+  return svgTextDataUrl(applySvgGlyphColorForTest(svg, glyphColor));
+}
+
+function displayIconSourceForTest(icon, source) {
+  if (icon.dataset.iconTile !== "brand" || !siteIconSourceLooksLikeSvgForTest(source)) {
+    return source;
+  }
+  if (!shouldInvertBrandSvgForTest(icon, source)) {
+    return source;
+  }
+  const glyphColor = iconGlyphColorForCurrentTileForTest(icon, source);
+  return glyphColor ? coloredSvgIconSourceForTest(source, glyphColor) : source;
+}
+
+function applySiteIconForTest(icon, site) {
+  const localIcon = localIconForUrlForTest(site.url);
+  const siteIcon = String(site.icon || "");
+  const iconSource = localIcon || siteIcon;
+  const tileIconSource = localIcon || (remoteBrandSvgDescriptorFromSource(siteIcon) ? siteIcon : "");
+  icon.dataset.siteUrl = site.url || "";
+  applySiteIconTileForTest(icon, site, tileIconSource);
+  if (!iconSource) {
+    return;
+  }
+  icon.dataset.iconSource = iconSource;
+  icon.dataset.iconCandidate = iconSource;
+  icon.src = displayIconSourceForTest(icon, iconSource);
+  icon.removeAttribute("srcset");
+}
+
+function refreshAdaptiveSiteIconsForTest(icons) {
+  for (const icon of icons) {
+    if (icon.dataset.iconTile !== "brand" || !icon.dataset.iconSource) {
+      continue;
+    }
+    const source = icon.dataset.iconSource;
+    icon.src = source;
+    const nextSource = displayIconSourceForTest(icon, source);
+    if (icon.dataset.iconSource === source) {
+      icon.src = nextSource;
+    }
+  }
+}
+
+function discoverRemoteBrandIconDataUrlForTest(siteUrl, provider) {
+  const localIcon = localIconForUrlForTest(siteUrl);
+  if (localIcon) {
+    return "";
+  }
+  return provider(siteKeyForUrlForTest(siteUrl));
+}
+
 assert.equal(localBrandGlyphColor("#00a1d6"), "#ffffff", "Local bilibili keeps a white glyph on the blue tile.");
 assert.equal(localBrandGlyphColor("#ffffff"), "#102019", "Local near-white brand tiles use a dark glyph.");
+assert.equal(localBrandGlyphColorForTile("#2932e1", "#2932e1"), "#ffffff", "Local Baidu brand tiles keep a white glyph on blue.");
+assert.equal(localBrandGlyphColorForTile("#f8fafc", "#2932e1"), "#2932e1", "Local Baidu SVGs recover the blue VI glyph on light carrier tiles.");
+assert.equal(localBrandGlyphColorForTile("#f8fafc", "#d97757"), "#d97757", "Local Claude SVGs recover the clay VI glyph on light carrier tiles.");
+assert.equal(localBrandGlyphColorForTile("#f8fafc", "#00a1d6"), "#00a1d6", "Local Bilibili SVGs recover the blue VI glyph on light carrier tiles.");
+assert.equal(localBrandGlyphColorForTile("#f8fafc", "#1ed760"), "#102019", "Low-contrast local green glyphs fall back to a readable glyph on light carrier tiles.");
+assert.equal(localBrandGlyphColorForTile("#f8fafc", "#ffcc00"), "#102019", "Low-contrast local yellow glyphs fall back to a readable glyph on light carrier tiles.");
 
 assert.equal(remoteBrandGlyphColor("#00a1d6"), "#ffffff", "Remote brand blue near the contrast threshold should keep a white glyph.");
 assert.equal(remoteBrandGlyphColor("#1db954"), "#102019", "Remote bright green should switch to a dark glyph for contrast.");
@@ -529,6 +1480,271 @@ assert.equal(remoteBrandGlyphColorForTile("#1ed760", "#1ed760"), "#102019", "Spo
 assert.equal(remoteBrandGlyphColorForTile("#181717", "#181717"), "#ffffff", "GitHub dark cloud tiles use a white glyph in day mode.");
 assert.equal(remoteBrandGlyphColorForTile("#ffcc00", "#ffcc00"), "#102019", "Yandex yellow cloud tiles use a dark glyph in day mode.");
 assert.equal(remoteBrandGlyphColorForTile("#000000", "#000000"), "#ffffff", "Notion black cloud tiles use a white glyph in day mode.");
+
+const adaptiveFixtureSvg = '<svg viewBox="0 0 24 24"><path fill="currentColor" d="M0 0h24v24H0z"/></svg>';
+
+{
+  const remoteCachedIcon = svgTextDataUrl(prepareRemoteBrandSvgForTest(adaptiveFixtureSvg, { brandColor: "#1db954", qualityScore: 92 }));
+  const providerCalls = [];
+  const icon = new TestIcon();
+  testTheme = "light";
+  applySiteIconForTest(icon, { url: "https://www.baidu.com/search", icon: remoteCachedIcon });
+  assert.equal(icon.dataset.iconSource, "icons/sites/baidu.svg", "A deployed local SVG must outrank a cached remote SVG data URL.");
+  assert.equal(icon.dataset.iconCandidate, "icons/sites/baidu.svg", "Local SVG candidates must keep the local resource token.");
+  assert.equal(icon.dataset.iconTile, "brand", "Local SVGs keep the brand tile mode.");
+  assert.equal(icon.classList.contains("site-icon-local"), true, "Local SVGs keep the local icon marker.");
+  assert.equal(icon.style.getPropertyValue("--site-icon-tile-light"), "#2932e1", "Local SVGs keep their known VI day tile.");
+  assert.equal(icon.style.getPropertyValue("--site-icon-tile-dark"), "#f8fafc", "Local SVGs keep the local night carrier tile.");
+  assert.match(decodeSvgDataUrl(icon.src), /fill="#ffffff"/, "Local SVG day glyphs render white on their brand tile.");
+  assert.doesNotMatch(decodeSvgDataUrl(icon.src), /data-wayleaf-remote-brand/, "Local SVG display data must not inherit remote descriptor metadata.");
+  assert.equal(discoverRemoteBrandIconDataUrlForTest("https://www.baidu.com/search", (siteKey) => {
+    providerCalls.push(siteKey);
+    return remoteCachedIcon;
+  }), "", "Remote provider discovery short-circuits when a deployed local icon exists.");
+  assert.deepEqual(providerCalls, [], "Local SVG discovery must not call the remote provider.");
+
+  testTheme = "dark";
+  refreshAdaptiveSiteIconsForTest([icon]);
+  assert.equal(currentIconTileColorForTest(icon), "#f8fafc", "Dark refresh reads the local SVG night tile.");
+  assert.match(decodeSvgDataUrl(icon.src), /fill="#2932e1"/, "Dark refresh restores the local known VI glyph instead of remote glyph rules.");
+  assert.doesNotMatch(decodeSvgDataUrl(icon.src), /fill="#102019"/, "Local SVG dark refresh must not fall through to the cloud dark glyph.");
+
+  testTheme = "light";
+  refreshAdaptiveSiteIconsForTest([icon]);
+  assert.equal(currentIconTileColorForTest(icon), "#2932e1", "Light refresh restores the local SVG day tile.");
+  assert.match(decodeSvgDataUrl(icon.src), /fill="#ffffff"/, "Light refresh restores the local white glyph on the brand tile.");
+}
+
+{
+  const remoteCachedIcon = svgTextDataUrl(prepareRemoteBrandSvgForTest(adaptiveFixtureSvg, { brandColor: "#1db954", qualityScore: 92 }));
+  const icon = new TestIcon();
+  testTheme = "light";
+  applySiteIconForTest(icon, { url: "https://www.google.com/search", icon: remoteCachedIcon });
+  assert.equal(icon.dataset.iconSource, "icons/sites/google.svg", "Local multicolor SVGs outrank cached remote SVG data URLs.");
+  assert.equal(icon.classList.contains("site-icon-local"), true, "Local multicolor SVGs keep the local marker.");
+  assert.equal(icon.style.getPropertyValue("--site-icon-tile-light"), "#ffffff", "Local multicolor SVGs keep a neutral day tile.");
+  assert.equal(icon.style.getPropertyValue("--site-icon-tile-dark"), "#f8fafc", "Local multicolor SVGs keep a neutral night tile.");
+  assert.equal(icon.src, "icons/sites/google.svg", "Local multicolor SVGs render original artwork without mask recoloring.");
+  testTheme = "dark";
+  refreshAdaptiveSiteIconsForTest([icon]);
+  assert.equal(icon.src, "icons/sites/google.svg", "Local multicolor SVGs stay original after dark refresh.");
+}
+
+{
+  const remoteCachedIcon = svgTextDataUrl(prepareRemoteBrandSvgForTest(adaptiveFixtureSvg, { brandColor: "#1db954", qualityScore: 92 }));
+  const icon = new TestIcon();
+  testTheme = "light";
+  applySiteIconForTest(icon, { url: "https://www.jd.com/", icon: remoteCachedIcon });
+  assert.equal(icon.dataset.iconSource, "icons/sites/jd.svg", "JD uses the deployed local SVG instead of cached remote SVGs.");
+  assert.equal(icon.classList.contains("site-icon-local"), true, "JD keeps the local icon marker.");
+  assert.equal(icon.style.getPropertyValue("--site-icon-tile-light"), "#ff0000", "JD local SVGs sit on the brand VI red day tile.");
+  assert.equal(icon.style.getPropertyValue("--site-icon-tile-dark"), "#ff0000", "JD local SVGs keep the red carrier in dark mode.");
+  assert.equal(icon.src, "icons/sites/jd.svg", "JD local SVGs preserve original artwork instead of mask recoloring the red carrier.");
+
+  testTheme = "dark";
+  refreshAdaptiveSiteIconsForTest([icon]);
+  assert.equal(currentIconTileColorForTest(icon), "#ff0000", "Dark refresh keeps the JD brand red tile.");
+  assert.equal(icon.src, "icons/sites/jd.svg", "Dark refresh does not recolor JD's original embedded red artwork.");
+}
+
+{
+  const remoteSvg = svgTextDataUrl(prepareRemoteBrandSvgForTest(adaptiveFixtureSvg, { brandColor: "#ff0000", qualityScore: 92 }));
+  const icon = new TestIcon();
+  testTheme = "light";
+  applySiteIconTileForTest(icon, { url: "https://www.jd.com/" }, remoteSvg);
+  icon.dataset.iconSource = remoteSvg;
+  icon.dataset.iconCandidate = remoteSvg;
+  icon.src = displayIconSourceForTest(icon, remoteSvg);
+  assert.match(decodeSvgDataUrl(icon.src), /fill="#ffffff"/, "Remote JD SVG descriptors still use mask recoloring instead of the local original-artwork branch.");
+}
+
+[
+  {
+    name: "Zhihu",
+    url: "https://www.zhihu.com/",
+    source: "icons/sites/zhihu.svg",
+    tile: "#0084ff"
+  },
+  {
+    name: "LinkedIn",
+    url: "https://www.linkedin.com/",
+    source: "icons/sites/linkedin.svg",
+    tile: "#0a66c2"
+  }
+].forEach((sample) => {
+  const remoteCachedIcon = svgTextDataUrl(prepareRemoteBrandSvgForTest(adaptiveFixtureSvg, { brandColor: "#1db954", qualityScore: 92 }));
+  const icon = new TestIcon();
+  testTheme = "light";
+  applySiteIconForTest(icon, { url: sample.url, icon: remoteCachedIcon });
+  assert.equal(icon.dataset.iconSource, sample.source, `${sample.name} uses the deployed local SVG instead of cached remote SVGs.`);
+  assert.equal(icon.classList.contains("site-icon-local"), true, `${sample.name} keeps the local icon marker.`);
+  assert.equal(icon.style.getPropertyValue("--site-icon-tile-light"), sample.tile, `${sample.name} local SVGs use the shared local SVG day tile strategy.`);
+  assert.equal(icon.style.getPropertyValue("--site-icon-tile-dark"), "#f8fafc", `${sample.name} local SVGs use the shared local SVG night tile strategy.`);
+  assert.match(decodeSvgDataUrl(icon.src), /fill="#ffffff"|fill:\s*#ffffff/, `${sample.name} local SVGs use shared mask recoloring in day mode.`);
+  assert.notEqual(icon.src, sample.source, `${sample.name} local SVGs do not use the original-artwork branch.`);
+
+  testTheme = "dark";
+  refreshAdaptiveSiteIconsForTest([icon]);
+  assert.equal(currentIconTileColorForTest(icon), "#f8fafc", `${sample.name} dark refresh reads the shared local SVG night tile.`);
+  assert.match(decodeSvgDataUrl(icon.src), new RegExp(`fill="${sample.tile}"|fill:\\s*${sample.tile}`, "i"), `${sample.name} dark refresh restores the VI glyph through shared local recoloring.`);
+});
+
+[
+  {
+    name: "MDN",
+    url: "https://developer.mozilla.org/",
+    source: "icons/sites/mdn.svg",
+    tile: "#15141a"
+  }
+].forEach((sample) => {
+  const remoteCachedIcon = svgTextDataUrl(prepareRemoteBrandSvgForTest(adaptiveFixtureSvg, { brandColor: "#1db954", qualityScore: 92 }));
+  const icon = new TestIcon();
+  testTheme = "light";
+  applySiteIconForTest(icon, { url: sample.url, icon: remoteCachedIcon });
+  assert.equal(icon.dataset.iconSource, sample.source, `${sample.name} uses the deployed local SVG instead of cached remote SVGs.`);
+  assert.equal(icon.classList.contains("site-icon-local"), true, `${sample.name} keeps the local icon marker.`);
+  assert.equal(icon.style.getPropertyValue("--site-icon-tile-light"), sample.tile, `${sample.name} local SVGs sit on their known VI day tile.`);
+  assert.equal(icon.style.getPropertyValue("--site-icon-tile-dark"), sample.tile, `${sample.name} local SVGs keep their VI carrier in dark mode.`);
+  assert.equal(icon.src, sample.source, `${sample.name} local SVGs preserve original artwork instead of mask recoloring.`);
+});
+
+{
+  const icoIcon = new TestIcon();
+  const pngIcon = new TestIcon();
+  applySiteIconForTest(icoIcon, { url: "https://1688.com/", icon: "" });
+  applySiteIconForTest(pngIcon, { url: "https://b.ai/", icon: "" });
+  assert.equal(icoIcon.dataset.iconSource, "icons/sites/1688.ico", "Local ico resources keep priority over remote discovery.");
+  assert.equal(pngIcon.dataset.iconSource, "icons/sites/bai.png", "Local png resources keep priority over remote discovery.");
+  assert.equal(icoIcon.src, "icons/sites/1688.ico", "Local ico resources are not SVG recolored.");
+  assert.equal(pngIcon.src, "icons/sites/bai.png", "Local png resources are not SVG recolored.");
+  assert.equal(icoIcon.classList.contains("site-icon-local"), true, "Local ico resources keep the local marker.");
+  assert.equal(pngIcon.classList.contains("site-icon-local"), true, "Local png resources keep the local marker.");
+}
+
+{
+  const remoteSvg = svgTextDataUrl(prepareRemoteBrandSvgForTest(adaptiveFixtureSvg, { brandColor: "#1db954", qualityScore: 92 }));
+  const icon = new TestIcon();
+  testTheme = "light";
+  applySiteIconForTest(icon, { url: "https://raycast.com/", icon: remoteSvg });
+  assert.equal(icon.dataset.iconSource, remoteSvg, "Sites without local resources may use a cached remote SVG data URL.");
+  assert.equal(icon.classList.contains("site-icon-local"), false, "Remote SVG data URLs must not receive the local icon marker.");
+  assert.equal(icon.style.getPropertyValue("--site-icon-tile-light"), "#1db954", "Remote SVG data URLs use descriptor day tiles.");
+  assert.equal(icon.style.getPropertyValue("--site-icon-tile-dark"), "#f8fafc", "Remote SVG data URLs use descriptor night tiles.");
+  assert.match(decodeSvgDataUrl(icon.src), /fill="#102019"/, "Remote SVG data URLs use cloud glyph rules on bright brand tiles.");
+  testTheme = "dark";
+  refreshAdaptiveSiteIconsForTest([icon]);
+  assert.match(decodeSvgDataUrl(icon.src), /fill="#102019"/, "Remote SVG data URLs continue to use descriptor glyphs after dark refresh.");
+}
+
+{
+  const remoteSvg = svgTextDataUrl(prepareRemoteBrandSvgForTest(adaptiveFixtureSvg, { brandColor: "#ff6363", qualityScore: 100 }));
+  const providerCalls = [];
+  const discovered = discoverRemoteBrandIconDataUrlForTest("https://raycast.com/", (siteKey) => {
+    providerCalls.push(siteKey);
+    return remoteSvg;
+  });
+  assert.equal(discovered, remoteSvg, "Sites without deployed local resources can fall through to the remote provider.");
+  assert.deepEqual(providerCalls, ["raycast.com"], "Remote provider discovery runs only for non-local sites.");
+}
+
+const faviconFixtureSize = 32;
+const centeredBox = (x, y, size, inset) => x >= inset && x < size - inset && y >= inset && y < size - inset;
+const centeredGlyph = (x, y, size) => centeredBox(x, y, size, 6);
+const smallGlyph = (x, y, size) => centeredBox(x, y, size, 11);
+const sparseDotGlyph = (x, y) => {
+  for (let dotX = 9; dotX <= 21; dotX += 4) {
+    for (let dotY = 9; dotY <= 21; dotY += 4) {
+      if ((x - dotX) ** 2 + (y - dotY) ** 2 <= 1.35) {
+        return true;
+      }
+    }
+  }
+  return false;
+};
+const faviconTileDecision = (sample) => {
+  const color = dominantFaviconSampleBackgroundColor(sample);
+  return {
+    color,
+    tileColors: color ? faviconMatchedTileColors(color) : null
+  };
+};
+
+{
+  const { color, tileColors } = faviconTileDecision(rgbaSample(faviconFixtureSize, (x, y, size) => {
+    return smallGlyph(x, y, size) ? hexChannels("#2f6bff") : hexChannels("#eef4ff");
+  }));
+  assert.equal(rgbChannelsToHex(color.red, color.green, color.blue), "#eef4ff", "Light favicon backgrounds should remain the sampled carrier color.");
+  assert.deepEqual(tileColors, { light: "#eef4ff", dark: "#eef4ff" }, "Ordinary light ico tiles keep the natural sampled color.");
+}
+
+{
+  const { color, tileColors } = faviconTileDecision(rgbaSample(faviconFixtureSize, (x, y, size) => {
+    return centeredGlyph(x, y, size) ? hexChannels("#101820") : [0, 0, 0, 0];
+  }));
+  const sampledGlyph = rgbChannelsToHex(color.red, color.green, color.blue);
+  assert.equal(sampledGlyph, "#101820", "Transparent dark ico glyphs still expose their palette color to the sampler.");
+  assert.notEqual(tileColors.light, sampledGlyph, "Transparent dark ico glyphs should not reuse the glyph as the mask carrier.");
+  assert.ok(contrastRatio(tileColors.light, sampledGlyph) >= FAVICON_READABLE_CARRIER_CONTRAST_MIN, "Transparent dark ico glyphs receive a high-contrast derived carrier.");
+}
+
+{
+  const { color, tileColors } = faviconTileDecision(rgbaSample(faviconFixtureSize, (x, y, size) => {
+    return centeredGlyph(x, y, size) ? hexChannels("#f2f5f7") : [0, 0, 0, 0];
+  }));
+  const sampledGlyph = rgbChannelsToHex(color.red, color.green, color.blue);
+  assert.equal(sampledGlyph, "#f2f5f7", "Transparent light ico glyphs still expose their palette color to the sampler.");
+  assert.notEqual(tileColors.light, sampledGlyph, "Transparent light ico glyphs should get a dark derived carrier instead of white-on-white.");
+  assert.ok(contrastRatio(tileColors.light, sampledGlyph) >= FAVICON_READABLE_CARRIER_CONTRAST_MIN, "Transparent light ico glyphs receive a high-contrast derived carrier.");
+}
+
+{
+  const { color, tileColors } = faviconTileDecision(rgbaSample(faviconFixtureSize, (x, y, size) => {
+    return centeredGlyph(x, y, size) ? hexChannels("#3a3a3a") : [0, 0, 0, 0];
+  }));
+  const sampledGlyph = rgbChannelsToHex(color.red, color.green, color.blue);
+  assert.equal(sampledGlyph, "#3a3a3a", "Transparent gray ico glyphs expose the neutral glyph color to the sampler.");
+  assert.notEqual(tileColors.light, sampledGlyph, "Transparent gray ico glyphs should not render as a same-color blank square.");
+  assert.ok(contrastRatio(tileColors.light, sampledGlyph) >= FAVICON_READABLE_CARRIER_CONTRAST_MIN, "Transparent gray ico glyphs receive a readable derived carrier.");
+}
+
+{
+  const { color, tileColors } = faviconTileDecision(rgbaSample(faviconFixtureSize, (x, y, size) => {
+    return sparseDotGlyph(x, y, size) ? hexChannels("#e89bc5") : [0, 0, 0, 0];
+  }));
+  const sampledGlyph = rgbChannelsToHex(color.red, color.green, color.blue);
+  assert.equal(sampledGlyph, "#e89bc5", "Transparent pink ico glyphs expose the colored glyph palette.");
+  assert.notEqual(tileColors.light, sampledGlyph, "Transparent pink ico glyphs should use a derived carrier instead of pink-on-pink.");
+  assert.ok(contrastRatio(tileColors.light, sampledGlyph) >= FAVICON_READABLE_CARRIER_CONTRAST_MIN, "Transparent pink ico glyphs receive a readable same-palette carrier.");
+}
+
+{
+  const { color, tileColors } = faviconTileDecision(rgbaSample(faviconFixtureSize, () => {
+    return hexChannels("#ffffff");
+  }));
+  const sampledGlyph = rgbChannelsToHex(color.red, color.green, color.blue);
+  assert.equal(sampledGlyph, "#ffffff", "Arkham-like white ico tiles expose a near-white palette color.");
+  assert.notEqual(tileColors.light, sampledGlyph, "Arkham-like white ico tiles should not render white-on-white.");
+  assert.ok(contrastRatio(tileColors.light, sampledGlyph) >= FAVICON_READABLE_CARRIER_CONTRAST_MIN, "Arkham-like white ico tiles receive a dark high-contrast carrier.");
+}
+
+{
+  const { color, tileColors } = faviconTileDecision(rgbaSample(faviconFixtureSize, (x, y, size) => {
+    return smallGlyph(x, y, size) ? hexChannels("#ffffff") : hexChannels("#101820");
+  }));
+  assert.equal(rgbChannelsToHex(color.red, color.green, color.blue), "#101820", "Dark full-surface favicon backgrounds should be selected as the carrier.");
+  assert.deepEqual(tileColors, { light: "#101820", dark: "#101820" }, "Dark ico backgrounds with readable content keep their natural fused tile.");
+}
+
+{
+  const { color, tileColors } = faviconTileDecision(rgbaSample(faviconFixtureSize, (x, y, size) => {
+    return smallGlyph(x, y, size) ? hexChannels("#202326") : hexChannels("#060708");
+  }));
+  const sampledTile = rgbChannelsToHex(color.red, color.green, color.blue);
+  assert.equal(sampledTile, "#060708", "Xiaomi-like dark ico backgrounds should use the edge-supported favicon carrier color.");
+  assert.deepEqual(tileColors, { light: "#060708", dark: "#060708" }, "Xiaomi-like dark ico backgrounds keep the sampled carrier even when internal text is low contrast.");
+}
+
+assert.deepEqual(genericSiteFallbackTileColors(), { light: "#f04424", dark: "#f04424" }, "No-site-ico fallback tile colors remain unchanged.");
 
 assert.deepEqual(extractSvgColorPalette('<svg><path fill="#abc"/><path stroke="#aabbcc"/></svg>'), ["#aabbcc"], "Equivalent short and long hex colors should dedupe.");
 assert.deepEqual(extractSvgColorPalette('<svg><path style="fill:#111;stroke:#222"/></svg>'), ["#111111", "#222222"], "Inline style colors must be included in the palette.");

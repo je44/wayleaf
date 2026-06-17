@@ -33,10 +33,10 @@ const SITE_ICON_CACHE_STORAGE_KEY = "siteIconCache";
 const PINNED_HISTORY_STORAGE_KEY = "pinnedHistory";
 const OPEN_TAB_ACTIVITY_STORAGE_KEY = "openTabActivity";
 const BOOKMARK_FOLDER_STORAGE_KEY = "bookmarkFolderId";
-const BOOKMARK_LAYOUT_STORAGE_KEY = "bookmarkLayout";
 const PORTAL_CATEGORY_STATE_STORAGE_KEY = "portalCategoryState";
 const THEME_STORAGE_KEY = "themeMode";
 const THEME_PALETTE_STORAGE_KEY = "themePalette";
+const THEME_BOOT_STORAGE_KEY = "__wayleaf_theme_boot__";
 const AI_DIRECT_PROMPT_STORAGE_KEY = "aiDirectPrompts";
 const SYNC_META_STORAGE_KEY = "syncMeta";
 const ONBOARDING_GUIDE_STORAGE_KEY = "onboardingGuideDismissed";
@@ -71,6 +71,7 @@ const FAVORITE_DELETE_EXIT_MS = 360;
 const FAVORITE_DELETE_CANCEL_MS = 280;
 const SEARCH_SUGGESTIONS_EXIT_MS = 260;
 const SEARCH_SUGGESTIONS_OPEN_PADDING_Y = 18;
+const AI_MODE_EXIT_MS = 300;
 const MAX_BOOKMARK_FOLDER_OPTIONS = 160;
 const MAX_PORTAL_FEATURED_ITEMS = 6;
 const MAX_BOOKMARK_PORTAL_ITEMS = 120;
@@ -170,7 +171,6 @@ const SYNC_STORAGE_KEYS = new Set([
   FAVORITE_SITES_STORAGE_KEY,
   PINNED_HISTORY_STORAGE_KEY,
   BOOKMARK_FOLDER_STORAGE_KEY,
-  BOOKMARK_LAYOUT_STORAGE_KEY,
   PORTAL_CATEGORY_STATE_STORAGE_KEY,
   THEME_STORAGE_KEY,
   THEME_PALETTE_STORAGE_KEY,
@@ -200,10 +200,20 @@ const FAVICON_FOREGROUND_COLOR_DISTANCE = 12;
 const FAVICON_LOW_CONTRAST_FOREGROUND_COVERAGE_MIN = 0.018;
 const FAVICON_LOW_CONTRAST_AVERAGE_MAX = 1.32;
 const FAVICON_LOW_CONTRAST_PEAK_MAX = 1.65;
+const FAVICON_TRANSPARENT_GLYPH_COVERAGE_MAX = 0.48;
+const FAVICON_TRANSPARENT_GLYPH_COVERAGE_MIN = 0.01;
+const FAVICON_TRANSPARENT_GLYPH_EDGE_CONFIDENCE_MAX = 0.22;
+const FAVICON_TRANSPARENT_GLYPH_CANDIDATE_RATIO_MIN = 0.58;
+const FAVICON_NEAR_WHITE_GLYPH_LUMINANCE_MIN = 0.82;
+const FAVICON_NEAR_WHITE_GLYPH_FOREGROUND_COVERAGE_MAX = 0.035;
+const FAVICON_EDGE_CARRIER_CONFIDENCE_MIN = 0.48;
 const FAVICON_EMBEDDED_TILE_EDGE_CONFIDENCE_MAX = 0.24;
 const FAVICON_EMBEDDED_TILE_INNER_CONFIDENCE_MIN = 0.34;
 const FAVICON_EMBEDDED_TILE_CONTRAST_MIN = 1.35;
 const FAVICON_EMBEDDED_TILE_CONTRAST_MAX_MIX = 0.42;
+const FAVICON_READABLE_CARRIER_CONTRAST_MIN = 3;
+const FAVICON_READABLE_CARRIER_MAX_MIX = 0.72;
+const LOCAL_BRAND_CARRIER_CONTRAST_MIN = 2.75;
 const DEFAULT_FAVICON_MIN_COVERAGE = 0.12;
 const DEFAULT_FAVICON_MAX_COVERAGE = 0.46;
 const DEFAULT_FAVICON_MIN_NEUTRAL_RATIO = 0.88;
@@ -219,7 +229,11 @@ const DEFAULT_FAVICON_NEUTRAL_GLYPH_MAX_COVERAGE = 0.52;
 const DEFAULT_FAVICON_NEUTRAL_GLYPH_MIN_NEUTRAL_RATIO = 0.78;
 const DEFAULT_FAVICON_NEUTRAL_GLYPH_MAX_COLOR_RATIO = 0.14;
 const DEFAULT_FAVICON_NEUTRAL_GLYPH_MAX_EDGE_OPACITY = 0.2;
+const TDESIGN_ICON_SET_URL = "icons/tdesign-icons.json";
+const TABLER_ICON_SET_URL = "icons/tabler-icons.json";
 let gsapPluginsRegistered = false;
+let tdesignIconSet = null;
+let tablerIconSet = null;
 
 function getGsap() {
   const gsap = window.gsap;
@@ -239,6 +253,38 @@ function getGsapFlip() {
   const gsap = getGsap();
   const Flip = window.Flip;
   return gsap && Flip ? { gsap, Flip } : null;
+}
+
+async function initTdesignIcons() {
+  try {
+    const response = await fetch(TDESIGN_ICON_SET_URL);
+    if (!response.ok) {
+      throw new Error(`TDesign icon set request failed: ${response.status}`);
+    }
+    const iconSet = await response.json();
+    if (iconSet?.prefix !== "tdesign" || !iconSet.icons || typeof iconSet.icons !== "object") {
+      throw new Error("TDesign icon set is invalid.");
+    }
+    tdesignIconSet = iconSet;
+  } catch (error) {
+    console.warn("Failed to load TDesign icon set", error);
+  }
+}
+
+async function initTablerIcons() {
+  try {
+    const response = await fetch(TABLER_ICON_SET_URL);
+    if (!response.ok) {
+      throw new Error(`Tabler icon set request failed: ${response.status}`);
+    }
+    const iconSet = await response.json();
+    if (iconSet?.prefix !== "tabler" || !iconSet.icons || typeof iconSet.icons !== "object") {
+      throw new Error("Tabler icon set is invalid.");
+    }
+    tablerIconSet = iconSet;
+  } catch (error) {
+    console.warn("Failed to load Tabler icon set", error);
+  }
 }
 
 function prefersReducedMotion() {
@@ -286,6 +332,12 @@ const DEFAULT_PORTAL_CATEGORY = "developer";
 const DEFAULT_SEARCH_ENGINE = "local";
 const DEFAULT_THEME_MODE = "system";
 const DEFAULT_THEME_PALETTE = "sage";
+const THEME_BACKGROUND_TRANSITION_MS = 300;
+const THEME_MODE_ICON_BY_MODE = Object.freeze({
+  system: "brightness-auto-filled",
+  light: "sun-filled",
+  dark: "moon-filled"
+});
 const CUSTOM_THEME_PALETTE_ID = "custom";
 const DEFAULT_CUSTOM_THEME_COLORS = Object.freeze({
   light: "#3f7f68",
@@ -609,7 +661,7 @@ const AUTH_HISTORY_QUERY_PARAMS = new Set([
   "state"
 ]);
 const SITE_ICON_DIRECTORY = "icons/sites";
-const GENERIC_SITE_FALLBACK_ICON = `${SITE_ICON_DIRECTORY}/generic-site-fallback.png`;
+const GENERIC_SITE_FALLBACK_ICON = `${SITE_ICON_DIRECTORY}/fallback.svg`;
 const GENERIC_SITE_FALLBACK_TILE_COLOR = "#f04424";
 const SITE_ICON_FILE_BY_SITE_KEY = Object.freeze({
   "1688.com": "1688.ico",
@@ -639,11 +691,11 @@ const SITE_ICON_FILE_BY_SITE_KEY = Object.freeze({
   "nodejs.org": "nodedotjs.svg",
   "npmjs.com": "npm.svg",
   "office.com": "microsoftoffice.svg",
-  "pinduoduo.com": "pinduoduo.jpg",
+  "pinduoduo.com": "pinduoduo.svg",
   "proton.me": "protonmail.svg",
   "steamcommunity.com": "steam.svg",
   "steampowered.com": "steam.svg",
-  "teams.microsoft.com": "microsoftteams.ico",
+  "teams.microsoft.com": "microsoftteams.svg",
   "tmall.com": "tmall.png",
   "trip.com": "tripdotcom.svg",
   "uizard.io": "uizard.ico",
@@ -705,6 +757,7 @@ const SITE_ICON_TILE_COLOR_BY_SITE_KEY = Object.freeze({
   "cloudflare.com": "#f38020",
   "cursor.com": "#000000",
   "discord.com": "#5865f2",
+  "developer.mozilla.org": "#15141a",
   "docs.b.ai": "#111827",
   "docs.google.com": "#4285f4",
   "douyin.com": "#000000",
@@ -719,6 +772,7 @@ const SITE_ICON_TILE_COLOR_BY_SITE_KEY = Object.freeze({
   "grok.com": "#000000",
   "drive.google.com": "#4285f4",
   "iconfont.cn": "#0c6066",
+  "jd.com": "#ff0000",
   "kagi.com": "#ffb319",
   "larksuite.com": "#00d6b9",
   "linkedin.com": "#0a66c2",
@@ -764,6 +818,10 @@ const MULTICOLOR_BRAND_ICON_SITE_KEYS = new Set([
 ]);
 const NATIVE_ROUNDED_BRAND_ICON_SITE_KEYS = new Set([
   "grok.com"
+]);
+const ORIGINAL_ARTWORK_BRAND_TILE_SITE_KEYS = new Set([
+  "developer.mozilla.org",
+  "jd.com"
 ]);
 const PORTAL_CATEGORY_BY_SITE_KEY = Object.freeze(Object.fromEntries(PORTALS.map((portal) => {
   const url = new URL(portal.url);
@@ -847,8 +905,6 @@ const MESSAGES = {
     mediaFeedLanguageZh: "中文",
     mediaFeedLanguageEn: "English",
     refreshBookmarkFolder: "刷新当前书签文件夹",
-    switchBookmarkLayoutToList: "切换为列表显示",
-    switchBookmarkLayoutToGrid: "切换为一行 4 个显示",
     chooseBookmarkFolder: "选择书签文件夹",
     collapseSurface: "收起面板",
     back: "返回",
@@ -1135,8 +1191,6 @@ const MESSAGES = {
     mediaFeedLanguageZh: "Chinese",
     mediaFeedLanguageEn: "English",
     refreshBookmarkFolder: "Refresh current bookmark folder",
-    switchBookmarkLayoutToList: "Switch to list view",
-    switchBookmarkLayoutToGrid: "Switch to 4-column grid view",
     chooseBookmarkFolder: "Choose bookmark folder",
     collapseSurface: "Collapse panel",
     back: "Back",
@@ -1382,7 +1436,6 @@ const bookmarkPickerToolbar = document.querySelector("#bookmarkPickerToolbar");
 const bookmarkFolderList = document.querySelector("#bookmarkFolderList");
 const chooseBookmarkFolderButton = document.querySelector("#chooseBookmarkFolderButton");
 const refreshBookmarkFolderButton = document.querySelector("#refreshBookmarkFolderButton");
-const toggleBookmarkLayoutButton = document.querySelector("#toggleBookmarkLayoutButton");
 const bookmarkFavoriteAddButton = document.querySelector("#bookmarkFavoriteAddButton");
 const closeBookmarkPickerButton = document.querySelector("#closeBookmarkPickerButton");
 const bookmarkPickerTitle = document.querySelector("#bookmarkPickerTitle");
@@ -1457,15 +1510,17 @@ let localSearchResults = [];
 let searchSuggestionsHideTimer = 0;
 let searchSuggestionsShowFrame = 0;
 let activeSurfacePanelId = "";
-let bookmarkLayout = "grid";
 let activeSearchEngine = DEFAULT_SEARCH_ENGINE;
 let selectedLocalSearchEngine = AGGREGATE_SEARCH_ENGINE_IDS[0];
 let aiModeExitTimer = 0;
 let portalCategoryState = {};
 let activePortalView = "smart";
 let activeThemeMode = DEFAULT_THEME_MODE;
+let activeResolvedTheme = "";
 let activeThemePalette = DEFAULT_THEME_PALETTE;
 let activeCustomThemeColors = { ...DEFAULT_CUSTOM_THEME_COLORS };
+let themeBackgroundTransitionTimer = 0;
+let themeBackgroundTransitionSequence = 0;
 let systemThemeQuery = null;
 let settingsPanelCloseTimer = 0;
 let activeMediaFeedRequestId = 0;
@@ -1710,7 +1765,6 @@ function applyLocale() {
 
   setButtonLabel(togglePortalFormButton, t("addPortal"));
   setButtonLabel(refreshBookmarkFolderButton, t("refreshBookmarkFolder"));
-  updateBookmarkLayoutButton();
   setButtonLabel(bookmarkFavoriteAddButton, t("addFavoriteSite"));
   setButtonLabel(chooseBookmarkFolderButton, t("chooseBookmarkFolder"));
   setButtonLabel(refreshHistoryButton, t("refreshHistory"));
@@ -1790,8 +1844,13 @@ function setButtonLabel(button, label) {
   button.setAttribute("aria-label", label);
 }
 
+function setThemeModeButtonLabel(button, label) {
+  setButtonLabel(button, label);
+  button.title = label;
+}
+
 function setStaticButtonIcons() {
-  portalSurfaceButton.querySelector(".button-icon").innerHTML = gridIcon();
+  portalSurfaceButton.querySelector(".button-icon").innerHTML = bookmarkDoubleFilledIcon();
   surfaceBackButtons.forEach((button) => {
     button.querySelector(".button-icon").innerHTML = arrowLeftIcon();
   });
@@ -1799,10 +1858,13 @@ function setStaticButtonIcons() {
   document.querySelector(".portal-category-trigger-icon").innerHTML = chevronDownIcon();
   refreshBookmarkFolderButton.querySelector(".button-icon").innerHTML = refreshIcon();
   bookmarkFavoriteAddButton.querySelector(".button-icon").innerHTML = plusIcon();
-  chooseBookmarkFolderButton.querySelector(".button-icon").innerHTML = folderPlusIcon();
+  chooseBookmarkFolderButton.querySelector(".button-icon").innerHTML = pageTabFilledIcon();
   closeBookmarkPickerButton.querySelector(".button-icon").innerHTML = arrowLeftIcon();
   refreshHistoryButton.querySelector(".button-icon").innerHTML = refreshIcon();
-  settingsButton.querySelector(".theme-toggle-icon").innerHTML = settingsIcon();
+  settingsButton.querySelector(".theme-toggle-icon").innerHTML = settingsFilledIcon();
+  document.querySelectorAll("[data-theme-mode]").forEach((button) => {
+    button.querySelector(".button-icon").innerHTML = themeModeIcon(button.dataset.themeMode);
+  });
   closeSettingsButton.querySelector(".button-icon").innerHTML = closeIcon();
   favoriteAddButton.querySelector(".button-icon").innerHTML = plusIcon();
   document.querySelector(".media-placeholder .empty-mark")?.replaceChildren();
@@ -1837,13 +1899,20 @@ function applyMediaFeedTypeLocale() {
 
 function applySettingsLocale() {
   document.querySelector("#settingsTitle").textContent = t("settingsTitle");
-  document.querySelector("#appearanceModeTitle").textContent = t("appearanceModeTitle");
+  document.querySelector("#themeModeControl")?.setAttribute("aria-label", t("appearanceModeTitle"));
   document.querySelector("#presetPaletteTitle").textContent = t("presetPaletteTitle");
   document.querySelector("#syncSettingsTitle").textContent = t("syncSettingsTitle");
   document.querySelector("#customPaletteTitle").textContent = t("customPaletteTitle");
-  document.querySelector('[data-theme-mode="system"]').textContent = t("themeModeSystem");
-  document.querySelector('[data-theme-mode="light"]').textContent = t("themeModeLight");
-  document.querySelector('[data-theme-mode="dark"]').textContent = t("themeModeDark");
+  document.querySelectorAll("[data-theme-mode]").forEach((button) => {
+    const mode = button.dataset.themeMode;
+    if (mode === "system") {
+      setThemeModeButtonLabel(button, t("themeModeSystem"));
+    } else if (mode === "light") {
+      setThemeModeButtonLabel(button, t("themeModeLight"));
+    } else if (mode === "dark") {
+      setThemeModeButtonLabel(button, t("themeModeDark"));
+    }
+  });
   setButtonLabel(syncSettingsNowButton, t("syncSettingsNow"));
   updateSyncSettingsUi();
   lightAccentInput.closest("label").querySelector("span").textContent = t("lightAccent");
@@ -1851,19 +1920,21 @@ function applySettingsLocale() {
 }
 
 async function init() {
-  await initSiteIconIndex();
+  await Promise.all([
+    initSiteIconIndex(),
+    initTdesignIcons(),
+    initTablerIcons()
+  ]);
   applyLocale();
   await initThemeMode();
   await initQuickSearchEngine();
   renderFavoriteSites();
   renderPortals();
-  initBookmarkLayout();
   renderSelectedBookmarkFolder();
   refreshHistory();
 
   chooseBookmarkFolderButton.addEventListener("click", openBookmarkPicker);
   refreshBookmarkFolderButton.addEventListener("click", renderSelectedBookmarkFolder);
-  toggleBookmarkLayoutButton.addEventListener("click", toggleBookmarkLayout);
   bookmarkFavoriteAddButton?.addEventListener("click", toggleFavoriteForm);
   closeBookmarkPickerButton.addEventListener("click", closeBookmarkPicker);
   refreshHistoryButton.addEventListener("click", refreshHistory);
@@ -1896,7 +1967,15 @@ async function init() {
   closeSettingsButton.addEventListener("click", () => closeSettingsPanel({ restoreFocus: true }));
   syncSettingsNowButton?.addEventListener("click", handleManualSyncSettings);
   document.querySelectorAll("[data-theme-mode]").forEach((button) => {
-    button.addEventListener("click", () => setThemeMode(button.dataset.themeMode, { persist: true }));
+    button.addEventListener("pointerdown", (event) => {
+      if (searchWorkbench?.classList.contains("search-active")) {
+        event.preventDefault();
+      }
+    });
+    button.addEventListener("click", (event) => setThemeMode(button.dataset.themeMode, {
+      persist: true,
+      sourceEvent: event
+    }));
   });
   lightAccentInput.addEventListener("input", handleCustomThemeColorInput);
   lightAccentStrongInput.addEventListener("input", handleCustomThemeColorInput);
@@ -2080,6 +2159,8 @@ async function initThemeMode() {
     console.warn("Failed to load theme mode", error);
     applyThemePalette();
     applyThemeMode(DEFAULT_THEME_MODE);
+  } finally {
+    releaseThemeHydration();
   }
 }
 
@@ -2153,7 +2234,7 @@ function renderAiEnginePill(engine) {
           aiEnginePill.replaceChildren();
           delete aiEnginePill.dataset.exiting;
         }
-      }, 300);
+      }, prefersReducedMotion() ? 0 : AI_MODE_EXIT_MS);
     } else {
       searchWorkbench?.removeAttribute("data-ai-active");
       searchWorkbench?.removeAttribute("data-ai-exiting");
@@ -2184,50 +2265,229 @@ function searchEngineById(engineId, options = {}) {
   return engine || SEARCH_ENGINES[0];
 }
 
-async function initBookmarkLayout() {
-  try {
-    const result = await getStoredValues({ [BOOKMARK_LAYOUT_STORAGE_KEY]: "grid" });
-    applyBookmarkLayout(result[BOOKMARK_LAYOUT_STORAGE_KEY] === "list" ? "list" : "grid");
-  } catch (error) {
-    console.warn("Failed to load bookmark layout", error);
-    applyBookmarkLayout("grid");
-  }
-}
-
-async function toggleBookmarkLayout() {
-  const nextLayout = bookmarkLayout === "list" ? "grid" : "list";
-  applyBookmarkLayout(nextLayout);
-  try {
-    await setStoredValues({ [BOOKMARK_LAYOUT_STORAGE_KEY]: nextLayout });
-  } catch (error) {
-    console.warn("Failed to save bookmark layout", error);
-  }
-}
-
-function applyBookmarkLayout(layout) {
-  bookmarkLayout = layout === "list" ? "list" : "grid";
-  bookmarkGrid.classList.toggle("list-layout", bookmarkLayout === "list");
-  bookmarkGrid.classList.toggle("grid-layout", bookmarkLayout !== "list");
-  updateBookmarkLayoutButton();
-}
-
-function updateBookmarkLayoutButton() {
-  if (!toggleBookmarkLayoutButton) {
-    return;
-  }
-  const isList = bookmarkLayout === "list";
-  const label = isList ? t("switchBookmarkLayoutToGrid") : t("switchBookmarkLayoutToList");
-  setButtonLabel(toggleBookmarkLayoutButton, label);
-  toggleBookmarkLayoutButton.setAttribute("aria-pressed", String(isList));
-  toggleBookmarkLayoutButton.querySelector(".button-icon").innerHTML = isList ? gridIcon() : listIcon();
-}
-
-function applyThemeMode(theme) {
+function applyThemeMode(theme, options = {}) {
+  const previousResolvedTheme = activeResolvedTheme;
+  const previousThemeSnapshot = readThemeTransitionSnapshot();
   activeThemeMode = theme === "dark" || theme === "light" || theme === "system" ? theme : DEFAULT_THEME_MODE;
   const resolvedTheme = resolvedThemeMode();
-  document.documentElement.dataset.theme = resolvedTheme;
-  refreshAdaptiveSiteIcons();
-  updateThemeSettingsUi();
+  const shouldAnimateTheme = previousResolvedTheme && previousResolvedTheme !== resolvedTheme && !prefersReducedMotion();
+  const commitThemeChange = () => {
+    document.documentElement.dataset.theme = resolvedTheme;
+    activeResolvedTheme = resolvedTheme;
+    writeThemeBootCache(activeThemeMode, resolvedTheme);
+    refreshAdaptiveSiteIcons();
+    updateThemeSettingsUi();
+  };
+
+  commitThemeChange();
+  const nextThemeSnapshot = readThemeTransitionSnapshot();
+  if (shouldAnimateTheme) {
+    startThemeBackgroundTransition({
+      toTheme: resolvedTheme,
+      fromTheme: previousThemeSnapshot,
+      sourceEvent: options.sourceEvent,
+      toThemeSnapshot: nextThemeSnapshot
+    });
+  }
+}
+
+function writeThemeBootCache(mode, resolvedTheme) {
+  try {
+    localStorage.setItem(THEME_BOOT_STORAGE_KEY, JSON.stringify({
+      mode,
+      resolved: resolvedTheme === "dark" ? "dark" : "light",
+      updatedAt: Date.now()
+    }));
+  } catch (error) {
+    console.warn("Failed to cache theme boot state", error);
+  }
+}
+
+function releaseThemeHydration() {
+  const root = document.documentElement;
+  if (!root.classList.contains("theme-hydrating")) {
+    return;
+  }
+  window.requestAnimationFrame(() => {
+    window.requestAnimationFrame(() => {
+      root.classList.remove("theme-hydrating");
+    });
+  });
+}
+
+function readThemeTransitionSnapshot() {
+  const rootStyle = getComputedStyle(document.documentElement);
+  const read = (name, fallback) => resolveThemeColor(rootStyle.getPropertyValue(name).trim() || fallback, fallback);
+  return {
+    paper: read("--paper", "#f8f8f3"),
+    inputBg: read("--input-bg", "#fffefa"),
+    panel: read("--panel", "#fffefa"),
+    panelSoft: read("--panel-soft", "#f1f4ef"),
+    line: read("--line", "rgba(19, 25, 21, 0.12)"),
+    lineStrong: read("--line-strong", "rgba(19, 25, 21, 0.23)"),
+    accentWashSoft: read("--accent-wash-soft", "rgb(63 127 104 / 0.055)"),
+    accentBorder: read("--accent-border", "rgb(63 127 104 / 0.34)")
+  };
+}
+
+function resolveThemeColor(value, fallback) {
+  if (!document.body) {
+    return value || fallback;
+  }
+  const probe = document.createElement("span");
+  probe.style.position = "fixed";
+  probe.style.inset = "0 auto auto 0";
+  probe.style.width = "0";
+  probe.style.height = "0";
+  probe.style.overflow = "hidden";
+  probe.style.pointerEvents = "none";
+  probe.style.backgroundColor = value;
+  document.body.appendChild(probe);
+  const resolved = getComputedStyle(probe).backgroundColor;
+  probe.remove();
+  return resolved && resolved !== "rgba(0, 0, 0, 0)" ? resolved : value || fallback;
+}
+
+function themeTransitionPoint(sourceEvent) {
+  const width = Math.max(1, window.innerWidth || document.documentElement.clientWidth || 1);
+  const height = Math.max(1, window.innerHeight || document.documentElement.clientHeight || 1);
+  const hasPointerPoint = Number.isFinite(sourceEvent?.clientX) && Number.isFinite(sourceEvent?.clientY);
+  return {
+    x: hasPointerPoint ? Math.max(0, Math.min(width, sourceEvent.clientX)) : width,
+    y: hasPointerPoint ? Math.max(0, Math.min(height, sourceEvent.clientY)) : 0
+  };
+}
+
+function themeTransitionMaxRadius(point) {
+  const width = Math.max(1, window.innerWidth || document.documentElement.clientWidth || 1);
+  const height = Math.max(1, window.innerHeight || document.documentElement.clientHeight || 1);
+  return Math.ceil(Math.hypot(
+    Math.max(point.x, width - point.x),
+    Math.max(point.y, height - point.y)
+  )) + 2;
+}
+
+function startThemeBackgroundTransition({ toTheme, fromTheme, sourceEvent, toThemeSnapshot }) {
+  if (!document.body) {
+    return;
+  }
+  const root = document.documentElement;
+  const direction = toTheme === "dark" ? "to-dark" : "to-light";
+  const point = themeTransitionPoint(sourceEvent);
+  themeBackgroundTransitionSequence += 1;
+  const sequence = themeBackgroundTransitionSequence;
+  window.clearTimeout(themeBackgroundTransitionTimer);
+  document.querySelector(".theme-transition-backdrop")?.remove();
+  root.classList.remove("theme-transitioning");
+  root.classList.remove("theme-transition-committing");
+  clearThemeTransitionVariables();
+  setThemeTransitionVariables(fromTheme, toThemeSnapshot);
+  root.classList.add("theme-transitioning");
+  root.dataset.themeTransition = direction;
+
+  const backdrop = document.createElement("div");
+  backdrop.className = "theme-transition-backdrop";
+  backdrop.dataset.direction = direction;
+  backdrop.setAttribute("aria-hidden", "true");
+
+  const overlay = createThemeTransitionLayer({
+    direction,
+    fromColor: fromTheme.paper,
+    point,
+    toColor: toThemeSnapshot.paper
+  });
+  backdrop.style.backgroundColor = overlay.baseColor;
+  backdrop.appendChild(overlay.circle);
+  document.body.prepend(backdrop);
+
+  let cleanupQueued = false;
+  const cleanup = () => {
+    if (sequence !== themeBackgroundTransitionSequence || cleanupQueued) {
+      return;
+    }
+    cleanupQueued = true;
+    backdrop.classList.add("is-complete");
+    root.classList.add("theme-transition-committing");
+    overlay.circle.style.transform = overlay.endTransform;
+    window.requestAnimationFrame(() => {
+      window.requestAnimationFrame(() => {
+        if (sequence !== themeBackgroundTransitionSequence) {
+          return;
+        }
+        backdrop.remove();
+        root.classList.remove("theme-transitioning");
+        root.classList.remove("theme-transition-committing");
+        delete root.dataset.themeTransition;
+        clearThemeTransitionVariables();
+      });
+    });
+  };
+  window.requestAnimationFrame(() => {
+    if (sequence === themeBackgroundTransitionSequence) {
+      backdrop.classList.add("is-animating");
+    }
+  });
+  themeBackgroundTransitionTimer = window.setTimeout(cleanup, THEME_BACKGROUND_TRANSITION_MS + 80);
+}
+
+function createThemeTransitionLayer({ direction, fromColor, point, toColor }) {
+  const maxRadius = themeTransitionMaxRadius(point);
+  const diameter = Math.max(1, maxRadius * 2);
+  const circle = document.createElement("div");
+  circle.className = "theme-transition-circle";
+  circle.style.width = `${diameter}px`;
+  circle.style.height = `${diameter}px`;
+  circle.style.left = `${point.x - maxRadius}px`;
+  circle.style.top = `${point.y - maxRadius}px`;
+  circle.style.backgroundColor = direction === "to-dark" ? toColor : fromColor;
+  const startScale = direction === "to-dark" ? 0 : 1;
+  const endScale = direction === "to-dark" ? 1 : 0;
+  const startTransform = `translate3d(0, 0, 0) scale(${startScale})`;
+  const endTransform = `translate3d(0, 0, 0) scale(${endScale})`;
+  circle.style.setProperty("--theme-circle-start-scale", String(startScale));
+  circle.style.setProperty("--theme-circle-end-scale", String(endScale));
+  circle.style.transform = startTransform;
+  return {
+    baseColor: direction === "to-dark" ? fromColor : toColor,
+    circle,
+    endTransform,
+    startTransform
+  };
+}
+
+function setThemeTransitionVariables(fromTheme, toThemeSnapshot) {
+  const rootStyle = document.documentElement.style;
+  const pairs = [
+    ["paper", fromTheme.paper, toThemeSnapshot.paper],
+    ["input-bg", fromTheme.inputBg, toThemeSnapshot.inputBg],
+    ["panel", fromTheme.panel, toThemeSnapshot.panel],
+    ["panel-soft", fromTheme.panelSoft, toThemeSnapshot.panelSoft],
+    ["line", fromTheme.line, toThemeSnapshot.line],
+    ["line-strong", fromTheme.lineStrong, toThemeSnapshot.lineStrong],
+    ["accent-wash-soft", fromTheme.accentWashSoft, toThemeSnapshot.accentWashSoft],
+    ["accent-border", fromTheme.accentBorder, toThemeSnapshot.accentBorder]
+  ];
+  pairs.forEach(([name, fromValue, toValue]) => {
+    rootStyle.setProperty(`--theme-transition-from-${name}`, fromValue);
+    rootStyle.setProperty(`--theme-transition-to-${name}`, toValue);
+  });
+}
+
+function clearThemeTransitionVariables() {
+  const rootStyle = document.documentElement.style;
+  [
+    "paper",
+    "input-bg",
+    "panel",
+    "panel-soft",
+    "line",
+    "line-strong",
+    "accent-wash-soft",
+    "accent-border"
+  ].forEach((name) => {
+    rootStyle.removeProperty(`--theme-transition-from-${name}`);
+    rootStyle.removeProperty(`--theme-transition-to-${name}`);
+  });
 }
 
 function resolvedThemeMode() {
@@ -2242,7 +2502,7 @@ function systemPrefersDark() {
 }
 
 async function setThemeMode(mode, options = {}) {
-  applyThemeMode(mode);
+  applyThemeMode(mode, options);
   if (!options.persist) {
     return;
   }
@@ -2758,8 +3018,13 @@ function aiEngineCommands(engine) {
 function handleQuickSearchBlur() {
   window.setTimeout(() => {
     const activeElement = document.activeElement;
+    const themeModeControl = document.querySelector("#themeModeControl");
     const keepActive = activeElement instanceof Element
-      && (quickSearchForm.contains(activeElement) || searchSuggestions.contains(activeElement));
+      && (
+        quickSearchForm.contains(activeElement)
+        || searchSuggestions.contains(activeElement)
+        || themeModeControl?.contains(activeElement)
+      );
     if (!keepActive) {
       setQuickSearchActive(false);
     }
@@ -2865,12 +3130,18 @@ function engineSearchDestination(engine, query) {
 async function submitAiDirectSearch(engine, query) {
   const targetUrl = engine.directUrl || engine.searchUrl;
   const token = crypto.randomUUID?.() || `${Date.now()}-${Math.random().toString(16).slice(2)}`;
-  await saveAiDirectPrompt(token, {
-    prompt: query,
-    engineId: engine.id,
-    createdAt: Date.now()
-  });
-  window.location.assign(aiDirectTargetUrl(targetUrl, token));
+  let destination = engineSearchDestination(engine, query);
+  try {
+    await saveAiDirectPrompt(token, {
+      prompt: query,
+      engineId: engine.id,
+      createdAt: Date.now()
+    });
+    destination = aiDirectTargetUrl(targetUrl, token);
+  } catch (error) {
+    console.warn("Failed to save AI direct prompt before navigation", error);
+  }
+  window.location.assign(destination);
 }
 
 async function saveAiDirectPrompt(token, payload) {
@@ -2952,11 +3223,28 @@ function updateSearchSuggestionsHeight() {
   const styles = window.getComputedStyle(searchSuggestions);
   const currentPaddingY = (Number.parseFloat(styles.paddingTop) || 0)
     + (Number.parseFloat(styles.paddingBottom) || 0);
-  const contentHeight = Math.max(0, searchSuggestions.scrollHeight - currentPaddingY);
+  const contentHeight = searchSuggestionsNaturalContentHeight();
+  const paddingY = searchWorkbench?.classList.contains("suggestions-open")
+    ? currentPaddingY
+    : SEARCH_SUGGESTIONS_OPEN_PADDING_Y;
   searchSuggestions.style.setProperty(
     "--search-suggestions-height",
-    `${Math.ceil(contentHeight + SEARCH_SUGGESTIONS_OPEN_PADDING_Y)}px`
+    `${Math.ceil(contentHeight + paddingY)}px`
   );
+}
+
+function searchSuggestionsNaturalContentHeight() {
+  const items = [...searchSuggestions.children].filter((item) => {
+    return item instanceof HTMLElement && !item.hidden;
+  });
+  if (!items.length) {
+    return 0;
+  }
+  const styles = window.getComputedStyle(searchSuggestions);
+  const rowGap = Number.parseFloat(styles.rowGap || styles.gap) || 0;
+  return items.reduce((total, item) => {
+    return total + item.getBoundingClientRect().height;
+  }, 0) + (items.length - 1) * rowGap;
 }
 
 function createSearchEngineSuggestion(query) {
@@ -5673,6 +5961,12 @@ function brandIconTileColors(tileColor, siteKey = "", iconPath = "") {
       dark: color
     };
   }
+  if (keepsBrandIconOriginalOnBrandTile(siteKey, iconPath)) {
+    return {
+      light: color,
+      dark: color
+    };
+  }
   if (keepsBrandIconOriginal(siteKey, iconPath)) {
     return {
       light: "#ffffff",
@@ -5692,6 +5986,9 @@ function brandIconTileColors(tileColor, siteKey = "", iconPath = "") {
 }
 
 function keepsBrandIconOriginal(siteKey, iconPath = "") {
+  if (keepsBrandIconOriginalOnBrandTile(siteKey, iconPath)) {
+    return true;
+  }
   if (MULTICOLOR_BRAND_ICON_SITE_KEYS.has(siteKey)) {
     return true;
   }
@@ -5703,6 +6000,12 @@ function keepsBrandIconOriginal(siteKey, iconPath = "") {
     return true;
   }
   return isSvgDataUrl(iconPath) && !remoteBrandSvgSourceIsMaskable(iconPath);
+}
+
+function keepsBrandIconOriginalOnBrandTile(siteKey, iconPath = "") {
+  return ORIGINAL_ARTWORK_BRAND_TILE_SITE_KEYS.has(siteKey)
+    && String(iconPath || "").startsWith(`${SITE_ICON_DIRECTORY}/`)
+    && siteIconSourceLooksLikeSvg(iconPath);
 }
 
 function siteIconSourceLooksLikeSvg(source) {
@@ -5828,8 +6131,8 @@ function iconGlyphColorForCurrentTile(icon, source = "") {
     }
     return remoteBrandGlyphColorForTile(tileColor, brandColor);
   }
-  if (brandColor && tileColor === brandColor) {
-    return localBrandGlyphColor(tileColor);
+  if (brandColor) {
+    return localBrandGlyphColorForTile(tileColor, brandColor);
   }
   if (iconTileShouldUseOriginalGlyph(tileColor)) {
     return "";
@@ -5853,6 +6156,21 @@ function localBrandGlyphColor(tileColor) {
     return "";
   }
   return nearWhiteBrandColor(color) ? readableIconGlyphColor(color) : "#ffffff";
+}
+
+function localBrandGlyphColorForTile(tileColor, brandColor = "") {
+  const tile = normalizeHexColor(tileColor);
+  const brand = normalizeHexColor(brandColor);
+  if (!tile) {
+    return "";
+  }
+  if (!brand || tile === brand) {
+    return localBrandGlyphColor(tile);
+  }
+  if (contrastRatio(tile, brand) >= LOCAL_BRAND_CARRIER_CONTRAST_MIN) {
+    return brand;
+  }
+  return readableIconGlyphColor(tile);
 }
 
 function remoteBrandGlyphColorForTile(tileColor, brandColor = "") {
@@ -6016,6 +6334,28 @@ function applySvgGlyphColor(svg, glyphColor, options = {}) {
     }
     return ` ${attributeName}=${quote}${color}${quote}`;
   };
+  const replaceStyleColor = (match, quote, value) => {
+    const nextValue = String(value).replace(/(^|;)(\s*)(fill|stroke|color)(\s*:\s*)([^;]+)/gi, (
+      declaration,
+      prefix,
+      spacing,
+      property,
+      separator,
+      rawValue
+    ) => {
+      const valueText = String(rawValue || "");
+      const important = /\s!important\s*$/i.test(valueText) ? " !important" : "";
+      const normalizedValue = valueText.replace(/\s!important\s*$/i, "").trim();
+      if (
+        /^(?:none|transparent)$/i.test(normalizedValue)
+        || (options.onlyCurrentColor && !/^currentColor$/i.test(normalizedValue))
+      ) {
+        return declaration;
+      }
+      return `${prefix}${spacing}${property}${separator}${color}${important}`;
+    });
+    return ` style=${quote}${nextValue}${quote}`;
+  };
   output = output.replace(/\sfill=(["'])([^"']*)\1/gi, (match, quote, value) => (
     replaceColorAttribute("fill", match, quote, value)
   ));
@@ -6024,6 +6364,9 @@ function applySvgGlyphColor(svg, glyphColor, options = {}) {
   ));
   output = output.replace(/\scolor=(["'])([^"']*)\1/gi, (match, quote, value) => (
     replaceColorAttribute("color", match, quote, value)
+  ));
+  output = output.replace(/\sstyle=(["'])([^"']*)\1/gi, (match, quote, value) => (
+    replaceStyleColor(match, quote, value)
   ));
   output = output.replace(/<svg\b([^>]*)>/i, (match, attrs) => (
     /\sfill=/i.test(attrs) ? `<svg${attrs}>` : `<svg${attrs} fill="${color}">`
@@ -6726,22 +7069,77 @@ function selectFaviconBackgroundCandidate(analysis, size) {
     .map((bucket) => faviconBackgroundCandidateFromBucket(bucket, analysis, size))
     .filter(Boolean)
     .sort((a, b) => b.score - a.score || b.confidence - a.confidence);
-  const candidate = candidates[0];
+  const candidate = (candidates[0]?.confidence || 0) >= FAVICON_BACKGROUND_CONFIDENCE_MIN
+    ? candidates[0]
+    : faviconTransparentGlyphCandidateFromBucket(baseBuckets[0], analysis);
   if (!candidate?.confidence) {
     return null;
   }
+  const selectedColor = {
+    red: Math.round(candidate.carrierRed ?? candidate.red),
+    green: Math.round(candidate.carrierGreen ?? candidate.green),
+    blue: Math.round(candidate.carrierBlue ?? candidate.blue)
+  };
   const selected = {
-    red: Math.round(candidate.red),
-    green: Math.round(candidate.green),
-    blue: Math.round(candidate.blue),
+    ...selectedColor,
+    paletteRed: Math.round(candidate.red),
+    paletteGreen: Math.round(candidate.green),
+    paletteBlue: Math.round(candidate.blue),
     confidence: candidate.confidence,
     coverage: candidate.coverage,
+    opaqueCoverage: analysis.opaqueWeight / analysis.totalWeight,
     edgeConfidence: candidate.edgeConfidence,
     innerTileConfidence: candidate.innerTileConfidence,
     matchMode: faviconBackgroundMatchMode(candidate),
-    foreground: faviconForegroundStatsForCandidate(candidate, analysis, size)
+    foreground: faviconForegroundStatsForCandidate(selectedColor, analysis, size)
   };
   return selected;
+}
+
+function faviconTransparentGlyphCandidateFromBucket(bucket, analysis) {
+  if (!bucket?.weight || !analysis.opaqueWeight || !analysis.totalWeight) {
+    return null;
+  }
+  const colorDistanceLimit = FAVICON_BACKGROUND_COLOR_DISTANCE ** 2;
+  let red = 0;
+  let green = 0;
+  let blue = 0;
+  let weight = 0;
+  let edgeWeight = 0;
+  for (const pixel of analysis.pixels) {
+    if (colorDistanceSquared(pixel, bucket) > colorDistanceLimit) {
+      continue;
+    }
+    red += pixel.red * pixel.weight;
+    green += pixel.green * pixel.weight;
+    blue += pixel.blue * pixel.weight;
+    weight += pixel.weight;
+    edgeWeight += pixel.edgeWeight;
+  }
+  if (!weight) {
+    return null;
+  }
+  const opaqueCoverage = analysis.opaqueWeight / analysis.totalWeight;
+  const coverage = weight / analysis.totalWeight;
+  const edgeConfidence = edgeWeight / Math.max(1, analysis.edgeSampleWeight);
+  if (
+    opaqueCoverage < FAVICON_TRANSPARENT_GLYPH_COVERAGE_MIN
+    || opaqueCoverage > FAVICON_TRANSPARENT_GLYPH_COVERAGE_MAX
+    || coverage / opaqueCoverage < FAVICON_TRANSPARENT_GLYPH_CANDIDATE_RATIO_MIN
+    || edgeConfidence > FAVICON_TRANSPARENT_GLYPH_EDGE_CONFIDENCE_MAX
+  ) {
+    return null;
+  }
+  return {
+    red: red / weight,
+    green: green / weight,
+    blue: blue / weight,
+    confidence: FAVICON_BACKGROUND_CONFIDENCE_MIN,
+    coverage,
+    edgeConfidence,
+    innerTileConfidence: 0,
+    score: FAVICON_BACKGROUND_CONFIDENCE_MIN
+  };
 }
 
 function faviconForegroundStatsForCandidate(candidate, analysis, size) {
@@ -6798,6 +7196,38 @@ function faviconCandidateHasLowContrastForeground(color) {
     && (foreground.maxContrast || 0) <= FAVICON_LOW_CONTRAST_PEAK_MAX;
 }
 
+function faviconCandidateLooksLikeTransparentGlyph(color, tileColor) {
+  const background = normalizeHexColor(tileColor);
+  if (!background) {
+    return false;
+  }
+  const opaqueCoverage = color.opaqueCoverage || 0;
+  if (
+    opaqueCoverage <= 0
+    || opaqueCoverage > FAVICON_TRANSPARENT_GLYPH_COVERAGE_MAX
+    || (color.coverage || 0) / opaqueCoverage < FAVICON_TRANSPARENT_GLYPH_CANDIDATE_RATIO_MIN
+    || (color.edgeConfidence || 0) > FAVICON_TRANSPARENT_GLYPH_EDGE_CONFIDENCE_MAX
+  ) {
+    return false;
+  }
+  return true;
+}
+
+function faviconCandidateLooksLikeNearWhiteGlyph(color, tileColor) {
+  const background = normalizeHexColor(tileColor);
+  if (!background || relativeLuminance(background) < FAVICON_NEAR_WHITE_GLYPH_LUMINANCE_MIN) {
+    return false;
+  }
+  const foreground = color.foreground || {};
+  return (foreground.coverage || 0) <= FAVICON_NEAR_WHITE_GLYPH_FOREGROUND_COVERAGE_MAX
+    || faviconCandidateHasLowContrastForeground(color);
+}
+
+function faviconCandidateNeedsReadableCarrier(color, tileColor) {
+  return faviconCandidateLooksLikeTransparentGlyph(color, tileColor)
+    || faviconCandidateLooksLikeNearWhiteGlyph(color, tileColor);
+}
+
 function faviconBackgroundCandidateFromBucket(bucket, analysis, size) {
   const colorDistanceLimit = FAVICON_BACKGROUND_COLOR_DISTANCE ** 2;
   const samples = [];
@@ -6806,6 +7236,10 @@ function faviconBackgroundCandidateFromBucket(bucket, analysis, size) {
   let blue = 0;
   let weight = 0;
   let edgeWeight = 0;
+  let carrierEdgeWeight = 0;
+  let edgeRed = 0;
+  let edgeGreen = 0;
+  let edgeBlue = 0;
   let minX = size;
   let minY = size;
   let maxX = -1;
@@ -6820,6 +7254,12 @@ function faviconBackgroundCandidateFromBucket(bucket, analysis, size) {
     blue += pixel.blue * pixel.weight;
     weight += pixel.weight;
     edgeWeight += pixel.edgeWeight;
+    if (pixel.edgeWeight > 0.35) {
+      carrierEdgeWeight += pixel.edgeWeight;
+      edgeRed += pixel.red * pixel.edgeWeight;
+      edgeGreen += pixel.green * pixel.edgeWeight;
+      edgeBlue += pixel.blue * pixel.edgeWeight;
+    }
     minX = Math.min(minX, pixel.x);
     minY = Math.min(minY, pixel.y);
     maxX = Math.max(maxX, pixel.x);
@@ -6836,10 +7276,18 @@ function faviconBackgroundCandidateFromBucket(bucket, analysis, size) {
   if (!confidence) {
     return null;
   }
+  const edgeCarrierColor = edgeConfidence >= FAVICON_EDGE_CARRIER_CONFIDENCE_MIN && carrierEdgeWeight > 0
+    ? {
+      carrierRed: edgeRed / carrierEdgeWeight,
+      carrierGreen: edgeGreen / carrierEdgeWeight,
+      carrierBlue: edgeBlue / carrierEdgeWeight
+    }
+    : {};
   return {
     red: red / weight,
     green: green / weight,
     blue: blue / weight,
+    ...edgeCarrierColor,
     confidence,
     coverage,
     edgeConfidence,
@@ -7025,18 +7473,18 @@ function faviconMatchedTileColors(color) {
 }
 
 function faviconSurfaceTileColors(tileColor, color) {
-  const preferInverse = faviconCandidateHasLowContrastForeground(color);
+  const preferReadableCarrier = faviconCandidateNeedsReadableCarrier(color, tileColor);
   return {
-    light: faviconCarrierTileColor(tileColor, "light", { preferInverse }),
-    dark: faviconCarrierTileColor(tileColor, "dark", { preferInverse })
+    light: faviconCarrierTileColor(tileColor, "light", { preferReadableCarrier }),
+    dark: faviconCarrierTileColor(tileColor, "dark", { preferReadableCarrier })
   };
 }
 
 function faviconSeparatedTileColors(tileColor, color) {
-  const preferInverse = faviconCandidateHasLowContrastForeground(color);
+  const preferReadableCarrier = faviconCandidateNeedsReadableCarrier(color, tileColor);
   return {
-    light: faviconCarrierTileColor(tileColor, "light", { preferInverse, separate: true }),
-    dark: faviconCarrierTileColor(tileColor, "dark", { preferInverse, separate: true })
+    light: faviconCarrierTileColor(tileColor, "light", { preferReadableCarrier, separate: true }),
+    dark: faviconCarrierTileColor(tileColor, "dark", { preferReadableCarrier, separate: true })
   };
 }
 
@@ -7045,11 +7493,8 @@ function faviconCarrierTileColor(tileColor, mode, options = {}) {
   if (!color) {
     return tileColor;
   }
-  if (options.preferInverse) {
-    const inverted = invertHexColor(color);
-    if (contrastRatio(color, inverted) >= FAVICON_EMBEDDED_TILE_CONTRAST_MIN) {
-      return inverted;
-    }
+  if (options.preferReadableCarrier) {
+    return faviconReadableCarrierTileColor(color, mode);
   }
   if (!options.separate) {
     return color;
@@ -7060,10 +7505,42 @@ function faviconCarrierTileColor(tileColor, mode, options = {}) {
   return mixColorUntilContrast(color, target, FAVICON_EMBEDDED_TILE_CONTRAST_MIN, initialAmount);
 }
 
-function mixColorUntilContrast(color, target, minimumContrast, initialAmount) {
+function faviconReadableCarrierTileColor(color, mode) {
+  const luminance = relativeLuminance(color);
+  const target = luminance < 0.5 ? "#ffffff" : "#000000";
+  const [red, green, blue] = hexToRgb(color);
+  const neutral = colorChannelSpread(red, green, blue) <= 18;
+  if (neutral && luminance >= 0.88) {
+    return "#000000";
+  }
+  if (neutral && luminance <= 0.04) {
+    return "#ffffff";
+  }
+  const initialAmount = mode === "dark" ? 0.34 : 0.42;
+  const mixed = mixColorUntilContrast(
+    color,
+    target,
+    FAVICON_READABLE_CARRIER_CONTRAST_MIN,
+    initialAmount,
+    FAVICON_READABLE_CARRIER_MAX_MIX
+  );
+  if (contrastRatio(color, mixed) >= FAVICON_READABLE_CARRIER_CONTRAST_MIN) {
+    return mixed;
+  }
+  const inverted = invertHexColor(color);
+  return contrastRatio(color, inverted) >= contrastRatio(color, mixed) ? inverted : mixed;
+}
+
+function mixColorUntilContrast(
+  color,
+  target,
+  minimumContrast,
+  initialAmount,
+  maxMix = FAVICON_EMBEDDED_TILE_CONTRAST_MAX_MIX
+) {
   for (
     let amount = initialAmount;
-    amount <= FAVICON_EMBEDDED_TILE_CONTRAST_MAX_MIX;
+    amount <= maxMix;
     amount += 0.04
   ) {
     const mixed = mixHexColors(color, target, amount);
@@ -7071,7 +7548,7 @@ function mixColorUntilContrast(color, target, minimumContrast, initialAmount) {
       return mixed;
     }
   }
-  return mixHexColors(color, target, FAVICON_EMBEDDED_TILE_CONTRAST_MAX_MIX);
+  return mixHexColors(color, target, maxMix);
 }
 
 function faviconColorShouldUseOriginalTile(color) {
@@ -9353,11 +9830,7 @@ function createRecentFolderItem(group) {
     }, RECENT_CARD_DRAWER_CLOSE_DELAY_MS);
   };
 
-  const animatePageTurn = (direction) => {
-    if (!direction || pages.length < 2) {
-      return;
-    }
-
+  const clearActivePageTurn = () => {
     if (activePageAnimation) {
       if (typeof activePageAnimation.kill === "function") {
         activePageAnimation.kill();
@@ -9366,23 +9839,56 @@ function createRecentFolderItem(group) {
       }
       activePageAnimation = null;
     }
-    inner.querySelectorAll(".recent-folder-face-snapshot").forEach((node) => node.remove());
+    inner.querySelectorAll(".recent-folder-face-snapshot, .recent-folder-page-title-snapshot")
+      .forEach((node) => node.remove());
+    face.style.opacity = "";
+    face.style.visibility = "";
+    face.style.transform = "";
+    face.style.filter = "";
+    face.style.transition = "";
+    pageTitle.style.opacity = "";
+    pageTitle.style.visibility = "";
+    pageTitle.style.transform = "";
+    pageTitle.style.transition = "";
+    pageTitle.classList.remove("is-turning");
+  };
 
-    const snapshot = face.cloneNode(true);
-    snapshot.removeAttribute("href");
-    snapshot.removeAttribute("aria-label");
-    snapshot.classList.add("recent-folder-face-snapshot");
+  const capturePageTurnSnapshot = (direction) => {
+    if (!direction || pages.length < 2 || prefersReducedMotion()) {
+      return null;
+    }
+
+    clearActivePageTurn();
+
+    const snapshot = pageTitle.cloneNode(true);
+    snapshot.removeAttribute("id");
+    snapshot.classList.add("recent-folder-page-title-snapshot");
     snapshot.setAttribute("aria-hidden", "true");
-    inner.append(snapshot);
+    snapshot.style.transition = "none";
+    pageTitle.style.transition = "none";
+    pageTitle.classList.add("is-turning");
+    face.append(snapshot);
+    return snapshot;
+  };
+
+  const animatePageTurn = (direction, snapshot) => {
+    if (!direction || pages.length < 2 || !snapshot) {
+      snapshot?.remove();
+      return;
+    }
 
     const vector = direction === "next" ? 1 : -1;
-    const easing = "cubic-bezier(0.22, 1, 0.36, 1)";
-    const duration = 520;
+    const incomingOffset = 34;
+    const outgoingOffset = 38;
+    const pageTurnDuration = 300;
+    const easing = "cubic-bezier(0.16, 1, 0.3, 1)";
     const gsap = getGsap();
     if (gsap) {
       const cleanUp = () => {
         snapshot.remove();
-        gsap.set(face, { clearProps: "opacity,visibility,transform" });
+        gsap.set(pageTitle, { clearProps: "opacity,visibility,transform" });
+        pageTitle.style.transition = "";
+        pageTitle.classList.remove("is-turning");
         if (activePageAnimation === timeline) {
           activePageAnimation = null;
         }
@@ -9392,59 +9898,66 @@ function createRecentFolderItem(group) {
         onComplete: cleanUp
       });
       timeline
-        .fromTo(face,
-          { autoAlpha: 0.18, x: vector * 54, scale: 0.995 },
-          { autoAlpha: 1, x: 0, scale: 1, duration: gsapDuration(duration) },
+        .fromTo(pageTitle,
+          { autoAlpha: 0, x: vector * incomingOffset },
+          { autoAlpha: 1, x: 0, duration: gsapDuration(pageTurnDuration) },
           0)
         .fromTo(snapshot,
-          { autoAlpha: 1, x: 0, scale: 1 },
-          { autoAlpha: 0, x: -vector * 46, scale: 0.995, duration: gsapDuration(440) },
+          { autoAlpha: 1, x: 0 },
+          { autoAlpha: 0, x: -vector * outgoingOffset, duration: gsapDuration(pageTurnDuration * 0.78) },
           0);
       activePageAnimation = timeline;
       return;
     }
-    const incoming = face.animate(
+    const incoming = pageTitle.animate(
       [
         {
-          opacity: 0.18,
-          transform: `translateX(${vector * 54}px) scale(0.995)`,
-          filter: "blur(0.4px)"
+          opacity: 0,
+          transform: `translate3d(${vector * incomingOffset}px, 0, 0)`
         },
         {
           opacity: 1,
-          transform: "translateX(0) scale(1)",
-          filter: "blur(0)"
+          transform: "translate3d(0, 0, 0)"
         }
       ],
-      { duration, easing, fill: "both" }
+      { duration: pageTurnDuration, easing, fill: "both" }
     );
     const outgoing = snapshot.animate(
       [
         {
           opacity: 1,
-          transform: "translateX(0) scale(1)",
-          filter: "blur(0)"
+          transform: "translate3d(0, 0, 0)"
         },
         {
           opacity: 0,
-          transform: `translateX(${-vector * 46}px) scale(0.995)`,
-          filter: "blur(0.4px)"
+          transform: `translate3d(${-vector * outgoingOffset}px, 0, 0)`
         }
       ],
-      { duration: 440, easing, fill: "both" }
+      { duration: pageTurnDuration * 0.78, easing, fill: "both" }
     );
 
+    let cleanupTimer = 0;
+    let cleanedUp = false;
+    let pageTurnAnimation = null;
     const cleanUp = () => {
+      if (cleanedUp) {
+        return;
+      }
+      cleanedUp = true;
+      window.clearTimeout(cleanupTimer);
       incoming.cancel();
       outgoing.cancel();
       snapshot.remove();
-      if (activePageAnimation === incoming) {
+      pageTitle.style.transition = "";
+      pageTitle.classList.remove("is-turning");
+      if (activePageAnimation === pageTurnAnimation) {
         activePageAnimation = null;
       }
     };
-    activePageAnimation = incoming;
+    pageTurnAnimation = { cancel: cleanUp };
+    activePageAnimation = pageTurnAnimation;
     incoming.addEventListener("finish", cleanUp, { once: true });
-    window.setTimeout(cleanUp, duration + 80);
+    cleanupTimer = window.setTimeout(cleanUp, pageTurnDuration + 80);
   };
 
   const setActivePage = (nextIndex, direction = "") => {
@@ -9452,6 +9965,7 @@ function createRecentFolderItem(group) {
     const index = ((nextIndex % pageCount) + pageCount) % pageCount;
     const activePage = pages[index] || item;
     const activeTitle = normalizeText(activePage?.title) || historyFallbackTitle(safeUrl(activePage?.url || group.url));
+    const pageTurnSnapshot = capturePageTurnSnapshot(direction);
     card.dataset.pageIndex = String(index);
     face.href = activePage?.url || group.url;
     face.setAttribute("aria-label", t("openPage", { title: activeTitle }));
@@ -9461,7 +9975,7 @@ function createRecentFolderItem(group) {
     pageIndicator.querySelectorAll(".recent-card-page-dot").forEach((dot, dotIndex) => {
       dot.classList.toggle("active", dotIndex === index);
     });
-    animatePageTurn(direction);
+    animatePageTurn(direction, pageTurnSnapshot);
   };
 
   previousButton.addEventListener("click", (event) => {
@@ -9980,169 +10494,161 @@ function renderHistoryTransientMessage(message) {
   }, 2400);
 }
 
-function inlineIcon(markup) {
-  return `<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">${markup.trim()}</svg>`;
+const TDESIGN_ICON_MARKUP = Object.freeze({
+  add: '<path fill="none" stroke="currentColor" stroke-linecap="square" stroke-width="2" d="M12 5v14m7-7H5"/>',
+  app: '<g fill="none"><path d="M3 3h7v7H3zm11 11h7v7h-7zM3 14h7v7H3zm18.5-7.5a4 4 0 1 1-8 0a4 4 0 0 1 8 0"/><path stroke="currentColor" stroke-width="2" d="M3 3h7v7H3zm11 11h7v7h-7zM3 14h7v7H3zm18.5-7.5a4 4 0 1 1-8 0a4 4 0 0 1 8 0Z"/></g>',
+  "arrow-left": '<path fill="none" stroke="currentColor" stroke-linecap="square" stroke-width="2" d="M11 6.5L5.5 12l5.5 5.5M6.75 12h13"/>',
+  "bookmark-double-filled": '<path fill="currentColor" d="M23.003 18.419L23 0L10.001.002v2H21v14.413z"/><path fill="currentColor" d="M19 4H3v19.943l8-5.714l8 5.714z"/>',
+  "chevron-down": '<path fill="none" stroke="currentColor" stroke-linecap="square" stroke-width="2" d="M17.5 9.5L12 15L6.5 9.5"/>',
+  "chevron-left": '<path fill="none" stroke="currentColor" stroke-linecap="square" stroke-width="2" d="M14.5 17.5L9 12l5.5-5.5"/>',
+  "chevron-right": '<path fill="none" stroke="currentColor" stroke-linecap="square" stroke-width="2" d="M9.5 17.5L15 12L9.5 6.5"/>',
+  "chevron-up": '<path fill="none" stroke="currentColor" stroke-linecap="square" stroke-width="2" d="M17.5 14.5L12 9l-5.5 5.5"/>',
+  close: '<path fill="none" stroke="currentColor" stroke-linecap="square" stroke-width="2" d="M16.95 7.05L12 12m0 0l-4.95 4.95M12 12l4.95 4.95M12 12L7.05 7.05"/>',
+  delete: '<g fill="none"><path d="M5 5h14l-.5 17h-13z"/><path stroke="currentColor" stroke-linecap="square" stroke-width="2" d="M21 5H3m2 0h14l-.5 17h-13zm3.5-3h7v3h-7zM12 9v9"/></g>',
+  "folder-add": '<path fill="none" stroke="currentColor" stroke-linecap="square" stroke-width="2" d="M22 11V6H11L9 3.5H2V20h11m7-5v3m0 0v3m0-3h-3m3 0h3"/>',
+  history: '<path fill="none" stroke="currentColor" stroke-linecap="square" stroke-width="2" d="M2.552 13c.5 4.777 4.539 8.5 9.448 8.5a9.5 9.5 0 0 0 0-19c-1.628 0-3.16.41-4.5 1.131A9.54 9.54 0 0 0 3.38 8M12 7v5l2.5 2.5m-12-11v5h5"/>',
+  more: '<path fill="none" stroke="currentColor" stroke-linecap="square" stroke-width="2" d="M11.5 4h1v1h-1zm0 7.5h1v1h-1zm0 7.5h1v1h-1z"/>',
+  "page-tab-filled": '<path fill="currentColor" d="m9.48 2.5l.301.375l2.9 3.625H23V21H1V2.5z"/><path fill="currentColor" d="M23 2.5v2H13v-2z"/>',
+  pin: '<g fill="none"><path d="M21.962 6.282L17.72 2.04L9.94 8.399L7.82 6.277l-4.245 4.245l9.9 9.9l4.244-4.245l-2.12-2.121z"/><path stroke="currentColor" stroke-linecap="square" stroke-width="2" d="m2.16 21.836l6.364-6.364M17.72 2.04l4.242 4.242l-6.365 7.774l2.121 2.12l-4.244 4.246l-9.9-9.9L7.82 6.277L9.94 8.4z"/></g>',
+  "pin-filled": '<path fill="currentColor" d="m18.076.981l4.949 4.95l-6.365 7.773l2.121 2.12l-5.305 5.306l-4.596-4.596l-6.718 6.718l-1.414-1.415l6.718-6.717l-4.597-4.596l5.306-5.306l2.121 2.122z"/>',
+  refresh: '<path fill="none" stroke="currentColor" stroke-linecap="square" stroke-width="2" d="M21.448 13c-.5 4.777-4.539 8.5-9.448 8.5A9.5 9.5 0 0 1 3.38 16m-.88 4.5v-5h3M2.552 11C3.052 6.223 7.09 2.5 12 2.5A9.5 9.5 0 0 1 20.62 8m.88-4.5v5h-3"/>',
+  search: '<g fill="none"><path d="M15.803 15.803A7.5 7.5 0 1 1 5.197 5.197a7.5 7.5 0 0 1 10.606 10.606"/><path stroke="currentColor" stroke-linecap="square" stroke-width="2" d="m15.803 15.804l5.303 5.303m-5.303-5.304A7.5 7.5 0 1 1 5.197 5.197a7.5 7.5 0 0 1 10.606 10.606Z"/></g>',
+  "setting-filled": '<path fill="currentColor" d="M21.66 6.423L12 .845L2.34 6.423v11.154L12 23.155l9.66-5.578zM12 16a4 4 0 1 1 0-8a4 4 0 0 1 0 8"/>',
+  "view-list": '<path fill="none" stroke="currentColor" stroke-linecap="square" stroke-width="2" d="M3 5h18M3 12h18M3 19h18"/>'
+});
+
+function resolveIconFromSet(iconSet, name) {
+  const icons = iconSet?.icons;
+  const aliases = iconSet?.aliases;
+  const directIcon = icons?.[name];
+  if (directIcon?.body) {
+    return {
+      body: directIcon.body,
+      width: directIcon.width || iconSet.width || 24,
+      height: directIcon.height || iconSet.height || 24
+    };
+  }
+  const alias = aliases?.[name];
+  const parentIcon = alias?.parent ? icons?.[alias.parent] : null;
+  if (parentIcon?.body) {
+    return {
+      body: parentIcon.body,
+      width: alias.width || parentIcon.width || iconSet.width || 24,
+      height: alias.height || parentIcon.height || iconSet.height || 24
+    };
+  }
+  return null;
+}
+
+function resolveTdesignIcon(name) {
+  const icon = resolveIconFromSet(tdesignIconSet, name);
+  if (icon) {
+    return icon;
+  }
+  const fallbackMarkup = TDESIGN_ICON_MARKUP[name];
+  return fallbackMarkup
+    ? { body: fallbackMarkup, width: 24, height: 24 }
+    : null;
+}
+
+function tdesignIcon(name) {
+  const icon = resolveTdesignIcon(name);
+  if (!icon) {
+    return "";
+  }
+  return `<svg class="tdesign-icon" viewBox="0 0 ${icon.width} ${icon.height}" aria-hidden="true" focusable="false">${icon.body}</svg>`;
+}
+
+function tablerIcon(name) {
+  const icon = resolveIconFromSet(tablerIconSet, name);
+  if (!icon) {
+    return "";
+  }
+  return `<svg class="tabler-icon" viewBox="0 0 ${icon.width} ${icon.height}" aria-hidden="true" focusable="false">${icon.body}</svg>`;
+}
+
+function themeModeIcon(mode) {
+  return tablerIcon(THEME_MODE_ICON_BY_MODE[mode] || THEME_MODE_ICON_BY_MODE.system);
 }
 
 function searchEngineSearchIcon() {
-  return inlineIcon(`
-    <path d="M3 10a7 7 0 1 0 14 0a7 7 0 1 0-14 0m18 11l-6-6"></path>
-  `);
+  return tdesignIcon("search");
 }
 
 function historyPinIcon(active) {
-  if (active) {
-    return inlineIcon(`
-      <path d="m3 3 18 18"></path>
-      <path d="M15 4.5 11.751 7.749"></path>
-      <path d="m9.181 9.182-2.181.818-1.5 1.5 7 7L14 17l.82-2.186"></path>
-      <path d="M16.25 12.25 19.5 9"></path>
-      <path d="M9 15 4.5 19.5"></path>
-      <path d="M14.5 4 20 9.5"></path>
-    `);
-  }
-  return inlineIcon(`
-    <path d="M9 4v6"></path>
-    <path d="m7 14 2-4"></path>
-    <path d="M7 16h10"></path>
-    <path d="m15 10 2 4"></path>
-    <path d="M12 16v5"></path>
-    <path d="M8 4h8"></path>
-  `);
+  return tdesignIcon(active ? "pin-filled" : "pin");
 }
 
 function plusIcon() {
-  return inlineIcon(`
-    <path stroke="none" d="M0 0h24v24H0z" fill="none"></path>
-    <path d="M12 5l0 14"></path>
-    <path d="M5 12l14 0"></path>
-  `);
+  return tdesignIcon("add");
 }
 
 function refreshIcon() {
-  return inlineIcon(`
-    <path d="M20 11A8.1 8.1 0 0 0 4.5 9"></path>
-    <path d="M4 5v4h4"></path>
-    <path d="M4 13a8.1 8.1 0 0 0 15.5 2"></path>
-    <path d="M20 19v-4h-4"></path>
-  `);
-}
-
-function listIcon() {
-  return inlineIcon(`
-    <path d="M9 6h11"></path>
-    <path d="M9 12h11"></path>
-    <path d="M9 18h11"></path>
-    <path d="M5 6v.01"></path>
-    <path d="M5 12v.01"></path>
-    <path d="M5 18v.01"></path>
-  `);
-}
-
-function gridIcon() {
-  return inlineIcon(`
-    <path d="M4 5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v4a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1z"></path>
-    <path d="M14 5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v4a1 1 0 0 1-1 1h-4a1 1 0 0 1-1-1z"></path>
-    <path d="M4 15a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v4a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1z"></path>
-    <path d="M14 15a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v4a1 1 0 0 1-1 1h-4a1 1 0 0 1-1-1z"></path>
-  `);
+  return tdesignIcon("refresh");
 }
 
 function historyIcon() {
-  return inlineIcon(`
-    <path d="M12 8v4l2 2"></path>
-    <path d="M3.05 11a9 9 0 1 1 .5 4"></path>
-    <path d="M3.05 20v-5h5"></path>
-  `);
+  return tdesignIcon("history");
 }
 
 function folderPlusIcon() {
-  return inlineIcon(`
-    <path d="M12 19H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h4l3 3h7a2 2 0 0 1 2 2v3.5"></path>
-    <path d="M16 19h6"></path>
-    <path d="M19 16v6"></path>
-  `);
+  return tdesignIcon("folder-add");
+}
+
+function pageTabFilledIcon() {
+  return tdesignIcon("page-tab-filled");
 }
 
 function arrowLeftIcon() {
-  return inlineIcon(`
-    <path d="M5 12h14"></path>
-    <path d="m5 12 6 6"></path>
-    <path d="m5 12 6-6"></path>
-  `);
+  return tdesignIcon("arrow-left");
 }
 
 function chevronLeftIcon() {
-  return inlineIcon(`
-    <path d="m15 6-6 6 6 6"></path>
-  `);
+  return tdesignIcon("chevron-left");
 }
 
 function chevronRightIcon() {
-  return inlineIcon(`
-    <path d="m9 6 6 6-6 6"></path>
-  `);
+  return tdesignIcon("chevron-right");
 }
 
 function newspaperIcon() {
-  return inlineIcon(`
-    <path d="M16 6h3a1 1 0 0 1 1 1v11a2 2 0 0 1-4 0V5a1 1 0 0 0-1-1H5a1 1 0 0 0-1 1v12a3 3 0 0 0 3 3h11"></path>
-    <path d="M8 8h4"></path>
-    <path d="M8 12h4"></path>
-    <path d="M8 16h4"></path>
-  `);
+  return tdesignIcon("view-list");
 }
 
 function settingsIcon() {
-  return inlineIcon(`
-    <path d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 0 0 2.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 0 0 1.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 0 0-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 0 0-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 0 0-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 0 0-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 0 0 1.066-2.573c-.94-1.543.826-3.31 2.37-2.37 1 .608 2.296.07 2.572-1.065"></path>
-    <path d="M9 12a3 3 0 1 0 6 0 3 3 0 0 0-6 0"></path>
-  `);
+  return tdesignIcon("setting-filled");
+}
+
+function bookmarkDoubleFilledIcon() {
+  return tdesignIcon("bookmark-double-filled");
+}
+
+function settingsFilledIcon() {
+  return tdesignIcon("setting-filled");
 }
 
 function closeIcon() {
-  return inlineIcon(`
-    <path d="M18 6 6 18"></path>
-    <path d="m6 6 12 12"></path>
-  `);
+  return tdesignIcon("close");
 }
 
 function trashIcon() {
-  return inlineIcon(`
-    <path d="M4 7h16"></path>
-    <path d="M10 11v6"></path>
-    <path d="M14 11v6"></path>
-    <path d="m5 7 1 12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2l1-12"></path>
-    <path d="M9 7V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v3"></path>
-  `);
+  return tdesignIcon("delete");
 }
 
 function emptyStateIcon() {
-  return inlineIcon(`
-    <path d="M3 6a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2 2 2 0 0 1-2 2H5a2 2 0 0 1-2-2"></path>
-    <path d="M5 8v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8"></path>
-    <path d="M10 12h4"></path>
-  `);
+  return tdesignIcon("folder-add");
 }
 
 function chevronDownIcon() {
-  return inlineIcon(`
-    <path d="m6 9 6 6 6-6"></path>
-  `);
+  return tdesignIcon("chevron-down");
 }
 
 function chevronUpIcon() {
-  return inlineIcon(`
-    <path d="m6 15 6-6 6 6"></path>
-  `);
+  return tdesignIcon("chevron-up");
 }
 
 function moreHorizontalIcon() {
-  return inlineIcon(`
-    <path d="M4 12a1 1 0 1 0 2 0 1 1 0 1 0-2 0"></path>
-    <path d="M11 12a1 1 0 1 0 2 0 1 1 0 1 0-2 0"></path>
-    <path d="M18 12a1 1 0 1 0 2 0 1 1 0 1 0-2 0"></path>
-  `);
+  return tdesignIcon("more");
 }
 
 function faviconUrl(url, size) {

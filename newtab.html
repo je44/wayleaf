@@ -1,9 +1,10 @@
 <!doctype html>
-<html lang="zh-CN" class="refresh-enter">
+<html lang="zh-CN" class="refresh-enter theme-hydrating">
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Wayleaf</title>
+    <script src="theme-preload.js"></script>
     <link rel="stylesheet" href="newtab.css">
   </head>
   <body>
@@ -14,6 +15,17 @@
         </button>
       </div>
       <div class="topbar-actions">
+        <div class="topbar-theme-mode-control theme-mode-control" id="themeModeControl" role="group" aria-label="外观模式" data-active-index="0">
+          <button class="theme-mode-button" type="button" data-theme-mode="system" aria-label="跟随系统">
+            <span class="button-icon" aria-hidden="true"></span>
+          </button>
+          <button class="theme-mode-button" type="button" data-theme-mode="light" aria-label="日间">
+            <span class="button-icon" aria-hidden="true"></span>
+          </button>
+          <button class="theme-mode-button" type="button" data-theme-mode="dark" aria-label="夜间">
+            <span class="button-icon" aria-hidden="true"></span>
+          </button>
+        </div>
         <button class="icon-button theme-toggle settings-toggle" id="settingsButton" type="button" aria-haspopup="dialog" aria-controls="settingsPanel" aria-expanded="false">
           <span class="theme-toggle-icon" aria-hidden="true"></span>
         </button>
@@ -28,8 +40,11 @@
             <span class="visually-hidden" id="quickSearchEngineLabel">搜索引擎</span>
             <span class="search-engine-control">
               <span class="search-engine-search-icon" aria-hidden="true">
-                <svg viewBox="0 0 24 24" focusable="false">
-                  <path d="M3 10a7 7 0 1 0 14 0a7 7 0 1 0-14 0m18 11l-6-6"></path>
+                <svg class="tdesign-icon" viewBox="0 0 24 24" focusable="false">
+                  <g fill="none">
+                    <path d="M15.803 15.803A7.5 7.5 0 1 1 5.197 5.197a7.5 7.5 0 0 1 10.606 10.606"></path>
+                    <path stroke="currentColor" stroke-linecap="square" stroke-width="2" d="m15.803 15.804l5.303 5.303m-5.303-5.304A7.5 7.5 0 1 1 5.197 5.197a7.5 7.5 0 0 1 10.606 10.606Z"></path>
+                  </g>
                 </svg>
               </span>
               <div class="ai-engine-pill" id="aiEnginePill" hidden aria-hidden="true"></div>
@@ -38,9 +53,8 @@
               <input id="quickSearchInput" name="q" type="search" autocomplete="off" spellcheck="false" placeholder="搜索或输入网址">
             </div>
             <span class="quick-search-settings" aria-hidden="true">
-              <svg viewBox="0 0 24 24" focusable="false">
-                <path d="M12 3 19.5 7.25v8.5L12 20 4.5 15.75v-8.5L12 3Z"></path>
-                <path d="M12 8.5 15.1 10.25v3.5L12 15.5l-3.1-1.75v-3.5L12 8.5Z"></path>
+              <svg class="tdesign-icon" viewBox="0 0 24 24" focusable="false">
+                <path fill="currentColor" d="M21.66 6.423L12 .845L2.34 6.423v11.154L12 23.155l9.66-5.578zM12 16a4 4 0 1 1 0-8a4 4 0 0 1 0 8"></path>
               </svg>
             </span>
           </form>
@@ -135,9 +149,6 @@
               <button class="icon-button subtle-action" id="refreshBookmarkFolderButton" type="button" aria-label="刷新当前书签文件夹">
                 <span class="button-icon" aria-hidden="true"></span>
               </button>
-              <button class="icon-button subtle-action" id="toggleBookmarkLayoutButton" type="button" aria-label="切换为列表显示" aria-pressed="false">
-                <span class="button-icon" aria-hidden="true"></span>
-              </button>
               <button class="icon-button subtle-action" id="bookmarkFavoriteAddButton" type="button" aria-label="添加常用网站" aria-hidden="true" hidden>
                 <span class="button-icon" aria-hidden="true"></span>
               </button>
@@ -205,17 +216,6 @@
         </header>
 
         <div class="settings-body">
-          <section class="settings-group" aria-labelledby="appearanceModeTitle">
-            <div class="settings-group-heading">
-              <h3 id="appearanceModeTitle">外观模式</h3>
-            </div>
-            <div class="segmented-control theme-mode-control" role="group" aria-label="外观模式" data-active-index="0">
-              <button class="segmented-option" type="button" data-theme-mode="system">跟随</button>
-              <button class="segmented-option" type="button" data-theme-mode="light">日间</button>
-              <button class="segmented-option" type="button" data-theme-mode="dark">夜间</button>
-            </div>
-          </section>
-
           <section class="settings-group" aria-labelledby="presetPaletteTitle">
             <div class="settings-group-heading">
               <h3 id="presetPaletteTitle">默认双色</h3>

@@ -228,6 +228,7 @@ function watchPromptTokenCleanup() {
 
 function isTerminalStatus(status) {
   return status === "submitted"
+    || status === "filled"
     || status === "missing-prompt"
     || status === "unsupported-host";
 }
@@ -243,28 +244,50 @@ async function submitPromptWhenReady(config, prompt) {
   if (!input) {
     return "input-not-found";
   }
+  const startedUrl = location.href;
   focusAndSetInputValue(input, prompt);
   await delay(WAYLEAF_EDITOR_SYNC_DELAY_MS);
-  const submitButton = await waitForElement(config.submitSelectors, isClickableButton, 6000);
-  if (submitButton && await clickSubmitButton(submitButton)) {
-    return "submitted";
+  const submitButton = await waitForSubmitButton(config, input, 6000);
+  if (submitButton) {
+    await clickSubmitButton(submitButton);
+    await delay(900);
+    if (promptSubmissionLooksComplete(input, prompt, startedUrl)) {
+      return "submitted";
+    }
   }
   submitWithEnter(input);
   await delay(900);
-  return inputText(input).trim() === prompt.trim() ? "filled" : "submitted";
+  if (promptSubmissionLooksComplete(input, prompt, startedUrl)) {
+    return "submitted";
+  }
+  return normalizePromptComparisonText(inputText(input)) === normalizePromptComparisonText(prompt) ? "filled" : "submitted";
 }
 
 function waitForElement(selectors, predicate, timeoutMs) {
+  return waitForCandidate(() => {
+    for (const selector of selectors) {
+      const nodes = [...document.querySelectorAll(selector)];
+      const match = nodes.find(predicate);
+      if (match) {
+        return match;
+      }
+    }
+    return null;
+  }, timeoutMs);
+}
+
+function waitForSubmitButton(config, input, timeoutMs) {
+  return waitForCandidate(() => findSubmitButton(config, input), timeoutMs);
+}
+
+function waitForCandidate(findCandidate, timeoutMs) {
   const startedAt = Date.now();
   return new Promise((resolve) => {
     const find = () => {
-      for (const selector of selectors) {
-        const nodes = [...document.querySelectorAll(selector)];
-        const match = nodes.find(predicate);
-        if (match) {
-          resolve(match);
-          return true;
-        }
+      const match = findCandidate();
+      if (match) {
+        resolve(match);
+        return true;
       }
       if (Date.now() - startedAt > timeoutMs) {
         resolve(null);
@@ -294,6 +317,27 @@ function waitForElement(selectors, predicate, timeoutMs) {
   });
 }
 
+function findSubmitButton(config, input) {
+  for (const selector of config.submitSelectors) {
+    const nodes = [...document.querySelectorAll(selector)];
+    const match = nodes.find(isClickableButton);
+    if (match) {
+      return match;
+    }
+  }
+  const scopedRoot = input.closest("form")
+    || input.closest("[role=\"form\"]")
+    || input.closest("main")
+    || document;
+  const scopedMatch = [...scopedRoot.querySelectorAll("button, [role=\"button\"]")]
+    .find((node) => isClickableButton(node) && isLikelySubmitButton(node));
+  if (scopedMatch) {
+    return scopedMatch;
+  }
+  return [...document.querySelectorAll("button, [role=\"button\"]")]
+    .find((node) => isClickableButton(node) && isLikelySubmitButton(node)) || null;
+}
+
 function isWritableInput(node) {
   if (!(node instanceof HTMLElement)) {
     return false;
@@ -305,11 +349,24 @@ function isWritableInput(node) {
 }
 
 function isClickableButton(node) {
-  return node instanceof HTMLButtonElement
-    && !node.disabled
+  return node instanceof HTMLElement
+    && (node.tagName === "BUTTON" || node.getAttribute("role") === "button")
+    && !(node instanceof HTMLButtonElement && node.disabled)
     && node.getAttribute("aria-disabled") !== "true"
     && node.getAttribute("data-disabled") !== "true"
     && isVisible(node);
+}
+
+function isLikelySubmitButton(button) {
+  const descriptor = [
+    button.getAttribute("aria-label"),
+    button.getAttribute("title"),
+    button.getAttribute("data-testid"),
+    button.getAttribute("class"),
+    button.textContent
+  ].filter(Boolean).join(" ").toLowerCase();
+  return /\b(send|submit|composer-submit|chat-submit)\b/.test(descriptor)
+    || /发送|提交|傳送/.test(descriptor);
 }
 
 function isVisible(node) {
@@ -370,8 +427,6 @@ async function clickSubmitButton(button) {
   for (const type of ["pointerdown", "mousedown", "pointerup", "mouseup", "click"]) {
     dispatchMouseLikeEvent(button, type, eventOptions);
   }
-  await delay(900);
-  return true;
 }
 
 function submitWithEnter(input) {
@@ -443,5 +498,22 @@ function inputText(input) {
   return input instanceof HTMLTextAreaElement || input instanceof HTMLInputElement
     ? input.value
     : input.textContent || "";
+}
+
+function promptSubmissionLooksComplete(input, prompt, startedUrl) {
+  if (location.href !== startedUrl) {
+    return true;
+  }
+  if (!document.contains(input) || !isVisible(input)) {
+    return true;
+  }
+  return normalizePromptComparisonText(inputText(input)) !== normalizePromptComparisonText(prompt);
+}
+
+function normalizePromptComparisonText(value) {
+  return String(value || "")
+    .replace(/\u00a0/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
 }
 })();
