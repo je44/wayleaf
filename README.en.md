@@ -12,7 +12,7 @@
 <p align="center">
   <a href="README.md">中文</a> | English ·
   <a href="https://github.com/je44/wayleaf/releases/latest">Releases</a> ·
-  <a href="https://github.com/je44/wayleaf/releases/download/v1.5/wayleaf-v1.5.0.zip">Download v1.5.0</a>
+  <a href="https://github.com/je44/wayleaf/releases/download/v1.6/wayleaf-v1.6.0.zip">Download v1.6.0</a>
 </p>
 
 ## Preview
@@ -49,9 +49,9 @@ The interface follows the browser language for Chinese, English, Japanese, Korea
 
 ## Quick Install
 
-Current version: `1.5.0`
+Current version: `1.6.0`
 
-1. Download [wayleaf-v1.5.0.zip](https://github.com/je44/wayleaf/releases/download/v1.5/wayleaf-v1.5.0.zip) and unzip it.
+1. Download [wayleaf-v1.6.0.zip](https://github.com/je44/wayleaf/releases/download/v1.6/wayleaf-v1.6.0.zip) and unzip it.
 2. Open `chrome://extensions/` in Chrome.
 3. Turn on Developer mode.
 4. Click Load unpacked.
@@ -171,8 +171,8 @@ Verify that the release zip has `manifest.json` at its root:
 
 ```sh
 mkdir -p dist
-zip -r -X dist/wayleaf-v1.5.0.zip manifest.json background.js newtab.html newtab.css newtab.js ai-submit.js theme-preload.js icons vendor docs -x '*/._*' '._*' '*.DS_Store' '*/.DS_Store'
-unzip -t dist/wayleaf-v1.5.0.zip
+zip -r -X dist/wayleaf-v1.6.0.zip manifest.json background.js newtab.html newtab.css newtab.js ai-submit.js theme-preload.js icons vendor docs -x '*/._*' '._*' '*.DS_Store' '*/.DS_Store'
+unzip -t dist/wayleaf-v1.6.0.zip
 ```
 
 Release checklist:
