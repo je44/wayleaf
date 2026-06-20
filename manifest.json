@@ -7,6 +7,7 @@
     "newtab": "newtab.html"
   },
   "permissions": [
+    "alarms",
     "bookmarks",
     "favicon",
     "history",
@@ -18,13 +19,23 @@
     "http://*/*",
     "https://*/*"
   ],
+  "background": {
+    "service_worker": "background.js"
+  },
   "content_scripts": [
     {
       "matches": [
         "https://chatgpt.com/*",
         "https://claude.ai/*",
         "https://gemini.google.com/*",
-        "https://grok.com/*"
+        "https://grok.com/*",
+        "https://chat.deepseek.com/*",
+        "https://www.doubao.com/*",
+        "https://www.kimi.com/*",
+        "https://kimi.moonshot.cn/*",
+        "https://chatglm.cn/*",
+        "https://z.ai/*",
+        "https://jimeng.jianying.com/*"
       ],
       "js": [
         "ai-submit.js"

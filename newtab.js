@@ -37,10 +37,14 @@ const PORTAL_CATEGORY_STATE_STORAGE_KEY = "portalCategoryState";
 const THEME_STORAGE_KEY = "themeMode";
 const THEME_PALETTE_STORAGE_KEY = "themePalette";
 const THEME_BOOT_STORAGE_KEY = "__wayleaf_theme_boot__";
+const SEARCH_SETTINGS_STORAGE_KEY = "searchSettings";
+const FIRST_PAINT_CACHE_STORAGE_KEY = "__wayleaf_first_paint_cache__";
+const FIRST_PAINT_CACHE_VERSION = 4;
 const AI_DIRECT_PROMPT_STORAGE_KEY = "aiDirectPrompts";
 const SYNC_META_STORAGE_KEY = "syncMeta";
 const ONBOARDING_GUIDE_STORAGE_KEY = "onboardingGuideDismissed";
 const AI_DIRECT_PROMPT_TOKEN_PARAM = "_wayleaf_prompt";
+const AI_DIRECT_PROMPT_TEXT_PARAM = "_wayleaf_text";
 const AI_DIRECT_PROMPT_TTL_MS = 2 * 60 * 1000;
 const MAX_HISTORY_SITE_GROUPS = 9;
 const MAX_HISTORY_PAGES_PER_SITE = 4;
@@ -174,6 +178,7 @@ const SYNC_STORAGE_KEYS = new Set([
   PORTAL_CATEGORY_STATE_STORAGE_KEY,
   THEME_STORAGE_KEY,
   THEME_PALETTE_STORAGE_KEY,
+  SEARCH_SETTINGS_STORAGE_KEY,
   CUSTOM_MEDIA_FEEDS_STORAGE_KEY,
   SYNC_META_STORAGE_KEY
 ]);
@@ -190,6 +195,9 @@ const MAX_MEDIA_FEED_FEEDBACK_KEYS = 120;
 const MEDIA_FEED_LARGE_CARD_INTERVAL = 5;
 const RECENT_CARD_DELETE_EXIT_MS = 140;
 const RECENT_CARD_ENTER_MS = 150;
+const RECENT_FOLDER_PAGE_SWITCH_MS = 330;
+const RECENT_FOLDER_PAGE_SWITCH_EXIT_MS = 240;
+const RECENT_FOLDER_PAGE_SWITCH_STAGGER_MS = 28;
 const RECENT_CARD_DRAWER_CLOSE_DELAY_MS = 180;
 const REDUCED_MOTION_QUERY = "(prefers-reduced-motion: reduce)";
 const FAVICON_BACKGROUND_SAMPLE_SIZE = 32;
@@ -229,11 +237,7 @@ const DEFAULT_FAVICON_NEUTRAL_GLYPH_MAX_COVERAGE = 0.52;
 const DEFAULT_FAVICON_NEUTRAL_GLYPH_MIN_NEUTRAL_RATIO = 0.78;
 const DEFAULT_FAVICON_NEUTRAL_GLYPH_MAX_COLOR_RATIO = 0.14;
 const DEFAULT_FAVICON_NEUTRAL_GLYPH_MAX_EDGE_OPACITY = 0.2;
-const TDESIGN_ICON_SET_URL = "icons/tdesign-icons.json";
-const TABLER_ICON_SET_URL = "icons/tabler-icons.json";
 let gsapPluginsRegistered = false;
-let tdesignIconSet = null;
-let tablerIconSet = null;
 
 function getGsap() {
   const gsap = window.gsap;
@@ -253,38 +257,6 @@ function getGsapFlip() {
   const gsap = getGsap();
   const Flip = window.Flip;
   return gsap && Flip ? { gsap, Flip } : null;
-}
-
-async function initTdesignIcons() {
-  try {
-    const response = await fetch(TDESIGN_ICON_SET_URL);
-    if (!response.ok) {
-      throw new Error(`TDesign icon set request failed: ${response.status}`);
-    }
-    const iconSet = await response.json();
-    if (iconSet?.prefix !== "tdesign" || !iconSet.icons || typeof iconSet.icons !== "object") {
-      throw new Error("TDesign icon set is invalid.");
-    }
-    tdesignIconSet = iconSet;
-  } catch (error) {
-    console.warn("Failed to load TDesign icon set", error);
-  }
-}
-
-async function initTablerIcons() {
-  try {
-    const response = await fetch(TABLER_ICON_SET_URL);
-    if (!response.ok) {
-      throw new Error(`Tabler icon set request failed: ${response.status}`);
-    }
-    const iconSet = await response.json();
-    if (iconSet?.prefix !== "tabler" || !iconSet.icons || typeof iconSet.icons !== "object") {
-      throw new Error("Tabler icon set is invalid.");
-    }
-    tablerIconSet = iconSet;
-  } catch (error) {
-    console.warn("Failed to load Tabler icon set", error);
-  }
 }
 
 function prefersReducedMotion() {
@@ -334,21 +306,23 @@ const DEFAULT_THEME_MODE = "system";
 const DEFAULT_THEME_PALETTE = "sage";
 const THEME_BACKGROUND_TRANSITION_MS = 300;
 const THEME_MODE_ICON_BY_MODE = Object.freeze({
-  system: "brightness-auto-filled",
-  light: "sun-filled",
+  system: "desktop",
+  light: "sunny-filled",
   dark: "moon-filled"
 });
 const CUSTOM_THEME_PALETTE_ID = "custom";
 const DEFAULT_CUSTOM_THEME_COLORS = Object.freeze({
-  light: "#3f7f68",
-  lightStrong: "#2b5f4d",
-  dark: "#86b9a4",
-  darkStrong: "#b3d7c8"
+  light: "#0d6d59",
+  lightStrong: "#074b3e",
+  dark: "#82c8ae",
+  darkStrong: "#a8dcc8"
 });
+const THEME_PALETTE_DISPLAY_ORDER = ["sage", "amber", "peach", "sky"];
+const VISIBLE_THEME_PALETTE_IDS = new Set(THEME_PALETTE_DISPLAY_ORDER);
 const THEME_PALETTES = [
   {
     id: "sage",
-    label: "鼠尾草",
+    labelKey: "themePaletteSage",
     light: "#3f7f68",
     dark: "#86b9a4",
     modes: {
@@ -382,8 +356,79 @@ const THEME_PALETTES = [
     }
   },
   {
+    id: "forest",
+    labelKey: "themePaletteForest",
+    light: "#0f5b4d",
+    dark: "#8db6a6",
+    modes: {
+      light: {
+        accent: "#0f5b4d",
+        accentStrong: "#073d34",
+        focus: "#4b7d68",
+        paper: "#f7f8f3",
+        panel: "#fffefa",
+        panelSoft: "#eff4ee",
+        inputBg: "#fffefa",
+        hoverBg: "#e9f1ed",
+        ink: "#151a17",
+        muted: "#5b665f",
+        faint: "#77817a"
+      },
+      dark: {
+        accent: "#8db6a6",
+        accentStrong: "#bad9cc",
+        focus: "#99c3df",
+        paper: "#101512",
+        panel: "#171d1a",
+        panelSoft: "#202922",
+        inputBg: "#121815",
+        hoverBg: "#26332d",
+        ink: "#eff6f3",
+        muted: "#b7c4be",
+        faint: "#84928c",
+        onAccent: "#102019"
+      }
+    }
+  },
+  {
+    id: "amber",
+    labelKey: "themePaletteAmber",
+    light: "#c78b1d",
+    dark: "#e4b95a",
+    modes: {
+      light: {
+        accent: "#c78b1d",
+        accentStrong: "#91610d",
+        focus: "#597e9f",
+        paper: "#faf8f1",
+        panel: "#fffefa",
+        panelSoft: "#f5f0e3",
+        inputBg: "#fffefa",
+        hoverBg: "#f2eadb",
+        ink: "#1b1812",
+        muted: "#685f52",
+        faint: "#83786a",
+        onAccent: "#ffffff"
+      },
+      dark: {
+        accent: "#e4b95a",
+        accentStrong: "#f2d58e",
+        focus: "#9ebfdb",
+        paper: "#15130f",
+        panel: "#201c15",
+        panelSoft: "#2b251b",
+        inputBg: "#201c15",
+        hoverBg: "#342c1f",
+        ink: "#f5f0e6",
+        muted: "#c8bda8",
+        faint: "#988d79",
+        onAccent: "#ffffff"
+      }
+    }
+  },
+  {
     id: "sky",
-    label: "雾蓝",
+    labelKey: "themePaletteSky",
     light: "#4f7ea8",
     dark: "#92b7dc",
     modes: {
@@ -418,7 +463,7 @@ const THEME_PALETTES = [
   },
   {
     id: "peach",
-    label: "杏桃",
+    labelKey: "themePalettePeach",
     light: "#b06f55",
     dark: "#d8a28b",
     modes: {
@@ -433,7 +478,8 @@ const THEME_PALETTES = [
         hoverBg: "#f2ebe3",
         ink: "#1d1916",
         muted: "#695f58",
-        faint: "#847970"
+        faint: "#847970",
+        onAccent: "#ffffff"
       },
       dark: {
         accent: "#d8a28b",
@@ -447,23 +493,92 @@ const THEME_PALETTES = [
         ink: "#f5f1ed",
         muted: "#c8bcb4",
         faint: "#978b83",
-        onAccent: "#2a160f"
+        onAccent: "#ffffff"
+      }
+    }
+  },
+  {
+    id: "neutral",
+    labelKey: "themePaletteNeutral",
+    light: "#585b56",
+    dark: "#aaada7",
+    modes: {
+      light: {
+        accent: "#585b56",
+        accentStrong: "#373a35",
+        focus: "#5f7e9a",
+        paper: "#f8f8f3",
+        panel: "#fffefa",
+        panelSoft: "#f0f1ec",
+        inputBg: "#fffefa",
+        hoverBg: "#ebeee8",
+        ink: "#171915",
+        muted: "#61655e",
+        faint: "#7d8179"
+      },
+      dark: {
+        accent: "#aaada7",
+        accentStrong: "#d2d4ce",
+        focus: "#9bbdd7",
+        paper: "#111310",
+        panel: "#1a1d18",
+        panelSoft: "#232720",
+        inputBg: "#181b16",
+        hoverBg: "#2a3027",
+        ink: "#f1f3ed",
+        muted: "#c0c4bd",
+        faint: "#8e938b",
+        onAccent: "#171915"
       }
     }
   }
 ];
-const SEARCH_ENGINES = [
-  { id: "local", label: "聚合搜索", local: true },
+const DEFAULT_LOCAL_SEARCH_ENGINE = "google";
+const EDITABLE_LOCAL_SEARCH_ENGINE_IDS = ["google", "baidu", "bing"];
+const EDITABLE_AI_ENGINE_IDS = ["chatgpt", "claude", "gemini", "grok", "deepseek", "doubao", "kimi", "glm", "jimeng"];
+const SETTINGS_ENGINE_ICON_STYLES = Object.freeze({
+  baidu: { mode: "mask", tile: "#ffffff", glyph: "#2932e1" },
+  chatgpt: { mode: "mask", tile: "#ffffff", glyph: "#000000" },
+  claude: { mode: "mask", tile: "#ffffff", glyph: "#d97757" },
+  deepseek: { mode: "mask", tile: "#ffffff", glyph: "#4d6bfe" },
+  doubao: { mode: "original", tile: "#ffffff" },
+  douyin: { mode: "original", tile: "#ffffff" },
+  gemini: { mode: "original", tile: "#ffffff" },
+  glm: { mode: "mask", tile: "#ffffff", glyph: "#3859ff" },
+  instagram: { mode: "original", tile: "#ffffff" },
+  jimeng: { mode: "original", tile: "#000000" },
+  kimi: { mode: "mask", tile: "#ffffff", glyph: "#111827" },
+  xiaohongshu: { mode: "mask", tile: "#ff2442", glyph: "#ffffff" },
+  zhihu: { mode: "mask", tile: "#0084ff", glyph: "#ffffff" }
+});
+const DEFAULT_SEARCH_ENGINES = [
+  { id: "local", label: "Aggregate search", labelKey: "quickSearchAggregate", local: true },
   { id: "google", label: "Google", searchUrl: "https://www.google.com/search", queryParam: "q", aggregateDefault: true },
   { id: "baidu", label: "百度", searchUrl: "https://www.baidu.com/s", queryParam: "wd" },
   { id: "bing", label: "Bing", searchUrl: "https://www.bing.com/search", queryParam: "q", aggregateDefault: true },
   { id: "chatgpt", command: "/gpt", commands: ["/gpt", "/chatgpt"], label: "ChatGPT", searchUrl: "https://chatgpt.com/", queryParam: "q", aiDirect: true, autoSubmit: true, directUrl: "https://chatgpt.com/", themeColor: "#10a37f" },
   { id: "claude", command: "/claude", label: "Claude", searchUrl: "https://claude.ai/new", queryParam: "q", aiDirect: true, autoSubmit: true, directUrl: "https://claude.ai/new", themeColor: "#d97757" },
   { id: "gemini", command: "/gemini", label: "Gemini", searchUrl: "https://gemini.google.com/app", queryParam: "q", aiDirect: true, autoSubmit: true, directUrl: "https://gemini.google.com/app", themeColor: "#4285f4" },
-  { id: "grok", command: "/grok", label: "Grok", searchUrl: "https://grok.com/", queryParam: "q", aiDirect: true, autoSubmit: true, directUrl: "https://grok.com/", themeColor: "#777f86" }
+  { id: "grok", command: "/grok", label: "Grok", searchUrl: "https://grok.com/", queryParam: "q", aiDirect: true, autoSubmit: true, directUrl: "https://grok.com/", themeColor: "#777f86" },
+  { id: "deepseek", command: "/deepseek", commands: ["/deepseek", "/ds"], label: "DeepSeek", searchUrl: "https://chat.deepseek.com/", queryParam: "q", aiDirect: true, autoSubmit: true, directUrl: "https://chat.deepseek.com/", themeColor: "#4d6bfe" },
+  { id: "doubao", command: "/doubao", commands: ["/doubao", "/db"], label: "豆包", searchUrl: "https://www.doubao.com/chat/", queryParam: "q", aiDirect: true, autoSubmit: true, directUrl: "https://www.doubao.com/chat/", themeColor: "#1e37fc" },
+  { id: "kimi", command: "/kimi", label: "Kimi", searchUrl: "https://www.kimi.com/", queryParam: "q", aiDirect: true, autoSubmit: true, directUrl: "https://www.kimi.com/", themeColor: "#111827" },
+  { id: "glm", command: "/glm", commands: ["/glm", "/chatglm", "/zhipu"], label: "GLM", searchUrl: "https://chatglm.cn/", queryParam: "q", aiDirect: true, autoSubmit: true, directUrl: "https://chatglm.cn/", themeColor: "#3859ff" },
+  { id: "jimeng", command: "/jimeng", commands: ["/jimeng", "/jm"], label: "即梦", searchUrl: "https://jimeng.jianying.com/ai-tool/home", queryParam: "q", aiDirect: true, autoSubmit: true, directUrl: "https://jimeng.jianying.com/ai-tool/home", themeColor: "#1c6fff", urlPromptFallback: true }
 ];
-const AGGREGATE_SEARCH_ENGINE_IDS = ["google", "bing"];
-const AI_COMMAND_ENGINES = SEARCH_ENGINES.filter((engine) => engine.aiDirect && engine.command);
+const PLATFORM_SEARCH_TARGETS = Object.freeze([
+  { id: "youtube", label: "YouTube", prefixes: ["yt", "youtube"], searchUrl: "https://www.youtube.com/results", queryParam: "search_query", iconUrl: "https://www.youtube.com/", themeColor: "#ff0000", behaviorKey: "platformSearchDirectBehavior" },
+  { id: "x", label: "X", prefixes: ["x", "twitter"], searchUrl: "https://x.com/search", queryParam: "q", searchParams: { src: "typed_query" }, iconUrl: "https://x.com/", themeColor: "#000000", behaviorKey: "platformSearchLoginBehavior" },
+  { id: "xiaohongshu", label: "小红书", prefixes: ["xhs", "rednote"], searchUrl: "https://www.xiaohongshu.com/search_result", queryParam: "keyword", searchParams: { source: "web_explore_feed" }, iconUrl: "https://www.xiaohongshu.com/", themeColor: "#ff2442", behaviorKey: "platformSearchLoginBehavior" },
+  { id: "instagram", label: "Instagram", prefixes: ["ig", "instagram"], searchUrl: "https://www.instagram.com/explore/search/keyword/", queryParam: "q", iconUrl: "https://www.instagram.com/", fallback: true, themeColor: "#e4405f", behaviorKey: "platformSearchFallbackBehavior" },
+  { id: "threads", label: "Threads", prefixes: ["threads", "th"], searchUrl: "https://www.threads.com/search", queryParam: "q", iconUrl: "https://www.threads.com/", fallback: true, themeColor: "#000000", behaviorKey: "platformSearchFallbackBehavior" },
+  { id: "douyin", label: "抖音", prefixes: ["dy", "douyin"], searchUrl: "https://www.douyin.com/search/", pathQuery: true, searchParams: { type: "general" }, iconUrl: "https://www.douyin.com/", themeColor: "#000000", behaviorKey: "platformSearchLoginBehavior" },
+  { id: "zhihu", label: "知乎", prefixes: ["zhihu", "zh"], searchUrl: "https://www.zhihu.com/search", queryParam: "q", searchParams: { type: "content" }, iconUrl: "https://www.zhihu.com/", themeColor: "#0084ff", behaviorKey: "platformSearchDirectBehavior" },
+  { id: "bilibili", label: "Bilibili", prefixes: ["bili", "bilibili"], searchUrl: "https://search.bilibili.com/all", queryParam: "keyword", iconUrl: "https://www.bilibili.com/", themeColor: "#00a1d6", behaviorKey: "platformSearchDirectBehavior" },
+  { id: "tiktok", label: "TikTok", prefixes: ["tt", "tiktok"], searchUrl: "https://www.tiktok.com/search", queryParam: "q", iconUrl: "https://www.tiktok.com/", themeColor: "#000000", behaviorKey: "platformSearchLoginBehavior" }
+]);
+let searchEngines = DEFAULT_SEARCH_ENGINES.map(cloneSearchEngine);
+const AGGREGATE_SEARCH_ENGINE_IDS = ["google", "baidu", "bing"];
 const PORTAL_CATEGORY_ORDER = [
   "custom",
   "developer",
@@ -482,8 +597,8 @@ const BOOKMARK_CATEGORY_RULES = {
     text: ["开发", "代码", "工程", "编程", "技术", "文档", "接口", "源码", "仓库", "developer", "docs", "api", "code", "engineering", "programming"]
   },
   ai: {
-    hosts: ["chatgpt", "openai", "claude", "anthropic", "gemini", "perplexity", "poe", "midjourney", "replicate", "huggingface", "cursor"],
-    text: ["ai", "人工智能", "大模型", "模型", "提示词", "prompt", "agent", "智能体", "生成", "llm", "gpt", "Claude", "Gemini"]
+    hosts: ["chatgpt", "openai", "claude", "anthropic", "gemini", "grok", "deepseek", "doubao", "kimi", "chatglm", "zhipu", "perplexity", "poe", "midjourney", "replicate", "huggingface", "cursor"],
+    text: ["ai", "人工智能", "大模型", "模型", "提示词", "prompt", "agent", "智能体", "生成", "llm", "gpt", "Claude", "Gemini", "DeepSeek", "Kimi", "GLM", "豆包"]
   },
   productivity: {
     hosts: ["notion", "drive", "docs.google", "gmail", "calendar", "slack", "teams", "feishu", "larksuite", "office", "dropbox", "linear", "trello", "asana"],
@@ -516,19 +631,24 @@ const SITE_NAME_BY_KEY = {
   "chatgpt.com": "ChatGPT",
   "cloudflare.com": "Cloudflare",
   "developer.mozilla.org": "MDN",
+  "deepseek.com": "DeepSeek",
   "discord.com": "Discord",
   "docs.b.ai": "B.AI Docs",
+  "doubao.com": "豆包",
   "drive.google.com": "Google Drive",
   "figma.com": "Figma",
   "github.com": "GitHub",
   "gmail.com": "Gmail",
   "google.com": "Google",
+  "instagram.com": "Instagram",
+  "kimi.com": "Kimi",
   "linkedin.com": "LinkedIn",
   "npmjs.com": "npm",
   "notion.so": "Notion",
   "react.dev": "React",
   "stackoverflow.com": "Stack Overflow",
   "taobao.com": "淘宝",
+  "threads.com": "Threads",
   "trip.com": "Trip.com",
   "vercel.com": "Vercel",
   "x.com": "X",
@@ -555,9 +675,15 @@ const SITE_GROUP_OVERRIDES = {
   "chrome.google.com": "chrome.google.com",
   "analytics.google.com": "analytics.google.com",
   "googleads.google.com": "googleads.google.com",
+  "chat.deepseek.com": "deepseek.com",
+  "chatglm.cn": "chatglm.cn",
   "drive.google.com": "drive.google.com",
+  "jimeng.jianying.com": "jimeng.jianying.com",
+  "kimi.moonshot.cn": "kimi.com",
   "maps.google.com": "maps.google.com",
   "meet.google.com": "meet.google.com",
+  "mimo.mi.com": "mimo.mi.com",
+  "mimo.xiaomi.com": "mimo.xiaomi.com",
   "web.wechat.com": "wechat.com",
   "weixin.qq.com": "wechat.com"
 };
@@ -576,6 +702,10 @@ const SITE_GROUP_SUFFIXES = [
   "github.com",
   "google.com",
   "amazon.com",
+  "deepseek.com",
+  "doubao.com",
+  "instagram.com",
+  "kimi.com",
   "microsoft.com",
   "linkedin.com",
   "npmjs.com",
@@ -583,6 +713,7 @@ const SITE_GROUP_SUFFIXES = [
   "pinterest.com",
   "stackoverflow.com",
   "taobao.com",
+  "threads.com",
   "twitter.com",
   "vercel.com",
   "x.com",
@@ -675,17 +806,23 @@ const SITE_ICON_FILE_BY_SITE_KEY = Object.freeze({
   "code.visualstudio.com": "visualstudiocode.svg",
   "datadoghq.com": "datadog.svg",
   "developer.mozilla.org": "mdn.svg",
+  "chatglm.cn": "glm.svg",
+  "doubao.com": "doubao.svg",
   "docs.b.ai": "baidocs.svg",
   "docs.google.com": "googledocs.svg",
-  "douyin.com": "douyin.ico",
+  "douyin.com": "douyin.svg",
   "drive.google.com": "googledrive.svg",
   "feishu.cn": "feishu.png",
   "gemini.google.com": "googlegemini.svg",
   "itch.io": "itchdotio.svg",
   "jd.com": "jd.svg",
+  "jimeng.jianying.com": "jimeng.svg",
+  "kimi.com": "kimi.svg",
   "larksuite.com": "larksuite.ico",
   "maps.google.com": "googlemaps.svg",
   "meet.google.com": "googlemeet.svg",
+  "mimo.mi.com": "xiaomimimo.svg",
+  "mimo.xiaomi.com": "xiaomimimo.svg",
   "music.163.com": "neteasecloudmusic.svg",
   "nextjs.org": "nextdotjs.svg",
   "nodejs.org": "nodedotjs.svg",
@@ -756,9 +893,12 @@ const SITE_ICON_TILE_COLOR_BY_SITE_KEY = Object.freeze({
   "claude.ai": "#d97757",
   "cloudflare.com": "#f38020",
   "cursor.com": "#000000",
+  "deepseek.com": "#4d6bfe",
   "discord.com": "#5865f2",
   "developer.mozilla.org": "#15141a",
   "docs.b.ai": "#111827",
+  "chatglm.cn": "#3859ff",
+  "doubao.com": "#1e37fc",
   "docs.google.com": "#4285f4",
   "douyin.com": "#000000",
   "duckduckgo.com": "#de5833",
@@ -771,12 +911,18 @@ const SITE_ICON_TILE_COLOR_BY_SITE_KEY = Object.freeze({
   "google.com": "#4285f4",
   "grok.com": "#000000",
   "drive.google.com": "#4285f4",
+  "huggingface.co": "#ffd21e",
   "iconfont.cn": "#0c6066",
+  "instagram.com": "#e4405f",
   "jd.com": "#ff0000",
+  "jimeng.jianying.com": "#1c6fff",
   "kagi.com": "#ffb319",
+  "kimi.com": "#111827",
   "larksuite.com": "#00d6b9",
   "linkedin.com": "#0a66c2",
   "microsoft.com": "#5e5e5e",
+  "mimo.mi.com": "#000000",
+  "mimo.xiaomi.com": "#000000",
   "midjourney.com": "#0050c9",
   "notion.so": "#000000",
   "openai.com": "#412991",
@@ -790,14 +936,18 @@ const SITE_ICON_TILE_COLOR_BY_SITE_KEY = Object.freeze({
   "sogou.com": "#fb6022",
   "spotify.com": "#1ed760",
   "stackoverflow.com": "#f58025",
+  "suno.com": "#000000",
   "taobao.com": "#e94f20",
   "teams.microsoft.com": "#6264a7",
+  "threads.com": "#000000",
+  "tiktok.com": "#000000",
   "tmall.com": "#ff0036",
   "uizard.io": "#00f9e5",
   "vercel.com": "#000000",
   "weibo.com": "#e6162d",
   "x.com": "#000000",
   "xiaohongshu.com": "#ff2442",
+  "xiaomimimo.com": "#000000",
   "yandex.com": "#ffcc00",
   "youtube.com": "#ff0000",
   "zhihu.com": "#0084ff"
@@ -805,19 +955,22 @@ const SITE_ICON_TILE_COLOR_BY_SITE_KEY = Object.freeze({
 const MULTICOLOR_BRAND_ICON_SITE_KEYS = new Set([
   "bing.com",
   "calendar.google.com",
+  "doubao.com",
+  "douyin.com",
   "docs.google.com",
   "drive.google.com",
   "figma.com",
   "gemini.google.com",
   "gmail.com",
   "google.com",
+  "huggingface.co",
+  "instagram.com",
+  "jimeng.jianying.com",
   "maps.google.com",
   "meet.google.com",
   "microsoft.com",
-  "slack.com"
-]);
-const NATIVE_ROUNDED_BRAND_ICON_SITE_KEYS = new Set([
-  "grok.com"
+  "slack.com",
+  "tiktok.com"
 ]);
 const ORIGINAL_ARTWORK_BRAND_TILE_SITE_KEYS = new Set([
   "developer.mozilla.org",
@@ -912,6 +1065,9 @@ const MESSAGES = {
     historyTitle: "最近浏览",
     openPortalSurface: "打开导航中枢",
     openHistorySurface: "打开最近浏览",
+    recentFoldersSwitch: "切换最近浏览卡片",
+    recentFoldersPrevious: "上一组最近浏览",
+    recentFoldersNext: "下一组最近浏览",
     historyPreviousPage: "上一条最近浏览",
     historyNextPage: "下一条最近浏览",
     refreshHistory: "刷新历史记录",
@@ -921,11 +1077,13 @@ const MESSAGES = {
     quickSearch: "搜索",
     quickSearchLocal: "打开",
     quickSearchAggregate: "聚合搜索",
-    quickSearchAiCommandHint: "输入 /gpt 或 /chatgpt 切换 ChatGPT，输入 /claude /gemini /grok 切换 AI",
+    quickSearchAiCommandHint: "输入 /gpt、/claude、/gemini、/grok、/deepseek、/doubao、/kimi 或 /glm 切换 AI",
     quickSearchAiSelected: "当前选择",
     quickSearchEngine: "搜索模式",
     quickSearchWith: "使用 {engine} 搜索",
     quickSearchWithAi: "发送到 {engine}",
+    quickSearchWithPlatform: "在 {platform} 搜索",
+    quickSearchPlatformPlaceholder: "在 {platform} 搜索",
     localSearchHistory: "历史",
     localSearchBookmark: "书签",
     localSearchNoResults: "没有匹配的历史或书签。",
@@ -937,21 +1095,66 @@ const MESSAGES = {
     portalCategoryItems: "{count} 个入口",
     deleteCustomPortal: "删除自定义入口",
     openSettings: "设置中心",
-    closeSettings: "关闭设置中心",
+    closeSettings: "返回首页",
+    settingsBackHome: "返回首页",
+    help: "帮助",
     settingsTitle: "设置中心",
-    appearanceModeTitle: "外观模式",
-    themeModeSystem: "跟随",
+    settingsSubtitle: "个性化 Wayleaf，管理同步与主题偏好。",
+    settingsTabsLabel: "设置分类",
+    settingsBasicTab: "基本设置",
+    settingsSearchTab: "搜索设置",
+    appearanceModeTitle: "外观",
+    appearanceModeDescription: "选择 Wayleaf 的外观",
+    appearanceModeHint: "根据系统设置自动切换日间或夜间模式。",
+    themeModeSystem: "跟随系统",
     themeModeLight: "日间",
     themeModeDark: "夜间",
-    presetPaletteTitle: "主题配色",
+    presetPaletteTitle: "色彩",
+    presetPaletteDescription: "为浅色与深色模式选择一组默认强调色",
+    presetPaletteHint: "用于按钮、链接、选中态与提示色。",
+    themePaletteSage: "松叶",
+    themePaletteForest: "墨绿",
+    themePaletteAmber: "琥珀",
+    themePaletteSky: "湖蓝",
+    themePalettePeach: "珊瑚",
+    themePaletteNeutral: "中性",
     syncSettingsTitle: "云端同步",
+    syncSettingsDescription: "跨设备同步你的配置",
     syncSettingsReady: "配置会跟随 Chrome 账号同步",
-    syncSettingsReadyDetail: "同一 Google 账号安装后会自动恢复。",
+    syncSettingsReadyDetail: "同一 Google 账号安装后会自动恢复；扩展启用时每天自动同步一次。",
     syncSettingsUnavailable: "当前浏览器不支持同步",
     syncSettingsUnavailableDetail: "仍会保存在这台设备。",
     syncSettingsDone: "刚刚写入同步区",
     syncSettingsDoneDetail: "Chrome 会自动分发到同账号设备。",
     syncSettingsNow: "手动同步",
+    syncSettingsAuto: "自动同步",
+    syncSettingsActionsLabel: "同步方式",
+    searchSettingsDefaultTitle: "基本搜索",
+    searchSettingsDefaultDescription: "设置普通关键词默认使用的搜索入口",
+    searchSettingsDefaultHint: "输入普通关键词时，Wayleaf 会优先使用标记为默认的基本搜索。",
+    searchSettingsAiTitle: "AI 搜索引擎",
+    searchSettingsAiDescription: "修改内建 AI 引擎的名称、触发词和搜索链接",
+    searchSettingsAiHint: "触发词用空格或逗号分隔，例如 /gpt /chatgpt。需要登录的平台请先完成首次登录再使用。",
+    searchSettingsPlatformTitle: "平台搜索",
+    searchSettingsPlatformDescription: "使用内置前缀直达常用平台搜索结果",
+    searchSettingsPlatformHint: "输入 yt 内容、x 内容、xhs 内容、ig 内容、threads 内容、dy 内容或 zhihu 内容时，搜索框会切换到对应平台；需要登录的平台请先完成首次登录再使用。",
+    searchSettingsPlatformPrefix: "前缀",
+    searchSettingsPlatformQuery: "内容",
+    searchSettingsBuiltInBadge: "内置",
+    platformSearchDirectBehavior: "直接打开平台搜索结果",
+    platformSearchLoginBehavior: "打开平台搜索结果；如需登录请先完成首次登录",
+    platformSearchFallbackBehavior: "使用平台 Web 搜索入口；若站点限制搜索，会保留已编码查询供手动恢复",
+    searchSettingsSetDefault: "设为默认",
+    searchSettingsDefaultBadge: "默认",
+    searchSettingsEdit: "编辑",
+    searchSettingsDoneEdit: "完成",
+    searchSettingsEngineName: "名称",
+    searchSettingsEngineCommands: "触发词",
+    searchSettingsEngineUrl: "搜索链接",
+    searchSettingsSave: "保存搜索设置",
+    searchSettingsReset: "恢复默认",
+    searchSettingsSaved: "搜索设置已保存。",
+    searchSettingsResetDone: "已恢复默认搜索设置。",
     onboardingKicker: "第一次使用",
     onboardingTitle: "先花一分钟了解 Wayleaf",
     onboardingIntro: "Wayleaf 会把新标签页变成你的本地工作台。下面这些点能帮你安全、顺手地开始。",
@@ -962,7 +1165,7 @@ const MESSAGES = {
     onboardingSyncTitle: "配置会尽量跟随 Chrome 同步",
     onboardingSyncBody: "同一 Google 账号会自动恢复偏好；如果当前浏览器不支持同步，设置仍会保留在本机。",
     onboardingAiTitle: "AI 指令有兜底",
-    onboardingAiBody: "输入 /gpt、/claude、/gemini 或 /grok 可跳转并尝试填入问题；若对方网站要求登录或改版，请手动粘贴暂存问题。",
+    onboardingAiBody: "输入 /gpt、/claude、/gemini、/grok、/deepseek、/doubao、/kimi 或 /glm 可跳转并尝试填入问题；若对方网站要求登录或改版，请手动粘贴暂存问题。",
     onboardingStartTitle: "从两个动作开始",
     onboardingStartBody: "添加一个常用网站，再到导航中枢选择一个书签文件夹。你可以随时在设置中心调整主题和同步。",
     onboardingFeedbackTitle: "遇到问题直接反馈",
@@ -971,8 +1174,10 @@ const MESSAGES = {
     onboardingDone: "开始使用",
     closeOnboarding: "关闭指引",
     customPaletteTitle: "自定义主题",
-    lightAccent: "日间",
-    darkAccent: "夜间",
+    customPaletteDescription: "自定义 Wayleaf 的主题双色",
+    customPaletteHint: "自定义颜色会在日间与夜间模式下自动适配。",
+    lightAccent: "主色（按钮 / 链接 / 选中）",
+    darkAccent: "辅助色（强调 / 提示）",
     portalNameRequired: "请填写入口名称。",
     portalUrlRequired: "请输入 http 或 https 开头的网址。",
     customPortalLimit: "自定义入口最多 {count} 个。",
@@ -1027,11 +1232,13 @@ const MESSAGES = {
     quickSearch: "搜尋",
     quickSearchLocal: "打開",
     quickSearchAggregate: "聚合搜尋",
-    quickSearchAiCommandHint: "輸入 /gpt 或 /chatgpt 切換 ChatGPT，輸入 /claude /gemini /grok 切換 AI",
+    quickSearchAiCommandHint: "輸入 /gpt、/claude、/gemini、/grok、/deepseek、/doubao、/kimi 或 /glm 切換 AI",
     quickSearchAiSelected: "目前選擇",
     quickSearchEngine: "搜尋模式",
     quickSearchWith: "使用 {engine} 搜尋",
     quickSearchWithAi: "送到 {engine}",
+    quickSearchWithPlatform: "在 {platform} 搜尋",
+    quickSearchPlatformPlaceholder: "在 {platform} 搜尋",
     portalCategoryItems: "{count} 個入口",
     portalCategories: "智能分類",
     portalCategoriesExpand: "展開",
@@ -1115,6 +1322,72 @@ const MESSAGES = {
     historyCollapsePages: "收起相關頁面",
     historyRelatedPages: "相關頁面",
     historyPrimaryPage: "最近頁面",
+    openSettings: "設定",
+    closeSettings: "返回首頁",
+    settingsBackHome: "返回首頁",
+    help: "說明",
+    settingsTitle: "設定",
+    settingsSubtitle: "個人化 Wayleaf，管理同步與主題偏好。",
+    settingsTabsLabel: "設定分類",
+    settingsBasicTab: "基本設定",
+    settingsSearchTab: "搜尋設定",
+    appearanceModeTitle: "外觀",
+    appearanceModeDescription: "選擇 Wayleaf 的外觀",
+    appearanceModeHint: "根據系統設定自動切換日間或夜間模式。",
+    themeModeSystem: "跟隨系統",
+    themeModeLight: "日間",
+    themeModeDark: "夜間",
+    presetPaletteTitle: "色彩",
+    presetPaletteDescription: "為淺色與深色模式選擇一組預設強調色",
+    presetPaletteHint: "用於按鈕、連結、選取狀態與提示色。",
+    themePaletteSage: "松葉",
+    themePaletteForest: "墨綠",
+    themePaletteAmber: "琥珀",
+    themePaletteSky: "湖藍",
+    themePalettePeach: "珊瑚",
+    themePaletteNeutral: "中性",
+    syncSettingsTitle: "雲端同步",
+    syncSettingsDescription: "跨裝置同步你的設定",
+    syncSettingsReady: "設定會跟隨 Chrome 帳號同步",
+    syncSettingsReadyDetail: "同一 Google 帳號安裝後會自動恢復；擴充功能啟用時每天自動同步一次。",
+    syncSettingsUnavailable: "目前瀏覽器不支援同步",
+    syncSettingsUnavailableDetail: "仍會保存在這台裝置。",
+    syncSettingsDone: "剛剛寫入同步區",
+    syncSettingsDoneDetail: "Chrome 會自動分發到同帳號裝置。",
+    syncSettingsNow: "手動同步",
+    syncSettingsAuto: "自動同步",
+    syncSettingsActionsLabel: "同步方式",
+    searchSettingsDefaultTitle: "基本搜尋",
+    searchSettingsDefaultDescription: "設定普通關鍵字預設使用的搜尋入口",
+    searchSettingsDefaultHint: "輸入普通關鍵字時，Wayleaf 會優先使用標記為預設的基本搜尋。",
+    searchSettingsAiTitle: "AI 搜尋引擎",
+    searchSettingsAiDescription: "修改內建 AI 引擎的名稱、觸發詞和搜尋連結",
+    searchSettingsAiHint: "觸發詞用空格或逗號分隔，例如 /gpt /chatgpt。需要登入的平台請先完成首次登入再使用。",
+    searchSettingsPlatformTitle: "平台搜尋",
+    searchSettingsPlatformDescription: "使用內建前綴直達常用平台搜尋結果",
+    searchSettingsPlatformHint: "輸入 yt 內容、x 內容、xhs 內容、ig 內容、threads 內容、dy 內容或 zhihu 內容時，搜尋框會切換到對應平台；需要登入的平台請先完成首次登入再使用。",
+    searchSettingsPlatformPrefix: "前綴",
+    searchSettingsPlatformQuery: "內容",
+    searchSettingsBuiltInBadge: "內建",
+    platformSearchDirectBehavior: "直接打開平台搜尋結果",
+    platformSearchLoginBehavior: "打開平台搜尋結果；如需登入請先完成首次登入",
+    platformSearchFallbackBehavior: "使用平台 Web 搜尋入口；若站點限制搜尋，會保留已編碼查詢供手動恢復",
+    searchSettingsSetDefault: "設為預設",
+    searchSettingsDefaultBadge: "預設",
+    searchSettingsEdit: "編輯",
+    searchSettingsDoneEdit: "完成",
+    searchSettingsEngineName: "名稱",
+    searchSettingsEngineCommands: "觸發詞",
+    searchSettingsEngineUrl: "搜尋連結",
+    searchSettingsSave: "儲存搜尋設定",
+    searchSettingsReset: "恢復預設",
+    searchSettingsSaved: "搜尋設定已儲存。",
+    searchSettingsResetDone: "已恢復預設搜尋設定。",
+    customPaletteTitle: "自訂主題",
+    customPaletteDescription: "自訂 Wayleaf 的主題雙色",
+    customPaletteHint: "自訂顏色會在日間與夜間模式下自動適配。",
+    lightAccent: "主色（按鈕 / 連結 / 選取）",
+    darkAccent: "輔助色（強調 / 提示）",
     unnamedPage: "未命名頁面",
     website: "網站"
   },
@@ -1198,6 +1471,9 @@ const MESSAGES = {
     historyTitle: "Recent browsing",
     openPortalSurface: "Open navigation hub",
     openHistorySurface: "Open recent browsing",
+    recentFoldersSwitch: "Switch recent cards",
+    recentFoldersPrevious: "Previous recent cards",
+    recentFoldersNext: "Next recent cards",
     historyPreviousPage: "Previous recent page",
     historyNextPage: "Next recent page",
     refreshHistory: "Refresh history",
@@ -1207,11 +1483,13 @@ const MESSAGES = {
     quickSearch: "Search",
     quickSearchLocal: "Open",
     quickSearchAggregate: "Aggregate search",
-    quickSearchAiCommandHint: "Type /gpt or /chatgpt for ChatGPT, or /claude /gemini /grok to switch AI",
+    quickSearchAiCommandHint: "Type /gpt, /claude, /gemini, /grok, /deepseek, /doubao, /kimi, or /glm to switch AI",
     quickSearchAiSelected: "Selected",
     quickSearchEngine: "Search mode",
     quickSearchWith: "Search with {engine}",
     quickSearchWithAi: "Send to {engine}",
+    quickSearchWithPlatform: "Search on {platform}",
+    quickSearchPlatformPlaceholder: "Search on {platform}",
     localSearchHistory: "History",
     localSearchBookmark: "Bookmark",
     localSearchNoResults: "No matching history or bookmarks.",
@@ -1223,21 +1501,66 @@ const MESSAGES = {
     portalCategoryItems: "{count} shortcuts",
     deleteCustomPortal: "Remove custom portal",
     openSettings: "Settings",
-    closeSettings: "Close settings",
+    closeSettings: "Back home",
+    settingsBackHome: "Back home",
+    help: "Help",
     settingsTitle: "Settings",
+    settingsSubtitle: "Personalize Wayleaf and manage sync and theme preferences.",
+    settingsTabsLabel: "Settings categories",
+    settingsBasicTab: "Basic",
+    settingsSearchTab: "Search",
     appearanceModeTitle: "Appearance",
-    themeModeSystem: "Follow",
+    appearanceModeDescription: "Choose Wayleaf's appearance mode",
+    appearanceModeHint: "Automatically switches light or dark mode from system settings.",
+    themeModeSystem: "System",
     themeModeLight: "Light",
     themeModeDark: "Dark",
-    presetPaletteTitle: "Theme palettes",
+    presetPaletteTitle: "Colors",
+    presetPaletteDescription: "Choose the default accent pair for light and dark modes",
+    presetPaletteHint: "Used for buttons, links, selected states, and hints.",
+    themePaletteSage: "Sage",
+    themePaletteForest: "Forest",
+    themePaletteAmber: "Amber",
+    themePaletteSky: "Sky",
+    themePalettePeach: "Coral",
+    themePaletteNeutral: "Neutral",
     syncSettingsTitle: "Cloud sync",
+    syncSettingsDescription: "Sync your settings across devices",
     syncSettingsReady: "Settings sync with your Chrome account",
-    syncSettingsReadyDetail: "Install with the same Google account to restore.",
+    syncSettingsReadyDetail: "Install with the same Google account to restore; auto sync runs once daily while the extension is enabled.",
     syncSettingsUnavailable: "Sync is unavailable in this browser",
     syncSettingsUnavailableDetail: "Settings still stay on this device.",
     syncSettingsDone: "Written to sync storage",
     syncSettingsDoneDetail: "Chrome will distribute it to signed-in devices.",
     syncSettingsNow: "Sync now",
+    syncSettingsAuto: "Auto sync",
+    syncSettingsActionsLabel: "Sync method",
+    searchSettingsDefaultTitle: "Basic search",
+    searchSettingsDefaultDescription: "Configure the search entry used for regular queries",
+    searchSettingsDefaultHint: "Wayleaf uses the basic search marked as default for regular keywords.",
+    searchSettingsAiTitle: "AI search engines",
+    searchSettingsAiDescription: "Edit built-in AI engine names, triggers, and search links",
+    searchSettingsAiHint: "Separate triggers with spaces or commas, for example /gpt /chatgpt. Sign in to platforms that require login before first use.",
+    searchSettingsPlatformTitle: "Platform search",
+    searchSettingsPlatformDescription: "Use built-in prefixes to jump to common platform search results",
+    searchSettingsPlatformHint: "Type yt query, x query, xhs query, ig query, threads query, dy query, or zhihu query to switch the search box to that platform. Sign in first when a platform requires login.",
+    searchSettingsPlatformPrefix: "Prefix",
+    searchSettingsPlatformQuery: "query",
+    searchSettingsBuiltInBadge: "Built in",
+    platformSearchDirectBehavior: "Opens the platform search results directly",
+    platformSearchLoginBehavior: "Opens platform search results; sign in first if required",
+    platformSearchFallbackBehavior: "Uses the platform web search entry; if the site limits search, the encoded query remains recoverable",
+    searchSettingsSetDefault: "Set default",
+    searchSettingsDefaultBadge: "Default",
+    searchSettingsEdit: "Edit",
+    searchSettingsDoneEdit: "Done",
+    searchSettingsEngineName: "Name",
+    searchSettingsEngineCommands: "Triggers",
+    searchSettingsEngineUrl: "Search link",
+    searchSettingsSave: "Save search settings",
+    searchSettingsReset: "Restore defaults",
+    searchSettingsSaved: "Search settings saved.",
+    searchSettingsResetDone: "Default search settings restored.",
     onboardingKicker: "First run",
     onboardingTitle: "Take one minute to understand Wayleaf",
     onboardingIntro: "Wayleaf turns your new tab into a local workspace. These notes help you start safely and smoothly.",
@@ -1248,7 +1571,7 @@ const MESSAGES = {
     onboardingSyncTitle: "Settings try to follow Chrome sync",
     onboardingSyncBody: "The same Google account can restore preferences. If sync is unavailable, settings still stay on this device.",
     onboardingAiTitle: "AI commands have a fallback",
-    onboardingAiBody: "Type /gpt, /claude, /gemini, or /grok to open and try filling a prompt. If the AI site needs login or changes, paste the saved prompt manually.",
+    onboardingAiBody: "Type /gpt, /claude, /gemini, /grok, /deepseek, /doubao, /kimi, or /glm to open and try filling a prompt. If the AI site needs login or changes, paste the saved prompt manually.",
     onboardingStartTitle: "Start with two actions",
     onboardingStartBody: "Add one favorite site, then choose a bookmark folder from the navigation hub. Theme and sync stay in Settings.",
     onboardingFeedbackTitle: "Report issues directly",
@@ -1257,8 +1580,10 @@ const MESSAGES = {
     onboardingDone: "Start using",
     closeOnboarding: "Close guide",
     customPaletteTitle: "Custom theme",
-    lightAccent: "Light",
-    darkAccent: "Dark",
+    customPaletteDescription: "Customize Wayleaf's theme color pair",
+    customPaletteHint: "Custom colors adapt automatically in light and dark modes.",
+    lightAccent: "Primary (buttons / links / selected)",
+    darkAccent: "Secondary (emphasis / hints)",
     portalNameRequired: "Enter a portal name.",
     portalUrlRequired: "Enter an http or https URL.",
     customPortalLimit: "You can add up to {count} custom portals.",
@@ -1325,7 +1650,74 @@ const MESSAGES = {
     bookmarkRecentMeta: "3日以内",
     bookmarkCount: "{count} 件のサイト",
     unnamedPage: "名称未設定のページ",
-    website: "Website"
+    website: "Website",
+    quickSearchAggregate: "統合検索",
+    openSettings: "設定",
+    closeSettings: "ホームに戻る",
+    settingsBackHome: "ホームに戻る",
+    help: "ヘルプ",
+    settingsTitle: "設定",
+    settingsSubtitle: "Wayleaf をカスタマイズし、同期とテーマ設定を管理します。",
+    settingsTabsLabel: "設定カテゴリ",
+    settingsBasicTab: "基本",
+    settingsSearchTab: "検索",
+    appearanceModeTitle: "外観",
+    appearanceModeDescription: "Wayleaf の外観モードを選択",
+    appearanceModeHint: "システム設定に合わせてライトまたはダークモードを自動で切り替えます。",
+    themeModeSystem: "システム",
+    themeModeLight: "ライト",
+    themeModeDark: "ダーク",
+    presetPaletteTitle: "カラー",
+    presetPaletteDescription: "ライト/ダークモードの既定アクセント色ペアを選択",
+    presetPaletteHint: "ボタン、リンク、選択状態、ヒントに使用されます。",
+    themePaletteSage: "セージ",
+    themePaletteForest: "フォレスト",
+    themePaletteAmber: "アンバー",
+    themePaletteSky: "スカイ",
+    themePalettePeach: "コーラル",
+    themePaletteNeutral: "ニュートラル",
+    syncSettingsTitle: "クラウド同期",
+    syncSettingsDescription: "デバイス間で設定を同期",
+    syncSettingsReady: "Chrome アカウントで設定を同期します",
+    syncSettingsReadyDetail: "同じ Google アカウントでインストールすると復元されます。拡張機能が有効な間は1日1回自動同期します。",
+    syncSettingsUnavailable: "このブラウザでは同期を利用できません",
+    syncSettingsUnavailableDetail: "設定はこのデバイスに保存されます。",
+    syncSettingsDone: "同期ストレージに書き込みました",
+    syncSettingsDoneDetail: "Chrome が同じアカウントのデバイスへ配信します。",
+    syncSettingsNow: "今すぐ同期",
+    syncSettingsAuto: "自動同期",
+    syncSettingsActionsLabel: "同期方法",
+    searchSettingsDefaultTitle: "基本検索",
+    searchSettingsDefaultDescription: "通常のキーワードで使う検索先を設定",
+    searchSettingsDefaultHint: "通常のキーワードでは、既定に設定した基本検索を優先して使います。",
+    searchSettingsAiTitle: "AI 検索エンジン",
+    searchSettingsAiDescription: "内蔵 AI エンジンの名前、トリガー、検索リンクを編集",
+    searchSettingsAiHint: "トリガーはスペースまたはカンマで区切ります。例: /gpt /chatgpt。ログインが必要なプラットフォームは初回利用前にログインしてください。",
+    searchSettingsPlatformTitle: "プラットフォーム検索",
+    searchSettingsPlatformDescription: "内蔵プレフィックスで主要プラットフォームの検索結果へ移動",
+    searchSettingsPlatformHint: "yt query、x query、xhs query、ig query、threads query、dy query、zhihu query と入力すると、そのプラットフォーム検索に切り替わります。ログインが必要な場合は先にログインしてください。",
+    searchSettingsPlatformPrefix: "プレフィックス",
+    searchSettingsPlatformQuery: "query",
+    searchSettingsBuiltInBadge: "内蔵",
+    platformSearchDirectBehavior: "プラットフォーム検索結果を直接開く",
+    platformSearchLoginBehavior: "検索結果を開きます。必要な場合は先にログインしてください",
+    platformSearchFallbackBehavior: "Web 検索入口を使用し、制限時もエンコード済みクエリを保持します",
+    searchSettingsSetDefault: "既定にする",
+    searchSettingsDefaultBadge: "既定",
+    searchSettingsEdit: "編集",
+    searchSettingsDoneEdit: "完了",
+    searchSettingsEngineName: "名前",
+    searchSettingsEngineCommands: "トリガー",
+    searchSettingsEngineUrl: "検索リンク",
+    searchSettingsSave: "検索設定を保存",
+    searchSettingsReset: "既定に戻す",
+    searchSettingsSaved: "検索設定を保存しました。",
+    searchSettingsResetDone: "既定の検索設定に戻しました。",
+    customPaletteTitle: "カスタムテーマ",
+    customPaletteDescription: "Wayleaf のテーマ色ペアをカスタマイズ",
+    customPaletteHint: "カスタム色はライト/ダークモードに自動で適応します。",
+    lightAccent: "メイン（ボタン / リンク / 選択）",
+    darkAccent: "サブ（強調 / ヒント）"
   },
   ko: {
     portalTitle: "탐색 허브",
@@ -1347,7 +1739,74 @@ const MESSAGES = {
     bookmarkRecentMeta: "최근 3일",
     bookmarkCount: "사이트 {count}개",
     unnamedPage: "제목 없는 페이지",
-    website: "Website"
+    website: "Website",
+    quickSearchAggregate: "통합 검색",
+    openSettings: "설정",
+    closeSettings: "홈으로 돌아가기",
+    settingsBackHome: "홈으로 돌아가기",
+    help: "도움말",
+    settingsTitle: "설정",
+    settingsSubtitle: "Wayleaf를 개인화하고 동기화와 테마 환경설정을 관리합니다.",
+    settingsTabsLabel: "설정 분류",
+    settingsBasicTab: "기본",
+    settingsSearchTab: "검색",
+    appearanceModeTitle: "모양",
+    appearanceModeDescription: "Wayleaf의 모양 모드를 선택하세요",
+    appearanceModeHint: "시스템 설정에 따라 라이트/다크 모드를 자동 전환합니다.",
+    themeModeSystem: "시스템",
+    themeModeLight: "라이트",
+    themeModeDark: "다크",
+    presetPaletteTitle: "색상",
+    presetPaletteDescription: "라이트/다크 모드의 기본 강조색 조합을 선택하세요",
+    presetPaletteHint: "버튼, 링크, 선택 상태, 안내 색상에 사용됩니다.",
+    themePaletteSage: "세이지",
+    themePaletteForest: "포레스트",
+    themePaletteAmber: "앰버",
+    themePaletteSky: "스카이",
+    themePalettePeach: "코럴",
+    themePaletteNeutral: "중립",
+    syncSettingsTitle: "클라우드 동기화",
+    syncSettingsDescription: "기기 간 설정 동기화",
+    syncSettingsReady: "Chrome 계정과 설정이 동기화됩니다",
+    syncSettingsReadyDetail: "같은 Google 계정으로 설치하면 복원됩니다. 확장 프로그램이 활성화된 동안 하루에 한 번 자동 동기화됩니다.",
+    syncSettingsUnavailable: "이 브라우저에서는 동기화를 사용할 수 없습니다",
+    syncSettingsUnavailableDetail: "설정은 이 기기에 계속 저장됩니다.",
+    syncSettingsDone: "동기화 저장소에 기록했습니다",
+    syncSettingsDoneDetail: "Chrome이 같은 계정의 기기로 배포합니다.",
+    syncSettingsNow: "지금 동기화",
+    syncSettingsAuto: "자동 동기화",
+    syncSettingsActionsLabel: "동기화 방식",
+    searchSettingsDefaultTitle: "기본 검색",
+    searchSettingsDefaultDescription: "일반 키워드에 사용할 기본 검색 항목 설정",
+    searchSettingsDefaultHint: "일반 키워드에는 기본으로 표시된 기본 검색을 우선 사용합니다.",
+    searchSettingsAiTitle: "AI 검색 엔진",
+    searchSettingsAiDescription: "내장 AI 엔진의 이름, 트리거, 검색 링크 편집",
+    searchSettingsAiHint: "트리거는 공백 또는 쉼표로 구분하세요. 예: /gpt /chatgpt. 로그인이 필요한 플랫폼은 먼저 로그인하세요.",
+    searchSettingsPlatformTitle: "플랫폼 검색",
+    searchSettingsPlatformDescription: "내장 접두어로 주요 플랫폼 검색 결과 열기",
+    searchSettingsPlatformHint: "yt query, x query, xhs query, ig query, threads query, dy query, zhihu query 형식으로 입력하면 해당 플랫폼 검색으로 전환됩니다. 로그인이 필요한 경우 먼저 로그인하세요.",
+    searchSettingsPlatformPrefix: "접두어",
+    searchSettingsPlatformQuery: "query",
+    searchSettingsBuiltInBadge: "내장",
+    platformSearchDirectBehavior: "플랫폼 검색 결과를 바로 엽니다",
+    platformSearchLoginBehavior: "검색 결과를 엽니다. 필요한 경우 먼저 로그인하세요",
+    platformSearchFallbackBehavior: "웹 검색 입구를 사용하며, 제한 시 인코딩된 쿼리를 유지합니다",
+    searchSettingsSetDefault: "기본값으로 설정",
+    searchSettingsDefaultBadge: "기본값",
+    searchSettingsEdit: "편집",
+    searchSettingsDoneEdit: "완료",
+    searchSettingsEngineName: "이름",
+    searchSettingsEngineCommands: "트리거",
+    searchSettingsEngineUrl: "검색 링크",
+    searchSettingsSave: "검색 설정 저장",
+    searchSettingsReset: "기본값 복원",
+    searchSettingsSaved: "검색 설정을 저장했습니다.",
+    searchSettingsResetDone: "기본 검색 설정을 복원했습니다.",
+    customPaletteTitle: "사용자 지정 테마",
+    customPaletteDescription: "Wayleaf의 테마 색상 조합 사용자 지정",
+    customPaletteHint: "사용자 지정 색상은 라이트/다크 모드에 자동으로 맞춰집니다.",
+    lightAccent: "기본색(버튼 / 링크 / 선택)",
+    darkAccent: "보조색(강조 / 힌트)"
   },
   es: {
     portalTitle: "Centro de navegación",
@@ -1369,7 +1828,74 @@ const MESSAGES = {
     bookmarkRecentMeta: "Últimos 3 días",
     bookmarkCount: "{count} sitios",
     unnamedPage: "Página sin título",
-    website: "Website"
+    website: "Website",
+    quickSearchAggregate: "Búsqueda agregada",
+    openSettings: "Configuración",
+    closeSettings: "Volver al inicio",
+    settingsBackHome: "Volver al inicio",
+    help: "Ayuda",
+    settingsTitle: "Configuración",
+    settingsSubtitle: "Personaliza Wayleaf y gestiona la sincronización y el tema.",
+    settingsTabsLabel: "Categorías de configuración",
+    settingsBasicTab: "Básico",
+    settingsSearchTab: "Búsqueda",
+    appearanceModeTitle: "Apariencia",
+    appearanceModeDescription: "Elige el modo de apariencia de Wayleaf",
+    appearanceModeHint: "Cambia automáticamente entre modo claro u oscuro según el sistema.",
+    themeModeSystem: "Sistema",
+    themeModeLight: "Claro",
+    themeModeDark: "Oscuro",
+    presetPaletteTitle: "Colores",
+    presetPaletteDescription: "Elige el par de acentos predeterminado para los modos claro y oscuro",
+    presetPaletteHint: "Se usa en botones, enlaces, estados seleccionados y ayudas.",
+    themePaletteSage: "Salvia",
+    themePaletteForest: "Bosque",
+    themePaletteAmber: "Ámbar",
+    themePaletteSky: "Cielo",
+    themePalettePeach: "Coral",
+    themePaletteNeutral: "Neutro",
+    syncSettingsTitle: "Sincronización en la nube",
+    syncSettingsDescription: "Sincroniza tus ajustes entre dispositivos",
+    syncSettingsReady: "Los ajustes se sincronizan con tu cuenta de Chrome",
+    syncSettingsReadyDetail: "Instala con la misma cuenta de Google para restaurarlos; la sincronización automática se ejecuta una vez al día mientras la extensión esté activa.",
+    syncSettingsUnavailable: "La sincronización no está disponible en este navegador",
+    syncSettingsUnavailableDetail: "Los ajustes seguirán en este dispositivo.",
+    syncSettingsDone: "Escrito en el almacenamiento de sincronización",
+    syncSettingsDoneDetail: "Chrome lo distribuirá a los dispositivos de la misma cuenta.",
+    syncSettingsNow: "Sincronizar",
+    syncSettingsAuto: "Sincronización automática",
+    syncSettingsActionsLabel: "Método de sincronización",
+    searchSettingsDefaultTitle: "Búsqueda básica",
+    searchSettingsDefaultDescription: "Configura el buscador para consultas normales",
+    searchSettingsDefaultHint: "Wayleaf usa el buscador básico marcado como predeterminado para palabras clave normales.",
+    searchSettingsAiTitle: "Motores de búsqueda de IA",
+    searchSettingsAiDescription: "Edita nombres, activadores y enlaces de búsqueda de los motores de IA integrados",
+    searchSettingsAiHint: "Separa los activadores con espacios o comas, por ejemplo /gpt /chatgpt. Inicia sesión antes en las plataformas que lo requieran.",
+    searchSettingsPlatformTitle: "Búsqueda de plataformas",
+    searchSettingsPlatformDescription: "Usa prefijos integrados para abrir resultados en plataformas comunes",
+    searchSettingsPlatformHint: "Escribe yt query, x query, xhs query, ig query, threads query, dy query o zhihu query para cambiar la búsqueda a esa plataforma. Inicia sesión primero si hace falta.",
+    searchSettingsPlatformPrefix: "Prefijo",
+    searchSettingsPlatformQuery: "query",
+    searchSettingsBuiltInBadge: "Integrado",
+    platformSearchDirectBehavior: "Abre directamente los resultados de la plataforma",
+    platformSearchLoginBehavior: "Abre resultados de la plataforma; inicia sesión primero si hace falta",
+    platformSearchFallbackBehavior: "Usa la entrada web de búsqueda y conserva la consulta codificada si el sitio limita la búsqueda",
+    searchSettingsSetDefault: "Predeterminar",
+    searchSettingsDefaultBadge: "Predeterminado",
+    searchSettingsEdit: "Editar",
+    searchSettingsDoneEdit: "Listo",
+    searchSettingsEngineName: "Nombre",
+    searchSettingsEngineCommands: "Activadores",
+    searchSettingsEngineUrl: "Enlace de búsqueda",
+    searchSettingsSave: "Guardar ajustes de búsqueda",
+    searchSettingsReset: "Restaurar valores",
+    searchSettingsSaved: "Ajustes de búsqueda guardados.",
+    searchSettingsResetDone: "Ajustes de búsqueda predeterminados restaurados.",
+    customPaletteTitle: "Tema personalizado",
+    customPaletteDescription: "Personaliza el par de colores del tema de Wayleaf",
+    customPaletteHint: "Los colores personalizados se adaptan automáticamente a los modos claro y oscuro.",
+    lightAccent: "Principal (botones / enlaces / selección)",
+    darkAccent: "Secundario (énfasis / ayudas)"
   },
   fr: {
     portalTitle: "Centre de navigation",
@@ -1391,7 +1917,74 @@ const MESSAGES = {
     bookmarkRecentMeta: "3 derniers jours",
     bookmarkCount: "{count} sites",
     unnamedPage: "Page sans titre",
-    website: "Website"
+    website: "Website",
+    quickSearchAggregate: "Recherche agrégée",
+    openSettings: "Paramètres",
+    closeSettings: "Retour à l'accueil",
+    settingsBackHome: "Retour à l'accueil",
+    help: "Aide",
+    settingsTitle: "Paramètres",
+    settingsSubtitle: "Personnalisez Wayleaf et gérez la synchronisation et le thème.",
+    settingsTabsLabel: "Catégories de paramètres",
+    settingsBasicTab: "Général",
+    settingsSearchTab: "Recherche",
+    appearanceModeTitle: "Apparence",
+    appearanceModeDescription: "Choisir le mode d'apparence de Wayleaf",
+    appearanceModeHint: "Bascule automatiquement entre clair et sombre selon le système.",
+    themeModeSystem: "Système",
+    themeModeLight: "Clair",
+    themeModeDark: "Sombre",
+    presetPaletteTitle: "Couleurs",
+    presetPaletteDescription: "Choisir la paire d'accents par défaut pour les modes clair et sombre",
+    presetPaletteHint: "Utilisée pour les boutons, liens, états sélectionnés et indications.",
+    themePaletteSage: "Sauge",
+    themePaletteForest: "Forêt",
+    themePaletteAmber: "Ambre",
+    themePaletteSky: "Ciel",
+    themePalettePeach: "Corail",
+    themePaletteNeutral: "Neutre",
+    syncSettingsTitle: "Synchronisation cloud",
+    syncSettingsDescription: "Synchroniser vos paramètres entre appareils",
+    syncSettingsReady: "Les paramètres se synchronisent avec votre compte Chrome",
+    syncSettingsReadyDetail: "Installez avec le même compte Google pour les restaurer ; la synchronisation automatique s'exécute une fois par jour quand l'extension est activée.",
+    syncSettingsUnavailable: "La synchronisation n'est pas disponible dans ce navigateur",
+    syncSettingsUnavailableDetail: "Les paramètres restent sur cet appareil.",
+    syncSettingsDone: "Écrit dans le stockage synchronisé",
+    syncSettingsDoneDetail: "Chrome le diffusera aux appareils du même compte.",
+    syncSettingsNow: "Synchroniser",
+    syncSettingsAuto: "Synchro auto",
+    syncSettingsActionsLabel: "Méthode de synchronisation",
+    searchSettingsDefaultTitle: "Recherche de base",
+    searchSettingsDefaultDescription: "Configurer le moteur utilisé pour les requêtes normales",
+    searchSettingsDefaultHint: "Wayleaf utilise le moteur de base marqué par défaut pour les mots-clés normaux.",
+    searchSettingsAiTitle: "Moteurs de recherche IA",
+    searchSettingsAiDescription: "Modifier les noms, déclencheurs et liens de recherche des moteurs IA intégrés",
+    searchSettingsAiHint: "Séparez les déclencheurs par des espaces ou des virgules, par exemple /gpt /chatgpt. Connectez-vous d'abord aux plateformes qui l'exigent.",
+    searchSettingsPlatformTitle: "Recherche de plateformes",
+    searchSettingsPlatformDescription: "Utiliser des préfixes intégrés pour ouvrir les résultats de plateformes courantes",
+    searchSettingsPlatformHint: "Saisissez yt query, x query, xhs query, ig query, threads query, dy query ou zhihu query pour basculer vers cette plateforme. Connectez-vous d'abord si nécessaire.",
+    searchSettingsPlatformPrefix: "Préfixe",
+    searchSettingsPlatformQuery: "query",
+    searchSettingsBuiltInBadge: "Intégré",
+    platformSearchDirectBehavior: "Ouvre directement les résultats de la plateforme",
+    platformSearchLoginBehavior: "Ouvre les résultats de la plateforme ; connectez-vous d'abord si nécessaire",
+    platformSearchFallbackBehavior: "Utilise l'entrée de recherche Web et garde la requête encodée si le site limite la recherche",
+    searchSettingsSetDefault: "Définir par défaut",
+    searchSettingsDefaultBadge: "Par défaut",
+    searchSettingsEdit: "Modifier",
+    searchSettingsDoneEdit: "Terminé",
+    searchSettingsEngineName: "Nom",
+    searchSettingsEngineCommands: "Déclencheurs",
+    searchSettingsEngineUrl: "Lien de recherche",
+    searchSettingsSave: "Enregistrer les paramètres",
+    searchSettingsReset: "Restaurer les valeurs par défaut",
+    searchSettingsSaved: "Paramètres de recherche enregistrés.",
+    searchSettingsResetDone: "Paramètres de recherche par défaut restaurés.",
+    customPaletteTitle: "Thème personnalisé",
+    customPaletteDescription: "Personnaliser la paire de couleurs du thème de Wayleaf",
+    customPaletteHint: "Les couleurs personnalisées s'adaptent automatiquement aux modes clair et sombre.",
+    lightAccent: "Principal (boutons / liens / sélection)",
+    darkAccent: "Secondaire (accent / indications)"
   },
   de: {
     portalTitle: "Navigationszentrale",
@@ -1413,7 +2006,74 @@ const MESSAGES = {
     bookmarkRecentMeta: "Letzte 3 Tage",
     bookmarkCount: "{count} Websites",
     unnamedPage: "Unbenannte Seite",
-    website: "Website"
+    website: "Website",
+    quickSearchAggregate: "Aggregierte Suche",
+    openSettings: "Einstellungen",
+    closeSettings: "Zur Startseite",
+    settingsBackHome: "Zur Startseite",
+    help: "Hilfe",
+    settingsTitle: "Einstellungen",
+    settingsSubtitle: "Personalisiere Wayleaf und verwalte Synchronisierung und Design.",
+    settingsTabsLabel: "Einstellungskategorien",
+    settingsBasicTab: "Allgemein",
+    settingsSearchTab: "Suche",
+    appearanceModeTitle: "Darstellung",
+    appearanceModeDescription: "Darstellungsmodus von Wayleaf auswählen",
+    appearanceModeHint: "Wechselt anhand der Systemeinstellung automatisch zwischen Hell- und Dunkelmodus.",
+    themeModeSystem: "System",
+    themeModeLight: "Hell",
+    themeModeDark: "Dunkel",
+    presetPaletteTitle: "Farben",
+    presetPaletteDescription: "Standard-Akzentpaar für hellen und dunklen Modus auswählen",
+    presetPaletteHint: "Für Buttons, Links, ausgewählte Zustände und Hinweise.",
+    themePaletteSage: "Salbei",
+    themePaletteForest: "Wald",
+    themePaletteAmber: "Bernstein",
+    themePaletteSky: "Himmel",
+    themePalettePeach: "Koralle",
+    themePaletteNeutral: "Neutral",
+    syncSettingsTitle: "Cloud-Synchronisierung",
+    syncSettingsDescription: "Einstellungen geräteübergreifend synchronisieren",
+    syncSettingsReady: "Einstellungen werden mit deinem Chrome-Konto synchronisiert",
+    syncSettingsReadyDetail: "Mit demselben Google-Konto installieren, um sie wiederherzustellen; die automatische Synchronisierung läuft einmal täglich, solange die Erweiterung aktiv ist.",
+    syncSettingsUnavailable: "Synchronisierung ist in diesem Browser nicht verfügbar",
+    syncSettingsUnavailableDetail: "Einstellungen bleiben auf diesem Gerät.",
+    syncSettingsDone: "In den Sync-Speicher geschrieben",
+    syncSettingsDoneDetail: "Chrome verteilt sie an Geräte mit demselben Konto.",
+    syncSettingsNow: "Jetzt synchronisieren",
+    syncSettingsAuto: "Automatisch",
+    syncSettingsActionsLabel: "Synchronisierungsart",
+    searchSettingsDefaultTitle: "Basissuche",
+    searchSettingsDefaultDescription: "Suchziel für normale Suchanfragen konfigurieren",
+    searchSettingsDefaultHint: "Wayleaf verwendet für normale Suchbegriffe die als Standard markierte Basissuche.",
+    searchSettingsAiTitle: "KI-Suchmaschinen",
+    searchSettingsAiDescription: "Namen, Auslöser und Suchlinks der integrierten KI-Engines bearbeiten",
+    searchSettingsAiHint: "Auslöser mit Leerzeichen oder Kommas trennen, z. B. /gpt /chatgpt. Melde dich bei Plattformen mit Loginpflicht vor der ersten Nutzung an.",
+    searchSettingsPlatformTitle: "Plattformsuche",
+    searchSettingsPlatformDescription: "Mit integrierten Präfixen Suchergebnisse auf häufigen Plattformen öffnen",
+    searchSettingsPlatformHint: "Gib yt query, x query, xhs query, ig query, threads query, dy query oder zhihu query ein, um die Suche auf diese Plattform umzuschalten. Melde dich bei Bedarf zuerst an.",
+    searchSettingsPlatformPrefix: "Präfix",
+    searchSettingsPlatformQuery: "query",
+    searchSettingsBuiltInBadge: "Integriert",
+    platformSearchDirectBehavior: "Öffnet die Suchergebnisse der Plattform direkt",
+    platformSearchLoginBehavior: "Öffnet Plattform-Suchergebnisse; bei Bedarf zuerst anmelden",
+    platformSearchFallbackBehavior: "Nutzt den Web-Sucheinstieg und behält die codierte Abfrage bei, falls die Website Suche einschränkt",
+    searchSettingsSetDefault: "Als Standard",
+    searchSettingsDefaultBadge: "Standard",
+    searchSettingsEdit: "Bearbeiten",
+    searchSettingsDoneEdit: "Fertig",
+    searchSettingsEngineName: "Name",
+    searchSettingsEngineCommands: "Auslöser",
+    searchSettingsEngineUrl: "Suchlink",
+    searchSettingsSave: "Sucheinstellungen speichern",
+    searchSettingsReset: "Standard wiederherstellen",
+    searchSettingsSaved: "Sucheinstellungen gespeichert.",
+    searchSettingsResetDone: "Standard-Sucheinstellungen wiederhergestellt.",
+    customPaletteTitle: "Benutzerdefiniertes Design",
+    customPaletteDescription: "Farbpaar des Wayleaf-Designs anpassen",
+    customPaletteHint: "Benutzerdefinierte Farben passen sich automatisch an hellen und dunklen Modus an.",
+    lightAccent: "Primär (Buttons / Links / Auswahl)",
+    darkAccent: "Sekundär (Akzent / Hinweise)"
   }
 };
 const LOCALE = resolveLocale();
@@ -1442,6 +2102,8 @@ const bookmarkPickerTitle = document.querySelector("#bookmarkPickerTitle");
 const pinnedGrid = document.querySelector("#pinnedGrid");
 const historyGrid = document.querySelector("#historyGrid");
 const recentHistoryFolders = document.querySelector("#recentHistoryFolders");
+const recentFoldersPreviousButton = document.querySelector("#recentFoldersPreviousButton");
+const recentFoldersNextButton = document.querySelector("#recentFoldersNextButton");
 const refreshHistoryButton = document.querySelector("#refreshHistoryButton");
 const mediaFeedList = document.querySelector("#mediaFeedList");
 const mediaFeedState = document.querySelector("#mediaFeedState");
@@ -1458,15 +2120,24 @@ const mediaFeedTypeTabs = document.querySelector("#mediaFeedTypeTabs");
 const mediaFeedTypeButtons = [...document.querySelectorAll("[data-media-feed-type]")];
 const siteCardTemplate = document.querySelector("#siteCardTemplate");
 const settingsButton = document.querySelector("#settingsButton");
-const settingsBackdrop = document.querySelector("#settingsBackdrop");
 const settingsShell = document.querySelector("#settingsShell");
 const settingsPanel = document.querySelector("#settingsPanel");
 const closeSettingsButton = document.querySelector("#closeSettingsButton");
+const settingsTabsShell = document.querySelector(".settings-tabs-shell");
+const settingsTabButtons = [...document.querySelectorAll("[data-settings-tab]")];
+const settingsTabPanels = [...document.querySelectorAll("[data-settings-panel]")];
 const palettePresetGrid = document.querySelector("#palettePresetGrid");
 const syncSettingsRow = document.querySelector("#syncSettingsRow");
 const syncSettingsStatus = document.querySelector("#syncSettingsStatus");
 const syncSettingsDetail = document.querySelector("#syncSettingsDetail");
 const syncSettingsNowButton = document.querySelector("#syncSettingsNowButton");
+const syncSettingsAutoButton = document.querySelector("#syncSettingsAutoButton");
+const searchSettingsForm = document.querySelector("#searchSettingsForm");
+const basicSearchEngineList = document.querySelector("#basicSearchEngineList");
+const aiEngineSettingsList = document.querySelector("#aiEngineSettingsList");
+const platformSearchSettingsList = document.querySelector("#platformSearchSettingsList");
+const resetSearchSettingsButton = document.querySelector("#resetSearchSettingsButton");
+const searchSettingsStatus = document.querySelector("#searchSettingsStatus");
 const lightAccentInput = document.querySelector("#lightAccentInput");
 const lightAccentStrongInput = document.querySelector("#lightAccentStrongInput");
 const darkAccentInput = document.querySelector("#darkAccentInput");
@@ -1511,7 +2182,8 @@ let searchSuggestionsHideTimer = 0;
 let searchSuggestionsShowFrame = 0;
 let activeSurfacePanelId = "";
 let activeSearchEngine = DEFAULT_SEARCH_ENGINE;
-let selectedLocalSearchEngine = AGGREGATE_SEARCH_ENGINE_IDS[0];
+let selectedLocalSearchEngine = DEFAULT_LOCAL_SEARCH_ENGINE;
+let activePlatformSearchTarget = "";
 let aiModeExitTimer = 0;
 let portalCategoryState = {};
 let activePortalView = "smart";
@@ -1533,6 +2205,9 @@ let mediaFeedRefreshSeed = 0;
 let activeMediaFeedFeedback = normalizeMediaFeedFeedback();
 let activeMediaFeedActionMenu = null;
 let pendingRecentPreviousKeys = null;
+let latestRecentFolderGroups = [];
+let recentFolderPageIndex = 0;
+let activeRecentFolderPageSwitchAnimation = null;
 let favoriteSitesHydrated = false;
 let availableSiteIconFiles = new Set();
 const whiteSvgIconDataUrlCache = new Map();
@@ -1545,28 +2220,24 @@ ensureChromeApiFallback();
 document.addEventListener("DOMContentLoaded", initWithStorageMigration);
 
 async function initWithStorageMigration() {
-  await migrateSyncStorageFromLocal();
+  void migrateSyncStorageFromLocal();
   await init();
 }
 
 async function initSiteIconIndex() {
   try {
-    const response = await fetch(`${SITE_ICON_DIRECTORY}/index.json`, { cache: "no-store" });
+    const response = await fetch(`${SITE_ICON_DIRECTORY}/index.json`);
     if (!response.ok) {
       throw new Error(`Site icon index request failed: ${response.status}`);
     }
     const files = await response.json();
     availableSiteIconFiles = new Set(Array.isArray(files)
-      ? files.filter(isValidSiteIconFileName)
+      ? files.filter((file) => typeof file === "string")
       : []);
   } catch (error) {
     console.warn("Failed to load site icon index", error);
     availableSiteIconFiles = new Set();
   }
-}
-
-function isValidSiteIconFileName(fileName) {
-  return /^[a-z0-9][a-z0-9._-]*\.(?:svg|png|jpg|jpeg|ico|webp)$/i.test(String(fileName || ""));
 }
 
 function ensureChromeApiFallback() {
@@ -1636,45 +2307,224 @@ function ensureChromeApiFallback() {
 }
 
 function storageAreaForKey(key) {
-  if (SYNC_STORAGE_KEYS.has(key) && chrome.storage?.sync) {
-    return chrome.storage.sync;
-  }
   return chrome.storage?.local || chrome.storage?.sync;
 }
 
 async function getStoredValues(defaults = {}) {
-  const localDefaults = {};
-  const syncDefaults = {};
-  Object.entries(defaults).forEach(([key, value]) => {
-    if (storageAreaForKey(key) === chrome.storage?.sync) {
-      syncDefaults[key] = value;
-    } else {
-      localDefaults[key] = value;
-    }
-  });
-
-  const [localResult, syncResult] = await Promise.all([
-    Object.keys(localDefaults).length ? storageAreaForKey("__local__").get(localDefaults) : Promise.resolve({}),
-    Object.keys(syncDefaults).length ? chrome.storage.sync.get(syncDefaults) : Promise.resolve({})
-  ]);
-  return { ...localResult, ...syncResult };
+  const storage = storageAreaForKey();
+  return storage ? storage.get(defaults) : { ...defaults };
 }
 
 async function setStoredValues(values = {}) {
-  const localValues = {};
-  const syncValues = {};
-  Object.entries(values).forEach(([key, value]) => {
-    if (storageAreaForKey(key) === chrome.storage?.sync) {
-      syncValues[key] = value;
-    } else {
-      localValues[key] = value;
-    }
-  });
+  const storage = storageAreaForKey();
+  if (storage) {
+    await storage.set(values);
+  }
+}
 
-  await Promise.all([
-    Object.keys(localValues).length ? storageAreaForKey("__local__").set(localValues) : Promise.resolve(),
-    Object.keys(syncValues).length ? chrome.storage.sync.set(syncValues) : Promise.resolve()
-  ]);
+function readFirstPaintCache() {
+  try {
+    const cache = JSON.parse(localStorage.getItem(FIRST_PAINT_CACHE_STORAGE_KEY) || "{}");
+    return cache?.version === FIRST_PAINT_CACHE_VERSION
+      && cache.extensionVersion === firstPaintExtensionVersion()
+      ? cache
+      : {};
+  } catch {
+    return {};
+  }
+}
+
+function writeFirstPaintCache(values = {}) {
+  try {
+    localStorage.setItem(FIRST_PAINT_CACHE_STORAGE_KEY, JSON.stringify({
+      ...readFirstPaintCache(),
+      ...values,
+      version: FIRST_PAINT_CACHE_VERSION,
+      extensionVersion: firstPaintExtensionVersion()
+    }));
+  } catch {}
+}
+
+function firstPaintExtensionVersion() {
+  try {
+    return chrome.runtime?.getManifest?.().version || "preview";
+  } catch {
+    return "preview";
+  }
+}
+
+function renderFirstPaintCache() {
+  const cache = readFirstPaintCache();
+  const favoriteSites = normalizeCachedFavoriteSites(cache.favoriteSites);
+  const recentGroups = normalizeCachedRecentGroups(cache.recentGroups);
+  if (favoriteSites.length) {
+    renderFavoriteSiteList(favoriteSites, { iconRenders: cache.iconRenders });
+  }
+  if (recentGroups.length) {
+    renderRecentFolders(recentGroups, { iconRenders: cache.iconRenders });
+  }
+}
+
+function normalizeCachedFavoriteSites(value) {
+  return Array.isArray(value)
+    ? value
+      .filter((site) => site?.url && isWebUrl(site.url))
+      .slice(0, MAX_FAVORITE_SITES)
+      .map((site) => ({
+        id: String(site.id || site.url),
+        title: normalizeText(site.title) || compactSiteDomain(site.url),
+        url: site.url,
+        icon: normalizeStoredSiteIcon(site.icon)
+      }))
+    : [];
+}
+
+function normalizeCachedRecentGroups(value) {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+  return value.map((group) => {
+    const pages = Array.isArray(group?.pages)
+      ? group.pages
+        .filter((item) => item?.url && isDisplayableHistoryUrl(safeUrl(item.url)))
+        .slice(0, MAX_HISTORY_PAGES_PER_SITE)
+        .map((item) => ({
+          title: normalizeText(item.title) || historyFallbackTitle(safeUrl(item.url)),
+          url: item.url,
+          lastVisitTime: Number(item.lastVisitTime || 0),
+          visitCount: Number(item.visitCount || 0),
+          typedCount: Number(item.typedCount || 0)
+        }))
+      : [];
+    if (!pages.length) {
+      return null;
+    }
+    const firstUrl = safeUrl(pages[0].url);
+    const key = siteGroupKey(safeUrl(group?.url)) || siteGroupKey(firstUrl);
+    if (!key) {
+      return null;
+    }
+    return {
+      key,
+      name: normalizeText(group.name) || siteDisplayName(firstUrl, pages[0].title),
+      url: isDisplayableHistoryUrl(safeUrl(group.url)) ? group.url : pages[0].url,
+      homeUrl: isDisplayableHistoryUrl(safeUrl(group.homeUrl)) ? group.homeUrl : siteHomeUrl(key, pages[0].url),
+      pages,
+      deleteUrls: Array.isArray(group.deleteUrls) ? group.deleteUrls.filter(Boolean) : []
+    };
+  }).filter(Boolean).slice(0, MAX_HISTORY_SITE_GROUPS);
+}
+
+function serializeRecentGroupsForFirstPaint(groups) {
+  return (groups || []).slice(0, MAX_HISTORY_SITE_GROUPS).map((group) => ({
+    key: group.key,
+    name: group.name,
+    url: group.url,
+    homeUrl: group.homeUrl,
+    deleteUrls: group.deleteUrls,
+    pages: (group.pages || []).slice(0, MAX_HISTORY_PAGES_PER_SITE).map((item) => ({
+      title: normalizeText(item.title),
+      url: item.url,
+      lastVisitTime: Number(item.lastVisitTime || 0),
+      visitCount: Number(item.visitCount || 0),
+      typedCount: Number(item.typedCount || 0)
+    }))
+  }));
+}
+
+function firstPaintIconCacheKey(site) {
+  const url = safeUrl(site?.url);
+  return siteGroupKey(url) || url?.hostname || "";
+}
+
+function cachedFirstPaintIconRender(iconRenders, site) {
+  const mode = document.documentElement.dataset.theme === "dark" ? "dark" : "light";
+  const entry = iconRenders?.[firstPaintIconCacheKey(site)];
+  const value = entry?.[mode];
+  const src = typeof value?.src === "string" && value.src.length <= MAX_CACHED_SITE_ICON_BYTES * 2 ? value.src : "";
+  const tileLight = typeof value?.tileLight === "string" && value.tileLight.length <= 128 ? value.tileLight : "";
+  const tileDark = typeof value?.tileDark === "string" && value.tileDark.length <= 128 ? value.tileDark : "";
+  if (!src || !tileLight || !tileDark || Date.now() - Number(value.updatedAt || 0) > SITE_ICON_CACHE_TTL_MS) {
+    return null;
+  }
+  return {
+    src,
+    source: typeof entry.source === "string" && entry.source.length <= MAX_CACHED_SITE_ICON_BYTES * 2 ? entry.source : "",
+    tile: value.tile === "brand" || value.tile === "generated" ? value.tile : "plain",
+    tileLight,
+    tileDark,
+    local: Boolean(value.local),
+    generic: Boolean(value.generic)
+  };
+}
+
+function restoreFirstPaintIconRender(icon, site, render) {
+  storeIconSiteContext(icon, site);
+  icon.dataset.siteKey = firstPaintIconCacheKey(site);
+  if (render.source) {
+    icon.dataset.iconSource = render.source;
+  }
+  icon.classList.toggle("site-icon-generic-fallback", render.generic);
+  applyIconTile(icon, render.tile, { light: render.tileLight, dark: render.tileDark }, render.local);
+  icon.dataset.iconCacheHydrated = "true";
+  icon.addEventListener("error", () => {
+    if (icon.dataset.iconCacheHydrated === "true") {
+      delete icon.dataset.iconCacheHydrated;
+      applySiteIcon(icon, site);
+    }
+  }, { once: true });
+  icon.src = render.src;
+}
+
+function cacheRenderedSiteIcon(icon, site) {
+  if (icon.dataset.iconDefaultProbe === "pending" || icon.dataset.iconDefaultRescue === "pending") {
+    return;
+  }
+  const key = firstPaintIconCacheKey(site);
+  const src = icon.getAttribute("src") || "";
+  const tileLight = icon.style.getPropertyValue("--site-icon-tile-light").trim();
+  const tileDark = icon.style.getPropertyValue("--site-icon-tile-dark").trim();
+  if (!key || !src || src.length > MAX_CACHED_SITE_ICON_BYTES * 2 || !tileLight || !tileDark) {
+    return;
+  }
+  const mode = document.documentElement.dataset.theme === "dark" ? "dark" : "light";
+  const cache = readFirstPaintCache();
+  const iconRenders = { ...(cache.iconRenders || {}) };
+  iconRenders[key] = {
+    ...(iconRenders[key] || {}),
+    source: icon.dataset.iconSource && icon.dataset.iconSource !== src
+      ? icon.dataset.iconSource
+      : (iconRenders[key]?.source || ""),
+    [mode]: {
+      src,
+      tile: icon.dataset.iconTile || "plain",
+      tileLight,
+      tileDark,
+      local: icon.classList.contains("site-icon-local"),
+      generic: icon.classList.contains("site-icon-generic-fallback"),
+      updatedAt: Date.now()
+    }
+  };
+  Object.entries(iconRenders)
+    .sort(([, first], [, second]) => Math.max(Number(second.light?.updatedAt || 0), Number(second.dark?.updatedAt || 0))
+      - Math.max(Number(first.light?.updatedAt || 0), Number(first.dark?.updatedAt || 0)))
+    .slice(MAX_FAVORITE_SITES + MAX_HISTORY_SITE_GROUPS)
+    .forEach(([staleKey]) => delete iconRenders[staleKey]);
+  writeFirstPaintCache({ iconRenders });
+}
+
+function cacheRenderedSiteIconFromContext(icon) {
+  if (!icon.closest(".favorite-site, .recent-folder-item")) {
+    return;
+  }
+  cacheRenderedSiteIcon(icon, {
+    title: icon.dataset.siteTitle || icon.alt || "",
+    url: icon.dataset.siteUrl || ""
+  });
+}
+
+function cacheRenderedSiteIconOnLoad(icon, site) {
+  icon.addEventListener("load", () => cacheRenderedSiteIcon(icon, site));
 }
 
 async function migrateSyncStorageFromLocal() {
@@ -1687,15 +2537,20 @@ async function migrateSyncStorageFromLocal() {
       chrome.storage.local.get(keys),
       chrome.storage.sync.get(keys)
     ]);
+    const missingLocalValues = {};
     const missingSyncValues = {};
     keys.forEach((key) => {
+      if (typeof localValues[key] === "undefined" && typeof syncValues[key] !== "undefined") {
+        missingLocalValues[key] = syncValues[key];
+      }
       if (typeof localValues[key] !== "undefined" && typeof syncValues[key] === "undefined") {
         missingSyncValues[key] = localValues[key];
       }
     });
-    if (Object.keys(missingSyncValues).length > 0) {
-      await chrome.storage.sync.set(missingSyncValues);
-    }
+    await Promise.all([
+      Object.keys(missingLocalValues).length ? chrome.storage.local.set(missingLocalValues) : Promise.resolve(),
+      Object.keys(missingSyncValues).length ? chrome.storage.sync.set(missingSyncValues) : Promise.resolve()
+    ]);
   } catch (error) {
     console.warn("Failed to migrate synced settings", error);
   }
@@ -1736,6 +2591,20 @@ function mediaFeedLanguageForLocale(locale) {
   return String(locale || "").toLowerCase().startsWith("zh") ? "zh" : "en";
 }
 
+function searchEngineLabel(engine) {
+  if (!engine) {
+    return "";
+  }
+  return engine.labelKey ? t(engine.labelKey) : (engine.label || "");
+}
+
+function themePaletteLabel(palette) {
+  if (!palette) {
+    return "";
+  }
+  return palette.labelKey ? t(palette.labelKey) : (palette.label || palette.id || "");
+}
+
 function messageTemplate(key) {
   if (MESSAGES[LOCALE]?.[key]) {
     return MESSAGES[LOCALE][key];
@@ -1754,6 +2623,9 @@ function applyLocale() {
   surfaceBackButtons.forEach((button) => setButtonLabel(button, t("collapseSurface")));
   setButtonLabel(surfaceBackdrop, t("collapseSurface"));
   document.querySelector("#recent-folders-title").textContent = t("historyTitle");
+  document.querySelector(".recent-folder-switch-controls")?.setAttribute("aria-label", t("recentFoldersSwitch"));
+  setButtonLabel(recentFoldersPreviousButton, t("recentFoldersPrevious"));
+  setButtonLabel(recentFoldersNextButton, t("recentFoldersNext"));
   document.querySelector("#portal-title").textContent = t("portalTitle");
   document.querySelector("#smartPortalTab").textContent = t("smartPortalTab");
   document.querySelector("#bookmarkPortalTab").textContent = t("bookmarkPortalTab");
@@ -1769,15 +2641,14 @@ function applyLocale() {
   setButtonLabel(chooseBookmarkFolderButton, t("chooseBookmarkFolder"));
   setButtonLabel(refreshHistoryButton, t("refreshHistory"));
   setButtonLabel(settingsButton, t("openSettings"));
-  setButtonLabel(settingsBackdrop, t("closeSettings"));
-  setButtonLabel(closeSettingsButton, t("closeSettings"));
+  setButtonLabel(closeSettingsButton, t("settingsBackHome"));
   settingsShell?.setAttribute("aria-label", t("settingsTitle"));
   setButtonLabel(favoriteAddButton, t("addFavoriteSite"));
   setStaticButtonIcons();
   applySettingsLocale();
-  updateQuickSearchModeUi();
   quickSearchInput.placeholder = t("quickSearchPlaceholder");
   quickSearchInput.setAttribute("aria-label", t("quickSearchPlaceholder"));
+  updateQuickSearchModeUi();
 
   const portalTitleLabel = portalTitleInput.closest("label")?.querySelector("span");
   const portalUrlLabel = portalUrlInput.closest("label")?.querySelector("span");
@@ -1847,6 +2718,10 @@ function setButtonLabel(button, label) {
 function setThemeModeButtonLabel(button, label) {
   setButtonLabel(button, label);
   button.title = label;
+  const visibleLabel = button.querySelector(".theme-mode-label");
+  if (visibleLabel) {
+    visibleLabel.textContent = label;
+  }
 }
 
 function setStaticButtonIcons() {
@@ -1861,11 +2736,23 @@ function setStaticButtonIcons() {
   chooseBookmarkFolderButton.querySelector(".button-icon").innerHTML = pageTabFilledIcon();
   closeBookmarkPickerButton.querySelector(".button-icon").innerHTML = arrowLeftIcon();
   refreshHistoryButton.querySelector(".button-icon").innerHTML = refreshIcon();
+  const recentFoldersPreviousIcon = recentFoldersPreviousButton?.querySelector(".button-icon");
+  const recentFoldersNextIcon = recentFoldersNextButton?.querySelector(".button-icon");
+  if (recentFoldersPreviousIcon) {
+    recentFoldersPreviousIcon.innerHTML = chevronLeftIcon();
+  }
+  if (recentFoldersNextIcon) {
+    recentFoldersNextIcon.innerHTML = chevronRightIcon();
+  }
   settingsButton.querySelector(".theme-toggle-icon").innerHTML = settingsFilledIcon();
   document.querySelectorAll("[data-theme-mode]").forEach((button) => {
     button.querySelector(".button-icon").innerHTML = themeModeIcon(button.dataset.themeMode);
   });
-  closeSettingsButton.querySelector(".button-icon").innerHTML = closeIcon();
+  const closeSettingsIcon = closeSettingsButton?.querySelector(".button-icon");
+  if (closeSettingsIcon) {
+    closeSettingsIcon.innerHTML = arrowLeftIcon();
+  }
+  document.querySelector(".settings-page-help .button-icon").innerHTML = githubIcon();
   favoriteAddButton.querySelector(".button-icon").innerHTML = plusIcon();
   document.querySelector(".media-placeholder .empty-mark")?.replaceChildren();
 }
@@ -1899,10 +2786,49 @@ function applyMediaFeedTypeLocale() {
 
 function applySettingsLocale() {
   document.querySelector("#settingsTitle").textContent = t("settingsTitle");
+  document.querySelector("#settingsSubtitle").textContent = t("settingsSubtitle");
+  document.querySelector(".settings-tabs")?.setAttribute("aria-label", t("settingsTabsLabel"));
+  document.querySelector("#settingsBasicTab").textContent = t("settingsBasicTab");
+  document.querySelector("#settingsSearchTab").textContent = t("settingsSearchTab");
   document.querySelector("#themeModeControl")?.setAttribute("aria-label", t("appearanceModeTitle"));
+  document.querySelector("#appearanceModeTitle").textContent = t("appearanceModeTitle");
+  document.querySelector(".settings-mode-group .settings-group-heading p").textContent = t("appearanceModeDescription");
+  document.querySelector(".settings-mode-group .settings-group-note").textContent = t("appearanceModeHint");
   document.querySelector("#presetPaletteTitle").textContent = t("presetPaletteTitle");
+  document.querySelector('[aria-labelledby="presetPaletteTitle"] .settings-group-heading p').textContent = t("presetPaletteDescription");
+  document.querySelector('[aria-labelledby="presetPaletteTitle"] .settings-group-note').textContent = t("presetPaletteHint");
   document.querySelector("#syncSettingsTitle").textContent = t("syncSettingsTitle");
-  document.querySelector("#customPaletteTitle").textContent = t("customPaletteTitle");
+  document.querySelector('[aria-labelledby="syncSettingsTitle"] .settings-group-heading p').textContent = t("syncSettingsDescription");
+  document.querySelector("#searchSettingsDefaultTitle").textContent = t("searchSettingsDefaultTitle");
+  document.querySelector('[aria-labelledby="searchSettingsDefaultTitle"] .settings-group-heading p').textContent = t("searchSettingsDefaultDescription");
+  document.querySelector('[aria-labelledby="searchSettingsDefaultTitle"] .settings-group-note').textContent = t("searchSettingsDefaultHint");
+  document.querySelector("#searchSettingsAiTitle").textContent = t("searchSettingsAiTitle");
+  document.querySelector('[aria-labelledby="searchSettingsAiTitle"] .settings-group-heading p').textContent = t("searchSettingsAiDescription");
+  document.querySelector('[aria-labelledby="searchSettingsAiTitle"] .settings-group-note').textContent = t("searchSettingsAiHint");
+  document.querySelector("#searchSettingsPlatformTitle").textContent = t("searchSettingsPlatformTitle");
+  document.querySelector('[aria-labelledby="searchSettingsPlatformTitle"] .settings-group-heading p').textContent = t("searchSettingsPlatformDescription");
+  document.querySelector('[aria-labelledby="searchSettingsPlatformTitle"] .settings-group-note').textContent = t("searchSettingsPlatformHint");
+  document.querySelector("#resetSearchSettingsButton").textContent = t("searchSettingsReset");
+  document.querySelector("#searchSettingsForm button[type='submit']").textContent = t("searchSettingsSave");
+  const customPaletteTitle = document.querySelector("#customPaletteTitle");
+  if (customPaletteTitle) {
+    customPaletteTitle.textContent = t("customPaletteTitle");
+    document.querySelector('[aria-labelledby="customPaletteTitle"] .settings-group-heading p').textContent = t("customPaletteDescription");
+    document.querySelector('[aria-labelledby="customPaletteTitle"] .settings-group-note').textContent = t("customPaletteHint");
+  }
+  if (closeSettingsButton) {
+    closeSettingsButton.title = t("settingsBackHome");
+  }
+  const settingsHelp = document.querySelector(".settings-page-help");
+  const settingsHelpLabel = settingsHelp?.querySelector("span:last-child");
+  if (settingsHelp) {
+    setButtonLabel(settingsHelp, "GitHub");
+    settingsHelp.title = "GitHub";
+    settingsHelp.href = ISSUE_FEEDBACK_URL;
+  }
+  if (settingsHelpLabel) {
+    settingsHelpLabel.textContent = "GitHub";
+  }
   document.querySelectorAll("[data-theme-mode]").forEach((button) => {
     const mode = button.dataset.themeMode;
     if (mode === "system") {
@@ -1914,30 +2840,48 @@ function applySettingsLocale() {
     }
   });
   setButtonLabel(syncSettingsNowButton, t("syncSettingsNow"));
+  setButtonLabel(syncSettingsAutoButton, t("syncSettingsAuto"));
+  document.querySelector(".sync-settings-actions")?.setAttribute("aria-label", t("syncSettingsActionsLabel"));
   updateSyncSettingsUi();
-  lightAccentInput.closest("label").querySelector("span").textContent = t("lightAccent");
-  darkAccentInput.closest("label").querySelector("span").textContent = t("darkAccent");
+  renderSearchSettingsForm();
+  lightAccentInput?.closest("label")?.querySelector("span")?.replaceChildren(document.createTextNode(t("lightAccent")));
+  darkAccentInput?.closest("label")?.querySelector("span")?.replaceChildren(document.createTextNode(t("darkAccent")));
+  updateSettingsActiveSummary(settingsTabButtons.find((button) => button.classList.contains("active"))?.dataset.settingsTab);
 }
 
 async function init() {
-  await Promise.all([
-    initSiteIconIndex(),
-    initTdesignIcons(),
-    initTablerIcons()
-  ]);
+  hydrateThemeFromBootCache();
   applyLocale();
-  await initThemeMode();
+  renderFirstPaintCache();
+  const siteIconIndexReady = initSiteIconIndex();
+  siteIconIndexReady.then(refreshRenderedSiteIcons).catch(() => {});
+  const themeModeReady = initThemeMode();
+  const searchSettingsReady = initSearchSettings();
   await initQuickSearchEngine();
   renderFavoriteSites();
   renderPortals();
   renderSelectedBookmarkFolder();
   refreshHistory();
+  void searchSettingsReady;
+  void themeModeReady;
 
   chooseBookmarkFolderButton.addEventListener("click", openBookmarkPicker);
   refreshBookmarkFolderButton.addEventListener("click", renderSelectedBookmarkFolder);
   bookmarkFavoriteAddButton?.addEventListener("click", toggleFavoriteForm);
   closeBookmarkPickerButton.addEventListener("click", closeBookmarkPicker);
   refreshHistoryButton.addEventListener("click", refreshHistory);
+  recentFoldersPreviousButton?.addEventListener("click", (event) => {
+    showRecentFolderPage(recentFolderPageIndex - 1, "previous");
+    if (event.detail > 0) {
+      recentFoldersPreviousButton.blur();
+    }
+  });
+  recentFoldersNextButton?.addEventListener("click", (event) => {
+    showRecentFolderPage(recentFolderPageIndex + 1, "next");
+    if (event.detail > 0) {
+      recentFoldersNextButton.blur();
+    }
+  });
   portalSurfaceButton.addEventListener("click", () => toggleSurfacePanel("portalPanel"));
   surfaceBackButtons.forEach((button) => {
     button.addEventListener("click", () => setActiveSurfacePanel(""));
@@ -1963,9 +2907,15 @@ async function init() {
   onboardingCloseButton?.addEventListener("click", dismissOnboardingGuide);
   onboardingDoneButton?.addEventListener("click", dismissOnboardingGuide);
   settingsButton.addEventListener("click", toggleSettingsPanel);
-  settingsBackdrop?.addEventListener("click", () => closeSettingsPanel({ restoreFocus: true }));
   closeSettingsButton.addEventListener("click", () => closeSettingsPanel({ restoreFocus: true }));
+  settingsShell?.addEventListener("scroll", updateSettingsTabsStickyVisualState, { passive: true });
+  window.addEventListener("resize", updateSettingsTabsStickyVisualState);
   syncSettingsNowButton?.addEventListener("click", handleManualSyncSettings);
+  settingsTabButtons.forEach((button) => {
+    button.addEventListener("click", () => activateSettingsTab(button.dataset.settingsTab));
+  });
+  searchSettingsForm?.addEventListener("submit", handleSearchSettingsSubmit);
+  resetSearchSettingsButton?.addEventListener("click", handleSearchSettingsReset);
   document.querySelectorAll("[data-theme-mode]").forEach((button) => {
     button.addEventListener("pointerdown", (event) => {
       if (searchWorkbench?.classList.contains("search-active")) {
@@ -1977,10 +2927,10 @@ async function init() {
       sourceEvent: event
     }));
   });
-  lightAccentInput.addEventListener("input", handleCustomThemeColorInput);
-  lightAccentStrongInput.addEventListener("input", handleCustomThemeColorInput);
-  darkAccentInput.addEventListener("input", handleCustomThemeColorInput);
-  darkAccentStrongInput.addEventListener("input", handleCustomThemeColorInput);
+  lightAccentInput?.addEventListener("input", handleCustomThemeColorInput);
+  lightAccentStrongInput?.addEventListener("input", handleCustomThemeColorInput);
+  darkAccentInput?.addEventListener("input", handleCustomThemeColorInput);
+  darkAccentStrongInput?.addEventListener("input", handleCustomThemeColorInput);
   mobileSectionTabs.forEach((tab) => {
     tab.addEventListener("click", () => activateMobilePanel(tab.dataset.panelTarget));
   });
@@ -2085,7 +3035,7 @@ function setActiveSurfacePanel(panelId) {
           panel.classList.remove("surface-closing");
         });
         syncSurfaceChromeState();
-        if (previousPanelId === "portalPanel") {
+        if (previousPanelId === "portalPanel" && !isSettingsPanelVisible()) {
           portalSurfaceButton.focus({ preventScroll: true });
         }
       }
@@ -2110,10 +3060,10 @@ function setHomeSurfaceIsolation(isIsolated) {
 
 function syncSurfaceChromeState() {
   const hasSurfacePanel = Boolean(activeSurfacePanelId);
-  const hasSettingsDrawer = settingsShell?.classList.contains("surface-open");
-  const isSurfaceChromeVisible = Boolean(hasSurfacePanel || hasSettingsDrawer);
-  document.body.classList.toggle("surface-open", isSurfaceChromeVisible);
-  setHomeSurfaceIsolation(isSurfaceChromeVisible);
+  const hasSettingsPage = Boolean(settingsShell?.classList.contains("page-active") || settingsShell?.classList.contains("page-closing"));
+  document.body.classList.toggle("surface-open", hasSurfacePanel);
+  document.body.classList.toggle("settings-page-open", hasSettingsPage);
+  setHomeSurfaceIsolation(Boolean(hasSurfacePanel || hasSettingsPage));
 }
 
 function focusActiveSurfacePanel(panelId) {
@@ -2168,6 +3118,428 @@ async function initQuickSearchEngine() {
   await setQuickSearchEngine(DEFAULT_SEARCH_ENGINE);
 }
 
+async function initSearchSettings() {
+  const settings = await loadSearchSettings();
+  applySearchSettings(settings);
+}
+
+async function loadSearchSettings() {
+  try {
+    const result = await getStoredValues({ [SEARCH_SETTINGS_STORAGE_KEY]: defaultSearchSettings() });
+    return normalizeSearchSettings(result[SEARCH_SETTINGS_STORAGE_KEY]);
+  } catch (error) {
+    console.warn("Failed to load search settings", error);
+    return defaultSearchSettings();
+  }
+}
+
+async function saveSearchSettings(settings) {
+  await setStoredValues({ [SEARCH_SETTINGS_STORAGE_KEY]: normalizeSearchSettings(settings) });
+}
+
+function defaultSearchSettings() {
+  return {
+    defaultSearchEngine: DEFAULT_LOCAL_SEARCH_ENGINE,
+    aiEngines: Object.fromEntries(defaultAiSearchEngines().map((engine) => [
+      engine.id,
+      {
+        label: engine.label,
+        commands: aiEngineCommands(engine),
+        searchUrl: engine.searchUrl || engine.directUrl || ""
+      }
+    ]))
+  };
+}
+
+function normalizeSearchSettings(value) {
+  const fallback = defaultSearchSettings();
+  const defaultSearchEngine = editableLocalSearchEngineIds().includes(value?.defaultSearchEngine)
+    ? value.defaultSearchEngine
+    : fallback.defaultSearchEngine;
+  const aiEngines = {};
+  defaultAiSearchEngines().forEach((engine) => {
+    const saved = value?.aiEngines?.[engine.id] || {};
+    const fallbackCommands = fallback.aiEngines[engine.id]?.commands || aiEngineCommands(engine);
+    const commands = normalizeAiCommandList(saved.commands, fallbackCommands);
+    const label = normalizeSettingText(saved.label, engine.label, 32);
+    const searchUrl = normalizeSearchSettingsUrl(saved.searchUrl, engine.searchUrl || engine.directUrl || "");
+    aiEngines[engine.id] = { label, commands, searchUrl };
+  });
+  return { defaultSearchEngine, aiEngines };
+}
+
+function applySearchSettings(settings, options = {}) {
+  const normalized = normalizeSearchSettings(settings);
+  selectedLocalSearchEngine = normalized.defaultSearchEngine;
+  searchEngines = DEFAULT_SEARCH_ENGINES.map((engine) => {
+    const nextEngine = cloneSearchEngine(engine);
+    const aiSettings = normalized.aiEngines[nextEngine.id];
+    if (!aiSettings || !nextEngine.aiDirect) {
+      return nextEngine;
+    }
+    nextEngine.label = aiSettings.label;
+    nextEngine.commands = aiSettings.commands;
+    nextEngine.command = aiSettings.commands[0] || nextEngine.command;
+    nextEngine.searchUrl = aiSettings.searchUrl;
+    nextEngine.directUrl = aiSettings.searchUrl;
+    return nextEngine;
+  });
+  if (!searchEngineById(activeSearchEngine, { strict: true })) {
+    activeSearchEngine = DEFAULT_SEARCH_ENGINE;
+  }
+  if (options.render !== false) {
+    updateQuickSearchModeUi();
+    renderSearchSettingsForm();
+    if (searchEngineById(activeSearchEngine).local && !searchSuggestions.hidden) {
+      renderLocalSearchSuggestions(normalizeText(quickSearchInput.value));
+    }
+  }
+  return normalized;
+}
+
+function cloneSearchEngine(engine) {
+  return {
+    ...engine,
+    commands: Array.isArray(engine.commands) ? [...engine.commands] : undefined
+  };
+}
+
+function clonePlatformSearchTarget(target) {
+  return {
+    ...target,
+    prefixes: Array.isArray(target.prefixes) ? [...target.prefixes] : [],
+    searchParams: target.searchParams ? { ...target.searchParams } : undefined
+  };
+}
+
+function defaultAiSearchEngines() {
+  return DEFAULT_SEARCH_ENGINES.filter((engine) => EDITABLE_AI_ENGINE_IDS.includes(engine.id));
+}
+
+function editableAiSearchEngines() {
+  return searchEngines.filter((engine) => EDITABLE_AI_ENGINE_IDS.includes(engine.id));
+}
+
+function editableLocalSearchEngines() {
+  return editableLocalSearchEngineIds()
+    .map((engineId) => searchEngineById(engineId, { strict: true }))
+    .filter(Boolean);
+}
+
+function editableLocalSearchEngineIds() {
+  return EDITABLE_LOCAL_SEARCH_ENGINE_IDS.filter((engineId) => (
+    Boolean(searchEngineById(engineId, { strict: true }))
+  ));
+}
+
+function platformSearchTargets() {
+  return PLATFORM_SEARCH_TARGETS.map(clonePlatformSearchTarget);
+}
+
+function normalizeSettingText(value, fallback, maxLength) {
+  const normalized = normalizeText(value).slice(0, maxLength);
+  return normalized || fallback;
+}
+
+function normalizeAiCommandList(value, fallbackCommands) {
+  const source = Array.isArray(value) ? value : String(value || "").split(/[\s,，]+/);
+  const commands = source
+    .map(normalizeAiCommandToken)
+    .filter(Boolean);
+  const uniqueCommands = [...new Set(commands)];
+  return uniqueCommands.length ? uniqueCommands : [...fallbackCommands];
+}
+
+function normalizeAiCommandToken(value) {
+  const token = String(value || "").trim().toLowerCase().replace(/^\/?/, "/");
+  return /^\/[a-z][a-z0-9-]*$/.test(token) ? token : "";
+}
+
+function normalizeSearchSettingsUrl(value, fallback) {
+  try {
+    const url = new URL(normalizePortalUrl(value || fallback));
+    return /^https?:$/.test(url.protocol) ? url.href : fallback;
+  } catch {
+    return fallback;
+  }
+}
+
+function renderSearchSettingsForm() {
+  if (!basicSearchEngineList || !aiEngineSettingsList) {
+    return;
+  }
+  basicSearchEngineList.replaceChildren(...editableLocalSearchEngines().map(createBasicSearchEngineCard));
+  aiEngineSettingsList.replaceChildren(...editableAiSearchEngines().map(createAiEngineSettingsCard));
+  platformSearchSettingsList?.replaceChildren(...platformSearchTargets().map(createPlatformSearchSettingsCard));
+}
+
+function createBasicSearchEngineCard(engine) {
+  const card = createEngineSettingsCard({
+    engine,
+    meta: engineSearchConfigLabel(engine),
+    actionLabel: engine.id === selectedLocalSearchEngine
+      ? t("searchSettingsDefaultBadge")
+      : t("searchSettingsSetDefault"),
+    current: engine.id === selectedLocalSearchEngine
+  });
+  const action = card.querySelector(".engine-settings-card-action");
+  action.addEventListener("click", () => {
+    if (engine.id !== selectedLocalSearchEngine) {
+      handleBasicSearchEngineSelect(engine.id);
+    }
+  });
+  return card;
+}
+
+function createAiEngineSettingsCard(engine) {
+  const commands = aiEngineCommands(engine).join(", ");
+  const card = createEngineSettingsCard({
+    engine,
+    meta: `${commands} · ${engineDirectConfigLabel(engine)}`,
+    actionLabel: t("searchSettingsEdit")
+  });
+  const panel = document.createElement("div");
+  const panelId = `search-settings-${engine.id}-editor`;
+  panel.className = "engine-settings-card-edit-panel";
+  panel.id = panelId;
+  panel.hidden = true;
+  panel.append(
+    createSearchSettingsInput({
+      label: t("searchSettingsEngineName"),
+      field: "label",
+      name: `${engine.id}-label`,
+      value: engine.label
+    }),
+    createSearchSettingsInput({
+      label: t("searchSettingsEngineCommands"),
+      field: "commands",
+      name: `${engine.id}-commands`,
+      value: commands,
+      attributes: {
+        spellcheck: "false"
+      }
+    }),
+    createSearchSettingsInput({
+      label: t("searchSettingsEngineUrl"),
+      field: "searchUrl",
+      name: `${engine.id}-searchUrl`,
+      value: engine.searchUrl || engine.directUrl || "",
+      wide: true,
+      attributes: {
+        inputmode: "url"
+      }
+    })
+  );
+  const editButton = card.querySelector(".engine-settings-card-action");
+  editButton.setAttribute("aria-controls", panelId);
+  editButton.setAttribute("aria-expanded", "false");
+  editButton.addEventListener("click", () => {
+    const expanded = !card.classList.contains("editing");
+    card.classList.toggle("editing", expanded);
+    panel.hidden = !expanded;
+    editButton.textContent = expanded ? t("searchSettingsDoneEdit") : t("searchSettingsEdit");
+    editButton.setAttribute("aria-expanded", String(expanded));
+    if (expanded) {
+      panel.querySelector("input")?.focus();
+    }
+  });
+  card.append(panel);
+  return card;
+}
+
+function createPlatformSearchSettingsCard(platform) {
+  const prefixes = platform.prefixes.map((prefix) => `${prefix} ${t("searchSettingsPlatformQuery")}`).join(", ");
+  const card = createEngineSettingsCard({
+    engine: {
+      id: platform.id,
+      label: platform.label,
+      searchUrl: platform.iconUrl || platform.searchUrl
+    },
+    meta: `${t("searchSettingsPlatformPrefix")}: ${prefixes} · ${platformSearchBehaviorLabel(platform)}`,
+    actionLabel: t("searchSettingsBuiltInBadge"),
+    current: true
+  });
+  const action = card.querySelector(".engine-settings-card-action");
+  action.disabled = true;
+  action.setAttribute("aria-disabled", "true");
+  return card;
+}
+
+function createEngineSettingsCard({ engine, meta, actionLabel, current = false }) {
+  const card = document.createElement("article");
+  card.className = "engine-settings-card";
+  card.dataset.engineId = engine.id;
+  const label = searchEngineLabel(engine);
+
+  const summary = document.createElement("div");
+  summary.className = "engine-settings-card-summary";
+
+  const kind = document.createElement("span");
+  kind.className = "engine-settings-card-kind";
+  kind.append(createSettingsEngineIcon(engine));
+
+  const main = document.createElement("span");
+  main.className = "engine-settings-card-main";
+  const title = document.createElement("strong");
+  title.className = "engine-settings-card-title";
+  title.textContent = label;
+  const description = document.createElement("span");
+  description.className = "engine-settings-card-meta";
+  description.textContent = meta;
+  main.append(title, description);
+
+  const actions = document.createElement("span");
+  actions.className = "engine-settings-card-actions";
+  const action = document.createElement("button");
+  action.className = "text-button engine-settings-card-action";
+  action.type = "button";
+  action.textContent = actionLabel;
+  action.setAttribute("aria-pressed", String(current));
+  action.classList.toggle("is-current", current);
+  actions.append(action);
+
+  summary.append(kind, main, actions);
+  card.append(summary);
+  return card;
+}
+
+function createSettingsEngineIcon(engine) {
+  const engineUrl = engine.searchUrl || engine.directUrl || "";
+  const localIcon = localIconForUrl(engineUrl) || GENERIC_SITE_FALLBACK_ICON;
+  const style = SETTINGS_ENGINE_ICON_STYLES[engine.id] || {};
+  const label = searchEngineLabel(engine);
+  const shell = document.createElement("span");
+  shell.className = "settings-engine-icon";
+  shell.dataset.engineIcon = engine.id;
+  shell.dataset.siteUrl = engineUrl;
+  shell.dataset.siteTitle = label;
+  shell.dataset.iconSource = localIcon;
+  shell.dataset.iconCandidate = localIcon;
+  shell.style.setProperty("--settings-engine-icon-tile", style.tile || "#ffffff");
+  shell.style.setProperty("--settings-engine-icon-glyph", style.glyph || "#1f2924");
+
+  if (style.mode === "mask") {
+    const glyph = document.createElement("span");
+    glyph.className = "settings-engine-icon-mask";
+    glyph.style.webkitMaskImage = `url("${localIcon}")`;
+    glyph.style.maskImage = `url("${localIcon}")`;
+    shell.append(glyph);
+    return shell;
+  }
+
+  const icon = document.createElement("img");
+  icon.className = "settings-engine-icon-image";
+  icon.alt = "";
+  icon.decoding = "async";
+  icon.dataset.engineIcon = engine.id;
+  icon.dataset.iconSource = localIcon;
+  icon.dataset.iconCandidate = localIcon;
+  icon.src = localIcon;
+  icon.removeAttribute("srcset");
+  shell.append(icon);
+  return shell;
+}
+
+function createSearchSettingsInput({ label, field, name, value, wide = false, attributes = {} }) {
+  const wrapper = document.createElement("label");
+  wrapper.className = `settings-form-field${wide ? " wide" : ""}`;
+  const labelNode = document.createElement("span");
+  labelNode.textContent = label;
+  const input = document.createElement("input");
+  input.dataset.searchSettingField = field;
+  input.name = name;
+  input.autocomplete = "off";
+  input.value = value;
+  Object.entries(attributes).forEach(([key, attributeValue]) => {
+    input.setAttribute(key, attributeValue);
+  });
+  wrapper.append(labelNode, input);
+  return wrapper;
+}
+
+function engineSearchConfigLabel(engine) {
+  const url = engine?.searchUrl || engine?.directUrl || "";
+  if (!url) {
+    return "";
+  }
+  return engine.queryParam ? `${url} · ${engine.queryParam}` : url;
+}
+
+function engineDirectConfigLabel(engine) {
+  return engine?.searchUrl || engine?.directUrl || "";
+}
+
+function platformSearchBehaviorLabel(platform) {
+  return t(platform?.behaviorKey || "platformSearchDirectBehavior");
+}
+
+async function handleBasicSearchEngineSelect(engineId) {
+  selectedLocalSearchEngine = engineId;
+  const settings = collectSearchSettingsFromForm();
+  try {
+    applySearchSettings(settings);
+    await saveSearchSettings(settings);
+    setSearchSettingsStatus(t("searchSettingsSaved"));
+  } catch (error) {
+    console.warn("Failed to save default search engine", error);
+    setSearchSettingsStatus("");
+  }
+}
+
+async function handleSearchSettingsSubmit(event) {
+  event.preventDefault();
+  const settings = collectSearchSettingsFromForm();
+  try {
+    applySearchSettings(settings);
+    await saveSearchSettings(settings);
+    setSearchSettingsStatus(t("searchSettingsSaved"));
+  } catch (error) {
+    console.warn("Failed to save search settings", error);
+    setSearchSettingsStatus("");
+  }
+}
+
+async function handleSearchSettingsReset() {
+  const settings = defaultSearchSettings();
+  try {
+    applySearchSettings(settings);
+    await saveSearchSettings(settings);
+    setSearchSettingsStatus(t("searchSettingsResetDone"));
+  } catch (error) {
+    console.warn("Failed to reset search settings", error);
+    setSearchSettingsStatus("");
+  }
+}
+
+function collectSearchSettingsFromForm() {
+  const aiEngines = {};
+  aiEngineSettingsList?.querySelectorAll("[data-engine-id]").forEach((card) => {
+    const engineId = card.dataset.engineId;
+    aiEngines[engineId] = {
+      label: card.querySelector('[data-search-setting-field="label"]')?.value,
+      commands: card.querySelector('[data-search-setting-field="commands"]')?.value,
+      searchUrl: card.querySelector('[data-search-setting-field="searchUrl"]')?.value
+    };
+  });
+  return normalizeSearchSettings({
+    defaultSearchEngine: selectedLocalSearchEngine,
+    aiEngines
+  });
+}
+
+function setSearchSettingsStatus(message) {
+  if (!searchSettingsStatus) {
+    return;
+  }
+  searchSettingsStatus.textContent = message;
+  window.clearTimeout(setSearchSettingsStatus.timer);
+  if (message) {
+    setSearchSettingsStatus.timer = window.setTimeout(() => {
+      searchSettingsStatus.textContent = "";
+    }, 2400);
+  }
+}
+
 function renderSearchEngineIcon(target, engine) {
   target.replaceChildren();
   if (engine.local) {
@@ -2178,7 +3550,7 @@ function renderSearchEngineIcon(target, engine) {
   icon.alt = "";
   icon.decoding = "async";
   icon.dataset.engineIcon = engine.id;
-  applySiteIcon(icon, { url: engine.searchUrl || engine.directUrl || "", title: engine.label });
+  applySiteIcon(icon, { url: engine.searchUrl || engine.directUrl || "", title: searchEngineLabel(engine) });
   target.appendChild(icon);
 }
 
@@ -2196,7 +3568,7 @@ function handleGlobalEscape(event) {
     dismissOnboardingGuide();
     return;
   }
-  exitAiQuickSearchMode();
+  exitDirectQuickSearchMode();
   hideSearchSuggestions();
   clearFavoriteDeleteMode();
   hideFavoriteForm();
@@ -2206,6 +3578,9 @@ function handleGlobalEscape(event) {
 
 async function setQuickSearchEngine(engineId, options = {}) {
   const nextEngine = searchEngineById(engineId);
+  if (!nextEngine.local) {
+    activePlatformSearchTarget = "";
+  }
   activeSearchEngine = nextEngine.id;
   updateQuickSearchModeUi();
   handleQuickSearchInput();
@@ -2213,30 +3588,49 @@ async function setQuickSearchEngine(engineId, options = {}) {
 
 function updateQuickSearchModeUi() {
   const engine = searchEngineById(activeSearchEngine);
-  quickSearchForm.style.setProperty("--ai-theme-color", engine.themeColor || "var(--accent)");
-  renderAiEnginePill(engine);
+  const platform = engine.local ? platformSearchTargetById(activePlatformSearchTarget) : null;
+  const modeTarget = platform || engine;
+  const placeholder = platform
+    ? t("quickSearchPlatformPlaceholder", { platform: platform.label })
+    : t("quickSearchPlaceholder");
+  const previousThemeColor = quickSearchForm.style.getPropertyValue("--ai-theme-color");
+  quickSearchForm.style.setProperty("--ai-theme-color", modeTarget.themeColor || "var(--accent)");
+  quickSearchInput.placeholder = placeholder;
+  quickSearchInput.setAttribute("aria-label", placeholder);
+  renderAiEnginePill(engine, { previousThemeColor });
 }
 
-function renderAiEnginePill(engine) {
+function renderAiEnginePill(engine, options = {}) {
   if (!aiEnginePill) {
     return;
   }
-  if (engine.local) {
+  const platform = engine.local ? platformSearchTargetById(activePlatformSearchTarget) : null;
+  if (engine.local && !platform) {
     if (!aiEnginePill.hidden) {
+      const previousMode = searchWorkbench?.getAttribute("data-platform-active") ? "platform" : "ai";
+      const previousThemeColor = options.previousThemeColor || quickSearchForm.style.getPropertyValue("--ai-theme-color");
       searchWorkbench?.setAttribute("data-ai-exiting", "");
       searchWorkbench?.removeAttribute("data-ai-active");
+      searchWorkbench?.removeAttribute("data-platform-active");
       aiEnginePill.dataset.exiting = "true";
+      aiEnginePill.dataset.exitMode = previousMode;
+      if (previousThemeColor) {
+        aiEnginePill.style.setProperty("--ai-exit-theme-color", previousThemeColor);
+      }
       window.clearTimeout(aiModeExitTimer);
       aiModeExitTimer = window.setTimeout(() => {
-        if (searchEngineById(activeSearchEngine).local) {
+        if (searchEngineById(activeSearchEngine).local && !activePlatformSearchTarget) {
           searchWorkbench?.removeAttribute("data-ai-exiting");
           aiEnginePill.hidden = true;
           aiEnginePill.replaceChildren();
           delete aiEnginePill.dataset.exiting;
+          delete aiEnginePill.dataset.exitMode;
+          aiEnginePill.style.removeProperty("--ai-exit-theme-color");
         }
       }, prefersReducedMotion() ? 0 : AI_MODE_EXIT_MS);
     } else {
       searchWorkbench?.removeAttribute("data-ai-active");
+      searchWorkbench?.removeAttribute("data-platform-active");
       searchWorkbench?.removeAttribute("data-ai-exiting");
     }
     return;
@@ -2244,25 +3638,37 @@ function renderAiEnginePill(engine) {
   window.clearTimeout(aiModeExitTimer);
   searchWorkbench?.removeAttribute("data-ai-exiting");
   delete aiEnginePill.dataset.exiting;
+  delete aiEnginePill.dataset.exitMode;
+  aiEnginePill.style.removeProperty("--ai-exit-theme-color");
+  const target = platform || engine;
   const icon = document.createElement("img");
   icon.alt = "";
   icon.decoding = "async";
-  icon.dataset.engineIcon = engine.id;
+  icon.dataset.engineIcon = target.id;
   applySiteIcon(icon, {
-    url: engine.searchUrl || engine.directUrl || "",
-    title: engine.label
+    url: target.iconUrl || target.searchUrl || target.directUrl || "",
+    title: target.label || searchEngineLabel(target)
   });
+  if (target.id === "jimeng") {
+    applyIconTile(icon, "brand", { light: "#000000", dark: "#000000" }, true);
+  }
   aiEnginePill.replaceChildren(icon);
   aiEnginePill.hidden = false;
-  searchWorkbench?.setAttribute("data-ai-active", engine.id);
+  if (platform) {
+    searchWorkbench?.removeAttribute("data-ai-active");
+    searchWorkbench?.setAttribute("data-platform-active", platform.id);
+  } else {
+    searchWorkbench?.removeAttribute("data-platform-active");
+    searchWorkbench?.setAttribute("data-ai-active", engine.id);
+  }
 }
 
 function searchEngineById(engineId, options = {}) {
-  const engine = SEARCH_ENGINES.find((item) => item.id === engineId);
+  const engine = searchEngines.find((item) => item.id === engineId);
   if (options.strict) {
     return engine || null;
   }
-  return engine || SEARCH_ENGINES[0];
+  return engine || searchEngines[0];
 }
 
 function applyThemeMode(theme, options = {}) {
@@ -2275,7 +3681,9 @@ function applyThemeMode(theme, options = {}) {
     document.documentElement.dataset.theme = resolvedTheme;
     activeResolvedTheme = resolvedTheme;
     writeThemeBootCache(activeThemeMode, resolvedTheme);
-    refreshAdaptiveSiteIcons();
+    if (previousResolvedTheme && previousResolvedTheme !== resolvedTheme) {
+      refreshAdaptiveSiteIcons();
+    }
     updateThemeSettingsUi();
   };
 
@@ -2291,11 +3699,44 @@ function applyThemeMode(theme, options = {}) {
   }
 }
 
+function readThemeBootCache() {
+  try {
+    return JSON.parse(localStorage.getItem(THEME_BOOT_STORAGE_KEY) || "{}");
+  } catch {
+    return {};
+  }
+}
+
+function hydrateThemeFromBootCache() {
+  const cached = readThemeBootCache();
+  const savedPalette = normalizeThemePaletteSettings({
+    palette: cached.palette,
+    custom: cached.custom
+  });
+  activeThemeMode = cached.mode === "dark" || cached.mode === "light" || cached.mode === "system"
+    ? cached.mode
+    : DEFAULT_THEME_MODE;
+  activeResolvedTheme = document.documentElement.dataset.theme === "dark" ? "dark" : "light";
+  activeThemePalette = savedPalette.palette;
+  activeCustomThemeColors = savedPalette.custom;
+}
+
 function writeThemeBootCache(mode, resolvedTheme) {
   try {
+    const variables = {};
+    const rootStyle = document.documentElement.style;
+    for (let index = 0; index < rootStyle.length; index += 1) {
+      const name = rootStyle[index];
+      if (/^--(?:light|dark)-/.test(name)) {
+        variables[name] = rootStyle.getPropertyValue(name).trim();
+      }
+    }
     localStorage.setItem(THEME_BOOT_STORAGE_KEY, JSON.stringify({
       mode,
       resolved: resolvedTheme === "dark" ? "dark" : "light",
+      palette: activeThemePalette,
+      custom: activeCustomThemeColors,
+      variables,
       updatedAt: Date.now()
     }));
   } catch (error) {
@@ -2545,7 +3986,7 @@ function normalizeThemePaletteSettings(value) {
   if (!value || typeof value !== "object") {
     return fallback;
   }
-  const palette = value.palette === CUSTOM_THEME_PALETTE_ID || THEME_PALETTES.some((item) => item.id === value.palette)
+  const palette = VISIBLE_THEME_PALETTE_IDS.has(value.palette)
     ? value.palette
     : DEFAULT_THEME_PALETTE;
   const light = normalizeColor(value.custom?.light, fallback.custom.light);
@@ -2579,28 +4020,38 @@ function normalizeColor(...values) {
 }
 
 function renderThemePalettePresets() {
-  palettePresetGrid.replaceChildren(...THEME_PALETTES.map((palette) => {
+  const displayPalettes = THEME_PALETTES.filter((palette) => VISIBLE_THEME_PALETTE_IDS.has(palette.id)).sort((first, second) => {
+    const firstIndex = THEME_PALETTE_DISPLAY_ORDER.indexOf(first.id);
+    const secondIndex = THEME_PALETTE_DISPLAY_ORDER.indexOf(second.id);
+    return (firstIndex === -1 ? Number.MAX_SAFE_INTEGER : firstIndex)
+      - (secondIndex === -1 ? Number.MAX_SAFE_INTEGER : secondIndex);
+  });
+  palettePresetGrid.replaceChildren(...displayPalettes.map((palette) => {
     const button = document.createElement("button");
     button.className = "palette-preset-button";
     button.type = "button";
     button.dataset.palette = palette.id;
     button.setAttribute("role", "radio");
+    const label = themePaletteLabel(palette);
+    button.setAttribute("aria-label", label);
     const lightMode = palette.modes.light;
     const darkMode = palette.modes.dark;
-    button.innerHTML = `
-      <span class="palette-swatch-pair" aria-hidden="true">
-        <span style="background:${lightMode.accent}"></span>
-        <span style="background:${darkMode.accent}"></span>
-      </span>
-      <span class="palette-preset-name">${palette.label}</span>
-    `;
+    const swatch = document.createElement("span");
+    swatch.className = "palette-swatch-pair";
+    swatch.setAttribute("aria-hidden", "true");
+    swatch.style.setProperty("--palette-swatch-light", lightMode.accent);
+    swatch.style.setProperty("--palette-swatch-dark", darkMode.accent);
+    const name = document.createElement("span");
+    name.className = "palette-preset-name";
+    name.textContent = label;
+    button.append(swatch, name);
     button.addEventListener("click", () => setThemePalette(palette.id, { persist: true }));
     return button;
   }));
 }
 
 async function setThemePalette(paletteId, options = {}) {
-  activeThemePalette = paletteId === CUSTOM_THEME_PALETTE_ID || THEME_PALETTES.some((palette) => palette.id === paletteId)
+  activeThemePalette = VISIBLE_THEME_PALETTE_IDS.has(paletteId)
     ? paletteId
     : DEFAULT_THEME_PALETTE;
   applyThemePalette();
@@ -2612,6 +4063,7 @@ async function setThemePalette(paletteId, options = {}) {
 }
 
 function applyThemePalette() {
+  document.documentElement.dataset.themePalette = activeThemePalette;
   if (activeThemePalette === CUSTOM_THEME_PALETTE_ID) {
     const basePalette = themePaletteById(DEFAULT_THEME_PALETTE);
     setThemeVariables({
@@ -2631,9 +4083,11 @@ function applyThemePalette() {
         }
       }
     });
+    writeThemeBootCache(activeThemeMode, activeResolvedTheme || document.documentElement.dataset.theme);
     return;
   }
   setThemeVariables(themePaletteById(activeThemePalette));
+  writeThemeBootCache(activeThemeMode, activeResolvedTheme || document.documentElement.dataset.theme);
 }
 
 function themePaletteById(paletteId) {
@@ -2714,6 +4168,9 @@ function rgbToHex(channels) {
 }
 
 async function handleCustomThemeColorInput() {
+  if (!lightAccentInput || !lightAccentStrongInput || !darkAccentInput || !darkAccentStrongInput) {
+    return;
+  }
   activeThemePalette = CUSTOM_THEME_PALETTE_ID;
   activeCustomThemeColors = {
     light: normalizeColor(lightAccentInput.value, DEFAULT_CUSTOM_THEME_COLORS.light),
@@ -2728,6 +4185,9 @@ async function handleCustomThemeColorInput() {
 }
 
 function updateCustomThemeInputs() {
+  if (!lightAccentInput || !lightAccentStrongInput || !darkAccentInput || !darkAccentStrongInput || !lightAccentValue || !darkAccentValue) {
+    return;
+  }
   lightAccentInput.value = activeCustomThemeColors.light;
   lightAccentStrongInput.value = activeCustomThemeColors.lightStrong;
   darkAccentInput.value = activeCustomThemeColors.dark;
@@ -2772,14 +4232,19 @@ function updateThemeSettingsUi() {
 }
 
 function updateSyncSettingsUi(status = storageSyncAvailable() ? "ready" : "unavailable") {
-  if (!syncSettingsRow || !syncSettingsStatus || !syncSettingsDetail || !syncSettingsNowButton) {
+  if (!syncSettingsRow || !syncSettingsStatus || !syncSettingsDetail || !syncSettingsNowButton || !syncSettingsAutoButton) {
     return;
   }
   const normalizedStatus = status === "done" ? "done" : (storageSyncAvailable() ? "ready" : "unavailable");
   syncSettingsRow.dataset.status = normalizedStatus;
   syncSettingsNowButton.disabled = normalizedStatus === "unavailable";
   syncSettingsNowButton.setAttribute("aria-disabled", String(syncSettingsNowButton.disabled));
+  syncSettingsAutoButton.disabled = true;
+  syncSettingsAutoButton.setAttribute("aria-disabled", "true");
   syncSettingsNowButton.querySelector(".button-icon").innerHTML = refreshIcon();
+  syncSettingsNowButton.querySelector(".sync-settings-action-label").textContent = t("syncSettingsNow");
+  syncSettingsAutoButton.querySelector(".button-icon").innerHTML = backupFilledIcon();
+  syncSettingsAutoButton.querySelector(".sync-settings-action-label").textContent = t("syncSettingsAuto");
   if (normalizedStatus === "done") {
     syncSettingsStatus.textContent = t("syncSettingsDone");
     syncSettingsDetail.textContent = t("syncSettingsDoneDetail");
@@ -2805,7 +4270,10 @@ async function handleManualSyncSettings() {
   }
   try {
     const keys = [...SYNC_STORAGE_KEYS].filter((key) => key !== SYNC_META_STORAGE_KEY);
-    const values = await getStoredValues(Object.fromEntries(keys.map((key) => [key, undefined])));
+    const defaults = Object.fromEntries(keys.map((key) => [key, undefined]));
+    const values = chrome.storage?.local
+      ? await chrome.storage.local.get(defaults)
+      : await getStoredValues(defaults);
     const payload = {};
     keys.forEach((key) => {
       if (typeof values[key] !== "undefined") {
@@ -2816,7 +4284,10 @@ async function handleManualSyncSettings() {
       syncedAt: Date.now(),
       source: "manual"
     };
-    await setStoredValues(payload);
+    await Promise.all([
+      chrome.storage.sync.set(payload),
+      chrome.storage?.local ? chrome.storage.local.set({ [SYNC_META_STORAGE_KEY]: payload[SYNC_META_STORAGE_KEY] }) : Promise.resolve()
+    ]);
     updateSyncSettingsUi("done");
   } catch (error) {
     console.warn("Failed to manually sync settings", error);
@@ -2836,6 +4307,36 @@ function isSettingsPanelVisible() {
   return Boolean(settingsShell && !settingsShell.hidden && settingsPanel.dataset.open === "true");
 }
 
+function updateSettingsActiveSummary(tabName = "basic") {
+  const tab = settingsTabButtons.find((button) => button.dataset.settingsTab === tabName);
+  const panel = settingsTabPanels.find((item) => item.dataset.settingsPanel === tabName);
+  const title = normalizeText(tab?.textContent) || t("settingsTitle");
+  const details = [...(panel?.querySelectorAll(".settings-group h3") || [])]
+    .map((heading) => normalizeText(heading.textContent))
+    .filter(Boolean)
+    .join(" / ");
+  document.querySelector("#settingsTitle").textContent = title;
+  document.querySelector("#settingsSubtitle").textContent = details || t("settingsSubtitle");
+}
+
+function activateSettingsTab(tabName = "basic") {
+  const targetTab = settingsTabButtons.some((button) => button.dataset.settingsTab === tabName)
+    ? tabName
+    : "basic";
+  settingsTabButtons.forEach((button) => {
+    const isActive = button.dataset.settingsTab === targetTab;
+    button.classList.toggle("active", isActive);
+    button.setAttribute("aria-selected", String(isActive));
+    button.tabIndex = isActive ? 0 : -1;
+  });
+  settingsTabPanels.forEach((panel) => {
+    const isActive = panel.dataset.settingsPanel === targetTab;
+    panel.classList.toggle("active", isActive);
+    panel.hidden = !isActive;
+  });
+  updateSettingsActiveSummary(targetTab);
+}
+
 function focusSettingsPanel() {
   window.requestAnimationFrame(() => {
     if (!isSettingsPanelVisible()) {
@@ -2845,43 +4346,54 @@ function focusSettingsPanel() {
   });
 }
 
+function updateSettingsTabsStickyVisualState() {
+  if (!settingsTabsShell) {
+    return;
+  }
+  const isStuck = Boolean(settingsShell && settingsShell.scrollTop > 0);
+  settingsTabsShell.setAttribute("data-stuck", isStuck ? "true" : "false");
+  settingsShell?.setAttribute("data-stuck", isStuck ? "true" : "false");
+}
+
 function openSettingsPanel() {
   window.clearTimeout(settingsPanelCloseTimer);
+  setActiveSurfacePanel("");
+  hideSearchSuggestions();
+  setQuickSearchActive(false);
   settingsShell.hidden = false;
-  settingsBackdrop.hidden = false;
-  settingsBackdrop.setAttribute("aria-hidden", "false");
-  settingsBackdrop.getBoundingClientRect();
+  settingsShell.scrollTop = 0;
+  updateSettingsTabsStickyVisualState();
+  window.requestAnimationFrame(updateSettingsTabsStickyVisualState);
+  settingsShell.getBoundingClientRect();
   settingsPanel.dataset.open = "true";
-  settingsShell.classList.remove("surface-closing");
-  settingsPanel.classList.remove("surface-closing");
-  settingsShell.classList.add("surface-open");
-  settingsPanel.classList.add("surface-active");
+  settingsShell.classList.remove("page-closing");
+  settingsShell.classList.add("page-active");
+  settingsButton.classList.add("active");
   settingsButton.setAttribute("aria-expanded", "true");
   updateThemeSettingsUi();
   updateSyncSettingsUi();
+  renderSearchSettingsForm();
   syncSurfaceChromeState();
   focusSettingsPanel();
 }
 
 function closeSettingsPanel(options = {}) {
-  if (!isSettingsPanelVisible() && !settingsShell.classList.contains("surface-closing")) {
+  if (!isSettingsPanelVisible() && !settingsShell.classList.contains("page-closing")) {
     return;
   }
   window.clearTimeout(settingsPanelCloseTimer);
   settingsPanel.dataset.open = "false";
-  settingsShell.classList.remove("surface-open");
-  settingsPanel.classList.remove("surface-active");
-  settingsShell.classList.add("surface-closing");
-  settingsPanel.classList.add("surface-closing");
-  settingsBackdrop.setAttribute("aria-hidden", "true");
+  settingsShell.classList.remove("page-active");
+  settingsShell.classList.add("page-closing");
+  settingsButton.classList.remove("active");
   settingsButton.setAttribute("aria-expanded", "false");
   syncSurfaceChromeState();
   settingsPanelCloseTimer = window.setTimeout(() => {
     if (settingsPanel.dataset.open !== "true") {
       settingsShell.hidden = true;
-      settingsBackdrop.hidden = true;
-      settingsShell.classList.remove("surface-closing");
-      settingsPanel.classList.remove("surface-closing");
+      settingsShell.classList.remove("page-closing");
+      settingsShell.setAttribute("data-stuck", "false");
+      settingsTabsShell?.setAttribute("data-stuck", "false");
       syncSurfaceChromeState();
     }
   }, 340);
@@ -2934,10 +4446,9 @@ function handleSettingsPanelDismiss(event) {
     return;
   }
   const target = event.target;
-  if (target instanceof Element && (settingsShell.contains(target) || settingsButton.contains(target) || settingsBackdrop?.contains(target))) {
+  if (target instanceof Element && (settingsShell.contains(target) || settingsButton.contains(target))) {
     return;
   }
-  closeSettingsPanel();
 }
 
 function handleQuickSearchSubmit(event) {
@@ -2946,16 +4457,24 @@ function handleQuickSearchSubmit(event) {
 }
 
 function handleQuickSearchInputKeydown(event) {
-  if (event.key === "Escape" && !event.isComposing && !searchEngineById(activeSearchEngine).local) {
+  if (event.key === "Escape" && !event.isComposing && !normalizeText(quickSearchInput.value)) {
     event.preventDefault();
     event.stopPropagation();
-    exitAiQuickSearchMode();
+    exitDirectQuickSearchMode();
+    hideSearchSuggestions();
+    quickSearchInput.blur();
     return;
   }
-  if (event.key === "Backspace" && !event.isComposing && !searchEngineById(activeSearchEngine).local && quickSearchInput.value.length === 0) {
+  if (event.key === "Escape" && !event.isComposing && (!searchEngineById(activeSearchEngine).local || activePlatformSearchTarget)) {
     event.preventDefault();
     event.stopPropagation();
-    exitAiQuickSearchMode();
+    exitDirectQuickSearchMode();
+    return;
+  }
+  if (event.key === "Backspace" && !event.isComposing && (!searchEngineById(activeSearchEngine).local || activePlatformSearchTarget) && quickSearchInput.value.length === 0) {
+    event.preventDefault();
+    event.stopPropagation();
+    exitDirectQuickSearchMode();
     return;
   }
   if (event.key !== "Enter" || event.isComposing) {
@@ -2963,6 +4482,14 @@ function handleQuickSearchInputKeydown(event) {
   }
   event.preventDefault();
   submitQuickSearch();
+}
+
+function exitDirectQuickSearchMode() {
+  if (activePlatformSearchTarget) {
+    exitPlatformQuickSearchMode();
+    return;
+  }
+  exitAiQuickSearchMode();
 }
 
 function exitAiQuickSearchMode() {
@@ -2974,11 +4501,26 @@ function exitAiQuickSearchMode() {
   renderLocalSearchSuggestions(normalizeText(quickSearchInput.value));
 }
 
+function exitPlatformQuickSearchMode() {
+  if (!activePlatformSearchTarget) {
+    return;
+  }
+  activePlatformSearchTarget = "";
+  updateQuickSearchModeUi();
+  renderLocalSearchSuggestions(normalizeText(quickSearchInput.value));
+}
+
 function handleQuickSearchInput() {
   const commandMatch = searchAiCommand(quickSearchInput.value);
   if (commandMatch) {
     quickSearchInput.value = commandMatch.remainder;
     setQuickSearchEngine(commandMatch.engine.id);
+    return;
+  }
+  const platformMatch = searchPlatformPrefix(quickSearchInput.value);
+  if (platformMatch && searchEngineById(activeSearchEngine).local) {
+    quickSearchInput.value = platformMatch.remainder;
+    setPlatformQuickSearchTarget(platformMatch.platform.id);
     return;
   }
   if (!searchEngineById(activeSearchEngine).local) {
@@ -2988,18 +4530,25 @@ function handleQuickSearchInput() {
   renderLocalSearchSuggestions(normalizeText(quickSearchInput.value));
 }
 
+function setPlatformQuickSearchTarget(platformId) {
+  activeSearchEngine = DEFAULT_SEARCH_ENGINE;
+  activePlatformSearchTarget = platformSearchTargetById(platformId)?.id || "";
+  updateQuickSearchModeUi();
+  renderLocalSearchSuggestions(normalizeText(quickSearchInput.value));
+}
+
 function handleQuickSearchFocus() {
   setQuickSearchActive(true);
   handleQuickSearchInput();
 }
 
 function searchAiCommand(value) {
-  const match = String(value || "").match(/^\/([a-z]+)(?:\s+|$)(.*)$/i);
+  const match = String(value || "").match(/^\/([a-z][a-z0-9-]*)(?:\s+|$)(.*)$/i);
   if (!match) {
     return null;
   }
   const command = `/${match[1].toLowerCase()}`;
-  const engine = AI_COMMAND_ENGINES.find((item) => aiEngineCommands(item).includes(command));
+  const engine = aiCommandEngines().find((item) => aiEngineCommands(item).includes(command));
   if (!engine) {
     return null;
   }
@@ -3009,10 +4558,88 @@ function searchAiCommand(value) {
   };
 }
 
+function searchPlatformPrefix(value) {
+  const match = String(value || "").match(/^([a-z][a-z0-9-]*)\s+(\S.*)$/i);
+  if (!match) {
+    return null;
+  }
+  const prefix = match[1].toLowerCase();
+  const remainder = match[2] || "";
+  const platform = PLATFORM_SEARCH_TARGETS.find((target) => (
+    target.prefixes.some((item) => item.toLowerCase() === prefix)
+  ));
+  const splitPrefixMatch = splitLongPlatformPrefix(prefix, remainder, platform);
+  if (splitPrefixMatch) {
+    return splitPrefixMatch;
+  }
+  if (isPartialSplitPlatformPrefix(prefix, remainder, platform)) {
+    return null;
+  }
+  if (!platform) {
+    return null;
+  }
+  return {
+    platform,
+    prefix,
+    remainder
+  };
+}
+
+function platformSearchPrefixes() {
+  return PLATFORM_SEARCH_TARGETS.flatMap((target) => (
+    target.prefixes.map((prefix) => ({
+      platform: target,
+      prefix: prefix.toLowerCase()
+    }))
+  ));
+}
+
+function splitLongPlatformPrefix(prefix, remainder, currentPlatform = null) {
+  const firstTokenMatch = String(remainder || "").match(/^([a-z0-9-]+)(?:\s+(\S.*))?$/i);
+  if (!firstTokenMatch) {
+    return null;
+  }
+  const combinedPrefix = `${prefix}${firstTokenMatch[1].toLowerCase()}`;
+  const match = platformSearchPrefixes().find((item) => (
+    item.prefix.length > prefix.length
+      && item.prefix === combinedPrefix
+      && item.platform.id !== currentPlatform?.id
+  ));
+  if (!match || typeof firstTokenMatch[2] === "undefined") {
+    return null;
+  }
+  return {
+    platform: match.platform,
+    prefix: match.prefix,
+    remainder: firstTokenMatch[2] || ""
+  };
+}
+
+function isPartialSplitPlatformPrefix(prefix, remainder, currentPlatform = null) {
+  const firstTokenMatch = String(remainder || "").match(/^([a-z0-9-]+)$/i);
+  if (!firstTokenMatch) {
+    return false;
+  }
+  const combinedPrefix = `${prefix}${firstTokenMatch[1].toLowerCase()}`;
+  return platformSearchPrefixes().some((item) => (
+    item.prefix.length > prefix.length
+    && item.platform.id !== currentPlatform?.id
+    && item.prefix.startsWith(combinedPrefix)
+  ));
+}
+
 function aiEngineCommands(engine) {
   return Array.from(new Set([engine.command, ...(engine.commands || [])]
     .filter(Boolean)
     .map((item) => String(item).toLowerCase())));
+}
+
+function aiCommandEngines() {
+  return searchEngines.filter((engine) => engine.aiDirect && aiEngineCommands(engine).length);
+}
+
+function platformSearchTargetById(platformId) {
+  return PLATFORM_SEARCH_TARGETS.find((target) => target.id === platformId) || null;
 }
 
 function handleQuickSearchBlur() {
@@ -3062,6 +4689,11 @@ function submitQuickSearch() {
 }
 
 function submitLocalQuickSearch(query) {
+  const platform = platformSearchTargetById(activePlatformSearchTarget);
+  if (platform) {
+    submitPlatformQuickSearch(platform, query);
+    return;
+  }
   const localUrl = localhostUrl(query);
   if (localUrl) {
     window.location.assign(localUrl);
@@ -3093,6 +4725,10 @@ function submitEngineQuickSearch(engine, query) {
   const fallbackEngine = searchEngineById("google", { strict: true });
   const targetEngine = engine?.searchUrl ? engine : fallbackEngine;
   window.location.assign(targetEngine ? engineSearchDestination(targetEngine, query) : aggregateSearchDestination(query));
+}
+
+function submitPlatformQuickSearch(platform, query) {
+  window.location.assign(platformSearchDestination(platform, query));
 }
 
 function aggregateSearchDestination(query) {
@@ -3127,6 +4763,20 @@ function engineSearchDestination(engine, query) {
   return searchUrl.href;
 }
 
+function platformSearchDestination(platform, query) {
+  const searchUrl = new URL(platform.searchUrl);
+  Object.entries(platform.searchParams || {}).forEach(([key, value]) => {
+    searchUrl.searchParams.set(key, value);
+  });
+  if (platform.pathQuery) {
+    const basePath = searchUrl.pathname.replace(/\/?$/, "/");
+    searchUrl.pathname = `${basePath}${encodeURIComponent(query)}`;
+  } else {
+    searchUrl.searchParams.set(platform.queryParam || "q", query);
+  }
+  return searchUrl.href;
+}
+
 async function submitAiDirectSearch(engine, query) {
   const targetUrl = engine.directUrl || engine.searchUrl;
   const token = crypto.randomUUID?.() || `${Date.now()}-${Math.random().toString(16).slice(2)}`;
@@ -3137,7 +4787,7 @@ async function submitAiDirectSearch(engine, query) {
       engineId: engine.id,
       createdAt: Date.now()
     });
-    destination = aiDirectTargetUrl(targetUrl, token);
+    destination = aiDirectTargetUrl(targetUrl, token, engine.urlPromptFallback ? query : "");
   } catch (error) {
     console.warn("Failed to save AI direct prompt before navigation", error);
   }
@@ -3166,10 +4816,15 @@ function pruneAiDirectPrompts(prompts) {
     .filter(([, item]) => now - Number(item?.createdAt || 0) < AI_DIRECT_PROMPT_TTL_MS));
 }
 
-function aiDirectTargetUrl(targetUrl, token) {
+function aiDirectTargetUrl(targetUrl, token, prompt = "") {
   try {
     const url = new URL(targetUrl);
     url.searchParams.set(AI_DIRECT_PROMPT_TOKEN_PARAM, token);
+    if (prompt) {
+      const hashParams = new URLSearchParams(url.hash.replace(/^#/, ""));
+      hashParams.set(AI_DIRECT_PROMPT_TEXT_PARAM, prompt);
+      url.hash = hashParams.toString();
+    }
     return url.href;
   } catch {
     return targetUrl;
@@ -3248,15 +4903,23 @@ function searchSuggestionsNaturalContentHeight() {
 }
 
 function createSearchEngineSuggestion(query) {
-  const engines = AGGREGATE_SEARCH_ENGINE_IDS
-    .map((engineId) => searchEngineById(engineId, { strict: true }))
-    .filter(Boolean);
+  const platform = platformSearchTargetById(activePlatformSearchTarget);
+  if (platform) {
+    return {
+      type: "engine-search",
+      title: query,
+      meta: "",
+      hint: t("quickSearchWithPlatform", { platform: platform.label }),
+      query,
+      selectedPlatformId: platform.id
+    };
+  }
   const selectedEngine = selectedLocalSearchEngineConfig();
   return {
     type: "engine-search",
-    title: selectedEngine ? t("quickSearchWith", { engine: selectedEngine.label }) : t("quickSearch"),
-    meta: query,
-    engines,
+    title: query,
+    meta: "",
+    hint: selectedEngine ? t("quickSearchWith", { engine: selectedEngine.label }) : t("quickSearch"),
     query,
     selectedEngineId: selectedEngine?.id || AGGREGATE_SEARCH_ENGINE_IDS[0]
   };
@@ -3529,7 +5192,7 @@ function createSearchSuggestionItem(item) {
   const copy = document.createElement("span");
   const title = document.createElement("strong");
   const meta = document.createElement("span");
-  const trailing = item.type === "engine-search" ? createSearchEngineChoices(item) : document.createElement("span");
+  const trailing = document.createElement("span");
   link.className = "search-suggestion-item";
   if (item.type === "engine-search") {
     link.classList.add("search-suggestion-item-primary");
@@ -3559,50 +5222,33 @@ function createSearchSuggestionItem(item) {
   }
   copy.className = "search-suggestion-copy";
   title.textContent = item.title;
-  meta.textContent = item.meta || (item.type === "history"
+  const metaText = item.meta || (item.type === "history"
     ? `${formatHistoryTimestamp(item.lastVisitTime)} · ${compactSiteDomain(item.url)}`
-    : compactSiteDomain(item.url));
-  if (item.type !== "engine-search") {
+    : item.type === "bookmark"
+      ? compactSiteDomain(item.url)
+      : "");
+  meta.textContent = metaText;
+  if (item.type === "engine-search") {
+    trailing.className = "search-suggestion-engine-label";
+    trailing.textContent = item.hint || "";
+  } else {
     trailing.className = "search-suggestion-badge";
     trailing.textContent = item.type === "history" ? t("localSearchHistory") : t("localSearchBookmark");
   }
-  copy.append(title, meta);
+  copy.append(title);
+  if (metaText) {
+    copy.append(meta);
+  }
   link.append(icon, copy, trailing);
   return link;
 }
 
-function createSearchEngineChoices(item) {
-  const choices = document.createElement("span");
-  choices.className = "search-engine-choices";
-  const selectedEngineId = item.selectedEngineId || selectedLocalSearchEngine;
-  item.engines.forEach((engine) => {
-    const button = document.createElement("button");
-    button.className = "search-engine-choice";
-    button.type = "button";
-    button.setAttribute("aria-label", t("quickSearchWith", { engine: engine.label }));
-    button.setAttribute("aria-pressed", String(engine.id === selectedEngineId));
-    const engineUrl = engine.searchUrl || engine.directUrl || "";
-    if (engineUrl) {
-      const icon = document.createElement("img");
-      icon.alt = "";
-      applySiteIcon(icon, { url: engineUrl, title: engine.label });
-      button.append(icon);
-    } else {
-      button.textContent = engine.label.slice(0, 1);
-    }
-    button.addEventListener("click", (event) => {
-      event.preventDefault();
-      event.stopPropagation();
-      selectedLocalSearchEngine = engine.id;
-      renderLocalSearchSuggestions(normalizeText(quickSearchInput.value));
-      quickSearchInput.focus();
-    });
-    choices.append(button);
-  });
-  return choices;
-}
-
 function submitSelectedSuggestionSearch(item) {
+  const platform = platformSearchTargetById(item.selectedPlatformId);
+  if (platform) {
+    submitPlatformQuickSearch(platform, item.query);
+    return;
+  }
   const selectedEngine = searchEngineById(item.selectedEngineId || selectedLocalSearchEngine, { strict: true })
     || selectedLocalSearchEngineConfig();
   submitEngineQuickSearch(selectedEngine, item.query);
@@ -4248,11 +5894,17 @@ function appendFavoriteTargetButton(node, site, favoriteKeys = new Set()) {
 async function renderFavoriteSites() {
   clearFavoriteDeleteMode();
   const favorites = await loadFavoriteSites();
+  writeFirstPaintCache({ favoriteSites: favorites });
+  await renderFavoriteSiteList(favorites, { iconRenders: readFirstPaintCache().iconRenders });
+}
+
+async function renderFavoriteSiteList(favorites, options = {}) {
   const previousState = captureFavoriteReorderState();
   const shouldAnimateReorder = favoriteSitesHydrated;
   const fragment = document.createDocumentFragment();
   const favoriteNodes = await Promise.all(favorites.map((site, index) => createFavoriteSite(site, index, {
-    awaitDisplayIcon: !favoriteSitesHydrated
+    awaitDisplayIcon: false,
+    cachedIconRender: cachedFirstPaintIconRender(options.iconRenders, site)
   })));
   favoriteNodes.forEach((node) => fragment.appendChild(node));
   favoriteStrip.replaceChildren(fragment);
@@ -4308,11 +5960,14 @@ async function createFavoriteSite(site, index, options = {}) {
   node.dataset.flipId = `favorite-${site.id}`;
   link.href = site.url;
   link.setAttribute("aria-label", site.title || compactSiteDomain(site.url));
-  if (options.awaitDisplayIcon) {
+  if (options.cachedIconRender) {
+    restoreFirstPaintIconRender(icon, site, options.cachedIconRender);
+  } else if (options.awaitDisplayIcon) {
     await applySiteIcon(icon, site, { awaitDisplayIcon: true });
   } else {
     applySiteIcon(icon, site);
   }
+  cacheRenderedSiteIconOnLoad(icon, site);
   icon.alt = "";
   setButtonLabel(removeButton, t("deleteFavoriteSite"));
   removeButton.innerHTML = closeIcon();
@@ -5755,6 +7410,9 @@ function applySiteIcon(icon, site, options = {}) {
   const tileIconSource = localIcon || (remoteBrandSvgDescriptorFromSource(siteIcon) ? siteIcon : "");
   storeIconSiteContext(icon, site);
   applySiteIconTile(icon, site, tileIconSource);
+  if (localIcon) {
+    delete icon.dataset.remoteBrandIconRequest;
+  }
   if (iconSource) {
     const displayIcon = displayIconSource(icon, iconSource, options);
     const setIconSource = (source) => {
@@ -5955,12 +7613,6 @@ function brandIconTileColors(tileColor, siteKey = "", iconPath = "") {
   if (!color) {
     return genericIconTileColors("");
   }
-  if (nativeRoundedBrandIcon(siteKey)) {
-    return {
-      light: color,
-      dark: color
-    };
-  }
   if (keepsBrandIconOriginalOnBrandTile(siteKey, iconPath)) {
     return {
       light: color,
@@ -6028,10 +7680,6 @@ function remoteBrandSvgSourceIsMaskable(source) {
   }
   const match = svg.match(/\sdata-wayleaf-monochrome=(["'])(true|false)\1/i);
   return match ? match[2] === "true" : remoteBrandSvgIsMonochrome(svg);
-}
-
-function nativeRoundedBrandIcon(siteKey) {
-  return NATIVE_ROUNDED_BRAND_ICON_SITE_KEYS.has(siteKey);
 }
 
 function genericIconTileColors(seed) {
@@ -6107,9 +7755,6 @@ function currentIconTileColor(icon) {
 
 function shouldInvertBrandSvg(icon, source) {
   const siteKey = icon.dataset.siteKey || siteGroupKey(safeUrl(icon.dataset.siteUrl));
-  if (nativeRoundedBrandIcon(siteKey)) {
-    return false;
-  }
   if (keepsBrandIconOriginal(siteKey, source)) {
     return false;
   }
@@ -6276,21 +7921,36 @@ function iconTileNeedsWhiteGlyph(tileColor) {
 }
 
 function refreshAdaptiveSiteIcons() {
+  const requestTheme = document.documentElement.dataset.theme;
   document.querySelectorAll('img[data-icon-tile="brand"][data-icon-source]').forEach((icon) => {
     const source = icon.dataset.iconSource || "";
-    if (source) {
-      icon.src = source;
-      const displayIcon = displayIconSource(icon, source, { awaitDisplayIcon: true });
-      if (displayIcon instanceof Promise) {
-        displayIcon.then((nextSource) => {
-          if (icon.dataset.iconSource === source) {
-            icon.src = nextSource;
-          }
-        });
-      } else {
-        icon.src = displayIcon;
-      }
+    if (!source) {
+      return;
     }
+    const requestToken = String(Number(icon.dataset.iconThemeRequest || 0) + 1);
+    icon.dataset.iconThemeRequest = requestToken;
+    Promise.resolve(displayIconSource(icon, source, { awaitDisplayIcon: true })).then((nextSource) => {
+      if (
+        icon.isConnected
+        && icon.dataset.iconSource === source
+        && icon.dataset.iconThemeRequest === requestToken
+        && document.documentElement.dataset.theme === requestTheme
+      ) {
+        icon.src = nextSource;
+      }
+    });
+  });
+}
+
+function refreshRenderedSiteIcons() {
+  document.querySelectorAll("img[data-site-url]").forEach((icon) => {
+    if (icon.dataset.iconCacheHydrated === "true") {
+      return;
+    }
+    applySiteIcon(icon, {
+      title: icon.dataset.siteTitle || icon.alt || "",
+      url: icon.dataset.siteUrl || ""
+    });
   });
 }
 
@@ -6473,6 +8133,7 @@ function applyFaviconSampleDecision(icon, sample, options = {}) {
       const tileColors = color?.confidence ? faviconMatchedTileColors(color) : null;
       if (tileColors) {
         applyIconTile(icon, "plain", tileColors, false);
+        cacheRenderedSiteIconFromContext(icon);
       }
       return;
     }
@@ -6492,6 +8153,7 @@ function applyFaviconSampleDecision(icon, sample, options = {}) {
     return;
   }
   applyIconTile(icon, "plain", tileColors, false);
+  cacheRenderedSiteIconFromContext(icon);
 }
 
 function probeUnreadableFaviconCandidate(icon, options = {}) {
@@ -7474,17 +9136,19 @@ function faviconMatchedTileColors(color) {
 
 function faviconSurfaceTileColors(tileColor, color) {
   const preferReadableCarrier = faviconCandidateNeedsReadableCarrier(color, tileColor);
+  const carrier = faviconCarrierTileColor(tileColor, "dark", { preferReadableCarrier });
   return {
-    light: faviconCarrierTileColor(tileColor, "light", { preferReadableCarrier }),
-    dark: faviconCarrierTileColor(tileColor, "dark", { preferReadableCarrier })
+    light: carrier,
+    dark: carrier
   };
 }
 
 function faviconSeparatedTileColors(tileColor, color) {
   const preferReadableCarrier = faviconCandidateNeedsReadableCarrier(color, tileColor);
+  const carrier = faviconCarrierTileColor(tileColor, "dark", { preferReadableCarrier, separate: true });
   return {
-    light: faviconCarrierTileColor(tileColor, "light", { preferReadableCarrier, separate: true }),
-    dark: faviconCarrierTileColor(tileColor, "dark", { preferReadableCarrier, separate: true })
+    light: carrier,
+    dark: carrier
   };
 }
 
@@ -9459,12 +11123,17 @@ async function refreshHistory() {
     const recentGroups = groupHistoryBySite(recentItems, {
       maxPagesPerSite: MAX_HISTORY_PAGES_PER_SITE
     });
+    writeFirstPaintCache({ recentGroups: serializeRecentGroupsForFirstPaint(recentGroups) });
     renderRecentFolders(recentGroups);
     renderHistory(recentGroups);
   } catch (error) {
     pinnedGrid.innerHTML = "";
     historyGrid.innerHTML = emptyState(t("historyReadFailed"));
     recentHistoryFolders.innerHTML = emptyState(t("historyReadFailed"));
+    latestRecentFolderGroups = [];
+    recentFolderPageIndex = 0;
+    pendingRecentPreviousKeys = null;
+    updateRecentFolderSwitchControls();
   }
 }
 
@@ -9548,19 +11217,18 @@ async function updateOpenTabActivity(tabs) {
       next[key] = {
         ...next[key],
         title: normalizeText(tab.title) || next[key].title,
-        lastAccessed: Math.max(Number(tab.lastAccessed || 0), Number(next[key].lastAccessed || 0), now),
+        lastAccessed: Math.max(normalizedTabLastAccessed(tab), Number(next[key].lastAccessed || 0)),
         tabCount: next[key].tabCount + 1
       };
       continue;
     }
     const seen = previous[key] || {};
     const firstSeenAt = Number.isFinite(Number(seen.firstSeenAt)) ? Number(seen.firstSeenAt) : now;
-    const lastAccessed = Math.max(Number(tab.lastAccessed || 0), Number(seen.lastAccessed || 0), now);
     next[key] = {
       url: url.href,
       title: normalizeText(tab.title) || normalizeText(seen.title),
       firstSeenAt,
-      lastAccessed,
+      lastAccessed: normalizedTabLastAccessed(tab) || Number(seen.lastAccessed || firstSeenAt),
       tabCount: 1
     };
   }
@@ -9571,11 +11239,20 @@ async function updateOpenTabActivity(tabs) {
     .map((entry) => ({
       title: normalizeText(entry.title) || historyFallbackTitle(safeUrl(entry.url)),
       url: entry.url,
-      lastVisitTime: Math.max(Number(entry.lastAccessed || 0), Number(entry.firstSeenAt || 0)),
+      lastVisitTime: openTabHistoryTime(entry),
       visitCount: Math.max(MIN_RECENT_DOMAIN_VISITS, Number(entry.tabCount || 0)),
       typedCount: 0,
       fromOpenTab: true
     }));
+}
+
+function normalizedTabLastAccessed(tab) {
+  const value = Number(tab?.lastAccessed || 0);
+  return Number.isFinite(value) && value > 0 ? value : 0;
+}
+
+function openTabHistoryTime(entry) {
+  return Number(entry?.firstSeenAt || 0);
 }
 
 function normalizeOpenTabActivity(value, now = Date.now()) {
@@ -9665,25 +11342,89 @@ function renderHistory(groups) {
   historyGrid.replaceChildren(fragment);
 }
 
-function renderRecentFolders(groups) {
-  if (!groups.length) {
+function renderRecentFolders(groups, options = {}) {
+  latestRecentFolderGroups = orderedRecentHistoryGroups(groups);
+  clearRecentFolderPageSwitchAnimation();
+  if (!latestRecentFolderGroups.length) {
     recentHistoryFolders.innerHTML = emptyState(t("noHistoryItems"));
     pendingRecentPreviousKeys = null;
+    recentFolderPageIndex = 0;
+    updateRecentFolderSwitchControls();
     return;
   }
 
-  const previousKeys = pendingRecentPreviousKeys;
+  const direction = options.direction || "";
+  const pageCount = recentFolderPageCount();
+  if (Number.isFinite(Number(options.pageIndex))) {
+    recentFolderPageIndex = Number(options.pageIndex);
+  } else if (!direction) {
+    recentFolderPageIndex = 0;
+  }
+  recentFolderPageIndex = Math.min(Math.max(0, recentFolderPageIndex), pageCount - 1);
+  const previousKeys = options.previousKeys || pendingRecentPreviousKeys;
+  const outgoingLayer = captureRecentFolderPageSwitchSnapshot(previousKeys, direction);
   pendingRecentPreviousKeys = null;
+  const iconRenders = options.iconRenders || readFirstPaintCache().iconRenders;
+  const startIndex = recentFolderPageIndex * MAX_RECENT_FOLDER_ITEMS;
   const fragment = document.createDocumentFragment();
-  groups.slice(0, MAX_RECENT_FOLDER_ITEMS).forEach((group) => {
-    const card = createRecentFolderItem(group);
+  latestRecentFolderGroups.slice(startIndex, startIndex + MAX_RECENT_FOLDER_ITEMS).forEach((group) => {
+    const card = createRecentFolderItem(group, { iconRenders });
     fragment.appendChild(card);
   });
   recentHistoryFolders.replaceChildren(fragment);
+  if (outgoingLayer) {
+    recentHistoryFolders.append(outgoingLayer);
+  }
+  updateRecentFolderSwitchControls();
   if (previousKeys) {
     const nextKeys = recentFolderVisibleKeys();
-    animateRecentFolderEntries(new Set([...nextKeys].filter((key) => !previousKeys.has(key))));
+    if (direction) {
+      animateRecentFolderPageSwitch(outgoingLayer, nextKeys, previousKeys, direction);
+    } else {
+      animateRecentFolderEntries(new Set([...nextKeys].filter((key) => !previousKeys.has(key))));
+    }
   }
+}
+
+function recentFolderPageCount(groups = latestRecentFolderGroups) {
+  return Math.max(1, Math.ceil((groups?.length || 0) / MAX_RECENT_FOLDER_ITEMS));
+}
+
+function updateRecentFolderSwitchControls() {
+  const pageCount = recentFolderPageCount();
+  const hasMultiplePages = latestRecentFolderGroups.length > MAX_RECENT_FOLDER_ITEMS && pageCount > 1;
+  const previousDisabled = !hasMultiplePages || recentFolderPageIndex <= 0;
+  const nextDisabled = !hasMultiplePages || recentFolderPageIndex >= pageCount - 1;
+  recentHistoryFolders.dataset.pageIndex = String(recentFolderPageIndex);
+  recentHistoryFolders.dataset.pageCount = String(pageCount);
+  [
+    [recentFoldersPreviousButton, previousDisabled],
+    [recentFoldersNextButton, nextDisabled]
+  ].forEach(([button, isDisabled]) => {
+    if (!button) {
+      return;
+    }
+    button.disabled = isDisabled;
+    button.setAttribute("aria-disabled", String(isDisabled));
+  });
+}
+
+function showRecentFolderPage(nextPageIndex, direction = "") {
+  const pageCount = recentFolderPageCount();
+  if (pageCount <= 1) {
+    updateRecentFolderSwitchControls();
+    return;
+  }
+
+  const targetPageIndex = Math.min(Math.max(0, Number(nextPageIndex)), pageCount - 1);
+  if (targetPageIndex === recentFolderPageIndex) {
+    updateRecentFolderSwitchControls();
+    return;
+  }
+
+  const previousKeys = recentFolderVisibleKeys();
+  recentFolderPageIndex = targetPageIndex;
+  renderRecentFolders(latestRecentFolderGroups, { previousKeys, direction });
 }
 
 function animateRecentFolderExit(card) {
@@ -9705,9 +11446,49 @@ function animateRecentFolderExit(card) {
   );
 }
 
+function clearRecentFolderPageSwitchAnimation() {
+  if (activeRecentFolderPageSwitchAnimation) {
+    activeRecentFolderPageSwitchAnimation.cancel();
+    activeRecentFolderPageSwitchAnimation = null;
+  }
+  recentHistoryFolders.querySelectorAll(".recent-folder-switch-layer").forEach((layer) => {
+    layer.remove();
+  });
+  recentHistoryFolders.querySelectorAll(":scope > .recent-folder-item").forEach((card) => {
+    card.style.opacity = "";
+    card.style.transform = "";
+    card.style.willChange = "";
+  });
+}
+
+function captureRecentFolderPageSwitchSnapshot(previousKeys, direction = "") {
+  if (!direction || prefersReducedMotion() || !previousKeys?.size || !recentHistoryFolders.children.length) {
+    return null;
+  }
+
+  const layer = document.createElement("div");
+  const cards = [...recentHistoryFolders.querySelectorAll(":scope > .recent-folder-item")]
+    .filter((card) => previousKeys.has(card.dataset.siteKey || ""));
+  if (!cards.length) {
+    return null;
+  }
+
+  layer.className = "recent-folder-switch-layer";
+  layer.setAttribute("aria-hidden", "true");
+  cards.forEach((card, index) => {
+    const snapshot = card.cloneNode(true);
+    snapshot.classList.add("recent-folder-switch-snapshot");
+    snapshot.querySelectorAll("a, button").forEach((node) => {
+      node.tabIndex = -1;
+    });
+    layer.append(snapshot);
+  });
+  return layer;
+}
+
 function recentFolderVisibleKeys(excludedKey = "") {
   return new Set(
-    [...recentHistoryFolders.querySelectorAll(".recent-folder-item")]
+    [...recentHistoryFolders.querySelectorAll(":scope > .recent-folder-item")]
       .map((node) => node.dataset.siteKey)
       .filter((key) => key && key !== excludedKey)
   );
@@ -9718,7 +11499,7 @@ function animateRecentFolderEntries(enterKeys) {
     return;
   }
 
-  const cards = [...recentHistoryFolders.querySelectorAll(".recent-folder-item")];
+  const cards = [...recentHistoryFolders.querySelectorAll(":scope > .recent-folder-item")];
   for (const card of cards) {
     const key = card.dataset.siteKey || "";
     if (!key || !enterKeys.has(key) || !card.animate) {
@@ -9728,7 +11509,7 @@ function animateRecentFolderEntries(enterKeys) {
     card.style.willChange = "opacity, transform";
     const animation = card.animate(
       [
-        { opacity: 0, transform: "translate3d(6px, 0, 0) scale(0.995)" },
+        { opacity: 0, transform: "translate3d(0, 6px, 0) scale(0.995)" },
         { opacity: 1, transform: "translate3d(0, 0, 0) scale(1)" }
       ],
       {
@@ -9742,7 +11523,133 @@ function animateRecentFolderEntries(enterKeys) {
   }
 }
 
-function createRecentFolderItem(group) {
+function animateRecentFolderPageSwitch(outgoingLayer, nextKeys, previousKeys, direction = "") {
+  if (!direction || prefersReducedMotion()) {
+    outgoingLayer?.remove();
+    return;
+  }
+
+  const enterCards = [...recentHistoryFolders.querySelectorAll(":scope > .recent-folder-item")]
+    .filter((card) => {
+      const key = card.dataset.siteKey || "";
+      return key && (!previousKeys?.has(key) || nextKeys?.has(key));
+    });
+  if (!outgoingLayer && !enterCards.length) {
+    return;
+  }
+
+  const vector = direction === "previous" ? -1 : 1;
+  const incomingOffset = 54;
+  const outgoingOffset = 62;
+  const gsap = getGsap();
+  const outgoingCards = outgoingLayer
+    ? [...outgoingLayer.querySelectorAll(".recent-folder-switch-snapshot")]
+    : [];
+  const animationHandle = {
+    cancel() {}
+  };
+  let cleanedUp = false;
+  const cleanUp = () => {
+    if (cleanedUp) {
+      return;
+    }
+    cleanedUp = true;
+    outgoingLayer?.remove();
+    enterCards.forEach((card) => {
+      card.style.opacity = "";
+      card.style.transform = "";
+      card.style.visibility = "";
+      card.style.willChange = "";
+    });
+    if (activeRecentFolderPageSwitchAnimation === animationHandle) {
+      activeRecentFolderPageSwitchAnimation = null;
+    }
+  };
+  animationHandle.cancel = cleanUp;
+  activeRecentFolderPageSwitchAnimation = animationHandle;
+
+  if (gsap) {
+    const timeline = gsap.timeline({
+      defaults: { ease: "power3.out" },
+      onComplete: cleanUp
+    });
+    animationHandle.cancel = () => {
+      timeline.kill();
+      cleanUp();
+    };
+    if (outgoingCards.length) {
+      gsap.set(outgoingCards, { willChange: "transform,opacity" });
+      timeline.to(outgoingCards, {
+        autoAlpha: 0,
+        x: -vector * outgoingOffset,
+        scale: 0.985,
+        duration: gsapDuration(RECENT_FOLDER_PAGE_SWITCH_EXIT_MS),
+        ease: "power2.out",
+        stagger: gsapDuration(RECENT_FOLDER_PAGE_SWITCH_STAGGER_MS * 0.44)
+      }, 0);
+    }
+    if (enterCards.length) {
+      gsap.set(enterCards, {
+        autoAlpha: 0,
+        x: vector * incomingOffset,
+        scale: 0.988,
+        willChange: "transform,opacity"
+      });
+      timeline.to(enterCards, {
+        autoAlpha: 1,
+        x: 0,
+        scale: 1,
+        duration: gsapDuration(RECENT_FOLDER_PAGE_SWITCH_MS),
+        ease: "power3.out",
+        stagger: gsapDuration(RECENT_FOLDER_PAGE_SWITCH_STAGGER_MS)
+      }, gsapDuration(46));
+    }
+    return;
+  }
+
+  const enterTiming = {
+    duration: RECENT_FOLDER_PAGE_SWITCH_MS,
+    easing: "cubic-bezier(0.16, 1, 0.3, 1)",
+    fill: "both"
+  };
+  const exitTiming = {
+    duration: RECENT_FOLDER_PAGE_SWITCH_EXIT_MS,
+    easing: "cubic-bezier(0.22, 1, 0.36, 1)",
+    fill: "forwards"
+  };
+  const animations = [];
+  outgoingCards.forEach((card, index) => {
+    card.style.willChange = "opacity, transform";
+    animations.push(card.animate([
+      { opacity: 1, transform: "translate3d(0, 0, 0) scale(1)" },
+      { opacity: 0, transform: `translate3d(${-vector * outgoingOffset}px, 0, 0) scale(0.985)` }
+    ], {
+      ...exitTiming,
+      delay: index * RECENT_FOLDER_PAGE_SWITCH_STAGGER_MS * 0.44
+    }));
+  });
+  enterCards.forEach((card, index) => {
+    card.style.opacity = "0";
+    card.style.willChange = "opacity, transform";
+    const animation = card.animate([
+      { opacity: 0, transform: `translate3d(${vector * incomingOffset}px, 0, 0) scale(0.988)` },
+      { opacity: 1, transform: "translate3d(0, 0, 0) scale(1)" }
+    ], {
+      ...enterTiming,
+      delay: 46 + index * RECENT_FOLDER_PAGE_SWITCH_STAGGER_MS
+    });
+    animations.push(animation);
+    animation.addEventListener("finish", () => {
+      card.style.opacity = "";
+      card.style.willChange = "";
+    }, { once: true });
+  });
+  Promise.allSettled(animations.map((animation) => animation.finished)).then(() => {
+    cleanUp();
+  });
+}
+
+function createRecentFolderItem(group, options = {}) {
   const pages = group.pages.slice(0, MAX_HISTORY_PAGES_PER_SITE);
   const item = pages[0];
   const title = normalizeText(group.name) || historyFallbackTitle(safeUrl(item?.url || group.url));
@@ -9771,10 +11678,17 @@ function createRecentFolderItem(group) {
   face.href = item?.url || group.url;
   face.setAttribute("aria-label", t("openPage", { title }));
   icon.className = "recent-folder-logo";
-  applyHistoryIcon(icon, {
+  const iconSite = {
     title,
     url: group.homeUrl || group.url
-  });
+  };
+  const cachedIconRender = cachedFirstPaintIconRender(options.iconRenders, iconSite);
+  if (cachedIconRender) {
+    restoreFirstPaintIconRender(icon, iconSite, cachedIconRender);
+  } else {
+    applyHistoryIcon(icon, iconSite);
+  }
+  cacheRenderedSiteIconOnLoad(icon, iconSite);
   icon.alt = "";
   copy.className = "recent-folder-copy";
   name.className = "recent-folder-name";
@@ -10069,15 +11983,42 @@ function groupHistoryBySite(items, options = {}) {
       group.deleteUrls.push(deleteUrl);
     }
     const pageKey = historyPageKey(item, url, key);
-    if (!group.pageKeys.has(pageKey) && group.pages.length < maxPagesPerSite) {
+    if (!group.pageKeys.has(pageKey)) {
       group.pageKeys.add(pageKey);
       group.pages.push(item);
     }
   }
 
-  return [...groups.values()]
-    .map(({ pageKeys, deleteUrlKeys, ...group }) => group)
+  return orderedRecentHistoryGroups(
+    [...groups.values()].map(({ pageKeys, deleteUrlKeys, ...group }) => group),
+    maxPagesPerSite
+  )
     .slice(0, maxGroups);
+}
+
+function orderedRecentHistoryGroups(groups, maxPagesPerSite = MAX_HISTORY_PAGES_PER_SITE) {
+  return (Array.isArray(groups) ? groups : [])
+    .map((group) => ({
+      ...group,
+      pages: Array.isArray(group.pages)
+        ? [...group.pages].sort(compareHistoryItemsByRecentVisit).slice(0, maxPagesPerSite)
+        : []
+    }))
+    .sort(compareHistoryGroupsByRecentVisit);
+}
+
+function compareHistoryItemsByRecentVisit(a, b) {
+  return Number(b.lastVisitTime || 0) - Number(a.lastVisitTime || 0);
+}
+
+function compareHistoryGroupsByRecentVisit(a, b) {
+  return historyGroupRecentVisitTime(b) - historyGroupRecentVisitTime(a);
+}
+
+function historyGroupRecentVisitTime(group) {
+  return (group.pages || []).reduce((latest, item) => (
+    Math.max(latest, Number(item.lastVisitTime || 0))
+  ), 0);
 }
 
 function createHistorySiteGroup(group, options = {}) {
@@ -10499,13 +12440,20 @@ const TDESIGN_ICON_MARKUP = Object.freeze({
   app: '<g fill="none"><path d="M3 3h7v7H3zm11 11h7v7h-7zM3 14h7v7H3zm18.5-7.5a4 4 0 1 1-8 0a4 4 0 0 1 8 0"/><path stroke="currentColor" stroke-width="2" d="M3 3h7v7H3zm11 11h7v7h-7zM3 14h7v7H3zm18.5-7.5a4 4 0 1 1-8 0a4 4 0 0 1 8 0Z"/></g>',
   "arrow-left": '<path fill="none" stroke="currentColor" stroke-linecap="square" stroke-width="2" d="M11 6.5L5.5 12l5.5 5.5M6.75 12h13"/>',
   "bookmark-double-filled": '<path fill="currentColor" d="M23.003 18.419L23 0L10.001.002v2H21v14.413z"/><path fill="currentColor" d="M19 4H3v19.943l8-5.714l8 5.714z"/>',
+  "backup-filled": '<path fill="currentColor" d="M12 2c3.728 0 6.82 2.72 7.402 6.283A6.502 6.502 0 0 1 17.5 21h-11A6.5 6.5 0 0 1 4.598 8.283A7.5 7.5 0 0 1 12 2m3 10.914l1.414-1.414L12 7.086L7.586 11.5L9 12.914l2-2V17h2v-6.086z"/>',
+  calendar: '<path fill="none" stroke="currentColor" stroke-linecap="square" stroke-width="2" d="M7 2v4m10-4v4M3.5 9.5h17M5 4.5h14a1.5 1.5 0 0 1 1.5 1.5v14A1.5 1.5 0 0 1 19 21.5H5A1.5 1.5 0 0 1 3.5 20V6A1.5 1.5 0 0 1 5 4.5Z"/>',
   "chevron-down": '<path fill="none" stroke="currentColor" stroke-linecap="square" stroke-width="2" d="M17.5 9.5L12 15L6.5 9.5"/>',
   "chevron-left": '<path fill="none" stroke="currentColor" stroke-linecap="square" stroke-width="2" d="M14.5 17.5L9 12l5.5-5.5"/>',
   "chevron-right": '<path fill="none" stroke="currentColor" stroke-linecap="square" stroke-width="2" d="M9.5 17.5L15 12L9.5 6.5"/>',
   "chevron-up": '<path fill="none" stroke="currentColor" stroke-linecap="square" stroke-width="2" d="M17.5 14.5L12 9l-5.5 5.5"/>',
+  cloud: '<path fill="none" stroke="currentColor" stroke-linecap="square" stroke-width="2" d="M7.5 18.5H18a4 4 0 0 0 .6-7.956A6.5 6.5 0 0 0 6.39 8.109A5.25 5.25 0 0 0 7.5 18.5Z"/>',
   close: '<path fill="none" stroke="currentColor" stroke-linecap="square" stroke-width="2" d="M16.95 7.05L12 12m0 0l-4.95 4.95M12 12l4.95 4.95M12 12L7.05 7.05"/>',
   delete: '<g fill="none"><path d="M5 5h14l-.5 17h-13z"/><path stroke="currentColor" stroke-linecap="square" stroke-width="2" d="M21 5H3m2 0h14l-.5 17h-13zm3.5-3h7v3h-7zM12 9v9"/></g>',
   "folder-add": '<path fill="none" stroke="currentColor" stroke-linecap="square" stroke-width="2" d="M22 11V6H11L9 3.5H2V20h11m7-5v3m0 0v3m0-3h-3m3 0h3"/>',
+  "help-circle": '<g fill="none"><path d="M21.5 12a9.5 9.5 0 1 1-19 0a9.5 9.5 0 0 1 19 0"/><path stroke="currentColor" stroke-linecap="square" stroke-width="2" d="M9.6 9.25a2.6 2.6 0 1 1 3.8 2.3c-.86.47-1.4 1.04-1.4 2.2m0 3.25h.01M21.5 12a9.5 9.5 0 1 1-19 0a9.5 9.5 0 0 1 19 0Z"/></g>',
+  desktop: '<g fill="none"><path d="M2 4h20v13H2z"/><path stroke="currentColor" stroke-linecap="square" stroke-width="2" d="M12 17v4m-4 0h8M2 4h20v13H2z"/></g>',
+  "sunny-filled": '<path fill="currentColor" d="M13 1v3h-2V1zm7.485 3.928L18.364 7.05L16.95 5.636l2.121-2.122zM4.93 3.514l2.12 2.122L5.636 7.05L3.515 4.929zM6 12a6 6 0 1 1 12 0a6 6 0 0 1-12 0m-5-1h3v2H1zm19 0h3v2h-3zM7.05 18.363l-2.12 2.123l-1.415-1.416l2.121-2.122zm11.314-1.414l2.121 2.122l-1.414 1.414l-2.121-2.121zM13 20v3h-2v-3z"/>',
+  "moon-filled": '<path fill="currentColor" d="M2 12C2 6.477 6.477 2 12 2h1.734l-.868 1.5C12.287 4.5 12 5.689 12 7a7 7 0 0 0 8.348 6.87l1.682-.327l-.543 1.626C20.162 19.137 16.417 22 12 22C6.477 22 2 17.523 2 12"/>',
   history: '<path fill="none" stroke="currentColor" stroke-linecap="square" stroke-width="2" d="M2.552 13c.5 4.777 4.539 8.5 9.448 8.5a9.5 9.5 0 0 0 0-19c-1.628 0-3.16.41-4.5 1.131A9.54 9.54 0 0 0 3.38 8M12 7v5l2.5 2.5m-12-11v5h5"/>',
   more: '<path fill="none" stroke="currentColor" stroke-linecap="square" stroke-width="2" d="M11.5 4h1v1h-1zm0 7.5h1v1h-1zm0 7.5h1v1h-1z"/>',
   "page-tab-filled": '<path fill="currentColor" d="m9.48 2.5l.301.375l2.9 3.625H23V21H1V2.5z"/><path fill="currentColor" d="M23 2.5v2H13v-2z"/>',
@@ -10517,58 +12465,16 @@ const TDESIGN_ICON_MARKUP = Object.freeze({
   "view-list": '<path fill="none" stroke="currentColor" stroke-linecap="square" stroke-width="2" d="M3 5h18M3 12h18M3 19h18"/>'
 });
 
-function resolveIconFromSet(iconSet, name) {
-  const icons = iconSet?.icons;
-  const aliases = iconSet?.aliases;
-  const directIcon = icons?.[name];
-  if (directIcon?.body) {
-    return {
-      body: directIcon.body,
-      width: directIcon.width || iconSet.width || 24,
-      height: directIcon.height || iconSet.height || 24
-    };
-  }
-  const alias = aliases?.[name];
-  const parentIcon = alias?.parent ? icons?.[alias.parent] : null;
-  if (parentIcon?.body) {
-    return {
-      body: parentIcon.body,
-      width: alias.width || parentIcon.width || iconSet.width || 24,
-      height: alias.height || parentIcon.height || iconSet.height || 24
-    };
-  }
-  return null;
-}
-
-function resolveTdesignIcon(name) {
-  const icon = resolveIconFromSet(tdesignIconSet, name);
-  if (icon) {
-    return icon;
-  }
-  const fallbackMarkup = TDESIGN_ICON_MARKUP[name];
-  return fallbackMarkup
-    ? { body: fallbackMarkup, width: 24, height: 24 }
-    : null;
-}
-
 function tdesignIcon(name) {
-  const icon = resolveTdesignIcon(name);
-  if (!icon) {
+  const body = TDESIGN_ICON_MARKUP[name];
+  if (!body) {
     return "";
   }
-  return `<svg class="tdesign-icon" viewBox="0 0 ${icon.width} ${icon.height}" aria-hidden="true" focusable="false">${icon.body}</svg>`;
-}
-
-function tablerIcon(name) {
-  const icon = resolveIconFromSet(tablerIconSet, name);
-  if (!icon) {
-    return "";
-  }
-  return `<svg class="tabler-icon" viewBox="0 0 ${icon.width} ${icon.height}" aria-hidden="true" focusable="false">${icon.body}</svg>`;
+  return `<svg class="tdesign-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">${body}</svg>`;
 }
 
 function themeModeIcon(mode) {
-  return tablerIcon(THEME_MODE_ICON_BY_MODE[mode] || THEME_MODE_ICON_BY_MODE.system);
+  return tdesignIcon(THEME_MODE_ICON_BY_MODE[mode] || THEME_MODE_ICON_BY_MODE.system);
 }
 
 function searchEngineSearchIcon() {
@@ -10585,6 +12491,18 @@ function plusIcon() {
 
 function refreshIcon() {
   return tdesignIcon("refresh");
+}
+
+function backupFilledIcon() {
+  return tdesignIcon("backup-filled");
+}
+
+function helpCircleIcon() {
+  return tdesignIcon("help-circle");
+}
+
+function githubIcon() {
+  return '<svg class="brand-icon github-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path fill="currentColor" d="M12 .297c-6.63 0-12 5.373-12 12c0 5.303 3.438 9.8 8.205 11.385c.6.113.82-.258.82-.577c0-.285-.01-1.04-.015-2.04c-3.338.724-4.042-1.61-4.042-1.61c-.546-1.385-1.335-1.755-1.335-1.755c-1.087-.744.084-.729.084-.729c1.205.084 1.838 1.236 1.838 1.236c1.07 1.835 2.809 1.305 3.495.998c.108-.776.417-1.305.76-1.605c-2.665-.3-5.466-1.332-5.466-5.93c0-1.31.465-2.38 1.235-3.22c-.135-.303-.54-1.523.105-3.176c0 0 1.005-.322 3.3 1.23c.96-.267 1.98-.399 3-.405c1.02.006 2.04.138 3 .405c2.28-1.552 3.285-1.23 3.285-1.23c.645 1.653.24 2.873.12 3.176c.765.84 1.23 1.91 1.23 3.22c0 4.61-2.805 5.625-5.475 5.92c.42.36.81 1.096.81 2.22c0 1.606-.015 2.896-.015 3.286c0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12Z"/></svg>';
 }
 
 function historyIcon() {

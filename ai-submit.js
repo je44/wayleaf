@@ -1,8 +1,14 @@
 (() => {
 "use strict";
 
+if (window.__wayleafAiSubmitLoaded) {
+  return;
+}
+window.__wayleafAiSubmitLoaded = true;
+
 const WAYLEAF_STORAGE_KEY = "aiDirectPrompts";
 const WAYLEAF_PROMPT_TOKEN_PARAM = "_wayleaf_prompt";
+const WAYLEAF_PROMPT_TEXT_PARAM = "_wayleaf_text";
 const WAYLEAF_MAX_PROMPT_LENGTH = 12000;
 const WAYLEAF_PROMPT_TTL_MS = 2 * 60 * 1000;
 const WAYLEAF_SUBMIT_TIMEOUT_MS = 12000;
@@ -77,6 +83,109 @@ const PROVIDERS = {
       "button[aria-label*=\"提交\"]",
       "button[type=\"submit\"]"
     ]
+  },
+  "chat.deepseek.com": {
+    engineId: "deepseek",
+    inputSelectors: [
+      "textarea",
+      "div[contenteditable=\"true\"]",
+      "[contenteditable=\"true\"]"
+    ],
+    submitSelectors: [
+      "button[aria-label*=\"Send\"]",
+      "button[aria-label*=\"发送\"]",
+      "button[aria-label*=\"提交\"]",
+      "button[type=\"submit\"]"
+    ]
+  },
+  "doubao.com": {
+    engineId: "doubao",
+    inputSelectors: [
+      "textarea",
+      "div[contenteditable=\"true\"]",
+      "[contenteditable=\"true\"]"
+    ],
+    submitSelectors: [
+      "button[aria-label*=\"Send\"]",
+      "button[aria-label*=\"发送\"]",
+      "button[aria-label*=\"提交\"]",
+      "button[type=\"submit\"]"
+    ]
+  },
+  "kimi.com": {
+    engineId: "kimi",
+    inputSelectors: [
+      "textarea",
+      "div[contenteditable=\"true\"]",
+      "[contenteditable=\"true\"]"
+    ],
+    submitSelectors: [
+      "button[aria-label*=\"Send\"]",
+      "button[aria-label*=\"发送\"]",
+      "button[aria-label*=\"提交\"]",
+      "button[type=\"submit\"]"
+    ]
+  },
+  "kimi.moonshot.cn": {
+    engineId: "kimi",
+    inputSelectors: [
+      "textarea",
+      "div[contenteditable=\"true\"]",
+      "[contenteditable=\"true\"]"
+    ],
+    submitSelectors: [
+      "button[aria-label*=\"Send\"]",
+      "button[aria-label*=\"发送\"]",
+      "button[aria-label*=\"提交\"]",
+      "button[type=\"submit\"]"
+    ]
+  },
+  "chatglm.cn": {
+    engineId: "glm",
+    inputSelectors: [
+      "textarea",
+      "div[contenteditable=\"true\"]",
+      "[contenteditable=\"true\"]"
+    ],
+    submitSelectors: [
+      "button[aria-label*=\"Send\"]",
+      "button[aria-label*=\"发送\"]",
+      "button[aria-label*=\"提交\"]",
+      "button[type=\"submit\"]"
+    ]
+  },
+  "z.ai": {
+    engineId: "glm",
+    inputSelectors: [
+      "textarea",
+      "div[contenteditable=\"true\"]",
+      "[contenteditable=\"true\"]"
+    ],
+    submitSelectors: [
+      "button[aria-label*=\"Send\"]",
+      "button[aria-label*=\"发送\"]",
+      "button[aria-label*=\"提交\"]",
+      "button[type=\"submit\"]"
+    ]
+  },
+  "jimeng.jianying.com": {
+    engineId: "jimeng",
+    inputSelectors: [
+      "div.tiptap.ProseMirror[contenteditable=\"true\"]",
+      "div.ProseMirror[contenteditable=\"true\"]",
+      "div[role=\"textbox\"][contenteditable=\"true\"]",
+      "[contenteditable]:not([contenteditable=\"false\"])",
+      "textarea"
+    ],
+    submitSelectors: [
+      "button[class*=\"submit-button\"]",
+      "button[class*=\"send\"]",
+      "button[class*=\"generate\"]",
+      "button[aria-label*=\"生成\"]",
+      "button[aria-label*=\"发送\"]",
+      "button[aria-label*=\"提交\"]",
+      "button[type=\"submit\"]"
+    ]
   }
 };
 
@@ -113,7 +222,7 @@ async function submitPrompt(promptText) {
 }
 
 async function readPromptFromStorage(token) {
-  if (!token || !chrome.storage?.local) {
+  if (!token || !hasChromeLocalStorage()) {
     return "";
   }
   const result = await chrome.storage.local.get({ [WAYLEAF_STORAGE_KEY]: {} });
@@ -123,7 +232,7 @@ async function readPromptFromStorage(token) {
 }
 
 async function removePromptFromStorage(token) {
-  if (!token || !chrome.storage?.local) {
+  if (!token || !hasChromeLocalStorage()) {
     return;
   }
   const result = await chrome.storage.local.get({ [WAYLEAF_STORAGE_KEY]: {} });
@@ -133,22 +242,24 @@ async function removePromptFromStorage(token) {
 }
 
 async function consumeStoredPromptForCurrentProvider() {
-  if (!chrome.storage?.local) {
-    return;
-  }
   const provider = providerForLocation(location);
   if (!provider) {
     return;
   }
   const token = promptTokenFromLocation(location);
+  const fallbackPrompt = promptTextFromLocation(location);
   cleanupPromptTokenFromUrl();
   for (let attempt = 0; attempt < WAYLEAF_BOOT_MAX_ATTEMPTS; attempt += 1) {
-    const entry = await findStoredPromptForProvider(provider, token);
-    if (!entry) {
+    const entry = hasChromeLocalStorage()
+      ? await findStoredPromptForProvider(provider, token)
+      : null;
+    if (!entry && !fallbackPrompt) {
       await delay(WAYLEAF_BOOT_DELAY_MS);
       continue;
     }
-    const result = await submitStoredPrompt(entry.token);
+    const result = entry
+      ? await submitStoredPrompt(entry.token)
+      : await submitPrompt(fallbackPrompt);
     if (isTerminalStatus(result.status)) {
       return;
     }
@@ -189,9 +300,22 @@ function latestStoredPromptForProvider(prompts, provider) {
     .sort((a, b) => Number(b.createdAt || 0) - Number(a.createdAt || 0))[0] || null;
 }
 
+function hasChromeLocalStorage() {
+  return typeof chrome !== "undefined" && Boolean(chrome.storage?.local);
+}
+
 function promptTokenFromLocation(currentLocation) {
   try {
     return new URL(currentLocation.href).searchParams.get(WAYLEAF_PROMPT_TOKEN_PARAM) || "";
+  } catch {
+    return "";
+  }
+}
+
+function promptTextFromLocation(currentLocation) {
+  try {
+    const hashParams = new URLSearchParams(new URL(currentLocation.href).hash.replace(/^#/, ""));
+    return String(hashParams.get(WAYLEAF_PROMPT_TEXT_PARAM) || "").trim().slice(0, WAYLEAF_MAX_PROMPT_LENGTH);
   } catch {
     return "";
   }
@@ -201,6 +325,9 @@ function urlWithoutPromptToken(currentLocation) {
   try {
     const url = new URL(currentLocation.href);
     url.searchParams.delete(WAYLEAF_PROMPT_TOKEN_PARAM);
+    const hashParams = new URLSearchParams(url.hash.replace(/^#/, ""));
+    hashParams.delete(WAYLEAF_PROMPT_TEXT_PARAM);
+    url.hash = hashParams.toString();
     return url.href;
   } catch {
     return currentLocation.href;
@@ -208,7 +335,7 @@ function urlWithoutPromptToken(currentLocation) {
 }
 
 function cleanupPromptTokenFromUrl() {
-  if (!promptTokenFromLocation(location)) {
+  if (!promptTokenFromLocation(location) && !promptTextFromLocation(location)) {
     return false;
   }
   history.replaceState(null, "", urlWithoutPromptToken(location));
@@ -366,7 +493,7 @@ function isLikelySubmitButton(button) {
     button.textContent
   ].filter(Boolean).join(" ").toLowerCase();
   return /\b(send|submit|composer-submit|chat-submit)\b/.test(descriptor)
-    || /发送|提交|傳送/.test(descriptor);
+    || /发送|提交|傳送|生成/.test(descriptor);
 }
 
 function isVisible(node) {

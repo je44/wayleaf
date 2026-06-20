@@ -5,6 +5,7 @@ const source = readFileSync(new URL("../newtab.js", import.meta.url), "utf8");
 const siteIconIndex = JSON.parse(readFileSync(new URL("../icons/sites/index.json", import.meta.url), "utf8"));
 const zhihuSvgSource = readFileSync(new URL("../icons/sites/zhihu.svg", import.meta.url), "utf8");
 const linkedInSvgSource = readFileSync(new URL("../icons/sites/linkedin.svg", import.meta.url), "utf8");
+const grokSvgSource = readFileSync(new URL("../icons/sites/grok.svg", import.meta.url), "utf8");
 const availableSiteIconFiles = new Set(siteIconIndex);
 const LOCAL_BRAND_CARRIER_CONTRAST_MIN = 2.75;
 const SITE_ICON_TILE_COLOR_BY_SITE_KEY_FOR_TEST = Object.freeze({
@@ -13,15 +14,34 @@ const SITE_ICON_TILE_COLOR_BY_SITE_KEY_FOR_TEST = Object.freeze({
   "baidu.com": "#2932e1",
   "bilibili.com": "#00a1d6",
   "developer.mozilla.org": "#15141a",
+  "chatglm.cn": "#3859ff",
+  "doubao.com": "#1e37fc",
+  "douyin.com": "#000000",
   "google.com": "#4285f4",
+  "grok.com": "#000000",
+  "huggingface.co": "#ffd21e",
+  "instagram.com": "#e4405f",
   "jd.com": "#ff0000",
+  "jimeng.jianying.com": "#1c6fff",
+  "kimi.com": "#111827",
   "linkedin.com": "#0a66c2",
+  "mimo.mi.com": "#000000",
+  "mimo.xiaomi.com": "#000000",
   "raycast.com": "#ff6363",
   "spotify.com": "#1ed760",
+  "suno.com": "#000000",
+  "tiktok.com": "#000000",
+  "xiaomimimo.com": "#000000",
   "zhihu.com": "#0084ff"
 });
 const MULTICOLOR_BRAND_ICON_SITE_KEYS_FOR_TEST = new Set([
-  "google.com"
+  "doubao.com",
+  "douyin.com",
+  "instagram.com",
+  "google.com",
+  "huggingface.co",
+  "jimeng.jianying.com",
+  "tiktok.com"
 ]);
 const ORIGINAL_ARTWORK_BRAND_TILE_SITE_KEYS_FOR_TEST = new Set([
   "developer.mozilla.org",
@@ -44,6 +64,8 @@ assert.match(source, /function remoteBrandProviderColorLooksDrifted/, "Provider 
 assert.match(source, /remoteBrandSvgBrandColor\(svg, options\)/, "Fetched provider SVGs must derive brand color through the provider trust gate.");
 assert.match(source, /SITE_ICON_TILE_COLOR_BY_SITE_KEY\[options\.siteKey\]/, "Provider color drift checks must compare against known local VI colors.");
 assert.match(source, /function keepsBrandIconOriginalOnBrandTile/, "Local SVGs with an embedded VI carrier can preserve original artwork on a brand tile.");
+assert.match(source, /"suno\.com": "#000000"/, "Suno's monochrome local SVG must share the black/white mask carrier used by X and GitHub.");
+assert.doesNotMatch(source, /nativeRoundedBrandIcon|NATIVE_ROUNDED_BRAND_ICON_SITE_KEYS/, "Grok must not keep a dedicated native-rounded SVG rendering branch.");
 assert.match(zhihuSvgSource, /<path\b/i, "Zhihu local SVG keeps a maskable path resource.");
 assert.match(linkedInSvgSource, /fill:\s*rgb\(0,\s*0,\s*0\)/i, "LinkedIn local SVG exercises inline style recoloring.");
 assert.match(source, /function discoverRemoteBrandIconDataUrl[\s\S]*localIconForUrl\(parsedUrl\.href\)[\s\S]*return "";/, "Remote provider discovery must short-circuit for deployed local icons.");
@@ -236,13 +258,20 @@ const SITE_ICON_FILE_BY_SITE_KEY_FOR_TEST = Object.freeze({
   "1688.com": "1688.ico",
   "b.ai": "bai.png",
   "calendar.google.com": "googlecalendar.svg",
+  "chatglm.cn": "glm.svg",
   "developer.mozilla.org": "mdn.svg",
+  "doubao.com": "doubao.svg",
+  "douyin.com": "douyin.svg",
   "docs.google.com": "googledocs.svg",
   "drive.google.com": "googledrive.svg",
   "gemini.google.com": "googlegemini.svg",
+  "jimeng.jianying.com": "jimeng.svg",
   "maps.google.com": "googlemaps.svg",
   "meet.google.com": "googlemeet.svg",
+  "mimo.mi.com": "xiaomimimo.svg",
+  "mimo.xiaomi.com": "xiaomimimo.svg",
   "music.163.com": "neteasecloudmusic.svg",
+  "kimi.com": "kimi.svg",
   "npmjs.com": "npm.svg",
   "office.com": "microsoftoffice.svg",
   "stackoverflow.com": "stackoverflow.svg",
@@ -1060,17 +1089,19 @@ function faviconMatchedTileColors(color) {
 
 function faviconSurfaceTileColors(tileColor, color) {
   const preferReadableCarrier = faviconCandidateNeedsReadableCarrier(color, tileColor);
+  const carrier = faviconCarrierTileColor(tileColor, "dark", { preferReadableCarrier });
   return {
-    light: faviconCarrierTileColor(tileColor, "light", { preferReadableCarrier }),
-    dark: faviconCarrierTileColor(tileColor, "dark", { preferReadableCarrier })
+    light: carrier,
+    dark: carrier
   };
 }
 
 function faviconSeparatedTileColors(tileColor, color) {
   const preferReadableCarrier = faviconCandidateNeedsReadableCarrier(color, tileColor);
+  const carrier = faviconCarrierTileColor(tileColor, "dark", { preferReadableCarrier, separate: true });
   return {
-    light: faviconCarrierTileColor(tileColor, "light", { preferReadableCarrier, separate: true }),
-    dark: faviconCarrierTileColor(tileColor, "dark", { preferReadableCarrier, separate: true })
+    light: carrier,
+    dark: carrier
   };
 }
 
@@ -1402,6 +1433,7 @@ const LOCAL_SVG_SOURCE_BY_PATH_FOR_TEST = Object.freeze({
   "icons/sites/baidu.svg": '<svg viewBox="0 0 24 24"><path fill="currentColor" d="M0 0h24v24H0z"/></svg>',
   "icons/sites/bilibili.svg": '<svg fill="#00a1d6" viewBox="0 0 24 24"><path d="M0 0h24v24H0z"/></svg>',
   "icons/sites/google.svg": '<svg viewBox="0 0 24 24"><path fill="#4285f4"/><path fill="#ea4335"/></svg>',
+  "icons/sites/grok.svg": grokSvgSource,
   "icons/sites/linkedin.svg": linkedInSvgSource,
   "icons/sites/zhihu.svg": zhihuSvgSource
 });
@@ -1570,6 +1602,12 @@ const adaptiveFixtureSvg = '<svg viewBox="0 0 24 24"><path fill="currentColor" d
     url: "https://www.linkedin.com/",
     source: "icons/sites/linkedin.svg",
     tile: "#0a66c2"
+  },
+  {
+    name: "Grok",
+    url: "https://grok.com/",
+    source: "icons/sites/grok.svg",
+    tile: "#000000"
   }
 ].forEach((sample) => {
   const remoteCachedIcon = svgTextDataUrl(prepareRemoteBrandSvgForTest(adaptiveFixtureSvg, { brandColor: "#1db954", qualityScore: 92 }));
@@ -1715,6 +1753,7 @@ const faviconTileDecision = (sample) => {
   assert.equal(sampledGlyph, "#e89bc5", "Transparent pink ico glyphs expose the colored glyph palette.");
   assert.notEqual(tileColors.light, sampledGlyph, "Transparent pink ico glyphs should use a derived carrier instead of pink-on-pink.");
   assert.ok(contrastRatio(tileColors.light, sampledGlyph) >= FAVICON_READABLE_CARRIER_CONTRAST_MIN, "Transparent pink ico glyphs receive a readable same-palette carrier.");
+  assert.equal(tileColors.dark, tileColors.light, "Sampled favicon carriers must remain fixed when Wayleaf switches light/dark mode.");
 }
 
 {
@@ -1772,7 +1811,7 @@ assert.deepEqual(
 );
 
 assert.deepEqual(
-  ["bilibili.com", "github.com", "google.com", "figma.com", "slack.com", "spotify.com", "notion.so"]
+  ["bilibili.com", "github.com", "google.com", "figma.com", "slack.com", "spotify.com", "suno.com", "notion.so"]
     .map((siteKey) => [siteKey, localIconForSiteKeyForTest(siteKey), remoteProviderCanRunForSiteKeyForTest(siteKey)]),
   [
     ["bilibili.com", "icons/sites/bilibili.svg", false],
@@ -1781,9 +1820,29 @@ assert.deepEqual(
     ["figma.com", "icons/sites/figma.svg", false],
     ["slack.com", "icons/sites/slack.svg", false],
     ["spotify.com", "icons/sites/spotify.svg", false],
+    ["suno.com", "icons/sites/suno.svg", false],
     ["notion.so", "icons/sites/notion.svg", false]
   ],
   "Representative deployed local SVG icons should be resolved locally and skip the remote provider branch."
+);
+
+assert.deepEqual(
+  brandIconTileColorsForTest("#000000", "suno.com", "icons/sites/suno.svg"),
+  { light: "#000000", dark: "#f8fafc" },
+  "Suno should render a black carrier with white glyph in light mode and a white carrier with black glyph in dark mode."
+);
+
+assert.deepEqual(
+  ["cohere.com", "jina.ai", "openrouter.ai", "qwen.ai", "zhipu.com"]
+    .map((siteKey) => [siteKey, localIconForSiteKeyForTest(siteKey), remoteProviderCanRunForSiteKeyForTest(siteKey)]),
+  [
+    ["cohere.com", "icons/sites/cohere.svg", false],
+    ["jina.ai", "icons/sites/jina.svg", false],
+    ["openrouter.ai", "icons/sites/openrouter.svg", false],
+    ["qwen.ai", "icons/sites/qwen.svg", false],
+    ["zhipu.com", "icons/sites/zhipu.svg", false]
+  ],
+  "LobeHub supplemental SVGs should be deployed as default local site-key matches."
 );
 
 assert.equal(
@@ -1880,6 +1939,49 @@ assert.equal(localIconForSiteKeyForTest("shadcn.com"), "", "shadcn has no deploy
 assert.equal(remoteProviderCanRunForSiteKeyForTest("shadcn.com"), true, "shadcn remains eligible for remote provider discovery before favicon fallback.");
 assert.equal(remoteBrandIconSlugCandidatesForTest("shadcn.com", "Shadcn")[0].slug, "shadcn", "shadcn should produce a deterministic provider slug before falling back.");
 assert.equal(remoteBrandSvgResponseMayContainSvg("text/html", "https://ui.shadcn.com"), false, "A shadcn-style non-SVG provider/fetch response must not be cached as a remote SVG.");
+
+assert.equal(localIconForUrlForTest("https://www.doubao.com/chat/"), "icons/sites/doubao.svg", "Doubao should use the deployed multicolor local SVG.");
+assert.equal(localIconForUrlForTest("https://www.kimi.com/"), "icons/sites/kimi.svg", "Kimi should use the deployed local SVG.");
+assert.equal(localIconForUrlForTest("https://chatglm.cn/"), "icons/sites/glm.svg", "GLM/ChatGLM should use the deployed local SVG.");
+assert.equal(localIconForUrlForTest("https://www.douyin.com/search/"), "icons/sites/douyin.svg", "Douyin should use the deployed multicolor local SVG instead of the legacy ico.");
+assert.equal(localIconForUrlForTest("https://www.instagram.com/"), "icons/sites/instagram.svg", "Instagram should use the deployed multicolor local SVG.");
+assert.equal(localIconForUrlForTest("https://huggingface.co/"), "icons/sites/huggingface.svg", "Hugging Face should use the deployed multicolor local SVG.");
+assert.equal(localIconForUrlForTest("https://jimeng.jianying.com/"), "icons/sites/jimeng.svg", "Jimeng should use the deployed multicolor local SVG.");
+assert.equal(localIconForUrlForTest("https://mimo.mi.com/"), "icons/sites/xiaomimimo.svg", "MiMo should use the deployed local SVG.");
+assert.equal(localIconForUrlForTest("https://www.tiktok.com/"), "icons/sites/tiktok.svg", "TikTok should use the deployed multicolor local SVG.");
+assert.deepEqual(
+  brandIconTileColorsForTest("#1e37fc", "doubao.com", "icons/sites/doubao.svg"),
+  { light: "#ffffff", dark: "#f8fafc" },
+  "Doubao should follow the Google-like multicolor white-tile strategy."
+);
+assert.deepEqual(
+  brandIconTileColorsForTest("#000000", "douyin.com", "icons/sites/douyin.svg"),
+  { light: "#ffffff", dark: "#f8fafc" },
+  "Douyin should follow the Google-like multicolor white-tile strategy."
+);
+assert.deepEqual(
+  brandIconTileColorsForTest("#e4405f", "instagram.com", "icons/sites/instagram.svg"),
+  { light: "#ffffff", dark: "#f8fafc" },
+  "Instagram should follow the Google-like multicolor white-tile strategy."
+);
+assert.deepEqual(
+  brandIconTileColorsForTest("#ffd21e", "huggingface.co", "icons/sites/huggingface.svg"),
+  { light: "#ffffff", dark: "#f8fafc" },
+  "Hugging Face should follow the Google-like multicolor white-tile strategy."
+);
+assert.deepEqual(
+  brandIconTileColorsForTest("#1c6fff", "jimeng.jianying.com", "icons/sites/jimeng.svg"),
+  { light: "#ffffff", dark: "#f8fafc" },
+  "Jimeng should follow the Google-like multicolor white-tile strategy."
+);
+assert.deepEqual(
+  brandIconTileColorsForTest("#000000", "tiktok.com", "icons/sites/tiktok.svg"),
+  { light: "#ffffff", dark: "#f8fafc" },
+  "TikTok should follow the Google-like multicolor white-tile strategy."
+);
+assert.equal(siteIconBrandColorForTest("chatglm.cn", "icons/sites/glm.svg"), "#3859ff", "GLM should use its blue VI color for mask recoloring.");
+assert.equal(siteIconBrandColorForTest("kimi.com", "icons/sites/kimi.svg"), "#111827", "Kimi should use its dark VI color for mask recoloring.");
+assert.equal(siteIconBrandColorForTest("mimo.mi.com", "icons/sites/xiaomimimo.svg"), "#000000", "MiMo should use a black tile for mask recoloring.");
 
 assert.deepEqual(
   remoteBrandSvgDescriptor(simpleSvg, { brandColor: "#1db954", qualityScore: 92 }),

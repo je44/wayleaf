@@ -36,14 +36,14 @@
 
 | 你想完成的事 | Wayleaf 的处理方式 |
 | --- | --- |
-| 搜索或打开网页 | 搜索框支持本地历史/书签、完整 URL、Google、百度、Bing 和 Google+Bing 聚合搜索。 |
+| 搜索或打开网页 | 搜索框支持本地历史/书签、完整 URL、Google、百度、Bing、Google+Bing 聚合搜索，以及 `yt 内容`、`xhs 内容` 等平台前缀搜索。 |
 | 管理常用入口 | 内置搜索、社交、购物、开发、效率、影音、设计和 AI 分类；也可以添加自定义入口。 |
 | 继续刚才的浏览 | 最近浏览按站点聚合重复访问页面，重要页面可以置顶或删除。 |
 | 展示书签文件夹 | 选择一个 Chrome 书签文件夹，Wayleaf 会突出显示 3 天内新加入的网站，并按名称首字母分组。 |
 | 收集高频网站 | 常用入口支持去重；在书签视图里也可以把当前文件夹中的网站直接加入常用入口。 |
-| 把问题发给 AI | 用 `/gpt`、`/claude`、`/gemini`、`/grok` 直达对应 AI 页面并尝试填入问题。 |
+| 把问题发给 AI | 用 `/gpt`、`/claude`、`/gemini`、`/grok`、`/deepseek`、`/doubao`、`/kimi`、`/glm` 直达对应 AI 页面并尝试填入问题。 |
 | 看技术资讯 | 内置中英文技术资讯源，也支持自定义 RSS/JSON 信息源。 |
-| 调整外观和同步 | 支持系统/日间/夜间主题、预设双色、自定义日夜主辅色和 `chrome.storage.sync` 偏好同步。 |
+| 调整外观和同步 | 支持系统/日间/夜间主题、预设双色、自定义日夜主辅色、手动同步和启用后每日一次自动同步。 |
 
 界面会根据浏览器语言显示中文、英文、日文、韩文、西班牙文、法文或德文。
 
@@ -66,7 +66,8 @@
 | --- | --- |
 | 输入关键词后按回车 | 使用当前搜索引擎搜索。 |
 | 输入完整网址后按回车 | 直接打开该网址。 |
-| 点击搜索框左侧图标 | 切换本地搜索、Google、百度、Bing 或 AI 指令模式。 |
+| 输入 `yt 内容`、`x 内容`、`xhs 内容`、`ig 内容`、`threads 内容`、`dy 内容` 或 `zhihu 内容` | 搜索框切换到对应平台状态，回车后打开该平台搜索结果。 |
+| 在设置中心选择默认搜索引擎 | 修改普通关键词默认使用的搜索入口。 |
 | 在本地搜索结果中选择条目 | 打开匹配的历史记录或书签。 |
 | 在导航中枢添加入口 | 填入名称、`http` 或 `https` 开头的网址，并选择分类。 |
 | 在「自选书签」点击 `+` | 选择一个包含网站书签的 Chrome 文件夹。 |
@@ -78,9 +79,27 @@ AI 指令示例：
 /claude 写一封简短邮件
 /gemini 给我三个旅行计划
 /grok 解释这条新闻
+/deepseek 分析这段代码
+/doubao 写一个小红书标题
+/kimi 总结这个长文档
+/glm 生成一个学习计划
 ```
 
-如果你已经登录对应 AI 网站，`Wayleaf` 会跳转过去并尝试填入问题；如果目标网站要求登录、加载较慢或页面结构变化，自动填入可能失败，但跳转和问题暂存仍会尽量保留。
+如果你已经登录对应 AI 网站，`Wayleaf` 会跳转过去并尝试填入问题；如果目标网站要求登录、加载较慢或页面结构变化，自动填入可能失败，但跳转和问题暂存仍会尽量保留。请先在需要登录的平台完成首次登录再使用。
+
+内置平台搜索前缀：
+
+| 前缀 | 平台 | 行为 |
+| --- | --- | --- |
+| `yt` / `youtube` | YouTube | 打开 YouTube 搜索结果。 |
+| `x` / `twitter` | X | 打开 X 搜索结果；如需登录请先完成首次登录。 |
+| `xhs` / `rednote` | 小红书 | 打开小红书搜索结果；如需登录请先完成首次登录。 |
+| `ig` / `instagram` | Instagram | 使用 Instagram Web 搜索入口；若站点限制搜索，会保留已编码查询供手动恢复。 |
+| `threads` / `th` | Threads | 使用 Threads Web 搜索入口；若站点限制搜索，会保留已编码查询供手动恢复。 |
+| `dy` / `douyin` | 抖音 | 打开抖音搜索结果；如需登录请先完成首次登录。 |
+| `zhihu` / `zh` | 知乎 | 打开知乎搜索结果。 |
+
+在「搜索设置」中可以查看内置 AI 引擎、触发词、搜索链接，以及平台搜索前缀和行为说明。
 
 ## 权限和隐私
 
@@ -92,6 +111,7 @@ AI 指令示例：
 | `history` | 读取最近浏览记录、统计重复访问网站，并支持删除历史条目。 |
 | `favicon` | 通过 Chrome 的 favicon 能力显示网站图标。 |
 | `storage` | 保存主题、入口、书签选择、置顶历史、同步状态和布局偏好。 |
+| `alarms` | 在扩展启用时触发每日一次的自动同步。 |
 | `tabs` | 打开搜索结果、AI 页面和多个搜索目标。 |
 | `scripting` | 配合 AI 页面直达功能尝试填入问题。 |
 | `http://*/*`、`https://*/*` | 识别网页入口、获取站点图标，并在支持的网站上完成 AI 页面辅助。 |
@@ -112,7 +132,7 @@ git clone https://github.com/je44/wayleaf.git
 cd wayleaf
 ```
 
-开发时修改 `manifest.json`、`newtab.html`、`newtab.css`、`newtab.js` 或 `ai-submit.js`，然后在 `chrome://extensions/` 的 `Wayleaf` 卡片上点击刷新，再新建标签页检查效果。
+开发时修改 `manifest.json`、`background.js`、`newtab.html`、`newtab.css`、`newtab.js` 或 `ai-submit.js`，然后在 `chrome://extensions/` 的 `Wayleaf` 卡片上点击刷新，再新建标签页检查效果。
 
 可以用本地静态服务器做布局预览，但 Chrome 扩展 API 只有在扩展环境里才完整可用：
 
@@ -126,6 +146,7 @@ python3 -m http.server 8080
 
 ```sh
 jq empty manifest.json
+node --check background.js
 node --check newtab.js
 node --check ai-submit.js
 ```
@@ -136,6 +157,7 @@ node --check ai-submit.js
 ```text
 .
 ├── manifest.json        # 扩展声明、权限、图标和新标签页入口
+├── background.js        # 每日自动同步的后台调度
 ├── newtab.html          # 新标签页页面结构
 ├── newtab.css           # 布局、主题、响应式规则和动效
 ├── newtab.js            # Chrome API 读取、状态保存、渲染和交互
@@ -149,7 +171,7 @@ node --check ai-submit.js
 
 ```sh
 mkdir -p dist
-zip -r -X dist/wayleaf-v1.5.0.zip manifest.json newtab.html newtab.css newtab.js ai-submit.js theme-preload.js icons vendor docs -x '*/._*' '._*' '*.DS_Store' '*/.DS_Store'
+zip -r -X dist/wayleaf-v1.5.0.zip manifest.json background.js newtab.html newtab.css newtab.js ai-submit.js theme-preload.js icons vendor docs -x '*/._*' '._*' '*.DS_Store' '*/.DS_Store'
 unzip -t dist/wayleaf-v1.5.0.zip
 ```
 

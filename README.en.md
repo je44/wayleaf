@@ -36,14 +36,14 @@ Most new-tab sessions start with the same small set of actions: open a frequent 
 
 | What you want to do | How Wayleaf handles it |
 | --- | --- |
-| Search or open a site | The search box supports local history/bookmarks, full URLs, Google, Baidu, Bing, and aggregate Google+Bing search. |
+| Search or open a site | The search box supports local history/bookmarks, full URLs, Google, Baidu, Bing, aggregate Google+Bing search, and platform prefixes such as `yt query` or `xhs query`. |
 | Manage frequent destinations | Built-in categories cover search, social, shopping, developer, productivity, media, design, and AI sites; custom shortcuts are supported. |
 | Continue recent browsing | Recent pages are grouped by repeat visits per site, with pin and delete actions for important or noisy pages. |
 | Show a bookmark folder | Pick one Chrome bookmark folder; Wayleaf highlights sites added in the last 3 days and groups the rest by title initial. |
 | Collect high-frequency sites | Favorite sites are deduplicated, and sites from the active bookmark folder can be added directly to favorites. |
-| Send a prompt to AI | Use `/gpt`, `/claude`, `/gemini`, or `/grok` to open the matching AI site and try to fill the prompt. |
+| Send a prompt to AI | Use `/gpt`, `/claude`, `/gemini`, `/grok`, `/deepseek`, `/doubao`, `/kimi`, or `/glm` to open the matching AI site and try to fill the prompt. |
 | Read tech feeds | Built-in Chinese and English tech sources are included, and custom RSS/JSON sources can be added. |
-| Tune appearance and sync | System/light/dark themes, preset color pairs, custom light/dark primary and secondary colors, and `chrome.storage.sync` preference sync are supported. |
+| Tune appearance and sync | System/light/dark themes, preset color pairs, custom light/dark primary and secondary colors, manual sync, and once-daily auto sync while enabled are supported. |
 
 The interface follows the browser language for Chinese, English, Japanese, Korean, Spanish, French, or German.
 
@@ -66,7 +66,8 @@ Current version: `1.5.0`
 | --- | --- |
 | Type a keyword and press Enter | Search with the current engine. |
 | Type a full URL and press Enter | Open the URL directly. |
-| Click the icon on the left side of the search box | Switch between local search, Google, Baidu, Bing, and AI command modes. |
+| Type `yt query`, `x query`, `xhs query`, `ig query`, `threads query`, `dy query`, or `zhihu query` | Switch the search box to that platform and open the platform search results on Enter. |
+| Choose the default engine in Settings | Change the search provider used for regular keyword searches. |
 | Pick a local search result | Open a matching history item or bookmark. |
 | Add an item in the navigation hub | Save a titled `http` or `https` shortcut in a category. |
 | Click `+` in Bookmarks | Select a Chrome folder that contains website bookmarks. |
@@ -78,9 +79,27 @@ AI command examples:
 /claude Write a short email
 /gemini Give me three travel plans
 /grok Explain this news
+/deepseek Analyze this code
+/doubao Write a RedNote title
+/kimi Summarize this long document
+/glm Create a study plan
 ```
 
-If you are already signed in to the selected AI site, `Wayleaf` opens it and tries to fill the prompt. If the site asks you to sign in, loads slowly, or changes its page structure, auto-fill may fail, but the jump and temporary prompt handoff still try to work.
+If you are already signed in to the selected AI site, `Wayleaf` opens it and tries to fill the prompt. If the site asks you to sign in, loads slowly, or changes its page structure, auto-fill may fail, but the jump and temporary prompt handoff still try to work. Sign in to platforms that require login before first use.
+
+Built-in platform search prefixes:
+
+| Prefix | Platform | Behavior |
+| --- | --- | --- |
+| `yt` / `youtube` | YouTube | Opens YouTube search results. |
+| `x` / `twitter` | X | Opens X search results; sign in first if required. |
+| `xhs` / `rednote` | Xiaohongshu / RedNote | Opens Xiaohongshu search results; sign in first if required. |
+| `ig` / `instagram` | Instagram | Uses the Instagram web search entry; if the site limits search, the encoded query remains recoverable. |
+| `threads` / `th` | Threads | Uses the Threads web search entry; if the site limits search, the encoded query remains recoverable. |
+| `dy` / `douyin` | Douyin | Opens Douyin search results; sign in first if required. |
+| `zhihu` / `zh` | Zhihu | Opens Zhihu search results. |
+
+Search Settings shows the built-in AI engines, triggers, search links, and the platform search prefixes with behavior notes.
 
 ## Permissions and Privacy
 
@@ -92,6 +111,7 @@ If you are already signed in to the selected AI site, `Wayleaf` opens it and tri
 | `history` | Read recent browsing history, detect repeated sites, and support deleting history entries. |
 | `favicon` | Show site icons through Chrome's favicon support. |
 | `storage` | Save theme, shortcuts, bookmark choice, pinned pages, sync state, and layout preferences. |
+| `alarms` | Trigger once-daily auto sync while the extension is enabled. |
 | `tabs` | Open search results, AI pages, and multiple search targets. |
 | `scripting` | Support AI page handoff and prompt fill. |
 | `http://*/*`, `https://*/*` | Recognize web shortcuts, fetch site icons, and assist supported AI pages. |
@@ -112,7 +132,7 @@ git clone https://github.com/je44/wayleaf.git
 cd wayleaf
 ```
 
-Edit `manifest.json`, `newtab.html`, `newtab.css`, `newtab.js`, or `ai-submit.js`, then click reload on the `Wayleaf` extension card in `chrome://extensions/` and open a new tab.
+Edit `manifest.json`, `background.js`, `newtab.html`, `newtab.css`, `newtab.js`, or `ai-submit.js`, then click reload on the `Wayleaf` extension card in `chrome://extensions/` and open a new tab.
 
 You can preview the static page with a local server, but Chrome extension APIs only work fully inside the extension environment:
 
@@ -126,6 +146,7 @@ Run at least these checks before committing:
 
 ```sh
 jq empty manifest.json
+node --check background.js
 node --check newtab.js
 node --check ai-submit.js
 ```
@@ -136,6 +157,7 @@ node --check ai-submit.js
 ```text
 .
 ├── manifest.json        # Extension metadata, permissions, icons, and new tab entry
+├── background.js        # Background schedule for daily auto sync
 ├── newtab.html          # New tab page structure
 ├── newtab.css           # Layout, theme, responsive rules, and motion
 ├── newtab.js            # Chrome API reads, state persistence, rendering, and interaction
@@ -149,7 +171,7 @@ Verify that the release zip has `manifest.json` at its root:
 
 ```sh
 mkdir -p dist
-zip -r -X dist/wayleaf-v1.5.0.zip manifest.json newtab.html newtab.css newtab.js ai-submit.js theme-preload.js icons vendor docs -x '*/._*' '._*' '*.DS_Store' '*/.DS_Store'
+zip -r -X dist/wayleaf-v1.5.0.zip manifest.json background.js newtab.html newtab.css newtab.js ai-submit.js theme-preload.js icons vendor docs -x '*/._*' '._*' '*.DS_Store' '*/.DS_Store'
 unzip -t dist/wayleaf-v1.5.0.zip
 ```
 
