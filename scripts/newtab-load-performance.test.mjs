@@ -74,6 +74,12 @@ assert.match(
 );
 
 assert.match(
+  source,
+  /const shouldRefreshRemoteBrand = !localIcon && siteIcon && !siteIconIsRemoteBrand;[\s\S]*if \(shouldRefreshRemoteBrand\) \{[\s\S]*refreshRemoteBrandIcon\(icon, site\);/,
+  "Stored site ico renders should still allow the remote SVG branch to replace them after the local icon index is ready."
+);
+
+assert.match(
   html,
   /<link rel="icon" type="image\/png" sizes="32x32" href="icons\/wayleaf-flat-32\.png">/,
   "HTTP previews should declare an existing favicon instead of letting the browser request /favicon.ico."

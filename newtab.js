@@ -71,6 +71,7 @@ const SITE_ICON_DISCOVERY_CANDIDATE_LIMIT = 12;
 const SITE_ICON_DISCOVERY_MEMORY_CACHE_LIMIT = 96;
 const SITE_ICON_CACHE_TTL_MS = 30 * 24 * 60 * 60 * 1000;
 const REMOTE_BRAND_ICON_MISSING_TTL_MS = 30 * 24 * 60 * 60 * 1000;
+const REMOTE_BRAND_ICON_INDEX_TTL_MS = 24 * 60 * 60 * 1000;
 const FAVORITE_REORDER_MS = 260;
 const FAVORITE_DELETE_EXIT_MS = 360;
 const FAVORITE_DELETE_CANCEL_MS = 280;
@@ -850,11 +851,20 @@ const SITE_ICON_FILE_BY_SITE_KEY = Object.freeze({
 const REMOTE_BRAND_ICON_PROVIDERS = Object.freeze([
   {
     id: "simple-icons-cdn",
+    index: "simple-icons",
+    packageName: "simple-icons",
     urlForSlug: (slug) => `https://cdn.simpleicons.org/${encodeURIComponent(slug)}?viewbox=auto`
   },
   {
     id: "iconify",
+    index: "iconify-simple-icons",
     urlForSlug: (slug) => `https://api.iconify.design/simple-icons/${encodeURIComponent(slug)}.svg`
+  },
+  {
+    id: "lobehub",
+    index: "lobehub-static-svg",
+    packageName: "@lobehub/icons-static-svg",
+    urlForSlug: (slug) => `https://unpkg.com/@lobehub/icons-static-svg@latest/icons/${encodeURIComponent(slug)}.svg`
   }
 ]);
 const REMOTE_BRAND_ICON_SLUGS_BY_SITE_KEY = Object.freeze({
@@ -3084,6 +3094,7 @@ let availableSiteIconFiles = new Set();
 let siteIconIndexLoaded = false;
 const whiteSvgIconDataUrlCache = new Map();
 const siteIconDiscoveryCache = new Map();
+const remoteBrandIconIndexCache = new Map();
 const mediaFeedLoadMoreSentinel = document.createElement("div");
 mediaFeedLoadMoreSentinel.className = "media-feed-load-more";
 mediaFeedLoadMoreSentinel.setAttribute("role", "status");
@@ -7568,6 +7579,9 @@ async function fetchRemoteBrandIconDataUrl(parsedUrl) {
   for (const candidate of candidates) {
     for (const provider of REMOTE_BRAND_ICON_PROVIDERS) {
       try {
+        if (!(await remoteBrandProviderHasSlug(provider, candidate.slug))) {
+          continue;
+        }
         const iconDataUrl = await fetchRemoteBrandSvgDataUrl(provider.urlForSlug(candidate.slug), {
           candidate,
           providerId: provider.id,
@@ -7582,6 +7596,115 @@ async function fetchRemoteBrandIconDataUrl(parsedUrl) {
     }
   }
   return "";
+}
+
+async function remoteBrandProviderHasSlug(provider, slug) {
+  const normalizedSlug = remoteBrandIconSlug(slug);
+  if (!normalizedSlug) {
+    return false;
+  }
+  if (!provider.index) {
+    return true;
+  }
+  const slugs = await remoteBrandProviderSlugs(provider);
+  return slugs.has(normalizedSlug);
+}
+
+async function remoteBrandProviderSlugs(provider) {
+  const cachedEntry = remoteBrandIconIndexCache.get(provider.index);
+  if (cachedEntry?.request) {
+    return cachedEntry.request;
+  }
+  if (cachedEntry && Date.now() - cachedEntry.updatedAt < REMOTE_BRAND_ICON_INDEX_TTL_MS) {
+    return cachedEntry.slugs;
+  }
+  const request = remoteBrandProviderSlugRequest(provider);
+  remoteBrandIconIndexCache.set(provider.index, { request });
+  let slugs;
+  try {
+    slugs = await request;
+  } catch {
+    remoteBrandIconIndexCache.delete(provider.index);
+    return new Set();
+  }
+  remoteBrandIconIndexCache.set(provider.index, {
+    slugs,
+    updatedAt: Date.now()
+  });
+  return slugs;
+}
+
+async function remoteBrandProviderSlugRequest(provider) {
+  if (provider.index === "lobehub-static-svg") {
+    return fetchLobeHubStaticSvgSlugs(provider.packageName);
+  }
+  if (provider.index === "simple-icons") {
+    return fetchSimpleIconSlugs(provider.packageName);
+  }
+  if (provider.index === "iconify-simple-icons") {
+    return fetchIconifyCollectionSlugs("simple-icons");
+  }
+  return new Set();
+}
+
+async function fetchLobeHubStaticSvgSlugs(packageName) {
+  const version = await fetchNpmPackageLatestVersion(packageName);
+  if (!version) {
+    return new Set();
+  }
+  const encodedPackageName = encodeURIComponent(packageName);
+  const response = await fetchJsonWithTimeout(`https://data.jsdelivr.com/v1/package/npm/${encodedPackageName}@${encodeURIComponent(version)}/flat`);
+  return remoteBrandSlugsFromFileList(response?.files, /^\/icons\/(.+)\.svg$/i);
+}
+
+async function fetchNpmPackageLatestVersion(packageName) {
+  const encodedPackageName = encodeURIComponent(packageName).replace(/^%40/i, "@");
+  const response = await fetchJsonWithTimeout(`https://registry.npmjs.org/${encodedPackageName}/latest`);
+  return typeof response?.version === "string" ? response.version : "";
+}
+
+async function fetchSimpleIconSlugs(packageName) {
+  const version = await fetchNpmPackageLatestVersion(packageName);
+  if (!version) {
+    return new Set();
+  }
+  const encodedPackageName = encodeURIComponent(packageName);
+  const response = await fetchJsonWithTimeout(`https://data.jsdelivr.com/v1/package/npm/${encodedPackageName}@${encodeURIComponent(version)}/flat`);
+  return remoteBrandSlugsFromFileList(response?.files, /^\/icons\/(.+)\.svg$/i);
+}
+
+async function fetchIconifyCollectionSlugs(prefix) {
+  const response = await fetchJsonWithTimeout(`https://api.iconify.design/collection?prefix=${encodeURIComponent(prefix)}`);
+  return new Set(Array.isArray(response?.uncategorized)
+    ? response.uncategorized.map(remoteBrandIconSlug).filter(Boolean)
+    : []);
+}
+
+function remoteBrandSlugsFromFileList(files, pattern) {
+  const slugs = new Set();
+  if (!Array.isArray(files)) {
+    return slugs;
+  }
+  for (const file of files) {
+    const name = String(file?.name || "");
+    const match = name.match(pattern);
+    if (match?.[1]) {
+      slugs.add(remoteBrandIconSlug(match[1]));
+    }
+  }
+  return slugs;
+}
+
+async function fetchJsonWithTimeout(url) {
+  const response = await withTimeout(fetch(url, {
+    cache: "force-cache",
+    credentials: "omit",
+    redirect: "follow"
+  }), SITE_ICON_FETCH_TIMEOUT_MS, "Remote brand index request timed out.");
+  if (!response.ok) {
+    throw new Error(`Remote brand index request failed: ${response.status}`);
+  }
+  return response.json();
 }
 
 async function fetchRemoteBrandSvgDataUrl(url, options = {}) {
@@ -8579,7 +8702,9 @@ function applySiteIcon(icon, site, options = {}) {
   const localIcon = localIconForUrl(site.url);
   const siteIcon = normalizeStoredSiteIcon(site.icon || "");
   const iconSource = localIcon || siteIcon;
-  const tileIconSource = localIcon || (remoteBrandSvgDescriptorFromSource(siteIcon) ? siteIcon : "");
+  const siteIconIsRemoteBrand = Boolean(remoteBrandSvgDescriptorFromSource(siteIcon));
+  const tileIconSource = localIcon || (siteIconIsRemoteBrand ? siteIcon : "");
+  const shouldRefreshRemoteBrand = !localIcon && siteIcon && !siteIconIsRemoteBrand;
   storeIconSiteContext(icon, site);
   applySiteIconTile(icon, site, tileIconSource);
   if (localIcon) {
@@ -8603,6 +8728,9 @@ function applySiteIcon(icon, site, options = {}) {
       icon.src = source;
       icon.removeAttribute("srcset");
       bindFaviconFallback(icon, site, 128);
+      if (shouldRefreshRemoteBrand) {
+        refreshRemoteBrandIcon(icon, site);
+      }
     };
     if (displayIcon instanceof Promise) {
       return displayIcon.then((source) => setIconSource(source));

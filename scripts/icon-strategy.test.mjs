@@ -49,6 +49,12 @@ const ORIGINAL_ARTWORK_BRAND_TILE_SITE_KEYS_FOR_TEST = new Set([
 ]);
 
 assert.match(source, /viewbox=auto/, "Simple Icons CDN requests should normalize the SVG viewBox.");
+assert.match(source, /@lobehub\/icons-static-svg/, "LobeHub static SVG package must be available as a supplemental remote provider.");
+assert.match(source, /function remoteBrandProviderHasSlug[\s\S]*remoteBrandProviderSlugs/, "Remote providers must check an index before fetching a slug.");
+assert.match(source, /function fetchLobeHubStaticSvgSlugs/, "LobeHub provider must discover SVG slugs from the static SVG package index.");
+assert.match(source, /function fetchSimpleIconSlugs/, "Simple Icons provider must discover SVG slugs from its package index.");
+assert.match(source, /function fetchIconifyCollectionSlugs/, "Iconify provider must discover SVG slugs from the Simple Icons collection index.");
+assert.match(source, /if \(cachedEntry\?\.request\) \{[\s\S]*return cachedEntry\.request;/, "Concurrent icon cards should share one provider index request.");
 assert.match(source, /return remoteBrandGlyphColorForTile\(tileColor, brandColor\);/, "Remote SVG data URLs must use the cloud glyph strategy.");
 assert.match(source, /return localBrandGlyphColorForTile\(tileColor, brandColor\);/, "Local brand icons must keep the local glyph strategy with known VI color recovery.");
 assert.match(source, /function remoteBrandSvgHasComplexPaint/, "Remote SVG classification must reject complex paint sources.");
@@ -260,6 +266,26 @@ function remoteBrandIconSlugCandidatesForTest(siteKey, siteName = "", aliases = 
   }
   addCandidate(siteName, 64, "site-name");
   return remoteBrandIconRankedCandidates(candidates).slice(0, 8);
+}
+
+function remoteBrandSlugsFromFileListForTest(files, pattern) {
+  const slugs = new Set();
+  if (!Array.isArray(files)) {
+    return slugs;
+  }
+  for (const file of files) {
+    const name = String(file?.name || "");
+    const match = name.match(pattern);
+    if (match?.[1]) {
+      slugs.add(remoteBrandIconSlug(match[1]));
+    }
+  }
+  return slugs;
+}
+
+function remoteBrandProviderHasSlugForTest(slugs, slug) {
+  const normalizedSlug = remoteBrandIconSlug(slug);
+  return Boolean(normalizedSlug && slugs.has(normalizedSlug));
 }
 
 const SITE_ICON_FILE_BY_SITE_KEY_FOR_TEST = Object.freeze({
@@ -1548,7 +1574,9 @@ function applySiteIconForTest(icon, site) {
   const localIcon = localIconForUrlForTest(site.url);
   const siteIcon = String(site.icon || "");
   const iconSource = localIcon || siteIcon;
-  const tileIconSource = localIcon || (remoteBrandSvgDescriptorFromSource(siteIcon) ? siteIcon : "");
+  const siteIconIsRemoteBrand = Boolean(remoteBrandSvgDescriptorFromSource(siteIcon));
+  const tileIconSource = localIcon || (siteIconIsRemoteBrand ? siteIcon : "");
+  const shouldRefreshRemoteBrand = !localIcon && siteIcon && !siteIconIsRemoteBrand;
   icon.dataset.siteUrl = site.url || "";
   applySiteIconTileForTest(icon, site, tileIconSource);
   if (!iconSource) {
@@ -1558,6 +1586,9 @@ function applySiteIconForTest(icon, site) {
   icon.dataset.iconCandidate = iconSource;
   icon.src = displayIconSourceForTest(icon, iconSource);
   icon.removeAttribute("srcset");
+  if (shouldRefreshRemoteBrand) {
+    icon.dataset.remoteBrandRefreshEligible = "true";
+  }
 }
 
 function refreshAdaptiveSiteIconsForTest(icons) {
@@ -1751,6 +1782,16 @@ const adaptiveFixtureSvg = '<svg viewBox="0 0 24 24"><path fill="currentColor" d
 }
 
 {
+  const icon = new TestIcon();
+  const storedIco = "data:image/x-icon;base64,fixture";
+  testTheme = "light";
+  applySiteIconForTest(icon, { url: "https://raycast.com/", icon: storedIco });
+  assert.equal(icon.dataset.iconSource, storedIco, "A site-provided ico should still render first when no deployed local SVG exists.");
+  assert.equal(icon.dataset.remoteBrandRefreshEligible, "true", "A site-provided ico should still be eligible for remote SVG replacement.");
+  assert.equal(icon.dataset.iconTile, "plain", "Site-provided ico starts on the favicon tile path before remote SVG replacement.");
+}
+
+{
   const remoteSvg = svgTextDataUrl(prepareRemoteBrandSvgForTest(adaptiveFixtureSvg, { brandColor: "#1db954", qualityScore: 92 }));
   const icon = new TestIcon();
   testTheme = "light";
@@ -1937,6 +1978,28 @@ assert.deepEqual(
   ],
   "Duplicate slug candidates should keep the highest score."
 );
+
+const simpleIconProviderSlugs = remoteBrandSlugsFromFileListForTest([
+  { name: "/icons/raycast.svg" },
+  { name: "/icons/raycast.svg" },
+  { name: "/icons/raycast-wordmark.svg" },
+  { name: "/data/simple-icons.json" }
+], /^\/icons\/(.+)\.svg$/i);
+assert.equal(remoteBrandProviderHasSlugForTest(simpleIconProviderSlugs, "raycast"), true, "Simple Icons package index should allow existing slugs before provider fetch.");
+assert.equal(remoteBrandProviderHasSlugForTest(simpleIconProviderSlugs, "missing-brand"), false, "Simple Icons package index should suppress missing slug fetches instead of probing 404s.");
+
+const lobeHubProviderSlugs = remoteBrandSlugsFromFileListForTest([
+  { name: "/icons/xai.svg" },
+  { name: "/icons/xiaomimimo.svg" },
+  { name: "/README.md" }
+], /^\/icons\/(.+)\.svg$/i);
+assert.equal(remoteBrandProviderHasSlugForTest(lobeHubProviderSlugs, "xai"), true, "LobeHub static SVG index should allow AI brand slugs before provider fetch.");
+assert.equal(
+  remoteBrandIconSlugCandidatesForTest("x.ai", "X", ["xai"]).some((candidate) => remoteBrandProviderHasSlugForTest(lobeHubProviderSlugs, candidate.slug)),
+  true,
+  "LobeHub static SVG index should match a normalized candidate for dotted AI domains."
+);
+assert.equal(remoteBrandProviderHasSlugForTest(lobeHubProviderSlugs, "raycast"), false, "LobeHub supplemental provider should not probe unavailable slugs.");
 
 assert.deepEqual(
   ["bilibili.com", "github.com", "google.com", "figma.com", "slack.com", "spotify.com", "suno.com", "notion.so"]
