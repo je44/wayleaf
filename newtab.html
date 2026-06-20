@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="zh-CN" class="refresh-enter theme-hydrating">
+<html lang="en" class="refresh-enter theme-hydrating locale-hydrating">
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -8,9 +8,9 @@
     <link rel="stylesheet" href="newtab.css">
   </head>
   <body>
-    <header class="topbar" aria-label="顶部功能区">
-      <div class="surface-launchers" aria-label="二级页面入口">
-        <button class="icon-button surface-toggle" id="portalSurfaceButton" type="button" aria-controls="portalPanel" aria-expanded="false" aria-label="导航中枢">
+    <header class="topbar" aria-label="Top bar">
+      <div class="surface-launchers" aria-label="Secondary pages">
+        <button class="icon-button surface-toggle" id="portalSurfaceButton" type="button" aria-controls="portalPanel" aria-expanded="false" aria-label="Navigation hub">
           <span class="button-icon" aria-hidden="true"></span>
         </button>
       </div>
@@ -21,12 +21,12 @@
       </div>
     </header>
 
-    <main class="home-stage" aria-label="Wayleaf 搜索工作台">
-      <section class="search-workbench" aria-label="搜索和常用网站">
+    <main class="home-stage" aria-label="Wayleaf search workspace">
+      <section class="search-workbench" aria-label="Search and favorite sites">
         <div class="search-panel">
           <form class="topbar-search" id="quickSearchForm" role="search">
-            <label class="visually-hidden" for="quickSearchInput">搜索或输入网址</label>
-            <span class="visually-hidden" id="quickSearchEngineLabel">搜索引擎</span>
+            <label class="visually-hidden" for="quickSearchInput">Search or enter URL</label>
+            <span class="visually-hidden" id="quickSearchEngineLabel">Search engine</span>
             <span class="search-engine-control">
               <span class="search-engine-search-icon" aria-hidden="true">
                 <svg class="tdesign-icon" viewBox="0 0 24 24" focusable="false">
@@ -39,7 +39,7 @@
               <div class="ai-engine-pill" id="aiEnginePill" hidden aria-hidden="true"></div>
             </span>
             <div class="quick-search-entry">
-              <input id="quickSearchInput" name="q" type="search" autocomplete="off" spellcheck="false" placeholder="搜索或输入网址">
+              <input id="quickSearchInput" name="q" type="search" autocomplete="off" spellcheck="false" placeholder="Search or enter URL">
             </div>
             <span class="quick-search-settings" aria-hidden="true">
               <svg class="tdesign-icon" viewBox="0 0 24 24" focusable="false">
@@ -47,32 +47,32 @@
               </svg>
             </span>
           </form>
-          <div class="search-suggestions" id="searchSuggestions" role="listbox" aria-label="搜索建议" hidden></div>
+          <div class="search-suggestions" id="searchSuggestions" role="listbox" aria-label="Search suggestions" hidden></div>
         </div>
         <button class="favorite-add-button" id="favoriteAddButton" type="button" aria-haspopup="dialog" aria-controls="favoriteForm" aria-expanded="false" aria-hidden="true" data-state="hidden" data-hydrating="true" tabindex="-1" disabled hidden>
           <span class="button-icon" aria-hidden="true"></span>
         </button>
         <form class="favorite-form" id="favoriteForm" hidden>
           <label>
-            <span>网址</span>
+            <span>URL</span>
             <input id="favoriteUrlInput" name="url" autocomplete="off" inputmode="url" placeholder="https://www.notion.so">
           </label>
           <div class="form-actions">
-            <button class="text-button" type="button" id="cancelFavoriteButton">取消</button>
-            <button class="text-button primary" type="submit">添加</button>
+            <button class="text-button" type="button" id="cancelFavoriteButton">Cancel</button>
+            <button class="text-button primary" type="submit">Add</button>
           </div>
           <p class="form-error" id="favoriteFormError" role="alert"></p>
         </form>
-        <div class="favorite-strip" id="favoriteStrip" aria-label="自定义常用网站" data-hydrating="true"></div>
+        <div class="favorite-strip" id="favoriteStrip" aria-label="Custom favorite sites" data-hydrating="true"></div>
       </section>
       <section class="recent-folders" aria-labelledby="recent-folders-title">
         <div class="recent-folders-header">
-          <h2 id="recent-folders-title">最近浏览</h2>
-          <div class="recent-folder-switch-controls" role="group" aria-label="切换最近浏览卡片">
-            <button class="recent-folder-switch-button previous" id="recentFoldersPreviousButton" type="button" aria-controls="recentHistoryFolders" aria-label="上一组最近浏览" disabled>
+          <h2 id="recent-folders-title">Recent browsing</h2>
+          <div class="recent-folder-switch-controls" role="group" aria-label="Switch recent browsing cards">
+            <button class="recent-folder-switch-button previous" id="recentFoldersPreviousButton" type="button" aria-controls="recentHistoryFolders" aria-label="Previous recent browsing group" disabled>
               <span class="button-icon" aria-hidden="true"></span>
             </button>
-            <button class="recent-folder-switch-button next" id="recentFoldersNextButton" type="button" aria-controls="recentHistoryFolders" aria-label="下一组最近浏览" disabled>
+            <button class="recent-folder-switch-button next" id="recentFoldersNextButton" type="button" aria-controls="recentHistoryFolders" aria-label="Next recent browsing group" disabled>
               <span class="button-icon" aria-hidden="true"></span>
             </button>
           </div>
@@ -80,58 +80,58 @@
         <div class="recent-folder-grid" id="recentHistoryFolders" aria-live="polite"></div>
       </section>
     </main>
-    <button class="surface-backdrop" id="surfaceBackdrop" type="button" aria-label="关闭导航中枢" hidden></button>
+    <button class="surface-backdrop" id="surfaceBackdrop" type="button" aria-label="Close navigation hub" hidden></button>
 
-    <nav class="mobile-section-switcher" aria-label="切换信息分区">
-      <button class="mobile-section-tab active" type="button" data-panel-target="portalPanel" aria-controls="portalPanel" aria-selected="true">入口</button>
+    <nav class="mobile-section-switcher" aria-label="Switch information sections">
+      <button class="mobile-section-tab active" type="button" data-panel-target="portalPanel" aria-controls="portalPanel" aria-selected="true">Shortcuts</button>
     </nav>
 
-    <aside class="shell" id="secondaryShell" aria-label="Wayleaf 控制台" data-active-surface="">
+    <aside class="shell" id="secondaryShell" aria-label="Wayleaf dashboard" data-active-surface="">
       <section class="panel portal-panel" id="portalPanel" aria-labelledby="portal-title">
         <header class="panel-header">
-          <button class="icon-button surface-back-button" type="button" aria-label="关闭导航中枢">
+          <button class="icon-button surface-back-button" type="button" aria-label="Close navigation hub">
             <span class="button-icon" aria-hidden="true"></span>
           </button>
           <div>
-            <h1 id="portal-title" tabindex="-1">导航中枢</h1>
+            <h1 id="portal-title" tabindex="-1">Navigation hub</h1>
           </div>
         </header>
 
-        <div class="portal-mode-tabs" role="tablist" aria-label="导航中枢" data-active-view="smart">
-          <button class="portal-mode-tab active" id="smartPortalTab" type="button" role="tab" aria-selected="true" aria-controls="smartPortalView" data-portal-view="smart">智能常用</button>
-          <button class="portal-mode-tab" id="bookmarkPortalTab" type="button" role="tab" aria-selected="false" aria-controls="bookmarkPortalView" data-portal-view="bookmarks">自选书签</button>
+        <div class="portal-mode-tabs" role="tablist" aria-label="Navigation hub" data-active-view="smart">
+          <button class="portal-mode-tab active" id="smartPortalTab" type="button" role="tab" aria-selected="true" aria-controls="smartPortalView" data-portal-view="smart">Smart</button>
+          <button class="portal-mode-tab" id="bookmarkPortalTab" type="button" role="tab" aria-selected="false" aria-controls="bookmarkPortalView" data-portal-view="bookmarks">Bookmarks</button>
         </div>
 
         <div class="portal-workspace">
           <div class="portal-view active" id="smartPortalView" role="tabpanel" aria-labelledby="smartPortalTab">
           <div class="portal-view-toolbar">
-            <button class="icon-button subtle-action" id="togglePortalFormButton" type="button" aria-label="添加入口">
+            <button class="icon-button subtle-action" id="togglePortalFormButton" type="button" aria-label="Add shortcut">
               <span class="button-icon" aria-hidden="true"></span>
             </button>
           </div>
           <form class="portal-form" id="portalForm" hidden>
             <label>
-              <span>名称</span>
-              <input id="portalTitleInput" name="title" autocomplete="off" placeholder="例如：Notion">
+              <span>Name</span>
+              <input id="portalTitleInput" name="title" autocomplete="off" placeholder="Example: Notion">
             </label>
             <label>
-              <span>网址</span>
+              <span>URL</span>
               <input id="portalUrlInput" name="url" autocomplete="off" inputmode="url" placeholder="https://www.notion.so">
             </label>
             <div class="portal-form-field portal-category-field">
-              <label id="portalCategoryLabel" for="portalCategorySelect">归类</label>
+              <label id="portalCategoryLabel" for="portalCategorySelect">Category</label>
               <select class="portal-category-native" id="portalCategorySelect" name="category" tabindex="-1" aria-hidden="true"></select>
               <div class="portal-category-picker" id="portalCategoryPicker">
                 <button class="portal-category-trigger" id="portalCategoryTrigger" type="button" aria-haspopup="listbox" aria-expanded="false" aria-controls="portalCategoryList" aria-labelledby="portalCategoryLabel portalCategoryCurrent">
-                  <span id="portalCategoryCurrent">自定义</span>
+                  <span id="portalCategoryCurrent">Custom</span>
                   <span class="button-icon portal-category-trigger-icon" aria-hidden="true"></span>
                 </button>
                 <div class="portal-category-list" id="portalCategoryList" role="listbox" aria-labelledby="portalCategoryLabel" hidden></div>
               </div>
             </div>
             <div class="form-actions">
-              <button class="text-button" type="button" id="cancelPortalButton">取消</button>
-              <button class="text-button primary" type="submit">添加</button>
+              <button class="text-button" type="button" id="cancelPortalButton">Cancel</button>
+              <button class="text-button primary" type="submit">Add</button>
             </div>
             <p class="form-error" id="portalFormError" role="alert"></p>
           </form>
@@ -143,20 +143,20 @@
           <div class="bookmark-toolbar">
             <div class="bookmark-folder-meta" id="bookmarkFolderMeta"></div>
             <div class="header-actions">
-              <button class="icon-button subtle-action" id="refreshBookmarkFolderButton" type="button" aria-label="刷新当前书签文件夹">
+              <button class="icon-button subtle-action" id="refreshBookmarkFolderButton" type="button" aria-label="Refresh current bookmark folder">
                 <span class="button-icon" aria-hidden="true"></span>
               </button>
-              <button class="icon-button subtle-action" id="bookmarkFavoriteAddButton" type="button" aria-label="添加常用网站" aria-hidden="true" hidden>
+              <button class="icon-button subtle-action" id="bookmarkFavoriteAddButton" type="button" aria-label="Add favorite site" aria-hidden="true" hidden>
                 <span class="button-icon" aria-hidden="true"></span>
               </button>
-              <button class="icon-button subtle-action" id="chooseBookmarkFolderButton" type="button" aria-label="选择书签文件夹">
+              <button class="icon-button subtle-action" id="chooseBookmarkFolderButton" type="button" aria-label="Choose bookmark folder">
                 <span class="button-icon" aria-hidden="true"></span>
               </button>
             </div>
           </div>
           <div class="bookmark-toolbar bookmark-picker-toolbar" id="bookmarkPickerToolbar" hidden>
             <div class="header-actions">
-              <button class="icon-button subtle-action" id="closeBookmarkPickerButton" type="button" aria-label="返回">
+              <button class="icon-button subtle-action" id="closeBookmarkPickerButton" type="button" aria-label="Back">
                 <span class="button-icon" aria-hidden="true"></span>
               </button>
             </div>
@@ -167,7 +167,7 @@
           </div>
 
           <div class="bookmark-picker" id="bookmarkPicker" hidden>
-            <div class="visually-hidden" id="bookmarkPickerTitle">选择一个书签文件夹</div>
+            <div class="visually-hidden" id="bookmarkPickerTitle">Choose a bookmark folder</div>
             <div class="bookmark-folder-list" id="bookmarkFolderList"></div>
           </div>
           </div>
@@ -177,31 +177,31 @@
       <section class="panel history-panel" id="historyPanel" aria-labelledby="history-title">
         <header class="panel-header history-header">
           <div>
-            <h2 id="history-title" tabindex="-1">最近浏览</h2>
+            <h2 id="history-title" tabindex="-1">Recent browsing</h2>
           </div>
-          <button class="icon-button" id="refreshHistoryButton" type="button" aria-label="刷新历史记录">
+          <button class="icon-button" id="refreshHistoryButton" type="button" aria-label="Refresh history">
             <span class="button-icon" aria-hidden="true"></span>
           </button>
         </header>
-        <button class="icon-button surface-back-button" type="button" aria-label="返回">
+        <button class="icon-button surface-back-button" type="button" aria-label="Back">
           <span class="button-icon" aria-hidden="true"></span>
         </button>
         <div class="history-stack" aria-live="polite">
           <section class="history-group pinned-group" aria-labelledby="pinned-title">
-            <h3 class="section-title" id="pinned-title">置顶</h3>
+            <h3 class="section-title" id="pinned-title">Pinned</h3>
             <div class="history-grid pinned-grid" id="pinnedGrid"></div>
           </section>
           <section class="history-group recent-group" aria-labelledby="recent-title">
-            <h3 class="section-title" id="recent-title">最近</h3>
+            <h3 class="section-title" id="recent-title">Recent</h3>
             <div class="history-grid" id="historyGrid"></div>
           </section>
         </div>
       </section>
     </aside>
 
-    <section class="settings-page" id="settingsShell" aria-label="Wayleaf 设置中心" hidden>
+    <section class="settings-page" id="settingsShell" aria-label="Settings" hidden>
       <div class="settings-page-chrome">
-        <button class="settings-page-return" id="closeSettingsButton" type="button" aria-label="返回首页" title="返回首页">
+        <button class="settings-page-return" id="closeSettingsButton" type="button" aria-label="Back home" title="Back home">
           <span class="button-icon" aria-hidden="true"></span>
         </button>
         <a class="settings-page-help" href="https://github.com/je44/wayleaf/issues" target="_blank" rel="noreferrer" aria-label="GitHub">
@@ -211,17 +211,17 @@
       </div>
       <div class="settings-brand" aria-hidden="true">WayLeaf</div>
       <div class="settings-tabs-shell">
-        <div class="settings-tabs" role="tablist" aria-label="设置分类">
-          <button class="settings-tab active" id="settingsBasicTab" type="button" role="tab" aria-selected="true" aria-controls="settingsBasicPanel" data-settings-tab="basic">基本设置</button>
-          <button class="settings-tab" id="settingsSearchTab" type="button" role="tab" aria-selected="false" aria-controls="settingsSearchPanel" data-settings-tab="search">搜索设置</button>
+        <div class="settings-tabs" role="tablist" aria-label="Settings categories">
+          <button class="settings-tab active" id="settingsBasicTab" type="button" role="tab" aria-selected="true" aria-controls="settingsBasicPanel" data-settings-tab="basic">Basic</button>
+          <button class="settings-tab" id="settingsSearchTab" type="button" role="tab" aria-selected="false" aria-controls="settingsSearchPanel" data-settings-tab="search">Search</button>
         </div>
         <span class="settings-tabs-sticky-line" aria-hidden="true"></span>
       </div>
       <section class="settings-panel" id="settingsPanel" aria-labelledby="settingsTitle" tabindex="-1">
         <header class="settings-header">
           <div>
-            <h2 id="settingsTitle">设置中心</h2>
-            <p id="settingsSubtitle">个性化 Wayleaf，管理同步与主题偏好。</p>
+            <h2 id="settingsTitle">Settings</h2>
+            <p id="settingsSubtitle">Personalize Wayleaf and manage sync and theme preferences.</p>
           </div>
         </header>
 
@@ -230,63 +230,63 @@
             <section class="settings-group settings-mode-group" aria-labelledby="appearanceModeTitle">
               <div class="settings-group-heading">
                 <div>
-                  <h3 id="appearanceModeTitle">外观</h3>
-                  <p>选择 Wayleaf 的外观</p>
+                  <h3 id="appearanceModeTitle">Appearance</h3>
+                  <p>Choose Wayleaf's appearance mode</p>
                 </div>
               </div>
               <div class="settings-group-control">
-                <div class="settings-theme-mode-control theme-mode-control" id="themeModeControl" role="group" aria-label="外观" data-active-index="0">
-                  <button class="theme-mode-button" type="button" data-theme-mode="system" aria-label="跟随系统">
+                <div class="settings-theme-mode-control theme-mode-control" id="themeModeControl" role="group" aria-label="Appearance" data-active-index="0">
+                  <button class="theme-mode-button" type="button" data-theme-mode="system" aria-label="System">
                     <span class="button-icon" aria-hidden="true"></span>
-                    <span class="theme-mode-label">跟随系统</span>
+                    <span class="theme-mode-label">System</span>
                   </button>
-                  <button class="theme-mode-button" type="button" data-theme-mode="light" aria-label="日间">
+                  <button class="theme-mode-button" type="button" data-theme-mode="light" aria-label="Light">
                     <span class="button-icon" aria-hidden="true"></span>
-                    <span class="theme-mode-label">日间</span>
+                    <span class="theme-mode-label">Light</span>
                   </button>
-                  <button class="theme-mode-button" type="button" data-theme-mode="dark" aria-label="夜间">
+                  <button class="theme-mode-button" type="button" data-theme-mode="dark" aria-label="Dark">
                     <span class="button-icon" aria-hidden="true"></span>
-                    <span class="theme-mode-label">夜间</span>
+                    <span class="theme-mode-label">Dark</span>
                   </button>
                 </div>
-                <p class="settings-group-note">根据系统设置自动切换日间或夜间模式。</p>
+                <p class="settings-group-note">Automatically switches light or dark mode from system settings.</p>
               </div>
             </section>
 
             <section class="settings-group" aria-labelledby="presetPaletteTitle">
               <div class="settings-group-heading">
                 <div>
-                  <h3 id="presetPaletteTitle">色彩</h3>
-                  <p>为浅色与深色模式选择一组默认强调色</p>
+                  <h3 id="presetPaletteTitle">Colors</h3>
+                  <p>Choose the default accent pair for light and dark modes</p>
                 </div>
               </div>
               <div class="settings-group-control">
                 <div class="palette-preset-grid" id="palettePresetGrid" role="radiogroup" aria-labelledby="presetPaletteTitle"></div>
-                <p class="settings-group-note">用于按钮、链接、选中态与提示色。</p>
+                <p class="settings-group-note">Used for buttons, links, selected states, and hints.</p>
               </div>
             </section>
 
             <section class="settings-group" aria-labelledby="syncSettingsTitle">
               <div class="settings-group-heading">
                 <div>
-                  <h3 id="syncSettingsTitle">云端同步</h3>
-                  <p>跨设备同步你的配置</p>
+                  <h3 id="syncSettingsTitle">Cloud sync</h3>
+                  <p>Sync your settings across devices</p>
                 </div>
               </div>
               <div class="settings-group-control">
                 <div class="sync-settings-row" id="syncSettingsRow" data-status="ready">
                   <span class="sync-settings-copy">
-                    <strong id="syncSettingsStatus">配置会跟随 Chrome 账号同步</strong>
-                    <span id="syncSettingsDetail">同一 Google 账号安装后会自动恢复。</span>
+                    <strong id="syncSettingsStatus">Settings sync with your Chrome account</strong>
+                    <span id="syncSettingsDetail">Install with the same Google account to restore.</span>
                   </span>
-                  <span class="sync-settings-actions" aria-label="同步方式">
-                    <button class="text-button sync-settings-action sync-settings-action-manual" id="syncSettingsNowButton" type="button" aria-label="手动同步">
+                  <span class="sync-settings-actions" aria-label="Sync methods">
+                    <button class="text-button sync-settings-action sync-settings-action-manual" id="syncSettingsNowButton" type="button" aria-label="Sync now">
                       <span class="button-icon" aria-hidden="true"></span>
-                      <span class="sync-settings-action-label">手动同步</span>
+                      <span class="sync-settings-action-label">Sync now</span>
                     </button>
-                    <button class="text-button sync-settings-action sync-settings-action-auto" id="syncSettingsAutoButton" type="button" aria-label="自动同步" aria-disabled="true" disabled>
+                    <button class="text-button sync-settings-action sync-settings-action-auto" id="syncSettingsAutoButton" type="button" aria-label="Auto sync" aria-disabled="true" disabled>
                       <span class="button-icon" aria-hidden="true"></span>
-                      <span class="sync-settings-action-label">自动同步</span>
+                      <span class="sync-settings-action-label">Auto sync</span>
                     </button>
                   </span>
                 </div>
@@ -300,29 +300,29 @@
             <section class="settings-group" aria-labelledby="searchSettingsDefaultTitle">
               <div class="settings-group-heading">
                 <div>
-                  <h3 id="searchSettingsDefaultTitle">基本搜索</h3>
-                  <p>设置普通关键词默认使用的搜索入口</p>
+                  <h3 id="searchSettingsDefaultTitle">Basic search</h3>
+                  <p>Set the default search entry for regular keywords</p>
                 </div>
               </div>
               <div class="settings-group-control">
                 <div class="engine-settings-list basic-search-engine-list" id="basicSearchEngineList"></div>
-                <p class="settings-group-note">输入普通关键词时，Wayleaf 会优先使用标记为默认的基本搜索。</p>
+                <p class="settings-group-note">For regular keywords, Wayleaf uses the basic search marked as default.</p>
               </div>
             </section>
 
             <section class="settings-group settings-search-ai-group" aria-labelledby="searchSettingsAiTitle">
               <div class="settings-group-heading">
                 <div>
-                  <h3 id="searchSettingsAiTitle">AI 搜索引擎</h3>
-                  <p>修改内建 AI 引擎的名称、触发词和搜索链接</p>
+                  <h3 id="searchSettingsAiTitle">AI search engines</h3>
+                  <p>Edit built-in AI engine names, triggers, and search links</p>
                 </div>
               </div>
               <div class="settings-group-control">
                 <div class="engine-settings-list ai-engine-settings-list" id="aiEngineSettingsList"></div>
-                <p class="settings-group-note">触发词用空格或逗号分隔，例如 /gpt /chatgpt。</p>
+                <p class="settings-group-note">Separate triggers with spaces or commas, for example /gpt /chatgpt.</p>
                 <div class="settings-form-actions">
-                  <button class="text-button" id="resetSearchSettingsButton" type="button">恢复默认</button>
-                  <button class="text-button primary" type="submit">保存搜索设置</button>
+                  <button class="text-button" id="resetSearchSettingsButton" type="button">Restore defaults</button>
+                  <button class="text-button primary" type="submit">Save search settings</button>
                 </div>
                 <p class="settings-form-status" id="searchSettingsStatus" role="status" aria-live="polite"></p>
               </div>
@@ -331,13 +331,13 @@
             <section class="settings-group settings-platform-search-group" aria-labelledby="searchSettingsPlatformTitle">
               <div class="settings-group-heading">
                 <div>
-                  <h3 id="searchSettingsPlatformTitle">平台搜索</h3>
-                  <p>使用内置前缀直达常用平台搜索结果</p>
+                  <h3 id="searchSettingsPlatformTitle">Platform search</h3>
+                  <p>Use built-in prefixes to open common platform search results</p>
                 </div>
               </div>
               <div class="settings-group-control">
                 <div class="engine-settings-list platform-search-settings-list" id="platformSearchSettingsList"></div>
-                <p class="settings-group-note">输入 yt 内容、xhs 内容、dy 内容等格式时，搜索框会切换到对应平台；需要登录的平台请先完成首次登录再使用。</p>
+                <p class="settings-group-note">Typing formats like yt query, xhs query, or dy query switches the search box to that platform. Sign in first where required.</p>
               </div>
             </section>
           </form>
@@ -349,43 +349,43 @@
       <div class="onboarding-card">
         <header class="onboarding-header">
           <div>
-            <p class="onboarding-kicker" id="onboardingKicker">第一次使用</p>
-            <h2 id="onboardingTitle">先花一分钟了解 Wayleaf</h2>
-            <p id="onboardingIntro">Wayleaf 会把新标签页变成你的本地工作台。下面这些点能帮你安全、顺手地开始。</p>
+            <p class="onboarding-kicker" id="onboardingKicker">First run</p>
+            <h2 id="onboardingTitle">Take one minute to understand Wayleaf</h2>
+            <p id="onboardingIntro">Wayleaf turns your new tab into a local-first workspace. These notes help you start safely and quickly.</p>
           </div>
-          <button class="icon-button subtle-action" id="onboardingCloseButton" type="button" aria-label="关闭指引">
+          <button class="icon-button subtle-action" id="onboardingCloseButton" type="button" aria-label="Close guide">
             <span class="button-icon" aria-hidden="true"></span>
           </button>
         </header>
         <div class="onboarding-grid">
           <article class="onboarding-item">
-            <strong id="onboardingPrivacyTitle">本地优先</strong>
-            <p id="onboardingPrivacyBody">历史、书签、入口和主题保存在浏览器扩展存储里，Wayleaf 没有后端账号。</p>
+            <strong id="onboardingPrivacyTitle">Local first</strong>
+            <p id="onboardingPrivacyBody">History, bookmarks, shortcuts, and theme settings stay in Chrome extension storage. Wayleaf has no backend account.</p>
           </article>
           <article class="onboarding-item">
-            <strong id="onboardingPermissionTitle">权限用来完成页面功能</strong>
-            <p id="onboardingPermissionBody">history 用于最近浏览，bookmarks 用于自选书签，tabs 和 scripting 用于打开搜索结果和 AI 页面辅助。</p>
+            <strong id="onboardingPermissionTitle">Permissions power the page</strong>
+            <p id="onboardingPermissionBody">history powers recent browsing, bookmarks powers bookmark folders, and tabs plus scripting help open search results and AI pages.</p>
           </article>
           <article class="onboarding-item">
-            <strong id="onboardingSyncTitle">配置会尽量跟随 Chrome 同步</strong>
-            <p id="onboardingSyncBody">同一 Google 账号会自动恢复偏好；如果当前浏览器不支持同步，设置仍会保留在本机。</p>
+            <strong id="onboardingSyncTitle">Settings try to follow Chrome sync</strong>
+            <p id="onboardingSyncBody">The same Google account restores preferences automatically. If sync is unavailable, settings stay on this device.</p>
           </article>
           <article class="onboarding-item">
-            <strong id="onboardingAiTitle">AI 指令有兜底</strong>
-            <p id="onboardingAiBody">输入 /gpt、/claude、/gemini、/grok、/deepseek、/doubao、/kimi 或 /glm 可跳转并尝试填入问题；若对方网站要求登录或改版，请手动粘贴暂存问题。</p>
+            <strong id="onboardingAiTitle">AI commands have a fallback</strong>
+            <p id="onboardingAiBody">Use /gpt, /claude, /gemini, /grok, /deepseek, /doubao, /kimi, or /glm to open the AI page and try to fill your prompt. If the site requires login or changes, paste the saved prompt manually.</p>
           </article>
           <article class="onboarding-item">
-            <strong id="onboardingStartTitle">从两个动作开始</strong>
-            <p id="onboardingStartBody">添加一个常用网站，再到导航中枢选择一个书签文件夹。你可以随时在设置中心调整主题和同步。</p>
+            <strong id="onboardingStartTitle">Start with two actions</strong>
+            <p id="onboardingStartBody">Add one favorite site, then choose a bookmark folder from the navigation hub. Theme and sync stay in Settings.</p>
           </article>
           <article class="onboarding-item">
-            <strong id="onboardingFeedbackTitle">遇到问题直接反馈</strong>
-            <p id="onboardingFeedbackBody">反馈时带上浏览器、Wayleaf 版本和失败场景，最容易定位。</p>
+            <strong id="onboardingFeedbackTitle">Report issues directly</strong>
+            <p id="onboardingFeedbackBody">Include your browser, Wayleaf version, and the failed scenario so the issue is easy to reproduce.</p>
           </article>
         </div>
         <footer class="onboarding-actions">
-          <a class="text-button" id="onboardingFeedbackLink" href="https://github.com/je44/wayleaf/issues" target="_blank" rel="noreferrer">反馈问题</a>
-          <button class="text-button primary" id="onboardingDoneButton" type="button">开始使用</button>
+          <a class="text-button" id="onboardingFeedbackLink" href="https://github.com/je44/wayleaf/issues" target="_blank" rel="noreferrer">Report issue</a>
+          <button class="text-button primary" id="onboardingDoneButton" type="button">Start using</button>
         </footer>
       </div>
     </section>
@@ -399,7 +399,7 @@
             <span class="site-domain"></span>
           </span>
         </a>
-        <button class="site-remove" type="button" aria-label="删除自定义入口"></button>
+        <button class="site-remove" type="button" aria-label="Remove custom portal"></button>
       </div>
     </template>
 
@@ -410,7 +410,7 @@
             <img class="favorite-icon" alt="">
           </span>
         </a>
-        <button class="favorite-remove" type="button" aria-label="删除自定义网站"></button>
+        <button class="favorite-remove" type="button" aria-label="Remove favorite site"></button>
       </div>
     </template>
 

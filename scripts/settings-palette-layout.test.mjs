@@ -7,14 +7,14 @@ const source = readFileSync(new URL("../newtab.js", import.meta.url), "utf8");
 
 assert.match(
   html,
-  /<h3 id="presetPaletteTitle">色彩<\/h3>\s*<p>为浅色与深色模式选择一组默认强调色<\/p>/,
-  "Default palette copy should explain the default light/dark accent pair."
+  /<h3 id="presetPaletteTitle">Colors<\/h3>\s*<p>Choose the default accent pair for light and dark modes<\/p>/,
+  "Default HTML palette copy should use the English baseline before locale hydration."
 );
 
 assert.match(
   html,
-  /<button class="settings-page-return" id="closeSettingsButton" type="button" aria-label="返回首页" title="返回首页">\s*<span class="button-icon" aria-hidden="true"><\/span>\s*<\/button>/,
-  "Settings return should render as an arrow icon button while keeping the accessible Back home label."
+  /<button class="settings-page-return" id="closeSettingsButton" type="button" aria-label="Back home" title="Back home">\s*<span class="button-icon" aria-hidden="true"><\/span>\s*<\/button>/,
+  "Settings return should render as an arrow icon button with the English baseline accessible label."
 );
 
 assert.match(

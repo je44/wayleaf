@@ -20,8 +20,8 @@ assert.ok(
 
 assert.match(
   html,
-  /<span class="sync-settings-actions" aria-label="同步方式">[\s\S]*id="syncSettingsNowButton"[\s\S]*id="syncSettingsAutoButton"[\s\S]*aria-disabled="true" disabled/,
-  "Cloud sync settings should render manual and disabled auto sync buttons side by side."
+  /<span class="sync-settings-actions" aria-label="Sync methods">[\s\S]*id="syncSettingsNowButton"[\s\S]*id="syncSettingsAutoButton"[\s\S]*aria-disabled="true" disabled/,
+  "Cloud sync settings should render manual and disabled auto sync buttons with the English baseline label."
 );
 
 assert.doesNotMatch(

@@ -6,8 +6,8 @@ const html = readFileSync(new URL("../newtab.html", import.meta.url), "utf8");
 
 assert.match(
   html,
-  /<section class="settings-group settings-platform-search-group" aria-labelledby="searchSettingsPlatformTitle">[\s\S]*id="platformSearchSettingsList"[\s\S]*需要登录的平台请先完成首次登录再使用。/,
-  "Search settings should include a built-in platform search module with first-login guidance."
+  /<section class="settings-group settings-platform-search-group" aria-labelledby="searchSettingsPlatformTitle">[\s\S]*id="platformSearchSettingsList"[\s\S]*Sign in first where required\./,
+  "Search settings should include a built-in platform search module with English baseline first-login guidance."
 );
 
 assert.match(

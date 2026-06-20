@@ -269,6 +269,10 @@ html.theme-hydrating .recent-card-bottom-bar {
   transition: none !important;
 }
 
+html.locale-hydrating body {
+  visibility: hidden;
+}
+
 .theme-transition-backdrop {
   position: fixed;
   inset: 0;

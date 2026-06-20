@@ -2,6 +2,8 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 
 const source = readFileSync(new URL("../newtab.js", import.meta.url), "utf8");
+const html = readFileSync(new URL("../newtab.html", import.meta.url), "utf8");
+const css = readFileSync(new URL("../newtab.css", import.meta.url), "utf8");
 
 assert.match(
   source,
@@ -22,10 +24,35 @@ assert.doesNotMatch(
 );
 
 const initBody = source.match(/async function init\(\) \{([\s\S]*?)\n\}/)?.[1] || "";
+assert.match(
+  html,
+  /<html lang="en" class="[^"]*\blocale-hydrating\b[^"]*"/,
+  "Static HTML should stay hidden until runtime locale hydration replaces the English baseline."
+);
+
+assert.match(
+  css,
+  /html\.locale-hydrating body\s*\{[\s\S]*visibility:\s*hidden;/,
+  "Locale hydration should hide the English HTML baseline before first paint."
+);
+
 assert.ok(
   initBody.indexOf("applyLocale();") !== -1
     && initBody.indexOf("applyLocale();") < initBody.indexOf("const searchSettingsReady = initSearchSettings();"),
   "Locale must be applied before startup awaits so system language does not flicker from the HTML default."
+);
+
+assert.ok(
+  initBody.indexOf("applyLocale();") !== -1
+    && initBody.indexOf('document.documentElement.classList.remove("locale-hydrating");') > initBody.indexOf("applyLocale();")
+    && initBody.indexOf('document.documentElement.classList.remove("locale-hydrating");') < initBody.indexOf("renderFirstPaintCache();"),
+  "The page should become visible only after system locale text has replaced the English baseline."
+);
+
+assert.match(
+  initBody,
+  /try\s*\{\s*applyLocale\(\);\s*\}\s*finally\s*\{\s*document\.documentElement\.classList\.remove\("locale-hydrating"\);\s*\}/,
+  "Locale hydration must not leave the page permanently hidden if localization throws."
 );
 
 assert.match(

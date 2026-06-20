@@ -2,14 +2,88 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 
 const source = readFileSync(new URL("../newtab.js", import.meta.url), "utf8");
+const html = readFileSync(new URL("../newtab.html", import.meta.url), "utf8");
+const manifest = JSON.parse(readFileSync(new URL("../manifest.json", import.meta.url), "utf8"));
+
+assert.equal(manifest.default_locale, "en", "Chrome extension metadata should use English as its default locale.");
+assert.equal(manifest.name, "__MSG_extName__", "Extension name should use Chrome i18n messages.");
+assert.equal(manifest.description, "__MSG_extDescription__", "Extension description should use Chrome i18n messages.");
+
+assert.match(
+  source,
+  /const DEFAULT_LOCALE = "en";/,
+  "English should be the fallback locale when no supported system language is available."
+);
+
+assert.match(
+  html,
+  /<html lang="en"/,
+  "Static HTML should use English as the baseline before runtime locale hydration."
+);
+
+assert.doesNotMatch(
+  html,
+  /[\u4e00-\u9fff]/,
+  "Static HTML should not default the extension UI to Chinese; runtime locale hydration supplies translated copy."
+);
+
+assert.match(
+  source,
+  /return DEFAULT_LOCALE;\s*\n\}/,
+  "Unsupported system languages should fall back to the default locale."
+);
 
 const supportedLocalesMatch = source.match(/const SUPPORTED_LOCALES = (\[[^\]]+\]);/);
 assert.ok(supportedLocalesMatch, "Supported locales should be declared.");
 const supportedLocales = JSON.parse(supportedLocalesMatch[1]);
+const chromeLocaleByAppLocale = {
+  "zh-CN": "zh_CN",
+  "zh-TW": "zh_TW",
+  en: "en",
+  ja: "ja",
+  ko: "ko",
+  es: "es",
+  fr: "fr",
+  de: "de"
+};
 
-const messagesMatch = source.match(/const MESSAGES = (\{[\s\S]*?\n\});\nconst LOCALE =/);
+for (const locale of supportedLocales) {
+  const chromeLocale = chromeLocaleByAppLocale[locale];
+  assert.ok(chromeLocale, `${locale} should map to a Chrome _locales directory.`);
+  const localeMessages = JSON.parse(readFileSync(new URL(`../_locales/${chromeLocale}/messages.json`, import.meta.url), "utf8"));
+  assert.equal(localeMessages.extName?.message, "Wayleaf", `${chromeLocale} should define the extension name.`);
+  assert.ok(localeMessages.extDescription?.message?.trim(), `${chromeLocale} should define the extension description.`);
+}
+
+const messagesMatch = source.match(/const MESSAGES = (\{[\s\S]*?\n\});\nconst LOCALE_COMPLETIONS =/);
 assert.ok(messagesMatch, "Messages object should be available for locale coverage checks.");
 const messages = Function(`"use strict"; return (${messagesMatch[1]});`)();
+
+const completionsMatch = source.match(/const LOCALE_COMPLETIONS = (\{[\s\S]*?\n\});\nfor \(const \[locale, messages\] of Object\.entries\(LOCALE_COMPLETIONS\)\)/);
+assert.ok(completionsMatch, "Locale completions should be available for full locale coverage checks.");
+const completions = Function(`"use strict"; return (${completionsMatch[1]});`)();
+for (const [locale, completion] of Object.entries(completions)) {
+  Object.assign(messages[locale], completion);
+}
+
+const baselineLocaleKeys = Object.keys(messages.en);
+for (const locale of supportedLocales) {
+  const missingKeys = baselineLocaleKeys.filter((key) => typeof messages[locale]?.[key] !== "string" || !messages[locale][key].trim());
+  assert.deepEqual(missingKeys, [], `${locale} should cover every English baseline UI key without falling back to another language.`);
+}
+
+const messageTemplateSource = source.match(/function messageTemplate\(key\) \{[\s\S]*?\n\}/)?.[0] || "";
+assert.ok(messageTemplateSource, "Message fallback helper should be declared.");
+assert.match(
+  messageTemplateSource,
+  /MESSAGES\[DEFAULT_LOCALE\]\[key\]/,
+  "Missing UI strings should fall back to the default locale."
+);
+assert.doesNotMatch(
+  messageTemplateSource,
+  /zh-CN|MESSAGES\["zh-CN"\]/,
+  "Simplified Chinese must stay a selectable system locale only, never a fallback source."
+);
 
 const settingsLocaleKeys = [
   "quickSearchAggregate",
@@ -99,6 +173,12 @@ assert.match(
   source,
   /\{ id: "local", label: "Aggregate search", labelKey: "quickSearchAggregate", local: true \}/,
   "The local aggregate search engine should expose a locale key for display."
+);
+
+assert.match(
+  source,
+  /quickSearchInput\.labels\?\.forEach\(\(label\) => \{\s*label\.textContent = t\("quickSearchPlaceholder"\);\s*\}\);/,
+  "The hidden quick-search label should hydrate with the system locale, not keep the English HTML baseline."
 );
 
 assert.match(

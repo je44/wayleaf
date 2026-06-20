@@ -17,9 +17,9 @@
 
 ## 预览
 
-| 日间模式 | 夜间模式 |
+| 浅色模式 | 深色模式 |
 | --- | --- |
-| ![Wayleaf 日间模式](docs/previews/wayleaf-light.png) | ![Wayleaf 夜间模式](docs/previews/wayleaf-dark.png) |
+| ![Wayleaf 浅色模式](docs/previews/wayleaf-light.png) | ![Wayleaf 深色模式](docs/previews/wayleaf-dark.png) |
 
 ## 为什么用 Wayleaf
 
@@ -43,7 +43,7 @@
 | 收集高频网站 | 常用入口支持去重；在书签视图里也可以把当前文件夹中的网站直接加入常用入口。 |
 | 把问题发给 AI | 用 `/gpt`、`/claude`、`/gemini`、`/grok`、`/deepseek`、`/doubao`、`/kimi`、`/glm` 直达对应 AI 页面并尝试填入问题。 |
 | 看技术资讯 | 内置中英文技术资讯源，也支持自定义 RSS/JSON 信息源。 |
-| 调整外观和同步 | 支持系统/日间/夜间主题、预设双色、自定义日夜主辅色、手动同步和启用后每日一次自动同步。 |
+| 调整外观和同步 | 支持系统/浅色/深色主题、预设双色、自定义浅色与深色主辅色、手动同步和启用后每日一次自动同步。 |
 
 界面会根据浏览器语言显示中文、英文、日文、韩文、西班牙文、法文或德文。
 
