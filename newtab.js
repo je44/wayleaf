@@ -3081,6 +3081,7 @@ let recentFolderPageIndex = 0;
 let activeRecentFolderPageSwitchAnimation = null;
 let favoriteSitesHydrated = false;
 let availableSiteIconFiles = new Set();
+let siteIconIndexLoaded = false;
 const whiteSvgIconDataUrlCache = new Map();
 const siteIconDiscoveryCache = new Map();
 const mediaFeedLoadMoreSentinel = document.createElement("div");
@@ -3096,6 +3097,7 @@ async function initWithStorageMigration() {
 }
 
 async function initSiteIconIndex() {
+  siteIconIndexLoaded = false;
   try {
     const response = await fetch(`${SITE_ICON_DIRECTORY}/index.json`);
     if (!response.ok) {
@@ -3108,6 +3110,8 @@ async function initSiteIconIndex() {
   } catch (error) {
     console.warn("Failed to load site icon index", error);
     availableSiteIconFiles = new Set();
+  } finally {
+    siteIconIndexLoaded = true;
   }
 }
 
@@ -7353,7 +7357,7 @@ async function saveFavoriteSites(sites) {
 }
 
 async function discoverFavoriteSiteIcon(url) {
-  if (!siteGroupKey(safeUrl(url)) || localIconForUrl(url)) {
+  if (!siteIconIndexLoaded || !siteGroupKey(safeUrl(url)) || localIconForUrl(url)) {
     return "";
   }
   return discoverSiteIconDataUrl(url);
@@ -7496,7 +7500,7 @@ async function fetchBestSiteIconDataUrl(parsedUrl) {
 async function discoverRemoteBrandIconDataUrl(url) {
   const parsedUrl = safeUrl(url);
   const siteKey = siteGroupKey(parsedUrl);
-  if (!siteKey || localIconForUrl(parsedUrl.href)) {
+  if (!siteIconIndexLoaded || !siteKey || localIconForUrl(parsedUrl.href)) {
     return "";
   }
   const cachedEntry = await loadCachedSiteIconEntry(siteKey);
@@ -8615,7 +8619,7 @@ function applySiteIcon(icon, site, options = {}) {
 function refreshRemoteBrandIcon(icon, site) {
   const parsedUrl = safeUrl(site.url);
   const siteKey = siteGroupKey(parsedUrl);
-  if (!parsedUrl || !siteKey || localIconForUrl(site.url)) {
+  if (!siteIconIndexLoaded || !parsedUrl || !siteKey || localIconForUrl(site.url)) {
     return;
   }
   const requestToken = `${siteKey}:${parsedUrl.href}`;

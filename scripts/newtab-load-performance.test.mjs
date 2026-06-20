@@ -61,6 +61,24 @@ assert.match(
   "Site icon index loading should refresh rendered icons instead of blocking the first content render."
 );
 
+assert.match(
+  source,
+  /let siteIconIndexLoaded = false;[\s\S]*async function initSiteIconIndex\(\) \{[\s\S]*siteIconIndexLoaded = false;[\s\S]*finally\s*\{[\s\S]*siteIconIndexLoaded = true;/,
+  "Startup should keep first content render non-blocking while exposing when local icon coverage is known."
+);
+
+assert.match(
+  source,
+  /async function discoverRemoteBrandIconDataUrl\(url\) \{[\s\S]*if \(!siteIconIndexLoaded \|\| !siteKey \|\| localIconForUrl\(parsedUrl\.href\)\) \{[\s\S]*return "";/,
+  "Remote brand discovery should wait for the local icon index so deployed local icons do not trigger noisy provider probes."
+);
+
+assert.match(
+  html,
+  /<link rel="icon" type="image\/png" sizes="32x32" href="icons\/wayleaf-flat-32\.png">/,
+  "HTTP previews should declare an existing favicon instead of letting the browser request /favicon.ico."
+);
+
 assert.ok(
   initBody.indexOf("renderFavoriteSites();") < initBody.indexOf("void searchSettingsReady;"),
   "Favorite content should not wait for search settings storage."
