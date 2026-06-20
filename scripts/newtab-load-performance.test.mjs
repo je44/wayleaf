@@ -98,7 +98,7 @@ assert.match(
 
 assert.match(
   source,
-  /function applyFaviconSampleDecision\(icon, sample, options = \{\}\)[\s\S]*applyIconTile\(icon, "plain", tileColors, false\);[\s\S]*cacheRenderedSiteIconFromContext\(icon\);/,
+  /function applyFaviconSampleDecision\(icon, sample, options = \{\}\)[\s\S]*applySampledFaviconTile\(icon, sample, color, tileColors\);[\s\S]*cacheRenderedSiteIconFromContext\(icon\);/,
   "Async favicon sampling should cache the settled tile after the existing color algorithm finishes."
 );
 

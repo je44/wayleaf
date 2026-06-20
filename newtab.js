@@ -36,6 +36,7 @@ const BOOKMARK_FOLDER_STORAGE_KEY = "bookmarkFolderId";
 const PORTAL_CATEGORY_STATE_STORAGE_KEY = "portalCategoryState";
 const THEME_STORAGE_KEY = "themeMode";
 const THEME_PALETTE_STORAGE_KEY = "themePalette";
+const LANGUAGE_STORAGE_KEY = "languagePreference";
 const THEME_BOOT_STORAGE_KEY = "__wayleaf_theme_boot__";
 const SEARCH_SETTINGS_STORAGE_KEY = "searchSettings";
 const FIRST_PAINT_CACHE_STORAGE_KEY = "__wayleaf_first_paint_cache__";
@@ -178,6 +179,7 @@ const SYNC_STORAGE_KEYS = new Set([
   PORTAL_CATEGORY_STATE_STORAGE_KEY,
   THEME_STORAGE_KEY,
   THEME_PALETTE_STORAGE_KEY,
+  LANGUAGE_STORAGE_KEY,
   SEARCH_SETTINGS_STORAGE_KEY,
   CUSTOM_MEDIA_FEEDS_STORAGE_KEY,
   SYNC_META_STORAGE_KEY
@@ -219,6 +221,8 @@ const FAVICON_EMBEDDED_TILE_EDGE_CONFIDENCE_MAX = 0.24;
 const FAVICON_EMBEDDED_TILE_INNER_CONFIDENCE_MIN = 0.34;
 const FAVICON_EMBEDDED_TILE_CONTRAST_MIN = 1.35;
 const FAVICON_EMBEDDED_TILE_CONTRAST_MAX_MIX = 0.42;
+const FAVICON_EMBEDDED_TILE_FUSION_CLEAR_DISTANCE = 48;
+const FAVICON_EMBEDDED_TILE_FUSION_FEATHER_DISTANCE = 24;
 const FAVICON_READABLE_CARRIER_CONTRAST_MIN = 3;
 const FAVICON_READABLE_CARRIER_MAX_MIX = 0.72;
 const LOCAL_BRAND_CARRIER_CONTRAST_MIN = 2.75;
@@ -309,6 +313,10 @@ const THEME_MODE_ICON_BY_MODE = Object.freeze({
   system: "desktop",
   light: "sunny-filled",
   dark: "moon-filled"
+});
+const SETTINGS_TAB_ICONS = Object.freeze({
+  basic: { inactive: "setting", active: "setting-filled" },
+  search: { inactive: "ai-search", active: "ai-search-filled" }
 });
 const CUSTOM_THEME_PALETTE_ID = "custom";
 const DEFAULT_CUSTOM_THEME_COLORS = Object.freeze({
@@ -982,6 +990,14 @@ const PORTAL_CATEGORY_BY_SITE_KEY = Object.freeze(Object.fromEntries(PORTALS.map
 })));
 const DEFAULT_LOCALE = "en";
 const SUPPORTED_LOCALES = ["zh-CN", "zh-TW", "en", "ja", "ko", "es", "fr", "de"];
+const LANGUAGE_PREFERENCES = ["system", "zh-TW", "zh-CN", "en", "ja", "ko"];
+const LANGUAGE_OPTION_LABELS = {
+  "zh-TW": "繁體中文",
+  "zh-CN": "简体中文",
+  en: "English",
+  ja: "日本語",
+  ko: "한국어"
+};
 const MESSAGES = {
   "zh-CN": {
     topbarLabel: "顶部功能区",
@@ -1103,6 +1119,8 @@ const MESSAGES = {
     settingsTabsLabel: "设置分类",
     settingsBasicTab: "基本设置",
     settingsSearchTab: "搜索设置",
+    languageSettingsTitle: "语言",
+    languageSettingsDescription: "选择 Wayleaf 的显示语言",
     appearanceModeTitle: "外观",
     appearanceModeDescription: "选择 Wayleaf 的外观",
     appearanceModeHint: "根据系统设置自动切换浅色或深色模式。",
@@ -1356,6 +1374,8 @@ const MESSAGES = {
     settingsTabsLabel: "設定分類",
     settingsBasicTab: "基本設定",
     settingsSearchTab: "搜尋設定",
+    languageSettingsTitle: "語言",
+    languageSettingsDescription: "選擇 Wayleaf 的顯示語言",
     appearanceModeTitle: "外觀",
     appearanceModeDescription: "選擇 Wayleaf 的外觀",
     appearanceModeHint: "根據系統設定自動切換淺色或深色模式。",
@@ -1578,6 +1598,8 @@ const MESSAGES = {
     settingsTabsLabel: "Settings categories",
     settingsBasicTab: "Basic",
     settingsSearchTab: "Search",
+    languageSettingsTitle: "Language",
+    languageSettingsDescription: "Choose Wayleaf's display language",
     appearanceModeTitle: "Appearance",
     appearanceModeDescription: "Choose Wayleaf's appearance mode",
     appearanceModeHint: "Automatically switches light or dark mode from system settings.",
@@ -1730,6 +1752,8 @@ const MESSAGES = {
     settingsTabsLabel: "設定カテゴリ",
     settingsBasicTab: "基本",
     settingsSearchTab: "検索",
+    languageSettingsTitle: "言語",
+    languageSettingsDescription: "Wayleaf の表示言語を選択",
     appearanceModeTitle: "外観",
     appearanceModeDescription: "Wayleaf の外観モードを選択",
     appearanceModeHint: "システム設定に合わせてライトまたはダークモードを自動で切り替えます。",
@@ -1819,6 +1843,8 @@ const MESSAGES = {
     settingsTabsLabel: "설정 분류",
     settingsBasicTab: "기본",
     settingsSearchTab: "검색",
+    languageSettingsTitle: "언어",
+    languageSettingsDescription: "Wayleaf 표시 언어를 선택하세요",
     appearanceModeTitle: "모양",
     appearanceModeDescription: "Wayleaf의 모양 모드를 선택하세요",
     appearanceModeHint: "시스템 설정에 따라 라이트/다크 모드를 자동 전환합니다.",
@@ -1908,6 +1934,8 @@ const MESSAGES = {
     settingsTabsLabel: "Categorías de configuración",
     settingsBasicTab: "Básico",
     settingsSearchTab: "Búsqueda",
+    languageSettingsTitle: "Idioma",
+    languageSettingsDescription: "Elige el idioma de visualización de Wayleaf",
     appearanceModeTitle: "Apariencia",
     appearanceModeDescription: "Elige el modo de apariencia de Wayleaf",
     appearanceModeHint: "Cambia automáticamente entre modo claro u oscuro según el sistema.",
@@ -1997,6 +2025,8 @@ const MESSAGES = {
     settingsTabsLabel: "Catégories de paramètres",
     settingsBasicTab: "Général",
     settingsSearchTab: "Recherche",
+    languageSettingsTitle: "Langue",
+    languageSettingsDescription: "Choisissez la langue d'affichage de Wayleaf",
     appearanceModeTitle: "Apparence",
     appearanceModeDescription: "Choisir le mode d'apparence de Wayleaf",
     appearanceModeHint: "Bascule automatiquement entre clair et sombre selon le système.",
@@ -2086,6 +2116,8 @@ const MESSAGES = {
     settingsTabsLabel: "Einstellungskategorien",
     settingsBasicTab: "Allgemein",
     settingsSearchTab: "Suche",
+    languageSettingsTitle: "Sprache",
+    languageSettingsDescription: "Anzeigesprache von Wayleaf auswählen",
     appearanceModeTitle: "Darstellung",
     appearanceModeDescription: "Darstellungsmodus von Wayleaf auswählen",
     appearanceModeHint: "Wechselt anhand der Systemeinstellung automatisch zwischen Hell- und Dunkelmodus.",
@@ -2910,8 +2942,8 @@ const LOCALE_COMPLETIONS = {
 for (const [locale, messages] of Object.entries(LOCALE_COMPLETIONS)) {
   Object.assign(MESSAGES[locale], messages);
 }
-const LOCALE = resolveLocale();
-const MEDIA_FEED_LOCALE_LANGUAGE = mediaFeedLanguageForLocale(LOCALE);
+let LOCALE = resolveLocale();
+let MEDIA_FEED_LOCALE_LANGUAGE = mediaFeedLanguageForLocale(LOCALE);
 
 const secondaryShell = document.querySelector("#secondaryShell");
 const homeStage = document.querySelector(".home-stage");
@@ -2960,6 +2992,10 @@ const closeSettingsButton = document.querySelector("#closeSettingsButton");
 const settingsTabsShell = document.querySelector(".settings-tabs-shell");
 const settingsTabButtons = [...document.querySelectorAll("[data-settings-tab]")];
 const settingsTabPanels = [...document.querySelectorAll("[data-settings-panel]")];
+const languagePicker = document.querySelector("#languagePicker");
+const languageTrigger = document.querySelector("#languageTrigger");
+const languageCurrent = document.querySelector("#languageCurrent");
+const languageOptions = document.querySelector("#languageOptions");
 const palettePresetGrid = document.querySelector("#palettePresetGrid");
 const syncSettingsRow = document.querySelector("#syncSettingsRow");
 const syncSettingsStatus = document.querySelector("#syncSettingsStatus");
@@ -3022,6 +3058,7 @@ let aiModeExitTimer = 0;
 let portalCategoryState = {};
 let activePortalView = "smart";
 let activeThemeMode = DEFAULT_THEME_MODE;
+let activeLanguagePreference = "system";
 let activeResolvedTheme = "";
 let activeThemePalette = DEFAULT_THEME_PALETTE;
 let activeCustomThemeColors = { ...DEFAULT_CUSTOM_THEME_COLORS };
@@ -3416,6 +3453,16 @@ function resolveLocale() {
   return DEFAULT_LOCALE;
 }
 
+function normalizeLanguagePreference(value) {
+  return LANGUAGE_PREFERENCES.includes(value) ? value : "system";
+}
+
+function applyLanguagePreference(preference) {
+  activeLanguagePreference = normalizeLanguagePreference(preference);
+  LOCALE = activeLanguagePreference === "system" ? resolveLocale() : activeLanguagePreference;
+  MEDIA_FEED_LOCALE_LANGUAGE = mediaFeedLanguageForLocale(LOCALE);
+}
+
 function t(key, values = {}) {
   const template = messageTemplate(key);
   return template.replace(/\{(\w+)\}/g, (_, valueKey) => String(values[valueKey] ?? ""));
@@ -3559,12 +3606,13 @@ function setThemeModeButtonLabel(button, label) {
 }
 
 function setStaticButtonIcons() {
-  portalSurfaceButton.querySelector(".button-icon").innerHTML = bookmarkDoubleFilledIcon();
+  portalSurfaceButton.querySelector(".button-icon").innerHTML = portalSurfaceIcon();
   surfaceBackButtons.forEach((button) => {
     button.querySelector(".button-icon").innerHTML = arrowLeftIcon();
   });
   togglePortalFormButton.querySelector(".button-icon").innerHTML = plusIcon();
   document.querySelector(".portal-category-trigger-icon").innerHTML = chevronDownIcon();
+  document.querySelector(".settings-language-trigger-icon").innerHTML = chevronDownIcon();
   refreshBookmarkFolderButton.querySelector(".button-icon").innerHTML = refreshIcon();
   bookmarkFavoriteAddButton.querySelector(".button-icon").innerHTML = plusIcon();
   chooseBookmarkFolderButton.querySelector(".button-icon").innerHTML = pageTabFilledIcon();
@@ -3578,7 +3626,8 @@ function setStaticButtonIcons() {
   if (recentFoldersNextIcon) {
     recentFoldersNextIcon.innerHTML = chevronRightIcon();
   }
-  settingsButton.querySelector(".theme-toggle-icon").innerHTML = settingsFilledIcon();
+  settingsButton.querySelector(".theme-toggle-icon").innerHTML = settingsToggleIcon();
+  updateSettingsTabIcons();
   document.querySelectorAll("[data-theme-mode]").forEach((button) => {
     button.querySelector(".button-icon").innerHTML = themeModeIcon(button.dataset.themeMode);
   });
@@ -3622,8 +3671,17 @@ function applySettingsLocale() {
   document.querySelector("#settingsTitle").textContent = t("settingsTitle");
   document.querySelector("#settingsSubtitle").textContent = t("settingsSubtitle");
   document.querySelector(".settings-tabs")?.setAttribute("aria-label", t("settingsTabsLabel"));
-  document.querySelector("#settingsBasicTab").textContent = t("settingsBasicTab");
-  document.querySelector("#settingsSearchTab").textContent = t("settingsSearchTab");
+  const settingsBasicTab = document.querySelector("#settingsBasicTab");
+  const settingsSearchTab = document.querySelector("#settingsSearchTab");
+  settingsBasicTab.querySelector(".settings-tab-label").textContent = t("settingsBasicTab");
+  settingsSearchTab.querySelector(".settings-tab-label").textContent = t("settingsSearchTab");
+  settingsBasicTab.setAttribute("aria-label", t("settingsBasicTab"));
+  settingsSearchTab.setAttribute("aria-label", t("settingsSearchTab"));
+  settingsBasicTab.title = t("settingsBasicTab");
+  settingsSearchTab.title = t("settingsSearchTab");
+  document.querySelector("#languageSettingsTitle").textContent = t("languageSettingsTitle");
+  document.querySelector(".settings-language-group .settings-group-heading p").textContent = t("languageSettingsDescription");
+  renderLanguageOptions();
   document.querySelector("#themeModeControl")?.setAttribute("aria-label", t("appearanceModeTitle"));
   document.querySelector("#appearanceModeTitle").textContent = t("appearanceModeTitle");
   document.querySelector(".settings-mode-group .settings-group-heading p").textContent = t("appearanceModeDescription");
@@ -3683,8 +3741,161 @@ function applySettingsLocale() {
   updateSettingsActiveSummary(settingsTabButtons.find((button) => button.classList.contains("active"))?.dataset.settingsTab);
 }
 
+function renderLanguageOptions() {
+  if (!languageOptions || !languageCurrent) {
+    return;
+  }
+  languageOptions.replaceChildren(...LANGUAGE_PREFERENCES.map((preference) => {
+    const option = document.createElement("button");
+    option.className = "portal-category-option settings-language-option";
+    option.type = "button";
+    option.dataset.languagePreference = preference;
+    option.id = `languageOption-${preference}`;
+    option.setAttribute("role", "option");
+    const label = document.createElement("span");
+    label.textContent = languagePreferenceLabel(preference);
+    const icon = document.createElement("span");
+    icon.className = "button-icon settings-language-option-icon";
+    icon.setAttribute("aria-hidden", "true");
+    icon.innerHTML = tdesignIcon("check");
+    option.append(label, icon);
+    option.addEventListener("pointerdown", (event) => event.preventDefault());
+    return option;
+  }));
+  updateLanguagePicker();
+}
+
+function languagePreferenceLabel(preference) {
+  return preference === "system" ? t("themeModeSystem") : LANGUAGE_OPTION_LABELS[preference];
+}
+
+function updateLanguagePicker() {
+  if (languageCurrent) {
+    languageCurrent.textContent = languagePreferenceLabel(activeLanguagePreference);
+  }
+  languageOptions?.querySelectorAll(".settings-language-option").forEach((option) => {
+    const isSelected = option.dataset.languagePreference === activeLanguagePreference;
+    option.setAttribute("aria-selected", String(isSelected));
+    option.tabIndex = isSelected ? 0 : -1;
+  });
+  languageTrigger?.setAttribute("aria-activedescendant", `languageOption-${activeLanguagePreference}`);
+}
+
+function toggleLanguagePicker(event) {
+  if (languagePicker?.classList.contains("open")) {
+    closeLanguagePicker({ restoreFocus: true });
+  } else {
+    openLanguagePicker({ focusOption: event?.detail === 0 });
+  }
+}
+
+function openLanguagePicker(options = {}) {
+  if (!languagePicker || !languageTrigger || !languageOptions) {
+    return;
+  }
+  languagePicker.classList.add("open");
+  languageTrigger.setAttribute("aria-expanded", "true");
+  languageOptions.hidden = false;
+  if (options.focusOption) {
+    languageOptions.querySelector('[aria-selected="true"]')?.focus({ preventScroll: true });
+  }
+}
+
+function closeLanguagePicker(options = {}) {
+  if (!languagePicker || !languageTrigger || !languageOptions) {
+    return;
+  }
+  languagePicker.classList.remove("open");
+  languageTrigger.setAttribute("aria-expanded", "false");
+  languageOptions.hidden = true;
+  if (options.restoreFocus) {
+    languageTrigger.focus({ preventScroll: true });
+  }
+}
+
+function handleLanguageOptionClick(event) {
+  const option = event.target.closest?.(".settings-language-option");
+  if (!option) {
+    return;
+  }
+  void setLanguagePreference(option.dataset.languagePreference);
+  closeLanguagePicker({ restoreFocus: true });
+}
+
+function handleLanguageOptionsKeydown(event) {
+  const options = [...languageOptions.querySelectorAll(".settings-language-option")];
+  const currentIndex = options.findIndex((option) => option === document.activeElement);
+  if (event.key === "Escape") {
+    event.preventDefault();
+    event.stopPropagation();
+    closeLanguagePicker({ restoreFocus: true });
+    return;
+  }
+  if (event.key === "Enter" || event.key === " ") {
+    event.preventDefault();
+    event.stopPropagation();
+    const currentOption = options[currentIndex];
+    if (currentOption) {
+      void setLanguagePreference(currentOption.dataset.languagePreference);
+      closeLanguagePicker({ restoreFocus: true });
+    }
+    return;
+  }
+  if (!["ArrowDown", "ArrowUp", "Home", "End"].includes(event.key)) {
+    return;
+  }
+  event.preventDefault();
+  const lastIndex = options.length - 1;
+  const nextIndex = event.key === "Home"
+    ? 0
+    : event.key === "End"
+      ? lastIndex
+      : event.key === "ArrowUp"
+        ? Math.max(0, currentIndex - 1)
+        : Math.min(lastIndex, currentIndex + 1);
+  options[nextIndex]?.focus({ preventScroll: true });
+}
+
+function handleLanguagePickerDismiss(event) {
+  if (!languagePicker?.classList.contains("open")) {
+    return;
+  }
+  const target = event.target;
+  if (target instanceof Element && languagePicker.contains(target)) {
+    return;
+  }
+  closeLanguagePicker();
+}
+
+async function initLanguagePreference() {
+  try {
+    const result = await getStoredValues({ [LANGUAGE_STORAGE_KEY]: "system" });
+    applyLanguagePreference(result[LANGUAGE_STORAGE_KEY]);
+  } catch (error) {
+    console.warn("Failed to load language preference", error);
+    applyLanguagePreference("system");
+  }
+}
+
+async function setLanguagePreference(preference) {
+  applyLanguagePreference(preference);
+  applyLocale();
+  renderThemePalettePresets();
+  updateThemeSettingsUi();
+  renderMediaFeedForActiveType();
+  void renderPortals();
+  void renderFavoriteSites();
+  void refreshHistory();
+  try {
+    await setStoredValues({ [LANGUAGE_STORAGE_KEY]: activeLanguagePreference });
+  } catch (error) {
+    console.warn("Failed to save language preference", error);
+  }
+}
+
 async function init() {
   hydrateThemeFromBootCache();
+  await initLanguagePreference();
   try {
     applyLocale();
   } finally {
@@ -3745,10 +3956,13 @@ async function init() {
   onboardingCloseButton?.addEventListener("click", dismissOnboardingGuide);
   onboardingDoneButton?.addEventListener("click", dismissOnboardingGuide);
   settingsButton.addEventListener("click", toggleSettingsPanel);
-  closeSettingsButton.addEventListener("click", () => closeSettingsPanel({ restoreFocus: true }));
+  closeSettingsButton.addEventListener("click", closeSettingsPanel);
   settingsShell?.addEventListener("scroll", updateSettingsTabsStickyVisualState, { passive: true });
   window.addEventListener("resize", updateSettingsTabsStickyVisualState);
   syncSettingsNowButton?.addEventListener("click", handleManualSyncSettings);
+  languageTrigger?.addEventListener("click", toggleLanguagePicker);
+  languageOptions?.addEventListener("click", handleLanguageOptionClick);
+  languageOptions?.addEventListener("keydown", handleLanguageOptionsKeydown);
   settingsTabButtons.forEach((button) => {
     button.addEventListener("click", () => activateSettingsTab(button.dataset.settingsTab));
   });
@@ -3776,6 +3990,7 @@ async function init() {
   document.addEventListener("pointerdown", handleFavoriteDeleteDismiss, true);
   document.addEventListener("pointerdown", handleSurfacePanelDismiss, true);
   document.addEventListener("pointerdown", handlePortalCategoryPickerDismiss, true);
+  document.addEventListener("pointerdown", handleLanguagePickerDismiss, true);
   document.addEventListener("pointerdown", handleSearchSuggestionDismiss, true);
   document.addEventListener("pointerdown", handleSettingsPanelDismiss, true);
   document.addEventListener("keydown", handleBookmarkDeleteEscape);
@@ -3873,9 +4088,6 @@ function setActiveSurfacePanel(panelId) {
           panel.classList.remove("surface-closing");
         });
         syncSurfaceChromeState();
-        if (previousPanelId === "portalPanel" && !isSettingsPanelVisible()) {
-          portalSurfaceButton.focus({ preventScroll: true });
-        }
       }
     }, 340);
   }
@@ -4109,6 +4321,7 @@ function renderSearchSettingsForm() {
   basicSearchEngineList.replaceChildren(...editableLocalSearchEngines().map(createBasicSearchEngineCard));
   aiEngineSettingsList.replaceChildren(...editableAiSearchEngines().map(createAiEngineSettingsCard));
   platformSearchSettingsList?.replaceChildren(...platformSearchTargets().map(createPlatformSearchSettingsCard));
+  window.requestAnimationFrame(updateSettingsTabsStickyVisualState);
 }
 
 function createBasicSearchEngineCard(engine) {
@@ -4177,6 +4390,8 @@ function createAiEngineSettingsCard(engine) {
     panel.hidden = !expanded;
     editButton.textContent = expanded ? t("searchSettingsDoneEdit") : t("searchSettingsEdit");
     editButton.setAttribute("aria-expanded", String(expanded));
+    updateSettingsTabsStickyVisualState();
+    window.requestAnimationFrame(updateSettingsTabsStickyVisualState);
     if (expanded) {
       panel.querySelector("input")?.focus();
     }
@@ -5138,7 +5353,7 @@ function toggleSettingsPanel() {
     openSettingsPanel();
     return;
   }
-  closeSettingsPanel({ restoreFocus: true });
+  closeSettingsPanel();
 }
 
 function isSettingsPanelVisible() {
@@ -5167,12 +5382,22 @@ function activateSettingsTab(tabName = "basic") {
     button.setAttribute("aria-selected", String(isActive));
     button.tabIndex = isActive ? 0 : -1;
   });
+  updateSettingsTabIcons(targetTab);
   settingsTabPanels.forEach((panel) => {
     const isActive = panel.dataset.settingsPanel === targetTab;
     panel.classList.toggle("active", isActive);
     panel.hidden = !isActive;
   });
   updateSettingsActiveSummary(targetTab);
+  updateSettingsTabsStickyVisualState();
+  window.requestAnimationFrame(updateSettingsTabsStickyVisualState);
+}
+
+function updateSettingsTabIcons(activeTab = settingsTabButtons.find((button) => button.classList.contains("active"))?.dataset.settingsTab || "basic") {
+  settingsTabButtons.forEach((button) => {
+    const icon = SETTINGS_TAB_ICONS[button.dataset.settingsTab] || SETTINGS_TAB_ICONS.basic;
+    button.querySelector(".settings-tab-icon").innerHTML = tdesignIcon(button.dataset.settingsTab === activeTab ? icon.active : icon.inactive);
+  });
 }
 
 function focusSettingsPanel() {
@@ -5185,12 +5410,24 @@ function focusSettingsPanel() {
 }
 
 function updateSettingsTabsStickyVisualState() {
-  if (!settingsTabsShell) {
+  if (!settingsTabsShell || !settingsShell) {
     return;
   }
-  const isStuck = Boolean(settingsShell && settingsShell.scrollTop > 0);
+  const activePanel = settingsTabPanels.find((panel) => panel.classList.contains("active"));
+  const activeBody = activePanel?.querySelector(".settings-body") || activePanel;
+  const lastContent = activeBody?.lastElementChild || activeBody;
+  const contentBottom = lastContent
+    ? Math.ceil(lastContent.getBoundingClientRect().bottom - settingsShell.getBoundingClientRect().top + settingsShell.scrollTop)
+    : 0;
+  const isScrollable = contentBottom > settingsShell.clientHeight + 2;
+  if (!isScrollable && settingsShell.scrollTop) {
+    settingsShell.scrollTop = 0;
+  }
+  const isStuck = Boolean(isScrollable && settingsShell.scrollTop > 0);
+  settingsShell.setAttribute("data-scrollable", isScrollable ? "true" : "false");
   settingsTabsShell.setAttribute("data-stuck", isStuck ? "true" : "false");
-  settingsShell?.setAttribute("data-stuck", isStuck ? "true" : "false");
+  settingsTabsShell.setAttribute("data-faded", isStuck ? "true" : "false");
+  settingsShell.setAttribute("data-stuck", isStuck ? "true" : "false");
 }
 
 function openSettingsPanel() {
@@ -5215,11 +5452,12 @@ function openSettingsPanel() {
   focusSettingsPanel();
 }
 
-function closeSettingsPanel(options = {}) {
+function closeSettingsPanel() {
   if (!isSettingsPanelVisible() && !settingsShell.classList.contains("page-closing")) {
     return;
   }
   window.clearTimeout(settingsPanelCloseTimer);
+  closeLanguagePicker();
   settingsPanel.dataset.open = "false";
   settingsShell.classList.remove("page-active");
   settingsShell.classList.add("page-closing");
@@ -5231,13 +5469,12 @@ function closeSettingsPanel(options = {}) {
       settingsShell.hidden = true;
       settingsShell.classList.remove("page-closing");
       settingsShell.setAttribute("data-stuck", "false");
+      settingsShell.setAttribute("data-scrollable", "false");
       settingsTabsShell?.setAttribute("data-stuck", "false");
+      settingsTabsShell?.setAttribute("data-faded", "false");
       syncSurfaceChromeState();
     }
   }, 340);
-  if (options.restoreFocus) {
-    settingsButton.focus({ preventScroll: true });
-  }
 }
 
 async function requestOnboardingGuide() {
@@ -5359,10 +5596,6 @@ function handleQuickSearchInput() {
   if (platformMatch && searchEngineById(activeSearchEngine).local) {
     quickSearchInput.value = platformMatch.remainder;
     setPlatformQuickSearchTarget(platformMatch.platform.id);
-    return;
-  }
-  if (!searchEngineById(activeSearchEngine).local) {
-    hideSearchSuggestions();
     return;
   }
   renderLocalSearchSuggestions(normalizeText(quickSearchInput.value));
@@ -5675,7 +5908,7 @@ async function renderLocalSearchSuggestions(query, options = {}) {
     hideSearchSuggestions();
     return;
   }
-  const results = await localSearchItems(query);
+  const results = await localSearchItems(query, { scope: activeSearchSuggestionScope() });
   if (requestId !== localSearchRequestId) {
     return;
   }
@@ -5752,6 +5985,17 @@ function createSearchEngineSuggestion(query) {
       selectedPlatformId: platform.id
     };
   }
+  const engine = searchEngineById(activeSearchEngine);
+  if (!engine.local) {
+    return {
+      type: "engine-search",
+      title: query,
+      meta: "",
+      hint: t("quickSearchWithAi", { engine: searchEngineLabel(engine) }),
+      query,
+      selectedAiEngineId: engine.id
+    };
+  }
   const selectedEngine = selectedLocalSearchEngineConfig();
   return {
     type: "engine-search",
@@ -5763,10 +6007,11 @@ function createSearchEngineSuggestion(query) {
   };
 }
 
-async function localSearchItems(query) {
+async function localSearchItems(query, options = {}) {
+  const scope = options.scope || null;
   const [historyItems, bookmarkItems] = await Promise.all([
-    searchHistoryItems(query),
-    searchBookmarkItems(query)
+    searchHistoryItems(query, scope),
+    searchBookmarkItems(query, scope)
   ]);
   const merged = [...historyItems, ...bookmarkItems];
   const byKey = new Map();
@@ -5793,19 +6038,50 @@ async function localSearchItems(query) {
     .slice(0, MAX_LOCAL_SEARCH_RESULTS);
 }
 
-async function searchHistoryItems(query) {
+function activeSearchSuggestionScope() {
+  const platform = platformSearchTargetById(activePlatformSearchTarget);
+  if (platform) {
+    return searchTargetSuggestionScope(platform);
+  }
+  const engine = searchEngineById(activeSearchEngine);
+  return engine.local ? null : searchTargetSuggestionScope(engine);
+}
+
+function searchTargetSuggestionScope(target) {
+  const siteKeys = [target.searchUrl, target.directUrl, target.iconUrl]
+    .map(searchSuggestionSiteKey)
+    .filter(Boolean);
+  const uniqueSiteKeys = [...new Set(siteKeys)];
+  return uniqueSiteKeys.length ? { siteKeys: uniqueSiteKeys } : null;
+}
+
+function searchSuggestionSiteKey(url) {
+  const parsed = safeUrl(url);
+  return parsed && isWebUrl(parsed.href) ? canonicalSiteHost(parsed.hostname) : "";
+}
+
+function localSearchMatchesScope(item, scope) {
+  if (!scope?.siteKeys?.length) {
+    return true;
+  }
+  const url = safeUrl(item?.url);
+  const siteKey = url ? canonicalSiteHost(url.hostname) : "";
+  return Boolean(siteKey && scope.siteKeys.includes(siteKey));
+}
+
+async function searchHistoryItems(query, scope = null) {
   if (!chrome.history?.search) {
     return [];
   }
   try {
     const items = await chrome.history.search({
       text: query,
-      maxResults: 24,
+      maxResults: scope ? 96 : 24,
       startTime: Date.now() - (BOOKMARK_HISTORY_LOOKBACK_DAYS * 24 * 60 * 60 * 1000)
     });
     const normalizedQuery = normalizeText(query).toLowerCase();
     return items
-      .filter((item) => item.url && isWebUrl(item.url) && fuzzyMatchesHistoryItem(item, normalizedQuery))
+      .filter((item) => item.url && isWebUrl(item.url) && localSearchMatchesScope(item, scope) && fuzzyMatchesHistoryItem(item, normalizedQuery))
       .map((item) => ({
         type: "history",
         title: normalizeText(item.title) || historyFallbackTitle(safeUrl(item.url)),
@@ -5819,7 +6095,7 @@ async function searchHistoryItems(query) {
   }
 }
 
-async function searchBookmarkItems(query) {
+async function searchBookmarkItems(query, scope = null) {
   if (!chrome.bookmarks?.getTree) {
     return [];
   }
@@ -5827,7 +6103,7 @@ async function searchBookmarkItems(query) {
     const tree = await chrome.bookmarks.getTree();
     const normalizedQuery = normalizeText(query).toLowerCase();
     return flattenBookmarkSites(tree)
-      .filter((entry) => entry.url && isWebUrl(entry.url) && fuzzyMatchesBookmarkEntry(entry, normalizedQuery))
+      .filter((entry) => entry.url && isWebUrl(entry.url) && localSearchMatchesScope(entry, scope) && fuzzyMatchesBookmarkEntry(entry, normalizedQuery))
       .slice(0, 24)
       .map((entry) => ({
         type: "bookmark",
@@ -6087,6 +6363,15 @@ function submitSelectedSuggestionSearch(item) {
     submitPlatformQuickSearch(platform, item.query);
     return;
   }
+  const aiEngine = searchEngineById(item.selectedAiEngineId, { strict: true });
+  if (aiEngine && !aiEngine.local) {
+    if (aiEngine.autoSubmit && !looksLikeUrl(item.query) && !localhostUrl(item.query)) {
+      submitAiDirectSearch(aiEngine, item.query);
+    } else {
+      submitEngineQuickSearch(aiEngine, item.query);
+    }
+    return;
+  }
   const selectedEngine = searchEngineById(item.selectedEngineId || selectedLocalSearchEngine, { strict: true })
     || selectedLocalSearchEngineConfig();
   submitEngineQuickSearch(selectedEngine, item.query);
@@ -6152,6 +6437,8 @@ async function renderPortals() {
     loadFavoriteSites()
   ]);
   const favoriteKeys = favoriteSiteKeySet(favoriteSites);
+  const favoriteIconMap = favoriteSiteIconMap(favoriteSites);
+  const iconRenders = readFirstPaintCache().iconRenders;
   const featuredPortals = featuredPortalItems(portalData.items);
   const groups = groupPortalsByCategory(portalData.items);
   portalCategoryState = await loadPortalCategoryState(groups);
@@ -6159,12 +6446,18 @@ async function renderPortals() {
     fragment.appendChild(createPortalCategorySection({
       category: "featured",
       favoriteKeys,
+      favoriteIconMap,
       featured: true,
+      iconRenders,
       items: featuredPortals
     }));
   }
   if (groups.length) {
-    fragment.appendChild(createPortalClassificationModule(groups, favoriteKeys));
+    fragment.appendChild(createPortalClassificationModule(groups, {
+      favoriteKeys,
+      favoriteIconMap,
+      iconRenders
+    }));
   }
   portalGrid.replaceChildren(fragment);
 }
@@ -6441,7 +6734,7 @@ function mergePortalItems(priorityItems, secondaryItems) {
   return merged;
 }
 
-function createPortalClassificationModule(groups, favoriteKeys = new Set()) {
+function createPortalClassificationModule(groups, options = {}) {
   const module = document.createElement("section");
   module.className = "portal-classification-module";
   groups.forEach((group) => {
@@ -6451,7 +6744,9 @@ function createPortalClassificationModule(groups, favoriteKeys = new Set()) {
       collapsible: group.items.length > 0,
       classification: true,
       expanded: isExpanded,
-      favoriteKeys
+      favoriteKeys: options.favoriteKeys,
+      favoriteIconMap: options.favoriteIconMap,
+      iconRenders: options.iconRenders
     });
     module.appendChild(section);
   });
@@ -6514,7 +6809,11 @@ function createPortalCategorySection(group) {
     grid.id = `portalCategoryGrid-${group.category}`;
   }
   visibleItems.forEach((portal, index) => {
-    const card = createSiteCard(portal, { favoriteKeys: group.favoriteKeys });
+    const card = createSiteCard(portal, {
+      favoriteKeys: group.favoriteKeys,
+      favoriteIconMap: group.favoriteIconMap,
+      iconRenders: group.iconRenders
+    });
     grid.appendChild(card);
   });
   headingActions.className = "portal-category-actions";
@@ -6688,6 +6987,37 @@ function handlePortalCategoryPickerDismiss(event) {
   closePortalCategoryPicker();
 }
 
+function favoriteSiteIconMap(sites = []) {
+  const iconMap = new Map();
+  for (const site of sites) {
+    const key = firstPaintIconCacheKey(site);
+    const icon = normalizeStoredSiteIcon(site?.icon || "");
+    if (key && icon && !iconMap.has(key)) {
+      iconMap.set(key, icon);
+    }
+  }
+  return iconMap;
+}
+
+function siteWithFavoriteIcon(site, favoriteIconMap = new Map()) {
+  const icon = normalizeStoredSiteIcon(site?.icon || "");
+  if (icon) {
+    return site;
+  }
+  const favoriteIcon = favoriteIconMap.get(firstPaintIconCacheKey(site));
+  return favoriteIcon ? { ...site, icon: favoriteIcon } : site;
+}
+
+function renderSharedSiteIcon(icon, site, options = {}) {
+  const iconSite = siteWithFavoriteIcon(site, options.favoriteIconMap);
+  const cachedIconRender = cachedFirstPaintIconRender(options.iconRenders, iconSite);
+  if (cachedIconRender) {
+    restoreFirstPaintIconRender(icon, iconSite, cachedIconRender);
+    return;
+  }
+  applySiteIcon(icon, iconSite);
+}
+
 function createSiteCard(site, options = {}) {
   const node = siteCardTemplate.content.firstElementChild.cloneNode(true);
   const link = node.querySelector(".site-link");
@@ -6695,7 +7025,7 @@ function createSiteCard(site, options = {}) {
   const domain = node.querySelector(".site-domain");
   const removeButton = node.querySelector(".site-remove");
   link.href = site.url;
-  applySiteIcon(icon, site);
+  renderSharedSiteIcon(icon, site, options);
   icon.alt = "";
   node.querySelector(".site-title").textContent = site.title;
   domain.textContent = compactSiteDomain(site.url);
@@ -8259,7 +8589,7 @@ function applySiteIcon(icon, site, options = {}) {
       delete icon.dataset.iconDefaultRescue;
       delete icon.dataset.iconDefaultProbe;
       icon.classList.remove("site-icon-generic-fallback");
-      if (!localIcon && !remoteBrandSvgDescriptorFromSource(iconSource)) {
+      if (iconSourceCanUseBitmapTileFusion(iconSource)) {
         icon.addEventListener("load", () => {
           if (iconStillRenderingCandidate(icon, iconSource)) {
             applyFaviconMatchedTile(icon);
@@ -8555,6 +8885,12 @@ function applyIconTileToShell(icon, tileMode, tileColors) {
   shell.style.setProperty("--site-icon-tile", tileColors.light);
   shell.style.setProperty("--site-icon-tile-light", tileColors.light);
   shell.style.setProperty("--site-icon-tile-dark", tileColors.dark);
+}
+
+function iconSourceCanUseBitmapTileFusion(source) {
+  return Boolean(source)
+    && !siteIconSourceLooksLikeSvg(source)
+    && !remoteBrandSvgDescriptorFromSource(source);
 }
 
 function displayIconSource(icon, source, options = {}) {
@@ -8929,9 +9265,16 @@ function applyIconCandidate(icon, candidates, index) {
   } else {
     delete icon.dataset.iconSource;
   }
-  if (!isLocalIcon) {
+  if (isLocalIcon) {
+    applySiteIconTile(icon, {
+      title: icon.dataset.siteTitle || icon.alt || "",
+      url: icon.dataset.siteUrl || ""
+    }, nextIcon);
+  } else {
     const tileColors = genericIconTileColors(icon.dataset.siteUrl || icon.dataset.siteTitle || "");
     applyIconTile(icon, "plain", tileColors, false);
+  }
+  if (iconSourceCanUseBitmapTileFusion(nextIcon)) {
     icon.addEventListener("load", () => {
       if (iconStillRenderingCandidate(icon, nextIcon)) {
         applyFaviconMatchedTile(icon);
@@ -8951,9 +9294,9 @@ function iconStillRenderingCandidate(icon, candidateToken) {
 }
 
 function applyFaviconMatchedTile(icon, options = {}) {
-  if (icon.dataset.iconTile !== "plain"
-    || icon.dataset.iconCandidate?.startsWith("icons/")
-    || remoteBrandSvgDescriptorFromSource(icon.dataset.iconCandidate || "")) {
+  const candidateToken = icon.dataset.iconCandidate || "";
+  if (!iconSourceCanUseBitmapTileFusion(candidateToken)
+    || (icon.dataset.iconTile !== "plain" && icon.dataset.iconTile !== "brand")) {
     return;
   }
   const sample = sampleFaviconImageData(icon);
@@ -8970,7 +9313,7 @@ function applyFaviconSampleDecision(icon, sample, options = {}) {
       const color = dominantFaviconSampleBackgroundColor(sample);
       const tileColors = color?.confidence ? faviconMatchedTileColors(color) : null;
       if (tileColors) {
-        applyIconTile(icon, "plain", tileColors, false);
+        applySampledFaviconTile(icon, sample, color, tileColors);
         cacheRenderedSiteIconFromContext(icon);
       }
       return;
@@ -8990,8 +9333,40 @@ function applyFaviconSampleDecision(icon, sample, options = {}) {
   if (!tileColors) {
     return;
   }
-  applyIconTile(icon, "plain", tileColors, false);
+  applySampledFaviconTile(icon, sample, color, tileColors);
   cacheRenderedSiteIconFromContext(icon);
+}
+
+function applySampledFaviconTile(icon, sample, color, tileColors) {
+  const tileMode = icon.dataset.iconTile === "brand" ? "brand" : "plain";
+  const hasLocalIcon = icon.classList.contains("site-icon-local");
+  applyIconTile(icon, tileMode, tileColors, hasLocalIcon);
+  fuseEmbeddedFaviconTile(icon, sample, color, tileColors);
+}
+
+function fuseEmbeddedFaviconTile(icon, sample, color, tileColors) {
+  const tileColor = document.documentElement.dataset.theme === "dark"
+    ? tileColors.dark
+    : tileColors.light;
+  if (!faviconShouldFuseEmbeddedTile(color, tileColor)) {
+    delete icon.dataset.iconFusedTile;
+    return;
+  }
+  const fused = fusedEmbeddedFaviconPixelData(sample, tileColor);
+  if (!fused) {
+    delete icon.dataset.iconFusedTile;
+    return;
+  }
+  const canvas = document.createElement("canvas");
+  canvas.width = fused.size;
+  canvas.height = fused.size;
+  const context = canvas.getContext("2d");
+  if (!context) {
+    return;
+  }
+  context.putImageData(new ImageData(fused.data, fused.size, fused.size), 0, 0);
+  icon.dataset.iconFusedTile = "true";
+  icon.src = canvas.toDataURL("image/png");
 }
 
 function probeUnreadableFaviconCandidate(icon, options = {}) {
@@ -9575,11 +9950,18 @@ function selectFaviconBackgroundCandidate(analysis, size) {
   if (!candidate?.confidence) {
     return null;
   }
-  const selectedColor = {
-    red: Math.round(candidate.carrierRed ?? candidate.red),
-    green: Math.round(candidate.carrierGreen ?? candidate.green),
-    blue: Math.round(candidate.carrierBlue ?? candidate.blue)
-  };
+  const matchMode = faviconBackgroundMatchMode(candidate);
+  const selectedColor = matchMode === "embedded-tile"
+    ? {
+      red: Math.round(candidate.red),
+      green: Math.round(candidate.green),
+      blue: Math.round(candidate.blue)
+    }
+    : {
+      red: Math.round(candidate.carrierRed ?? candidate.red),
+      green: Math.round(candidate.carrierGreen ?? candidate.green),
+      blue: Math.round(candidate.carrierBlue ?? candidate.blue)
+    };
   const selected = {
     ...selectedColor,
     paletteRed: Math.round(candidate.red),
@@ -9590,7 +9972,7 @@ function selectFaviconBackgroundCandidate(analysis, size) {
     opaqueCoverage: analysis.opaqueWeight / analysis.totalWeight,
     edgeConfidence: candidate.edgeConfidence,
     innerTileConfidence: candidate.innerTileConfidence,
-    matchMode: faviconBackgroundMatchMode(candidate),
+    matchMode,
     foreground: faviconForegroundStatsForCandidate(selectedColor, analysis, size)
   };
   return selected;
@@ -9701,6 +10083,9 @@ function faviconCandidateLooksLikeTransparentGlyph(color, tileColor) {
   if (!background) {
     return false;
   }
+  if (faviconCandidateHasEmbeddedForeground(color)) {
+    return false;
+  }
   const opaqueCoverage = color.opaqueCoverage || 0;
   if (
     opaqueCoverage <= 0
@@ -9711,6 +10096,15 @@ function faviconCandidateLooksLikeTransparentGlyph(color, tileColor) {
     return false;
   }
   return true;
+}
+
+function faviconCandidateHasEmbeddedForeground(color) {
+  if (color.matchMode !== "embedded-tile") {
+    return false;
+  }
+  const foreground = color.foreground || {};
+  return (foreground.coverage || 0) >= FAVICON_LOW_CONTRAST_FOREGROUND_COVERAGE_MIN
+    && (foreground.maxContrast || 0) > FAVICON_LOW_CONTRAST_PEAK_MAX;
 }
 
 function faviconCandidateLooksLikeNearWhiteGlyph(color, tileColor) {
@@ -9726,6 +10120,52 @@ function faviconCandidateLooksLikeNearWhiteGlyph(color, tileColor) {
 function faviconCandidateNeedsReadableCarrier(color, tileColor) {
   return faviconCandidateLooksLikeTransparentGlyph(color, tileColor)
     || faviconCandidateLooksLikeNearWhiteGlyph(color, tileColor);
+}
+
+function faviconShouldFuseEmbeddedTile(color, tileColor) {
+  const background = normalizeHexColor(tileColor);
+  if (!background || color?.matchMode !== "embedded-tile" || !faviconCandidateHasEmbeddedForeground(color)) {
+    return false;
+  }
+  return rgbChannelsToHex(color.red, color.green, color.blue) === background;
+}
+
+function fusedEmbeddedFaviconPixelData(sample, tileColor) {
+  const background = normalizeHexColor(tileColor);
+  if (!sample?.data || !sample.size || !background) {
+    return null;
+  }
+  const [tileRed, tileGreen, tileBlue] = hexToRgb(background);
+  const clearLimit = FAVICON_EMBEDDED_TILE_FUSION_CLEAR_DISTANCE;
+  const featherLimit = clearLimit + FAVICON_EMBEDDED_TILE_FUSION_FEATHER_DISTANCE;
+  const clearLimitSquared = clearLimit ** 2;
+  const featherLimitSquared = featherLimit ** 2;
+  const output = new Uint8ClampedArray(sample.data);
+  let adjusted = 0;
+  for (let index = 0; index < output.length; index += 4) {
+    const alpha = output[index + 3];
+    if (!alpha) {
+      continue;
+    }
+    const distanceSquared = (output[index] - tileRed) ** 2
+      + (output[index + 1] - tileGreen) ** 2
+      + (output[index + 2] - tileBlue) ** 2;
+    if (distanceSquared <= clearLimitSquared) {
+      output[index + 3] = 0;
+      adjusted += 1;
+      continue;
+    }
+    if (distanceSquared <= featherLimitSquared) {
+      const distance = Math.sqrt(distanceSquared);
+      const opacity = Math.max(0, Math.min(1, (distance - clearLimit) / Math.max(1, featherLimit - clearLimit)));
+      const nextAlpha = Math.round(alpha * opacity);
+      if (nextAlpha < alpha) {
+        output[index + 3] = nextAlpha;
+        adjusted += 1;
+      }
+    }
+  }
+  return adjusted ? { data: output, size: sample.size } : null;
 }
 
 function faviconBackgroundCandidateFromBucket(bucket, analysis, size) {
@@ -9983,7 +10423,10 @@ function faviconSurfaceTileColors(tileColor, color) {
 
 function faviconSeparatedTileColors(tileColor, color) {
   const preferReadableCarrier = faviconCandidateNeedsReadableCarrier(color, tileColor);
-  const carrier = faviconCarrierTileColor(tileColor, "dark", { preferReadableCarrier, separate: true });
+  const carrier = faviconCarrierTileColor(tileColor, "dark", {
+    preferReadableCarrier,
+    separate: preferReadableCarrier
+  });
   return {
     light: carrier,
     dark: carrier
@@ -10191,7 +10634,10 @@ async function renderSelectedBookmarkFolder() {
         url: item.url,
         dateAdded: Number(item.dateAdded || 0)
       }));
-    const favoriteKeys = favoriteSiteKeySet(await loadFavoriteSites());
+    const favoriteSites = await loadFavoriteSites();
+    const favoriteKeys = favoriteSiteKeySet(favoriteSites);
+    const favoriteIconMap = favoriteSiteIconMap(favoriteSites);
+    const iconRenders = readFirstPaintCache().iconRenders;
 
     bookmarkFolderMeta.textContent = t("bookmarkMeta", {
       folder: folder.title || t("unnamedFolder"),
@@ -10205,11 +10651,11 @@ async function renderSelectedBookmarkFolder() {
     const { recentSites, groupedSites } = partitionRecentBookmarkSites(sites);
     const fragment = document.createDocumentFragment();
     if (recentSites.length) {
-      fragment.appendChild(createRecentBookmarkSection(recentSites, favoriteKeys));
+      fragment.appendChild(createRecentBookmarkSection(recentSites, { favoriteKeys, favoriteIconMap, iconRenders }));
       scheduleRecentBookmarkExpiry(recentSites);
     }
     groupBookmarkSitesByInitial(groupedSites).forEach((group) => {
-      fragment.appendChild(createBookmarkInitialSection(group, favoriteKeys));
+      fragment.appendChild(createBookmarkInitialSection(group, { favoriteKeys, favoriteIconMap, iconRenders }));
     });
     bookmarkGrid.replaceChildren(fragment);
   } catch (error) {
@@ -10242,13 +10688,13 @@ function isRecentBookmarkSite(site, recentCutoff) {
     && site.dateAdded <= Date.now();
 }
 
-function createRecentBookmarkSection(sites, favoriteKeys) {
+function createRecentBookmarkSection(sites, options = {}) {
   return createBookmarkSection({
     className: "bookmark-recent-section",
     title: t("bookmarkRecentTitle"),
     meta: t("bookmarkRecentMeta"),
     items: sites.slice().sort(compareRecentBookmarkSites),
-    favoriteKeys
+    ...options
   });
 }
 
@@ -10374,17 +10820,26 @@ function compareBookmarkSites(siteA, siteB) {
     || compactSiteDomain(siteA.url).localeCompare(compactSiteDomain(siteB.url), "en", { sensitivity: "base" });
 }
 
-function createBookmarkInitialSection(group, favoriteKeys) {
+function createBookmarkInitialSection(group, options = {}) {
   return createBookmarkSection({
     className: "bookmark-letter-section",
     initial: group.initial,
     title: group.initial,
     items: group.items,
-    favoriteKeys
+    ...options
   });
 }
 
-function createBookmarkSection({ className, initial = "", title, meta = "", items, favoriteKeys = new Set() }) {
+function createBookmarkSection({
+  className,
+  initial = "",
+  title,
+  meta = "",
+  items,
+  favoriteKeys = new Set(),
+  favoriteIconMap,
+  iconRenders
+}) {
   const section = document.createElement("section");
   const header = document.createElement("header");
   const heading = document.createElement("h3");
@@ -10402,7 +10857,7 @@ function createBookmarkSection({ className, initial = "", title, meta = "", item
   divider.setAttribute("aria-hidden", "true");
   grid.className = "bookmark-letter-grid";
   items.forEach((site) => {
-    grid.appendChild(createBookmarkSiteCard(site, favoriteKeys));
+    grid.appendChild(createBookmarkSiteCard(site, { favoriteKeys, favoriteIconMap, iconRenders }));
   });
   header.append(heading, divider);
   if (meta) {
@@ -10415,8 +10870,8 @@ function createBookmarkSection({ className, initial = "", title, meta = "", item
   return section;
 }
 
-function createBookmarkSiteCard(site, favoriteKeys = new Set()) {
-  const node = createSiteCard(site, { favoriteKeys });
+function createBookmarkSiteCard(site, options = {}) {
+  const node = createSiteCard(site, options);
   const deleteButton = document.createElement("button");
 
   node.classList.add("bookmark-site-card");
@@ -10424,6 +10879,10 @@ function createBookmarkSiteCard(site, favoriteKeys = new Set()) {
   deleteButton.type = "button";
   deleteButton.innerHTML = trashIcon();
   deleteButton.setAttribute("aria-label", t("deleteBookmark", { title: site.title }));
+  deleteButton.addEventListener("pointerenter", () => setBookmarkDeleteButtonFilled(deleteButton, true));
+  deleteButton.addEventListener("pointerleave", () => setBookmarkDeleteButtonFilled(deleteButton, false));
+  deleteButton.addEventListener("focus", () => setBookmarkDeleteButtonFilled(deleteButton, true));
+  deleteButton.addEventListener("blur", () => setBookmarkDeleteButtonFilled(deleteButton, false));
   deleteButton.addEventListener("click", async (event) => {
     event.preventDefault();
     event.stopPropagation();
@@ -10432,6 +10891,11 @@ function createBookmarkSiteCard(site, favoriteKeys = new Set()) {
   node.appendChild(deleteButton);
   bindBookmarkLongPress(node, site);
   return node;
+}
+
+function setBookmarkDeleteButtonFilled(button, isFilled) {
+  button.classList.toggle("is-filled", isFilled);
+  button.innerHTML = isFilled ? trashFilledIcon() : trashIcon();
 }
 
 function canAddBookmarkSiteToFavorites(site, favoriteKeys = new Set()) {
@@ -10533,7 +10997,6 @@ function showBookmarkDeleteMode(node) {
   const deleteButton = node.querySelector(".bookmark-delete-button");
   if (deleteButton) {
     deleteButton.style.display = "grid";
-    deleteButton.focus({ preventScroll: true });
   }
 }
 
@@ -13279,7 +13742,10 @@ const TDESIGN_ICON_MARKUP = Object.freeze({
   "arrow-left": '<path fill="none" stroke="currentColor" stroke-linecap="square" stroke-width="2" d="M11 6.5L5.5 12l5.5 5.5M6.75 12h13"/>',
   "bookmark-double-filled": '<path fill="currentColor" d="M23.003 18.419L23 0L10.001.002v2H21v14.413z"/><path fill="currentColor" d="M19 4H3v19.943l8-5.714l8 5.714z"/>',
   "backup-filled": '<path fill="currentColor" d="M12 2c3.728 0 6.82 2.72 7.402 6.283A6.502 6.502 0 0 1 17.5 21h-11A6.5 6.5 0 0 1 4.598 8.283A7.5 7.5 0 0 1 12 2m3 10.914l1.414-1.414L12 7.086L7.586 11.5L9 12.914l2-2V17h2v-6.086z"/>',
+  "ai-search": '<g fill="none" stroke="currentColor" stroke-width="2"><path d="m16.75 2.5l.52 1.23l1.23.52l-1.23.52L16.75 6l-.52-1.23L15 4.25l1.23-.52z"/><path stroke-linecap="square" d="m15.803 15.804l5.303 5.303m-5.303-5.303A7.5 7.5 0 1 1 10 3.017m5.803 12.787A7.47 7.47 0 0 0 17.983 11"/></g>',
+  "ai-search-filled": '<path fill="currentColor" d="M10.648 2.072a6.5 6.5 0 0 0 8.348 8.348a8.56 8.56 0 0 1-1.822 5.41l5.346 5.346l-1.414 1.414l-5.346-5.347a8.48 8.48 0 0 1-5.26 1.826c-4.635 0-8.5-3.87-8.5-8.5c0-4.238 3.335-7.993 7.584-8.45a8 8 0 0 1 1.064-.047"/><path fill="currentColor" d="M18.032 3.036L21.07 4.32l-3.037 1.283l-1.282 3.037l-1.283-3.037l-3.036-1.283l3.036-1.283L16.75 0z"/>',
   calendar: '<path fill="none" stroke="currentColor" stroke-linecap="square" stroke-width="2" d="M7 2v4m10-4v4M3.5 9.5h17M5 4.5h14a1.5 1.5 0 0 1 1.5 1.5v14A1.5 1.5 0 0 1 19 21.5H5A1.5 1.5 0 0 1 3.5 20V6A1.5 1.5 0 0 1 5 4.5Z"/>',
+  check: '<path fill="none" stroke="currentColor" stroke-linecap="square" stroke-width="2" d="m5 12.5l4 4l10-10"/>',
   "chevron-down": '<path fill="none" stroke="currentColor" stroke-linecap="square" stroke-width="2" d="M17.5 9.5L12 15L6.5 9.5"/>',
   "chevron-left": '<path fill="none" stroke="currentColor" stroke-linecap="square" stroke-width="2" d="M14.5 17.5L9 12l5.5-5.5"/>',
   "chevron-right": '<path fill="none" stroke="currentColor" stroke-linecap="square" stroke-width="2" d="M9.5 17.5L15 12L9.5 6.5"/>',
@@ -13287,7 +13753,9 @@ const TDESIGN_ICON_MARKUP = Object.freeze({
   cloud: '<path fill="none" stroke="currentColor" stroke-linecap="square" stroke-width="2" d="M7.5 18.5H18a4 4 0 0 0 .6-7.956A6.5 6.5 0 0 0 6.39 8.109A5.25 5.25 0 0 0 7.5 18.5Z"/>',
   close: '<path fill="none" stroke="currentColor" stroke-linecap="square" stroke-width="2" d="M16.95 7.05L12 12m0 0l-4.95 4.95M12 12l4.95 4.95M12 12L7.05 7.05"/>',
   delete: '<g fill="none"><path d="M5 5h14l-.5 17h-13z"/><path stroke="currentColor" stroke-linecap="square" stroke-width="2" d="M21 5H3m2 0h14l-.5 17h-13zm3.5-3h7v3h-7zM12 9v9"/></g>',
+  "delete-filled": '<path fill="currentColor" d="M7.5 3h9V1h-9zM22 6V4H2v2h2.029l.5 17h14.942l.5-17zM11 19V8h2v11z"/>',
   "folder-add": '<path fill="none" stroke="currentColor" stroke-linecap="square" stroke-width="2" d="M22 11V6H11L9 3.5H2V20h11m7-5v3m0 0v3m0-3h-3m3 0h3"/>',
+  "format-vertical-align-left": '<path fill="none" stroke="currentColor" stroke-linecap="square" stroke-width="2" d="M3 5h18M3 12h12M3 19h18"/>',
   "help-circle": '<g fill="none"><path d="M21.5 12a9.5 9.5 0 1 1-19 0a9.5 9.5 0 0 1 19 0"/><path stroke="currentColor" stroke-linecap="square" stroke-width="2" d="M9.6 9.25a2.6 2.6 0 1 1 3.8 2.3c-.86.47-1.4 1.04-1.4 2.2m0 3.25h.01M21.5 12a9.5 9.5 0 1 1-19 0a9.5 9.5 0 0 1 19 0Z"/></g>',
   desktop: '<g fill="none"><path d="M2 4h20v13H2z"/><path stroke="currentColor" stroke-linecap="square" stroke-width="2" d="M12 17v4m-4 0h8M2 4h20v13H2z"/></g>',
   "sunny-filled": '<path fill="currentColor" d="M13 1v3h-2V1zm7.485 3.928L18.364 7.05L16.95 5.636l2.121-2.122zM4.93 3.514l2.12 2.122L5.636 7.05L3.515 4.929zM6 12a6 6 0 1 1 12 0a6 6 0 0 1-12 0m-5-1h3v2H1zm19 0h3v2h-3zM7.05 18.363l-2.12 2.123l-1.415-1.416l2.121-2.122zm11.314-1.414l2.121 2.122l-1.414 1.414l-2.121-2.121zM13 20v3h-2v-3z"/>',
@@ -13299,6 +13767,7 @@ const TDESIGN_ICON_MARKUP = Object.freeze({
   "pin-filled": '<path fill="currentColor" d="m18.076.981l4.949 4.95l-6.365 7.773l2.121 2.12l-5.305 5.306l-4.596-4.596l-6.718 6.718l-1.414-1.415l6.718-6.717l-4.597-4.596l5.306-5.306l2.121 2.122z"/>',
   refresh: '<path fill="none" stroke="currentColor" stroke-linecap="square" stroke-width="2" d="M21.448 13c-.5 4.777-4.539 8.5-9.448 8.5A9.5 9.5 0 0 1 3.38 16m-.88 4.5v-5h3M2.552 11C3.052 6.223 7.09 2.5 12 2.5A9.5 9.5 0 0 1 20.62 8m.88-4.5v5h-3"/>',
   search: '<g fill="none"><path d="M15.803 15.803A7.5 7.5 0 1 1 5.197 5.197a7.5 7.5 0 0 1 10.606 10.606"/><path stroke="currentColor" stroke-linecap="square" stroke-width="2" d="m15.803 15.804l5.303 5.303m-5.303-5.304A7.5 7.5 0 1 1 5.197 5.197a7.5 7.5 0 0 1 10.606 10.606Z"/></g>',
+  setting: '<g fill="none"><path d="M20.66 7L12 2L3.34 7v10L12 22l8.66-5zM12 16a4 4 0 1 0 0-8a4 4 0 0 0 0 8" clip-rule="evenodd"/><path d="M16 12a4 4 0 1 1-8 0a4 4 0 0 1 8 0"/><path stroke="currentColor" stroke-linecap="square" stroke-width="2" d="m12 2l8.66 5v10L12 22l-8.66-5V7z"/><path stroke="currentColor" stroke-linecap="square" stroke-width="2" d="M16 12a4 4 0 1 1-8 0a4 4 0 0 1 8 0Z"/></g>',
   "setting-filled": '<path fill="currentColor" d="M21.66 6.423L12 .845L2.34 6.423v11.154L12 23.155l9.66-5.578zM12 16a4 4 0 1 1 0-8a4 4 0 0 1 0 8"/>',
   "view-list": '<path fill="none" stroke="currentColor" stroke-linecap="square" stroke-width="2" d="M3 5h18M3 12h18M3 19h18"/>'
 });
@@ -13372,15 +13841,16 @@ function newspaperIcon() {
 }
 
 function settingsIcon() {
-  return tdesignIcon("setting-filled");
+  return tdesignIcon("setting");
 }
 
-function bookmarkDoubleFilledIcon() {
-  return tdesignIcon("bookmark-double-filled");
+function portalSurfaceIcon() {
+  const icon = tdesignIcon("format-vertical-align-left");
+  return `<span class="portal-surface-icon-base">${icon}</span><span class="portal-surface-icon-fill">${icon}</span>`;
 }
 
-function settingsFilledIcon() {
-  return tdesignIcon("setting-filled");
+function settingsToggleIcon() {
+  return `<span class="settings-toggle-icon-base">${settingsIcon()}</span><span class="settings-toggle-icon-fill">${tdesignIcon("setting-filled")}</span>`;
 }
 
 function closeIcon() {
@@ -13389,6 +13859,10 @@ function closeIcon() {
 
 function trashIcon() {
   return tdesignIcon("delete");
+}
+
+function trashFilledIcon() {
+  return tdesignIcon("delete-filled");
 }
 
 function emptyStateIcon() {

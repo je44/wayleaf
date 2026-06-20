@@ -3,6 +3,7 @@ import { existsSync, readFileSync } from "node:fs";
 
 const styles = readFileSync(new URL("../newtab.css", import.meta.url), "utf8");
 const html = readFileSync(new URL("../newtab.html", import.meta.url), "utf8");
+const source = readFileSync(new URL("../newtab.js", import.meta.url), "utf8");
 
 function cssBlock(selector) {
   const escapedSelector = selector.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -24,8 +25,8 @@ const fontPath = new URL("../vendor/fonts/VujahdayScript-Regular.ttf", import.me
 
 assert.match(
   html,
-  /<div class="settings-brand" aria-hidden="true">WayLeaf<\/div>\s*<div class="settings-tabs-shell">/,
-  "Settings page should render the WayLeaf brand title as one text run so the font can apply natural kerning."
+  /<div class="settings-brand" aria-hidden="true">WayLeaf<\/div>\s*<div class="settings-tabs-shell">[\s\S]*id="settingsBasicTab"[\s\S]*settings-tab-icon[\s\S]*id="settingsSearchTab"[\s\S]*settings-tab-icon/,
+  "Settings page should keep the WayLeaf wordmark and render both settings destinations as icon controls."
 );
 
 assert.match(
@@ -66,26 +67,26 @@ assert.match(
 
 assert.match(
   rootBlock,
-  /--settings-tabs-bg:\s*var\(--theme-mode-control-bg\);[\s\S]*--settings-tab-active-bg:\s*var\(--theme-mode-active-bg\);[\s\S]*--settings-tab-active-shadow:\s*var\(--theme-mode-active-shadow\);[\s\S]*--settings-tab-color:\s*var\(--theme-mode-button-color\);/,
-  "Settings tabs should share the same background and selected-state tokens as the appearance mode control."
+  /--settings-tabs-bg:\s*color-mix\(in srgb, var\(--panel\) 88%, transparent\);[\s\S]*--settings-tab-color:\s*var\(--muted\);/,
+  "Settings tabs should share the same background and muted icon color as the settings cards."
 );
 
-assert.match(
+assert.doesNotMatch(
   darkBlock,
-  /--settings-tabs-bg:\s*var\(--theme-mode-control-bg\);[\s\S]*--settings-tab-active-bg:\s*var\(--theme-mode-active-bg\);/,
-  "Dark settings tabs should continue to reuse appearance mode control colors."
+  /--settings-tabs-bg:/,
+  "Dark settings tabs should inherit the same card-matched tab tokens instead of using a separate control color."
 );
 
-assert.match(
+assert.doesNotMatch(
   warmDarkBlock,
-  /--settings-tabs-bg:\s*var\(--theme-mode-control-bg\);[\s\S]*--settings-tab-active-bg:\s*var\(--theme-mode-active-bg\);[\s\S]*--settings-tab-color:\s*var\(--theme-mode-button-color\);/,
-  "Amber and coral dark settings tabs should match the appearance mode control base and selected fill."
+  /--settings-tabs-bg:/,
+  "Warm dark palettes should not override the card-matched settings tab background."
 );
 
 assert.match(
   settingsTabsBlock,
-  /background:\s*var\(--settings-tabs-bg\);/,
-  "Settings tab rail should consume the theme-aware background token."
+  /min-width:\s*88px;[\s\S]*border:\s*1px solid var\(--line\);[\s\S]*border-radius:\s*4px;[\s\S]*background:\s*var\(--settings-tabs-bg\);/,
+  "Settings icon rail should match the settings card background with a 4px outlined mask and no visible reserved slot."
 );
 
 assert.match(
@@ -102,8 +103,20 @@ assert.match(
 
 assert.match(
   styles,
-  /@media \(min-width: 1120px\)[\s\S]*\.settings-page\s*\{[\s\S]*--settings-sidebar-left:\s*0px;[\s\S]*--settings-sidebar-width:\s*336px;[\s\S]*--settings-titlebar-height:\s*70px;[\s\S]*padding:\s*0 32px 56px;[\s\S]*\.settings-page\.page-active\s*\{[\s\S]*transform:\s*none;[\s\S]*\.settings-page::before\s*\{[\s\S]*position:\s*fixed;[\s\S]*height:\s*var\(--settings-titlebar-height\);[\s\S]*border-bottom:\s*1px solid transparent;[\s\S]*box-shadow:\s*none;[\s\S]*\.settings-page\[data-stuck="true"\]::before\s*\{[\s\S]*border-bottom-color:\s*color-mix\(in srgb, var\(--line\) 76%, transparent\);[\s\S]*box-shadow:\s*0 8px 18px rgb\(0 0 0 \/ 0\.14\);[\s\S]*\.settings-brand\s*\{[\s\S]*top:\s*23px;[\s\S]*\.settings-tabs-shell\s*\{[\s\S]*position:\s*fixed;[\s\S]*left:\s*var\(--settings-sidebar-left\);[\s\S]*width:\s*var\(--settings-sidebar-width\);[\s\S]*\.settings-tabs\s*\{[\s\S]*display:\s*grid;[\s\S]*background:\s*transparent;[\s\S]*\.settings-tab\s*\{[\s\S]*justify-content:\s*flex-start;[\s\S]*padding:\s*0 18px 0 44px;[\s\S]*border-radius:\s*0 4px 4px 0;[\s\S]*\.settings-tab\.active\s*\{[\s\S]*background:\s*color-mix\(in srgb, var\(--accent\) 18%, var\(--panel-soft\)\);[\s\S]*\.settings-panel\s*\{[\s\S]*margin-top:\s*96px;[\s\S]*\.settings-header\s*\{[\s\S]*position:\s*static;/,
-  "Desktop settings navigation should switch from top tabs to a Chrome-like left sidebar without changing panel content."
+  /@media \(min-width: 1120px\)[\s\S]*\.settings-page\s*\{[\s\S]*--settings-titlebar-height:\s*70px;[\s\S]*\.settings-tabs-shell\s*\{[\s\S]*position:\s*fixed;[\s\S]*top:\s*149px;[\s\S]*left:\s*calc\(50% - 440px\);[\s\S]*width:\s*44px;[\s\S]*\.settings-tabs\s*\{[\s\S]*grid-auto-flow:\s*row;[\s\S]*grid-auto-rows:\s*44px;[\s\S]*min-height:\s*88px;[\s\S]*\.settings-tab \+ \.settings-tab::before\s*\{[\s\S]*width:\s*26px;[\s\S]*height:\s*1px;/,
+  "Desktop settings navigation should be a compact vertical icon rail beside the first settings card, without rendering future empty slots."
+);
+
+assert.match(
+  styles,
+  /\.settings-page\[data-scrollable="false"\]\s*\{\s*overflow-y:\s*hidden;\s*\}/,
+  "Settings page should disable vertical scrolling when the active content is already fully visible."
+);
+
+assert.match(
+  styles,
+  /@media \(min-width: 1120px\)[\s\S]*\.settings-tabs-shell\[data-faded="true"\]\s*\{[\s\S]*opacity:\s*0;[\s\S]*pointer-events:\s*none;[\s\S]*transform:\s*translateY\(-6px\);/,
+  "Desktop settings icon rail should fade out after a real downward scroll."
 );
 
 assert.match(
@@ -114,12 +127,18 @@ assert.match(
 
 assert.match(
   settingsTabActiveBlock,
-  /background:\s*var\(--settings-tab-active-bg\);[\s\S]*box-shadow:\s*var\(--settings-tab-active-shadow\);/,
-  "Active settings tabs should consume the theme-aware selected fill and shadow tokens."
+  /background:\s*transparent;[\s\S]*color:\s*var\(--ink\);/,
+  "Active settings tabs should avoid selected fill and rely on filled icon state plus stronger color."
+);
+
+assert.match(
+  source,
+  /const SETTINGS_TAB_ICONS = Object\.freeze\(\{[\s\S]*basic:\s*\{ inactive:\s*"setting", active:\s*"setting-filled" \},[\s\S]*search:\s*\{ inactive:\s*"ai-search", active:\s*"ai-search-filled" \}/,
+  "Settings tab icons should be data-mapped so future settings sections can be added in code without rendering placeholder slots."
 );
 
 assert.doesNotMatch(
   settingsTabActiveBlock,
-  /border|inset/,
+  /border/,
   "Active settings tabs should follow the no-outline selected-state style."
 );

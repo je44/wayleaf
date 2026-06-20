@@ -85,10 +85,8 @@
   --theme-mode-active-bg: color-mix(in srgb, var(--panel) 92%, var(--panel-soft));
   --theme-mode-active-shadow: 0 1px 2px rgb(19 25 21 / 0.06), 0 8px 18px rgb(19 25 21 / 0.045);
   --theme-mode-button-color: color-mix(in srgb, var(--ink) 64%, var(--muted));
-  --settings-tabs-bg: var(--theme-mode-control-bg);
-  --settings-tab-active-bg: var(--theme-mode-active-bg);
-  --settings-tab-active-shadow: var(--theme-mode-active-shadow);
-  --settings-tab-color: var(--theme-mode-button-color);
+  --settings-tabs-bg: color-mix(in srgb, var(--panel) 88%, transparent);
+  --settings-tab-color: var(--muted);
   --focus-border: rgb(var(--focus-rgb) / 0.42);
   --focus-border-strong: rgb(var(--focus-rgb) / 0.62);
   --focus-wash: rgb(var(--focus-rgb) / 0.08);
@@ -143,6 +141,12 @@
   initial-value: 0px;
 }
 
+@property --settings-toggle-hole {
+  syntax: "<percentage>";
+  inherits: false;
+  initial-value: 72%;
+}
+
 :root[data-theme="dark"] {
   --paper: var(--dark-paper);
   --panel: var(--dark-panel);
@@ -165,10 +169,6 @@
   --theme-mode-active-bg: color-mix(in srgb, var(--panel-soft) 66%, transparent);
   --theme-mode-active-shadow: none;
   --theme-mode-button-color: var(--muted);
-  --settings-tabs-bg: var(--theme-mode-control-bg);
-  --settings-tab-active-bg: var(--theme-mode-active-bg);
-  --settings-tab-active-shadow: var(--theme-mode-active-shadow);
-  --settings-tab-color: var(--theme-mode-button-color);
   --focus: var(--dark-focus);
   --focus-rgb: var(--dark-focus-rgb);
   --on-accent: var(--dark-on-accent);
@@ -198,9 +198,6 @@
   --theme-mode-active-bg: color-mix(in srgb, var(--accent) 18%, var(--panel-soft));
   --theme-mode-active-shadow: 0 10px 24px rgb(0 0 0 / 0.16);
   --theme-mode-button-color: color-mix(in srgb, var(--ink) 70%, var(--faint));
-  --settings-tabs-bg: var(--theme-mode-control-bg);
-  --settings-tab-active-bg: var(--theme-mode-active-bg);
-  --settings-tab-color: var(--theme-mode-button-color);
 }
 
 :root[data-theme="dark"] img[data-icon-tile],
@@ -2177,6 +2174,69 @@ html.theme-transitioning .search-workbench[data-ai-exiting] .favorite-icon {
   height: var(--topbar-action-icon-size);
 }
 
+#portalSurfaceButton .button-icon,
+#settingsButton .theme-toggle-icon {
+  position: relative;
+  overflow: hidden;
+}
+
+#portalSurfaceButton .button-icon > span,
+#settingsButton .theme-toggle-icon > span {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+}
+
+#portalSurfaceButton .portal-surface-icon-base,
+#settingsButton .settings-toggle-icon-base {
+  color: currentColor;
+}
+
+#portalSurfaceButton .portal-surface-icon-fill {
+  color: var(--accent-strong);
+  clip-path: inset(0 100% 0 0);
+  transition: clip-path 260ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+#portalSurfaceButton:hover,
+#portalSurfaceButton:focus-visible {
+  color: var(--faint);
+}
+
+#portalSurfaceButton:hover .portal-surface-icon-fill,
+#portalSurfaceButton:focus-visible .portal-surface-icon-fill {
+  clip-path: inset(0);
+}
+
+#settingsButton .settings-toggle-icon-base {
+  opacity: 1;
+  transition: opacity 120ms ease;
+}
+
+#settingsButton .settings-toggle-icon-fill {
+  --settings-toggle-hole: 72%;
+  color: currentColor;
+  opacity: 0;
+  transition:
+    --settings-toggle-hole 280ms cubic-bezier(0.16, 1, 0.3, 1),
+    opacity 120ms ease;
+  -webkit-mask-image: radial-gradient(circle at 50% 50%, transparent 0 var(--settings-toggle-hole), #000 calc(var(--settings-toggle-hole) + 1px));
+  mask-image: radial-gradient(circle at 50% 50%, transparent 0 var(--settings-toggle-hole), #000 calc(var(--settings-toggle-hole) + 1px));
+}
+
+#settingsButton:hover .settings-toggle-icon-base,
+#settingsButton:focus-visible .settings-toggle-icon-base {
+  opacity: 0;
+}
+
+#settingsButton:hover .settings-toggle-icon-fill,
+#settingsButton:focus-visible .settings-toggle-icon-fill {
+  --settings-toggle-hole: 0%;
+  opacity: 1;
+}
+
 .settings-page {
   --settings-content-width: min(760px, calc(100vw - 48px));
   position: fixed;
@@ -2205,6 +2265,10 @@ html.theme-transitioning .search-workbench[data-ai-exiting] .favorite-icon {
 
 .settings-page[hidden] {
   display: none;
+}
+
+.settings-page[data-scrollable="false"] {
+  overflow-y: hidden;
 }
 
 .settings-page.page-active {
@@ -2498,32 +2562,66 @@ html.theme-transitioning .search-workbench[data-ai-exiting] .favorite-icon {
 .settings-tabs {
   position: relative;
   z-index: 1;
-  display: inline-flex;
+  display: inline-grid;
+  grid-auto-columns: 44px;
+  grid-auto-flow: column;
   align-items: center;
   justify-self: start;
-  gap: 4px;
+  min-width: 88px;
+  min-height: 44px;
+  gap: 0;
   margin: 0;
-  padding: 4px;
-  border-radius: 8px;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 4px;
   background: var(--settings-tabs-bg);
+  overflow: hidden;
 }
 
 .settings-tab {
   position: relative;
-  min-width: 92px;
-  min-height: 34px;
-  padding: 0 14px;
+  display: inline-grid;
+  width: 44px;
+  min-width: 44px;
+  min-height: 42px;
+  padding: 0;
+  place-items: center;
   border: 0;
-  border-radius: 6px;
+  border-radius: 3px;
   background: transparent;
   color: var(--settings-tab-color);
   cursor: pointer;
   font: inherit;
-  font-size: 13px;
-  font-weight: 700;
   transition:
-    background 160ms ease,
+    transform 160ms ease,
     color 160ms ease;
+}
+
+.settings-tab + .settings-tab::before {
+  position: absolute;
+  top: 8px;
+  left: 0;
+  width: 1px;
+  height: 26px;
+  background: color-mix(in srgb, var(--line) 78%, transparent);
+  content: "";
+}
+
+.settings-tab-icon {
+  display: inline-grid;
+  width: 20px;
+  height: 20px;
+  place-items: center;
+  line-height: 0;
+  opacity: 0.62;
+  transition:
+    opacity 160ms ease,
+    transform 160ms ease;
+}
+
+.settings-tab-icon svg {
+  width: 18px;
+  height: 18px;
 }
 
 .settings-tab:hover,
@@ -2533,19 +2631,21 @@ html.theme-transitioning .search-workbench[data-ai-exiting] .favorite-icon {
 }
 
 .settings-tab:focus-visible {
-  box-shadow: 0 0 0 2px var(--focus);
+  box-shadow: inset 0 0 0 2px var(--focus);
 }
 
 .settings-tab.active {
-  background: var(--settings-tab-active-bg);
+  background: transparent;
   color: var(--ink);
-  box-shadow: var(--settings-tab-active-shadow);
+}
+
+.settings-tab.active .settings-tab-icon {
+  opacity: 1;
+  transform: scale(1.08);
 }
 
 @media (min-width: 1120px) {
   .settings-page {
-    --settings-sidebar-left: 0px;
-    --settings-sidebar-width: 336px;
     --settings-titlebar-height: 70px;
     padding: 0 32px 56px;
   }
@@ -2589,7 +2689,7 @@ html.theme-transitioning .search-workbench[data-ai-exiting] .favorite-icon {
     top: 23px;
     left: 72px;
     z-index: 4;
-    width: calc(var(--settings-sidebar-width) - 48px);
+    width: 288px;
     min-height: 36px;
     margin: 0;
     font-size: 34px;
@@ -2597,11 +2697,16 @@ html.theme-transitioning .search-workbench[data-ai-exiting] .favorite-icon {
 
   .settings-tabs-shell {
     position: fixed;
-    top: 96px;
-    left: var(--settings-sidebar-left);
-    width: var(--settings-sidebar-width);
+    top: 149px;
+    left: calc(50% - 440px);
+    width: 44px;
     margin: 0;
     padding: 0;
+    opacity: 1;
+    transform: translateY(0);
+    transition:
+      opacity 180ms ease,
+      transform 180ms ease;
   }
 
   .settings-tabs-shell::before,
@@ -2609,40 +2714,35 @@ html.theme-transitioning .search-workbench[data-ai-exiting] .favorite-icon {
     display: none;
   }
 
+  .settings-tabs-shell[data-faded="true"] {
+    opacity: 0;
+    pointer-events: none;
+    transform: translateY(-6px);
+  }
+
   .settings-tabs {
     display: grid;
+    grid-auto-columns: auto;
+    grid-auto-flow: row;
+    grid-auto-rows: 44px;
     width: 100%;
-    gap: 4px;
+    min-width: 0;
+    min-height: 88px;
+    gap: 0;
     padding: 0;
-    background: transparent;
   }
 
   .settings-tab {
-    display: flex;
-    align-items: center;
-    justify-content: flex-start;
-    width: 100%;
-    min-width: 0;
+    width: 42px;
+    min-width: 42px;
     min-height: 44px;
-    padding: 0 18px 0 44px;
-    border-radius: 0 4px 4px 0;
-    text-align: left;
   }
 
-  .settings-tab.active {
-    background: color-mix(in srgb, var(--accent) 18%, var(--panel-soft));
-    color: var(--ink);
-    box-shadow: none;
-  }
-
-  .settings-tab.active::before {
-    position: absolute;
+  .settings-tab + .settings-tab::before {
     top: 0;
-    left: 0;
-    width: 5px;
-    height: 100%;
-    background: color-mix(in srgb, var(--accent) 18%, var(--panel-soft));
-    content: "";
+    left: 8px;
+    width: 26px;
+    height: 1px;
   }
 
   .settings-panel {
@@ -3579,6 +3679,10 @@ h2 {
   letter-spacing: 0;
 }
 
+.panel-header :is(h1, h2):focus {
+  outline: 0;
+}
+
 .icon-button {
   display: inline-grid;
   place-items: center;
@@ -3855,10 +3959,59 @@ select:focus-visible {
   color: var(--ink);
 }
 
+.settings-language-option-icon {
+  display: inline-grid;
+  width: 16px;
+  height: 16px;
+  place-items: center;
+  color: var(--accent-strong);
+  line-height: 0;
+  opacity: 0;
+}
+
+.settings-language-option[aria-selected="true"] .settings-language-option-icon {
+  opacity: 1;
+}
+
+.settings-language-option-icon svg {
+  width: 14px;
+  height: 14px;
+}
+
+.settings-language-option {
+  min-height: 40px;
+  padding: 0 10px;
+}
+
+.settings-language-trigger {
+  min-height: 40px;
+}
+
+.settings-language-picker.open {
+  z-index: 8;
+}
+
+.settings-language-options {
+  position: absolute;
+  z-index: 1;
+  top: calc(100% + 6px);
+  right: 0;
+  left: 0;
+  max-height: 268px;
+  box-shadow: 0 14px 30px rgb(16 32 25 / 0.12);
+}
+
 .portal-form input:focus,
 .portal-category-trigger:focus,
 .bookmark-folder-option:focus {
   border-color: var(--focus-border-strong);
+}
+
+.settings-language-trigger:focus,
+.settings-language-trigger:focus-visible {
+  border-color: var(--accent-border);
+  outline: 0;
+  box-shadow: none;
 }
 
 .form-actions {
@@ -4440,7 +4593,7 @@ select:focus-visible {
 
 .bookmark-site-card.pressing .site-link {
   position: relative;
-  border-color: rgb(var(--danger-rgb) / 0.32);
+  border-color: transparent;
   background: rgb(var(--danger-rgb) / 0.08);
   outline: 0;
   transform: scale3d(1, 1, 1);
@@ -4475,7 +4628,7 @@ select:focus-visible {
 
 .bookmark-site-card.delete-ready .site-link {
   padding-right: 126px;
-  border-color: rgb(var(--danger-rgb) / 0.24);
+  border-color: transparent;
   background: rgb(var(--danger-rgb) / 0.08);
   outline: 0;
   transform: scale3d(1, 1, 1);
@@ -4547,11 +4700,11 @@ select:focus-visible {
 }
 
 .bookmark-delete-button:hover,
-.bookmark-delete-button:focus-visible {
+.bookmark-delete-button:focus-visible,
+.bookmark-delete-button.is-filled {
   background: transparent;
   color: var(--danger);
-  outline: 2px solid rgb(var(--danger-rgb) / 0.18);
-  outline-offset: 2px;
+  outline: 0;
 }
 
 .bookmark-delete-button:active {
@@ -6161,12 +6314,12 @@ a.history-page-link:hover {
 }
 
 .bookmark-site-card.pressing:hover .site-link {
-  border-color: rgb(var(--danger-rgb) / 0.32);
+  border-color: transparent;
   background: rgb(var(--danger-rgb) / 0.08);
 }
 
 .bookmark-site-card.delete-ready:hover .site-link {
-  border-color: rgb(var(--danger-rgb) / 0.24);
+  border-color: transparent;
   background: rgb(var(--danger-rgb) / 0.08);
 }
 
@@ -6678,7 +6831,7 @@ a.history-page-link:hover {
 
   .settings-tab {
     min-width: 0;
-    padding: 0 10px;
+    padding: 0;
   }
 
   .settings-group {

@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 
 const source = readFileSync(new URL("../newtab.js", import.meta.url), "utf8");
 const html = readFileSync(new URL("../newtab.html", import.meta.url), "utf8");
+const css = readFileSync(new URL("../newtab.css", import.meta.url), "utf8");
 const manifest = JSON.parse(readFileSync(new URL("../manifest.json", import.meta.url), "utf8"));
 
 assert.equal(manifest.default_locale, "en", "Chrome extension metadata should use English as its default locale.");
@@ -94,6 +95,8 @@ const settingsLocaleKeys = [
   "settingsTabsLabel",
   "settingsBasicTab",
   "settingsSearchTab",
+  "languageSettingsTitle",
+  "languageSettingsDescription",
   "appearanceModeTitle",
   "appearanceModeDescription",
   "appearanceModeHint",
@@ -189,8 +192,86 @@ assert.match(
 
 assert.match(
   source,
+  /settingsBasicTab\.querySelector\("\.settings-tab-label"\)\.textContent = t\("settingsBasicTab"\);[\s\S]*settingsSearchTab\.querySelector\("\.settings-tab-label"\)\.textContent = t\("settingsSearchTab"\);[\s\S]*settingsBasicTab\.setAttribute\("aria-label", t\("settingsBasicTab"\)\);[\s\S]*settingsSearchTab\.setAttribute\("aria-label", t\("settingsSearchTab"\)\);/,
+  "Icon-only settings tabs should localize their hidden labels and accessible names without replacing their icons."
+);
+
+assert.doesNotMatch(
+  source,
+  /document\.querySelector\("#settings(?:Basic|Search)Tab"\)\.textContent/,
+  "Settings localization must not replace icon-only tab contents with visible text."
+);
+
+assert.match(
+  source,
   /document\.querySelector\("\.sync-settings-actions"\)\?\.setAttribute\("aria-label", t\("syncSettingsActionsLabel"\)\);/,
   "Sync action group aria label should be localized."
+);
+
+assert.match(
+  source,
+  /const LANGUAGE_PREFERENCES = \["system", "zh-TW", "zh-CN", "en", "ja", "ko"\];/,
+  "Language settings should expose exactly the requested choices."
+);
+
+assert.match(
+  source,
+  /await setStoredValues\(\{ \[LANGUAGE_STORAGE_KEY\]: activeLanguagePreference \}\);/,
+  "The selected language should persist with the existing settings storage path."
+);
+
+assert.match(
+  html,
+  /<button class="portal-category-trigger settings-language-trigger" id="languageTrigger"[^>]+aria-haspopup="listbox"[^>]+aria-controls="languageOptions"/,
+  "Basic settings should use Wayleaf's custom listbox trigger."
+);
+
+assert.doesNotMatch(
+  html,
+  /<select[^>]+id="languageSelect"/,
+  "Language settings should not invoke the native system select menu."
+);
+
+assert.match(
+  source,
+  /document\.querySelector\("\.settings-language-trigger-icon"\)\.innerHTML = chevronDownIcon\(\);/,
+  "The language menu trigger should use Wayleaf's existing TDesign chevron."
+);
+
+assert.match(
+  source,
+  /icon\.innerHTML = tdesignIcon\("check"\);/,
+  "The selected language should use a TDesign check icon."
+);
+
+assert.match(
+  css,
+  /\.settings-language-trigger:focus,[\s\S]*?border-color: var\(--accent-border\);[\s\S]*?outline: 0;[\s\S]*?box-shadow: none;/,
+  "The custom language trigger should replace the native blue focus ring with Wayleaf's accent border."
+);
+
+assert.match(
+  css,
+  /\.settings-language-trigger \{\s*min-height: 40px;\s*\}/,
+  "The language trigger should match the 40px active appearance control height."
+);
+
+assert.match(
+  css,
+  /\.settings-language-option \{\s*min-height: 40px;/,
+  "Every expanded language option should match the 40px trigger height."
+);
+
+assert.match(
+  css,
+  /\.settings-language-options \{[\s\S]*?position: absolute;[\s\S]*?top: calc\(100% \+ 6px\);/,
+  "Opening the language menu should overlay the settings page instead of changing its layout height."
+);
+
+assert.match(
+  source,
+  /openLanguagePicker\(\{ focusOption: event\?\.detail === 0 \}\);/,
+  "Pointer-opened language menus should keep trigger focus and avoid scrolling the settings page."
 );
 
 assert.match(
@@ -207,6 +288,12 @@ assert.match(
 
 assert.match(
   source,
-  /settingsTabsShell\.setAttribute\("data-stuck", isStuck \? "true" : "false"\);[\s\S]*settingsShell\?\.setAttribute\("data-stuck", isStuck \? "true" : "false"\);/,
-  "Settings scroll state should drive the fixed titlebar shadow, not only the sidebar tab rail."
+  /const lastContent = activeBody\?\.lastElementChild \|\| activeBody;[\s\S]*contentBottom[\s\S]*settingsShell\.scrollTop[\s\S]*const isScrollable = contentBottom > settingsShell\.clientHeight \+ 2;/,
+  "Settings scrollability should be measured from the active panel content, not a fixed baseline or page padding."
+);
+
+assert.match(
+  source,
+  /settingsShell\.setAttribute\("data-scrollable", isScrollable \? "true" : "false"\);[\s\S]*settingsTabsShell\.setAttribute\("data-faded", isStuck \? "true" : "false"\);[\s\S]*settingsShell\.setAttribute\("data-stuck", isStuck \? "true" : "false"\);/,
+  "Settings scroll state should lock non-scrollable pages and fade the fixed tab rail only after real scrolling."
 );

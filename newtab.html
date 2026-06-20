@@ -212,8 +212,14 @@
       <div class="settings-brand" aria-hidden="true">WayLeaf</div>
       <div class="settings-tabs-shell">
         <div class="settings-tabs" role="tablist" aria-label="Settings categories">
-          <button class="settings-tab active" id="settingsBasicTab" type="button" role="tab" aria-selected="true" aria-controls="settingsBasicPanel" data-settings-tab="basic">Basic</button>
-          <button class="settings-tab" id="settingsSearchTab" type="button" role="tab" aria-selected="false" aria-controls="settingsSearchPanel" data-settings-tab="search">Search</button>
+          <button class="settings-tab active" id="settingsBasicTab" type="button" role="tab" aria-label="Basic" title="Basic" aria-selected="true" aria-controls="settingsBasicPanel" data-settings-tab="basic">
+            <span class="button-icon settings-tab-icon" aria-hidden="true"></span>
+            <span class="visually-hidden settings-tab-label">Basic</span>
+          </button>
+          <button class="settings-tab" id="settingsSearchTab" type="button" role="tab" aria-label="Search" title="Search" aria-selected="false" aria-controls="settingsSearchPanel" data-settings-tab="search">
+            <span class="button-icon settings-tab-icon" aria-hidden="true"></span>
+            <span class="visually-hidden settings-tab-label">Search</span>
+          </button>
         </div>
         <span class="settings-tabs-sticky-line" aria-hidden="true"></span>
       </div>
@@ -250,6 +256,24 @@
                   </button>
                 </div>
                 <p class="settings-group-note">Automatically switches light or dark mode from system settings.</p>
+              </div>
+            </section>
+
+            <section class="settings-group settings-language-group" aria-labelledby="languageSettingsTitle">
+              <div class="settings-group-heading">
+                <div>
+                  <h3 id="languageSettingsTitle">Language</h3>
+                  <p>Choose Wayleaf's display language</p>
+                </div>
+              </div>
+              <div class="settings-group-control">
+                <div class="portal-category-picker settings-language-picker" id="languagePicker">
+                  <button class="portal-category-trigger settings-language-trigger" id="languageTrigger" type="button" aria-haspopup="listbox" aria-expanded="false" aria-controls="languageOptions" aria-labelledby="languageSettingsTitle languageCurrent">
+                    <span id="languageCurrent">System</span>
+                    <span class="button-icon portal-category-trigger-icon settings-language-trigger-icon" aria-hidden="true"></span>
+                  </button>
+                  <div class="portal-category-list settings-language-options" id="languageOptions" role="listbox" aria-labelledby="languageSettingsTitle" hidden></div>
+                </div>
               </div>
             </section>
 
