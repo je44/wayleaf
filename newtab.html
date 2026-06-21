@@ -371,47 +371,16 @@
       </section>
     </section>
 
-    <section class="onboarding-guide" id="onboardingGuide" role="dialog" aria-modal="true" aria-labelledby="onboardingTitle" aria-describedby="onboardingIntro" hidden>
-      <div class="onboarding-card">
-        <header class="onboarding-header">
-          <div>
-            <p class="onboarding-kicker" id="onboardingKicker">First run</p>
-            <h2 id="onboardingTitle">Take one minute to understand Wayleaf</h2>
-            <p id="onboardingIntro">Wayleaf turns your new tab into a local-first workspace. These notes help you start safely and quickly.</p>
-          </div>
-          <button class="icon-button subtle-action" id="onboardingCloseButton" type="button" aria-label="Close guide">
-            <span class="button-icon" aria-hidden="true"></span>
-          </button>
-        </header>
-        <div class="onboarding-grid">
-          <article class="onboarding-item">
-            <strong id="onboardingPrivacyTitle">Local first</strong>
-            <p id="onboardingPrivacyBody">History, bookmarks, shortcuts, and theme settings stay in Chrome extension storage. Wayleaf has no backend account.</p>
-          </article>
-          <article class="onboarding-item">
-            <strong id="onboardingPermissionTitle">Permissions power the page</strong>
-            <p id="onboardingPermissionBody">history powers recent browsing, bookmarks powers bookmark folders, and tabs plus scripting help open search results and AI pages.</p>
-          </article>
-          <article class="onboarding-item">
-            <strong id="onboardingSyncTitle">Settings try to follow Chrome sync</strong>
-            <p id="onboardingSyncBody">The same Google account restores preferences automatically. If sync is unavailable, settings stay on this device.</p>
-          </article>
-          <article class="onboarding-item">
-            <strong id="onboardingAiTitle">AI commands have a fallback</strong>
-            <p id="onboardingAiBody">Use /gpt, /claude, /gemini, /grok, /deepseek, /doubao, /kimi, or /glm to open the AI page and try to fill your prompt. If the site requires login or changes, paste the saved prompt manually.</p>
-          </article>
-          <article class="onboarding-item">
-            <strong id="onboardingStartTitle">Start with two actions</strong>
-            <p id="onboardingStartBody">Add one favorite site, then choose a bookmark folder from the navigation hub. Theme and sync stay in Settings.</p>
-          </article>
-          <article class="onboarding-item">
-            <strong id="onboardingFeedbackTitle">Report issues directly</strong>
-            <p id="onboardingFeedbackBody">Include your browser, Wayleaf version, and the failed scenario so the issue is easy to reproduce.</p>
-          </article>
-        </div>
+    <section class="onboarding-guide" id="onboardingGuide" role="dialog" aria-modal="true" aria-labelledby="onboardingStepTitle" aria-describedby="onboardingStepBody" hidden>
+      <div class="onboarding-card" id="onboardingCard">
+        <button class="icon-button subtle-action onboarding-close" id="onboardingCloseButton" type="button" aria-label="Close guide">
+          <span class="button-icon" aria-hidden="true"></span>
+        </button>
+        <p class="onboarding-kicker" id="onboardingKicker">First run · 1 / 5</p>
+        <h2 id="onboardingStepTitle">Search from the center</h2>
+        <p class="onboarding-step-body" id="onboardingStepBody">Enter a keyword, URL, or AI command in the main search bar.</p>
         <footer class="onboarding-actions">
-          <a class="text-button" id="onboardingFeedbackLink" href="https://github.com/je44/wayleaf/issues" target="_blank" rel="noreferrer">Report issue</a>
-          <button class="text-button primary" id="onboardingDoneButton" type="button">Start using</button>
+          <button class="text-button primary" id="onboardingDoneButton" type="button">Next</button>
         </footer>
       </div>
     </section>

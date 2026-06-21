@@ -44,6 +44,20 @@ const FIRST_PAINT_CACHE_VERSION = 4;
 const AI_DIRECT_PROMPT_STORAGE_KEY = "aiDirectPrompts";
 const SYNC_META_STORAGE_KEY = "syncMeta";
 const ONBOARDING_GUIDE_STORAGE_KEY = "onboardingGuideDismissed";
+const ONBOARDING_STEPS = [
+  { target: ".search-panel", titleKey: "onboardingPrivacyTitle", bodyKey: "onboardingPrivacyBody", placement: "bottom" },
+  { target: "#favoriteStrip", titleKey: "onboardingPermissionTitle", bodyKey: "onboardingPermissionBody", placement: "bottom" },
+  { target: ".recent-folders", titleKey: "onboardingSyncTitle", bodyKey: "onboardingSyncBody", placement: "top" },
+  { target: "#portalSurfaceButton", titleKey: "onboardingAiTitle", bodyKey: "onboardingAiBody", placement: "right" },
+  { target: "#settingsButton", titleKey: "onboardingStartTitle", bodyKey: "onboardingStartBody", placement: "left" }
+];
+const ONBOARDING_PREVIEW_FAVORITES = [
+  { id: "onboarding-github", title: "GitHub", url: "https://github.com" },
+  { id: "onboarding-notion", title: "Notion", url: "https://www.notion.so" },
+  { id: "onboarding-youtube", title: "YouTube", url: "https://www.youtube.com" },
+  { id: "onboarding-figma", title: "Figma", url: "https://www.figma.com" },
+  { id: "onboarding-chatgpt", title: "ChatGPT", url: "https://chatgpt.com" }
+];
 const AI_DIRECT_PROMPT_TOKEN_PARAM = "_wayleaf_prompt";
 const AI_DIRECT_PROMPT_TEXT_PARAM = "_wayleaf_text";
 const AI_DIRECT_PROMPT_TTL_MS = 2 * 60 * 1000;
@@ -545,6 +559,8 @@ const THEME_PALETTES = [
 const DEFAULT_LOCAL_SEARCH_ENGINE = "google";
 const EDITABLE_LOCAL_SEARCH_ENGINE_IDS = ["google", "baidu", "bing"];
 const EDITABLE_AI_ENGINE_IDS = ["chatgpt", "claude", "gemini", "grok", "deepseek", "doubao", "kimi", "glm", "jimeng"];
+const GOOGLE_AI_MODE_COMMAND = "/ai";
+const GOOGLE_AI_MODE_SEARCH_URL = "https://www.google.com/ai";
 const SETTINGS_ENGINE_ICON_STYLES = Object.freeze({
   baidu: { mode: "mask", tile: "#ffffff", glyph: "#2932e1" },
   chatgpt: { mode: "mask", tile: "#ffffff", glyph: "#000000" },
@@ -1242,20 +1258,21 @@ const MESSAGES = {
     onboardingKicker: "第一次使用",
     onboardingTitle: "先花一分钟了解 Wayleaf",
     onboardingIntro: "Wayleaf 会把新标签页变成你的本地工作台。下面这些点能帮你安全、顺手地开始。",
-    onboardingPrivacyTitle: "本地优先",
-    onboardingPrivacyBody: "历史、书签、入口和主题保存在浏览器扩展存储里，Wayleaf 没有后端账号。",
-    onboardingPermissionTitle: "权限用来完成页面功能",
-    onboardingPermissionBody: "history 用于最近浏览，bookmarks 用于自选书签，tabs 和 scripting 用于打开搜索结果和 AI 页面辅助。",
-    onboardingSyncTitle: "配置会尽量跟随 Chrome 同步",
-    onboardingSyncBody: "同一 Google 账号会自动恢复偏好；如果当前浏览器不支持同步，设置仍会保留在本机。",
-    onboardingAiTitle: "AI 指令有兜底",
-    onboardingAiBody: "输入 /gpt、/claude、/gemini、/grok、/deepseek、/doubao、/kimi 或 /glm 可跳转并尝试填入问题；若对方网站要求登录或改版，请手动粘贴暂存问题。",
-    onboardingStartTitle: "从两个动作开始",
-    onboardingStartBody: "添加一个常用网站，再到导航中枢选择一个书签文件夹。你可以随时在设置中心调整主题和同步。",
+    onboardingPrivacyTitle: "从中心搜索栏开始",
+    onboardingPrivacyBody: "输入关键词、网址或 /AI 指令，Wayleaf 会从这个主区域开始搜索与跳转。",
+    onboardingPermissionTitle: "添加自定义喜好网站",
+    onboardingPermissionBody: "搜索栏下方可添加最多 5 个常用网站，点击图标即可快速打开。",
+    onboardingSyncTitle: "查看最近浏览",
+    onboardingSyncBody: "下方会按网站整理最近访问内容，并保留同一网站的相关页面。",
+    onboardingAiTitle: "打开导航中枢",
+    onboardingAiBody: "左上角入口集中管理快捷网站与自选书签文件夹。",
+    onboardingStartTitle: "进入设置中心",
+    onboardingStartBody: "右上角设置中心用于调整语言、外观、同步与搜索偏好。",
     onboardingFeedbackTitle: "遇到问题直接反馈",
     onboardingFeedbackBody: "反馈时带上浏览器、Wayleaf 版本和失败场景，最容易定位。",
     onboardingFeedback: "反馈问题",
-    onboardingDone: "开始使用",
+    onboardingNext: "下一步",
+    onboardingDone: "完成",
     closeOnboarding: "关闭指引",
     customPaletteTitle: "自定义主题",
     customPaletteDescription: "自定义 Wayleaf 的主题双色",
@@ -1498,20 +1515,21 @@ const MESSAGES = {
     onboardingKicker: "第一次使用",
     onboardingTitle: "先花一分鐘了解 Wayleaf",
     onboardingIntro: "Wayleaf 會把新分頁變成你的本機工作台。下面這些重點能幫你安全、順手地開始。",
-    onboardingPrivacyTitle: "本機優先",
-    onboardingPrivacyBody: "歷史、書籤、入口和主題設定會保存在瀏覽器擴充功能儲存空間中，Wayleaf 沒有後端帳號。",
-    onboardingPermissionTitle: "權限用來完成頁面功能",
-    onboardingPermissionBody: "history 用於最近瀏覽，bookmarks 用於自選書籤，tabs 和 scripting 用於打開搜尋結果並輔助 AI 頁面交接。",
-    onboardingSyncTitle: "設定會盡量跟隨 Chrome 同步",
-    onboardingSyncBody: "同一 Google 帳號會自動恢復偏好；如果目前瀏覽器不支援同步，設定仍會保留在本機。",
-    onboardingAiTitle: "AI 指令有備援",
-    onboardingAiBody: "輸入 /gpt、/claude、/gemini、/grok、/deepseek、/doubao、/kimi 或 /glm 可跳轉並嘗試填入問題；若對方網站要求登入或改版，請手動貼上暫存問題。",
-    onboardingStartTitle: "從兩個動作開始",
-    onboardingStartBody: "新增一個常用網站，再到導航中樞選擇一個書籤資料夾。你可以隨時在設定中調整主題和同步。",
+    onboardingPrivacyTitle: "從中央搜尋列開始",
+    onboardingPrivacyBody: "輸入關鍵字、網址或 /AI 指令，Wayleaf 會從這個主要區域開始搜尋與跳轉。",
+    onboardingPermissionTitle: "新增自訂喜好網站",
+    onboardingPermissionBody: "搜尋列下方可新增最多 5 個常用網站，點擊圖示即可快速開啟。",
+    onboardingSyncTitle: "查看最近瀏覽",
+    onboardingSyncBody: "下方會依網站整理最近造訪內容，並保留同一網站的相關頁面。",
+    onboardingAiTitle: "開啟導航中樞",
+    onboardingAiBody: "左上角入口集中管理快捷網站與自選書籤資料夾。",
+    onboardingStartTitle: "進入設定中心",
+    onboardingStartBody: "右上角設定中心可調整語言、外觀、同步與搜尋偏好。",
     onboardingFeedbackTitle: "遇到問題直接回報",
     onboardingFeedbackBody: "回報時帶上瀏覽器、Wayleaf 版本和失敗場景，最容易定位。",
     onboardingFeedback: "回報問題",
-    onboardingDone: "開始使用",
+    onboardingNext: "下一步",
+    onboardingDone: "完成",
     closeOnboarding: "關閉指引",
     customPaletteTitle: "自訂主題",
     customPaletteDescription: "自訂 Wayleaf 的主題雙色",
@@ -1723,20 +1741,21 @@ const MESSAGES = {
     onboardingKicker: "First run",
     onboardingTitle: "Take one minute to understand Wayleaf",
     onboardingIntro: "Wayleaf turns your new tab into a local workspace. These notes help you start safely and smoothly.",
-    onboardingPrivacyTitle: "Local-first",
-    onboardingPrivacyBody: "History, bookmarks, shortcuts, and theme settings stay in Chrome extension storage. Wayleaf has no backend account.",
-    onboardingPermissionTitle: "Permissions power the page",
-    onboardingPermissionBody: "history drives recent browsing, bookmarks powers selected folders, tabs and scripting open results and assist AI page handoff.",
-    onboardingSyncTitle: "Settings try to follow Chrome sync",
-    onboardingSyncBody: "The same Google account can restore preferences. If sync is unavailable, settings still stay on this device.",
-    onboardingAiTitle: "AI commands have a fallback",
-    onboardingAiBody: "Type /gpt, /claude, /gemini, /grok, /deepseek, /doubao, /kimi, or /glm to open and try filling a prompt. If the AI site needs login or changes, paste the saved prompt manually.",
-    onboardingStartTitle: "Start with two actions",
-    onboardingStartBody: "Add one favorite site, then choose a bookmark folder from the navigation hub. Theme and sync stay in Settings.",
+    onboardingPrivacyTitle: "Start with the center search bar",
+    onboardingPrivacyBody: "Enter a keyword, URL, or /AI command here to search and jump directly to a destination.",
+    onboardingPermissionTitle: "Add favorite websites",
+    onboardingPermissionBody: "Add up to five favorite sites below the search bar, then open them with one click.",
+    onboardingSyncTitle: "Review recent browsing",
+    onboardingSyncBody: "Recent visits are grouped by website below, including related pages from the same site.",
+    onboardingAiTitle: "Open the navigation hub",
+    onboardingAiBody: "Use the top-left hub to manage shortcuts and selected bookmark folders.",
+    onboardingStartTitle: "Open Settings",
+    onboardingStartBody: "Use the top-right Settings center for language, appearance, sync, and search preferences.",
     onboardingFeedbackTitle: "Report issues directly",
     onboardingFeedbackBody: "Include your browser, Wayleaf version, and the failed scenario so the issue is easy to reproduce.",
     onboardingFeedback: "Report issue",
-    onboardingDone: "Start using",
+    onboardingNext: "Next",
+    onboardingDone: "Finish",
     closeOnboarding: "Close guide",
     customPaletteTitle: "Custom theme",
     customPaletteDescription: "Customize Wayleaf's theme color pair",
@@ -2347,20 +2366,21 @@ const LOCALE_COMPLETIONS = {
     onboardingKicker: "初回起動",
     onboardingTitle: "Wayleaf を 1 分で理解する",
     onboardingIntro: "Wayleaf は新しいタブをローカル優先のワークスペースに変えます。以下のメモで安全かつスムーズに始められます。",
-    onboardingPrivacyTitle: "ローカル優先",
-    onboardingPrivacyBody: "履歴、ブックマーク、ショートカット、テーマ設定は Chrome 拡張機能ストレージに保存されます。Wayleaf にはバックエンドアカウントがありません。",
-    onboardingPermissionTitle: "権限はページ機能に使われます",
-    onboardingPermissionBody: "history は最近の閲覧、bookmarks は選択フォルダ、tabs と scripting は検索結果を開き AI ページへの受け渡しを補助します。",
-    onboardingSyncTitle: "設定は Chrome 同期に従います",
-    onboardingSyncBody: "同じ Google アカウントで設定を復元できます。同期できない場合も設定はこのデバイスに保存されます。",
-    onboardingAiTitle: "AI コマンドにはフォールバックがあります",
-    onboardingAiBody: "/gpt、/claude、/gemini、/grok、/deepseek、/doubao、/kimi、/glm で AI ページを開きプロンプト入力を試みます。ログインやサイト変更が必要な場合は保存されたプロンプトを手動で貼り付けてください。",
-    onboardingStartTitle: "2 つの操作から開始",
-    onboardingStartBody: "お気に入りサイトを 1 つ追加し、ナビゲーションハブでブックマークフォルダを選びます。テーマと同期は設定で変更できます。",
+    onboardingPrivacyTitle: "中央の検索バーから開始",
+    onboardingPrivacyBody: "キーワード、URL、または /AI コマンドを入力して検索や移動を開始します。",
+    onboardingPermissionTitle: "お気に入りサイトを追加",
+    onboardingPermissionBody: "検索バーの下に最大 5 件のサイトを追加し、ワンクリックで開けます。",
+    onboardingSyncTitle: "最近の閲覧を確認",
+    onboardingSyncBody: "最近の訪問はサイトごとに整理され、同じサイトの関連ページも表示されます。",
+    onboardingAiTitle: "ナビゲーションハブを開く",
+    onboardingAiBody: "左上のハブでショートカットと選択したブックマークフォルダを管理します。",
+    onboardingStartTitle: "設定を開く",
+    onboardingStartBody: "右上の設定で言語、外観、同期、検索の設定を変更します。",
     onboardingFeedbackTitle: "問題を直接報告",
     onboardingFeedbackBody: "ブラウザ、Wayleaf バージョン、失敗した場面を含めると再現しやすくなります。",
     onboardingFeedback: "問題を報告",
-    onboardingDone: "使い始める",
+    onboardingNext: "次へ",
+    onboardingDone: "完了",
     closeOnboarding: "ガイドを閉じる",
     portalNameRequired: "ポータル名を入力してください。",
     portalUrlRequired: "http または https の URL を入力してください。",
@@ -2500,20 +2520,21 @@ const LOCALE_COMPLETIONS = {
     onboardingKicker: "첫 실행",
     onboardingTitle: "Wayleaf를 1분 안에 알아보기",
     onboardingIntro: "Wayleaf는 새 탭을 로컬 우선 작업 공간으로 바꿉니다. 아래 안내로 안전하고 빠르게 시작하세요.",
-    onboardingPrivacyTitle: "로컬 우선",
-    onboardingPrivacyBody: "기록, 북마크, 바로가기, 테마 설정은 Chrome 확장 프로그램 저장소에 보관됩니다. Wayleaf에는 백엔드 계정이 없습니다.",
-    onboardingPermissionTitle: "권한은 페이지 기능에 사용됩니다",
-    onboardingPermissionBody: "history는 최근 방문, bookmarks는 선택한 폴더, tabs와 scripting은 검색 결과 열기와 AI 페이지 전달을 돕습니다.",
-    onboardingSyncTitle: "설정은 Chrome 동기화를 따릅니다",
-    onboardingSyncBody: "같은 Google 계정으로 환경설정을 복원할 수 있습니다. 동기화를 사용할 수 없어도 설정은 이 기기에 남습니다.",
-    onboardingAiTitle: "AI 명령에는 대체 경로가 있습니다",
-    onboardingAiBody: "/gpt, /claude, /gemini, /grok, /deepseek, /doubao, /kimi, /glm으로 AI 페이지를 열고 프롬프트 입력을 시도합니다. 로그인이 필요하거나 사이트가 바뀌면 저장된 프롬프트를 직접 붙여넣으세요.",
-    onboardingStartTitle: "두 가지 작업으로 시작",
-    onboardingStartBody: "즐겨찾기 사이트 하나를 추가하고 탐색 허브에서 북마크 폴더를 선택하세요. 테마와 동기화는 설정에서 관리합니다.",
+    onboardingPrivacyTitle: "중앙 검색창에서 시작",
+    onboardingPrivacyBody: "키워드, URL 또는 /AI 명령을 입력해 검색하거나 바로 이동하세요.",
+    onboardingPermissionTitle: "즐겨찾기 사이트 추가",
+    onboardingPermissionBody: "검색창 아래에 사이트를 최대 5개 추가하고 한 번의 클릭으로 열 수 있습니다.",
+    onboardingSyncTitle: "최근 방문 확인",
+    onboardingSyncBody: "최근 방문은 사이트별로 정리되며 같은 사이트의 관련 페이지도 함께 표시됩니다.",
+    onboardingAiTitle: "탐색 허브 열기",
+    onboardingAiBody: "왼쪽 위 허브에서 바로가기와 선택한 북마크 폴더를 관리하세요.",
+    onboardingStartTitle: "설정 열기",
+    onboardingStartBody: "오른쪽 위 설정에서 언어, 화면, 동기화, 검색 환경설정을 조정하세요.",
     onboardingFeedbackTitle: "문제 직접 신고",
     onboardingFeedbackBody: "브라우저, Wayleaf 버전, 실패 상황을 포함하면 재현이 쉬워집니다.",
     onboardingFeedback: "문제 신고",
-    onboardingDone: "시작하기",
+    onboardingNext: "다음",
+    onboardingDone: "완료",
     closeOnboarding: "가이드 닫기",
     portalNameRequired: "포털 이름을 입력하세요.",
     portalUrlRequired: "http 또는 https URL을 입력하세요.",
@@ -2653,20 +2674,21 @@ const LOCALE_COMPLETIONS = {
     onboardingKicker: "Primer uso",
     onboardingTitle: "Entiende Wayleaf en un minuto",
     onboardingIntro: "Wayleaf convierte tu nueva pestaña en un espacio local. Estas notas te ayudan a empezar con seguridad y rapidez.",
-    onboardingPrivacyTitle: "Local primero",
-    onboardingPrivacyBody: "Historial, marcadores, accesos y ajustes de tema permanecen en el almacenamiento de la extensión de Chrome. Wayleaf no tiene cuenta backend.",
-    onboardingPermissionTitle: "Los permisos activan la página",
-    onboardingPermissionBody: "history impulsa recientes, bookmarks usa carpetas elegidas, y tabs más scripting abren resultados y ayudan a entregar prompts a páginas de IA.",
-    onboardingSyncTitle: "Los ajustes siguen Chrome Sync",
-    onboardingSyncBody: "La misma cuenta de Google puede restaurar preferencias. Si la sincronización no está disponible, los ajustes quedan en este dispositivo.",
-    onboardingAiTitle: "Los comandos de IA tienen respaldo",
-    onboardingAiBody: "Usa /gpt, /claude, /gemini, /grok, /deepseek, /doubao, /kimi o /glm para abrir la página de IA e intentar completar el prompt. Si requiere inicio de sesión o cambia, pega el prompt guardado manualmente.",
-    onboardingStartTitle: "Empieza con dos acciones",
-    onboardingStartBody: "Agrega un sitio favorito y luego elige una carpeta de marcadores desde el centro de navegación. Tema y sincronización están en Configuración.",
+    onboardingPrivacyTitle: "Empieza por la barra de búsqueda central",
+    onboardingPrivacyBody: "Escribe una palabra, URL o comando /AI para buscar o abrir un destino directamente.",
+    onboardingPermissionTitle: "Agrega sitios favoritos",
+    onboardingPermissionBody: "Añade hasta cinco sitios debajo de la búsqueda y ábrelos con un clic.",
+    onboardingSyncTitle: "Revisa la navegación reciente",
+    onboardingSyncBody: "Las visitas recientes se agrupan por sitio e incluyen páginas relacionadas del mismo dominio.",
+    onboardingAiTitle: "Abre el centro de navegación",
+    onboardingAiBody: "Usa el acceso superior izquierdo para gestionar atajos y carpetas de marcadores.",
+    onboardingStartTitle: "Abre Configuración",
+    onboardingStartBody: "En la esquina superior derecha puedes ajustar idioma, apariencia, sincronización y búsqueda.",
     onboardingFeedbackTitle: "Informa problemas directamente",
     onboardingFeedbackBody: "Incluye navegador, versión de Wayleaf y escenario fallido para facilitar la reproducción.",
     onboardingFeedback: "Informar problema",
-    onboardingDone: "Empezar",
+    onboardingNext: "Siguiente",
+    onboardingDone: "Finalizar",
     closeOnboarding: "Cerrar guía",
     portalNameRequired: "Introduce un nombre de portal.",
     portalUrlRequired: "Introduce una URL http o https.",
@@ -2806,20 +2828,21 @@ const LOCALE_COMPLETIONS = {
     onboardingKicker: "Première utilisation",
     onboardingTitle: "Comprendre Wayleaf en une minute",
     onboardingIntro: "Wayleaf transforme votre nouvel onglet en espace local. Ces notes vous aident à démarrer vite et en sécurité.",
-    onboardingPrivacyTitle: "Local d'abord",
-    onboardingPrivacyBody: "Historique, favoris, raccourcis et thème restent dans le stockage de l'extension Chrome. Wayleaf n'a pas de compte backend.",
-    onboardingPermissionTitle: "Les autorisations alimentent la page",
-    onboardingPermissionBody: "history gère la navigation récente, bookmarks les dossiers choisis, tabs et scripting ouvrent les résultats et aident le passage vers les pages IA.",
-    onboardingSyncTitle: "Les paramètres suivent Chrome Sync",
-    onboardingSyncBody: "Le même compte Google peut restaurer les préférences. Si la synchronisation est indisponible, les paramètres restent sur cet appareil.",
-    onboardingAiTitle: "Les commandes IA ont un repli",
-    onboardingAiBody: "Utilisez /gpt, /claude, /gemini, /grok, /deepseek, /doubao, /kimi ou /glm pour ouvrir la page IA et tenter de remplir le prompt. Si une connexion est requise ou si le site change, collez le prompt enregistré manuellement.",
-    onboardingStartTitle: "Commencer par deux actions",
-    onboardingStartBody: "Ajoutez un site favori, puis choisissez un dossier de favoris dans le centre de navigation. Thème et synchronisation sont dans Paramètres.",
+    onboardingPrivacyTitle: "Commencez par la barre de recherche centrale",
+    onboardingPrivacyBody: "Saisissez un mot-clé, une URL ou une commande /AI pour rechercher ou ouvrir une destination.",
+    onboardingPermissionTitle: "Ajoutez des sites favoris",
+    onboardingPermissionBody: "Ajoutez jusqu'à cinq sites sous la recherche, puis ouvrez-les en un clic.",
+    onboardingSyncTitle: "Consultez la navigation récente",
+    onboardingSyncBody: "Les visites récentes sont regroupées par site avec les pages associées du même domaine.",
+    onboardingAiTitle: "Ouvrez le centre de navigation",
+    onboardingAiBody: "Le bouton en haut à gauche gère les raccourcis et les dossiers de favoris sélectionnés.",
+    onboardingStartTitle: "Ouvrez les paramètres",
+    onboardingStartBody: "Les paramètres en haut à droite contrôlent la langue, l'apparence, la synchronisation et la recherche.",
     onboardingFeedbackTitle: "Signaler les problèmes directement",
     onboardingFeedbackBody: "Incluez navigateur, version de Wayleaf et scénario en échec pour faciliter la reproduction.",
     onboardingFeedback: "Signaler un problème",
-    onboardingDone: "Commencer",
+    onboardingNext: "Suivant",
+    onboardingDone: "Terminer",
     closeOnboarding: "Fermer le guide",
     portalNameRequired: "Saisissez un nom de portail.",
     portalUrlRequired: "Saisissez une URL http ou https.",
@@ -2959,20 +2982,21 @@ const LOCALE_COMPLETIONS = {
     onboardingKicker: "Erster Start",
     onboardingTitle: "Wayleaf in einer Minute verstehen",
     onboardingIntro: "Wayleaf macht den neuen Tab zu einem lokalen Arbeitsbereich. Diese Hinweise helfen beim sicheren und schnellen Start.",
-    onboardingPrivacyTitle: "Lokal zuerst",
-    onboardingPrivacyBody: "Verlauf, Lesezeichen, Kurzbefehle und Design bleiben im Speicher der Chrome-Erweiterung. Wayleaf hat kein Backend-Konto.",
-    onboardingPermissionTitle: "Berechtigungen treiben die Seite an",
-    onboardingPermissionBody: "history steuert zuletzt besuchte Seiten, bookmarks gewählte Ordner, tabs und scripting öffnen Ergebnisse und helfen bei der KI-Übergabe.",
-    onboardingSyncTitle: "Einstellungen folgen Chrome Sync",
-    onboardingSyncBody: "Dasselbe Google-Konto kann Einstellungen wiederherstellen. Wenn Sync nicht verfügbar ist, bleiben Einstellungen auf diesem Gerät.",
-    onboardingAiTitle: "KI-Befehle haben einen Ausweichweg",
-    onboardingAiBody: "Nutze /gpt, /claude, /gemini, /grok, /deepseek, /doubao, /kimi oder /glm, um die KI-Seite zu öffnen und den Prompt einzufügen. Wenn Login nötig ist oder sich die Seite ändert, füge den gespeicherten Prompt manuell ein.",
-    onboardingStartTitle: "Mit zwei Aktionen starten",
-    onboardingStartBody: "Füge eine Lieblingswebsite hinzu und wähle dann einen Lesezeichenordner in der Navigationszentrale. Design und Sync bleiben in den Einstellungen.",
+    onboardingPrivacyTitle: "Mit der zentralen Suche starten",
+    onboardingPrivacyBody: "Gib ein Stichwort, eine URL oder einen /AI-Befehl ein, um zu suchen oder direkt zu öffnen.",
+    onboardingPermissionTitle: "Lieblingswebsites hinzufügen",
+    onboardingPermissionBody: "Füge unter der Suche bis zu fünf Websites hinzu und öffne sie mit einem Klick.",
+    onboardingSyncTitle: "Zuletzt besuchte Seiten ansehen",
+    onboardingSyncBody: "Letzte Besuche werden nach Website gruppiert und zeigen auch zugehörige Seiten derselben Domain.",
+    onboardingAiTitle: "Navigationszentrale öffnen",
+    onboardingAiBody: "Oben links verwaltest du Kurzbefehle und ausgewählte Lesezeichenordner.",
+    onboardingStartTitle: "Einstellungen öffnen",
+    onboardingStartBody: "Oben rechts stellst du Sprache, Darstellung, Synchronisierung und Suche ein.",
     onboardingFeedbackTitle: "Probleme direkt melden",
     onboardingFeedbackBody: "Gib Browser, Wayleaf-Version und das fehlgeschlagene Szenario an, damit es leicht reproduzierbar ist.",
     onboardingFeedback: "Problem melden",
-    onboardingDone: "Loslegen",
+    onboardingNext: "Weiter",
+    onboardingDone: "Fertig",
     closeOnboarding: "Anleitung schließen",
     portalNameRequired: "Gib einen Portalnamen ein.",
     portalUrlRequired: "Gib eine http- oder https-URL ein.",
@@ -3101,9 +3125,12 @@ const favoriteUrlInput = document.querySelector("#favoriteUrlInput");
 const favoriteFormError = document.querySelector("#favoriteFormError");
 const cancelFavoriteButton = document.querySelector("#cancelFavoriteButton");
 const onboardingGuide = document.querySelector("#onboardingGuide");
+const onboardingCard = document.querySelector("#onboardingCard");
 const onboardingCloseButton = document.querySelector("#onboardingCloseButton");
 const onboardingDoneButton = document.querySelector("#onboardingDoneButton");
-const onboardingFeedbackLink = document.querySelector("#onboardingFeedbackLink");
+const onboardingKicker = document.querySelector("#onboardingKicker");
+const onboardingStepTitle = document.querySelector("#onboardingStepTitle");
+const onboardingStepBody = document.querySelector("#onboardingStepBody");
 const togglePortalFormButton = document.querySelector("#togglePortalFormButton");
 const portalForm = document.querySelector("#portalForm");
 const portalTitleInput = document.querySelector("#portalTitleInput");
@@ -3154,6 +3181,8 @@ let latestRecentFolderGroups = [];
 let recentFolderPageIndex = 0;
 let activeRecentFolderPageSwitchAnimation = null;
 let favoriteSitesHydrated = false;
+let onboardingStepIndex = 0;
+let onboardingPreviewActive = false;
 let availableSiteIconFiles = new Set();
 let siteIconIndexLoaded = false;
 const whiteSvgIconDataUrlCache = new Map();
@@ -3641,23 +3670,11 @@ function applyOnboardingLocale() {
   if (!onboardingGuide) {
     return;
   }
-  document.querySelector("#onboardingKicker").textContent = t("onboardingKicker");
-  document.querySelector("#onboardingTitle").textContent = t("onboardingTitle");
-  document.querySelector("#onboardingIntro").textContent = t("onboardingIntro");
-  document.querySelector("#onboardingPrivacyTitle").textContent = t("onboardingPrivacyTitle");
-  document.querySelector("#onboardingPrivacyBody").textContent = t("onboardingPrivacyBody");
-  document.querySelector("#onboardingPermissionTitle").textContent = t("onboardingPermissionTitle");
-  document.querySelector("#onboardingPermissionBody").textContent = t("onboardingPermissionBody");
-  document.querySelector("#onboardingSyncTitle").textContent = t("onboardingSyncTitle");
-  document.querySelector("#onboardingSyncBody").textContent = t("onboardingSyncBody");
-  document.querySelector("#onboardingAiTitle").textContent = t("onboardingAiTitle");
-  document.querySelector("#onboardingAiBody").textContent = t("onboardingAiBody");
-  document.querySelector("#onboardingStartTitle").textContent = t("onboardingStartTitle");
-  document.querySelector("#onboardingStartBody").textContent = t("onboardingStartBody");
-  document.querySelector("#onboardingFeedbackTitle").textContent = t("onboardingFeedbackTitle");
-  document.querySelector("#onboardingFeedbackBody").textContent = t("onboardingFeedbackBody");
-  onboardingFeedbackLink.textContent = t("onboardingFeedback");
-  onboardingDoneButton.textContent = t("onboardingDone");
+  const step = ONBOARDING_STEPS[onboardingStepIndex] || ONBOARDING_STEPS[0];
+  onboardingKicker.textContent = `${t("onboardingKicker")} · ${onboardingStepIndex + 1} / ${ONBOARDING_STEPS.length}`;
+  onboardingStepTitle.textContent = t(step.titleKey);
+  onboardingStepBody.textContent = t(step.bodyKey);
+  onboardingDoneButton.textContent = t(onboardingStepIndex === ONBOARDING_STEPS.length - 1 ? "onboardingDone" : "onboardingNext");
   setButtonLabel(onboardingCloseButton, t("closeOnboarding"));
 }
 
@@ -4033,11 +4050,12 @@ async function init() {
   cancelFavoriteButton.addEventListener("click", hideFavoriteForm);
   favoriteForm.addEventListener("submit", handleFavoriteSubmit);
   onboardingCloseButton?.addEventListener("click", dismissOnboardingGuide);
-  onboardingDoneButton?.addEventListener("click", dismissOnboardingGuide);
+  onboardingDoneButton?.addEventListener("click", advanceOnboardingGuide);
   settingsButton.addEventListener("click", toggleSettingsPanel);
   closeSettingsButton.addEventListener("click", closeSettingsPanel);
   settingsShell?.addEventListener("scroll", updateSettingsTabsStickyVisualState, { passive: true });
   window.addEventListener("resize", updateSettingsTabsStickyVisualState);
+  window.addEventListener("resize", positionOnboardingStep);
   syncSettingsNowButton?.addEventListener("click", handleManualSyncSettings);
   languageTrigger?.addEventListener("click", toggleLanguagePicker);
   languageOptions?.addEventListener("click", handleLanguageOptionClick);
@@ -5566,34 +5584,113 @@ async function requestOnboardingGuide() {
     if (stored[ONBOARDING_GUIDE_STORAGE_KEY]) {
       return;
     }
-    openOnboardingGuide();
+    await openOnboardingGuide();
   } catch (error) {
     console.warn("Failed to read onboarding guide state", error);
   }
 }
 
-function openOnboardingGuide() {
+async function openOnboardingGuide() {
   if (!onboardingGuide) {
     return;
   }
   closeSettingsPanel();
-  onboardingFeedbackLink.href = ISSUE_FEEDBACK_URL;
+  onboardingPreviewActive = true;
+  await renderOnboardingPreview();
   onboardingCloseButton.querySelector(".button-icon").innerHTML = closeIcon();
+  onboardingStepIndex = 0;
   onboardingGuide.hidden = false;
+  showOnboardingStep();
   onboardingDoneButton.focus({ preventScroll: true });
+}
+
+async function renderOnboardingPreview() {
+  await renderFavoriteSiteList(ONBOARDING_PREVIEW_FAVORITES);
+  const now = Date.now();
+  renderRecentFolders(groupHistoryBySite([
+    { title: "Pull requests · GitHub", url: "https://github.com/pulls", lastVisitTime: now, visitCount: 8 },
+    { title: "Issues · GitHub", url: "https://github.com/issues", lastVisitTime: now - 4 * 60 * 1000, visitCount: 6 },
+    { title: "Project workspace", url: "https://www.notion.so/product", lastVisitTime: now - 12 * 60 * 1000, visitCount: 5 },
+    { title: "Recent files", url: "https://www.figma.com/files/recently-viewed", lastVisitTime: now - 28 * 60 * 1000, visitCount: 4 },
+    { title: "Subscriptions", url: "https://www.youtube.com/feed/subscriptions", lastVisitTime: now - 42 * 60 * 1000, visitCount: 3 }
+  ], { maxPagesPerSite: MAX_HISTORY_PAGES_PER_SITE }));
+}
+
+function showOnboardingStep() {
+  applyOnboardingLocale();
+  requestAnimationFrame(positionOnboardingStep);
+}
+
+function positionOnboardingStep() {
+  if (!onboardingGuide || onboardingGuide.hidden || !onboardingCard) {
+    return;
+  }
+  const step = ONBOARDING_STEPS[onboardingStepIndex];
+  const target = document.querySelector(step.target);
+  if (!target) {
+    return;
+  }
+  const viewportPadding = 12;
+  const gap = 18;
+  const targetRect = target.getBoundingClientRect();
+  const cardRect = onboardingCard.getBoundingClientRect();
+  let placement = step.placement;
+  if (placement === "bottom" && targetRect.bottom + gap + cardRect.height > window.innerHeight - viewportPadding) {
+    placement = "top";
+  } else if (placement === "top" && targetRect.top - gap - cardRect.height < viewportPadding) {
+    placement = "bottom";
+  } else if (placement === "right" && targetRect.right + gap + cardRect.width > window.innerWidth - viewportPadding) {
+    placement = targetRect.left - gap - cardRect.width >= viewportPadding ? "left" : "bottom";
+  } else if (placement === "left" && targetRect.left - gap - cardRect.width < viewportPadding) {
+    placement = targetRect.right + gap + cardRect.width <= window.innerWidth - viewportPadding ? "right" : "bottom";
+  }
+
+  let left = targetRect.left + (targetRect.width - cardRect.width) / 2;
+  let top = targetRect.bottom + gap;
+  if (placement === "top") {
+    top = targetRect.top - cardRect.height - gap;
+  } else if (placement === "right") {
+    left = targetRect.right + gap;
+    top = targetRect.top + (targetRect.height - cardRect.height) / 2;
+  } else if (placement === "left") {
+    left = targetRect.left - cardRect.width - gap;
+    top = targetRect.top + (targetRect.height - cardRect.height) / 2;
+  }
+  left = Math.min(Math.max(viewportPadding, left), window.innerWidth - cardRect.width - viewportPadding);
+  top = Math.min(Math.max(viewportPadding, top), window.innerHeight - cardRect.height - viewportPadding);
+  onboardingCard.style.left = `${left}px`;
+  onboardingCard.style.top = `${top}px`;
+  onboardingCard.dataset.placement = placement;
+  const arrowPosition = placement === "top" || placement === "bottom"
+    ? targetRect.left + targetRect.width / 2 - left - 7
+    : targetRect.top + targetRect.height / 2 - top - 7;
+  const arrowLimit = (placement === "top" || placement === "bottom" ? cardRect.width : cardRect.height) - 30;
+  onboardingCard.style.setProperty("--onboarding-arrow-position", `${Math.min(Math.max(16, arrowPosition), arrowLimit)}px`);
+}
+
+async function advanceOnboardingGuide() {
+  if (onboardingStepIndex >= ONBOARDING_STEPS.length - 1) {
+    await dismissOnboardingGuide();
+    return;
+  }
+  onboardingStepIndex += 1;
+  showOnboardingStep();
 }
 
 async function dismissOnboardingGuide() {
   if (!onboardingGuide || onboardingGuide.hidden) {
     return;
   }
+  onboardingDoneButton.disabled = true;
+  onboardingPreviewActive = false;
+  await Promise.allSettled([renderFavoriteSites(), refreshHistory()]);
   onboardingGuide.hidden = true;
+  onboardingDoneButton.disabled = false;
   try {
     await chrome.storage.local.set({ [ONBOARDING_GUIDE_STORAGE_KEY]: true });
   } catch (error) {
     console.warn("Failed to save onboarding guide state", error);
   }
-  quickSearchInput.focus({ preventScroll: true });
 }
 
 function handleSettingsPanelDismiss(event) {
@@ -5898,6 +5995,11 @@ function submitAggregateQuickSearch(query) {
 }
 
 function submitEngineQuickSearch(engine, query) {
+  const googleAiQuery = googleAiModeQuery(query);
+  if (engine?.id === "google" && googleAiQuery !== null) {
+    window.location.assign(googleAiModeDestination(googleAiQuery));
+    return;
+  }
   const localUrl = localhostUrl(query);
   if (localUrl) {
     window.location.assign(localUrl);
@@ -5946,6 +6048,19 @@ function quickSearchDestination(query) {
 function engineSearchDestination(engine, query) {
   const searchUrl = new URL(engine.searchUrl);
   searchUrl.searchParams.set(engine.queryParam, query);
+  return searchUrl.href;
+}
+
+function googleAiModeQuery(query) {
+  const match = String(query || "").match(/^\/ai(?:\s+|$)(.*)$/i);
+  return match ? match[1] || "" : null;
+}
+
+function googleAiModeDestination(query) {
+  const searchUrl = new URL(GOOGLE_AI_MODE_SEARCH_URL);
+  if (query) {
+    searchUrl.searchParams.set("q", query);
+  }
   return searchUrl.href;
 }
 
@@ -7177,6 +7292,9 @@ function appendFavoriteTargetButton(node, site, favoriteKeys = new Set()) {
 async function renderFavoriteSites() {
   clearFavoriteDeleteMode();
   const favorites = await loadFavoriteSites();
+  if (onboardingPreviewActive) {
+    return;
+  }
   writeFirstPaintCache({ favoriteSites: favorites });
   await renderFavoriteSiteList(favorites, { iconRenders: readFirstPaintCache().iconRenders });
 }
@@ -12667,6 +12785,9 @@ async function refreshHistory() {
     const recentGroups = groupHistoryBySite(recentItems, {
       maxPagesPerSite: MAX_HISTORY_PAGES_PER_SITE
     });
+    if (onboardingPreviewActive) {
+      return;
+    }
     writeFirstPaintCache({ recentGroups: serializeRecentGroupsForFirstPaint(recentGroups) });
     renderRecentFolders(recentGroups);
     renderHistory(recentGroups);
