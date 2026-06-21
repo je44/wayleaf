@@ -36,6 +36,8 @@ assert.match(newtabSource, /const EDITABLE_AI_ENGINE_IDS = \["chatgpt", "claude"
   );
 });
 assert.match(newtabSource, /\{ id: "jimeng"[\s\S]*commands: \["\/jimeng", "\/jm"\][\s\S]*urlPromptFallback: true/, "Jimeng should be an AI engine with a short command and URL-fragment fallback.");
+assert.match(newtabSource, /\{ id: "doubao"[\s\S]*iconUrl: "icons\/sites\/doubao\.png"/, "Doubao AI engine should use the explicit PNG icon without changing generic doubao.com site icon routing.");
+assert.ok(newtabSource.includes('engine?.id === "doubao"'), "Explicit PNG icon routing should stay scoped to the Doubao AI engine.");
 assert.equal(searchAiCommand("/g"), null, "A partial AI command should remain ordinary input.");
 assert.equal(searchAiCommand("/chat"), null, "A partial long AI alias should remain ordinary input.");
 assert.equal(searchAiCommand("/gptx"), null, "An AI command must match the complete configured command.");
@@ -56,6 +58,8 @@ assert.match(submitSource, /function shouldRemoveStoredPrompt\(status\) \{[\s\S]
 assert.doesNotMatch(submitSource, /function shouldRemoveStoredPrompt\(status\) \{[\s\S]*status === "filled"/, "Filled manual fallback must keep the stored prompt until TTL cleanup.");
 assert.match(submitSource, /const submitButton = await waitForSubmitButton\(config, input, 6000\);[\s\S]*await clickSubmitButton\(submitButton\);[\s\S]*if \(promptSubmissionLooksComplete\(input, prompt, startedUrl\)\) \{[\s\S]*return "submitted";[\s\S]*submitWithEnter\(input\);[\s\S]*return normalizePromptComparisonText\(inputText\(input\)\) === normalizePromptComparisonText\(prompt\) \? "filled" : "submitted";/, "Submit flow must verify click success, fall back to Enter, and report filled when manual fallback remains.");
 assert.match(submitSource, /function findSubmitButton\(config, input\) \{[\s\S]*config\.submitSelectors[\s\S]*input\.closest\("form"\)[\s\S]*isLikelySubmitButton/, "Submit fallback must search scoped likely send buttons after provider selectors.");
+assert.match(submitSource, /config\.engineId === "doubao"[\s\S]*findDoubaoSubmitButton\(input\)/, "Doubao should use a provider-specific fallback for the unlabeled blue submit button.");
+assert.match(submitSource, /function findDoubaoSubmitButton\(input\) \{[\s\S]*\[class\*=\\"send\\"\][\s\S]*buttonCenterX\(node\) > inputRect\.left \+ inputRect\.width \* 0\.7[\s\S]*buttonCenterX\(b\) - buttonCenterX\(a\)/, "Doubao fallback should choose the rightmost small clickable control near the composer.");
 assert.match(submitSource, /function promptSubmissionLooksComplete\(input, prompt, startedUrl\) \{[\s\S]*location\.href !== startedUrl[\s\S]*!document\.contains\(input\)[\s\S]*normalizePromptComparisonText\(inputText\(input\)\) !== normalizePromptComparisonText\(prompt\)/, "Submitted state must be based on URL, input removal/visibility, or normalized prompt text changing.");
 assert.match(submitSource, /function normalizePromptComparisonText\(value\) \{[\s\S]*replace\(\/\\u00a0\/g, " "\)[\s\S]*replace\(\/\\s\+\/g, " "\)/, "Submit completion checks must ignore editor whitespace normalization.");
 [

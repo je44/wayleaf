@@ -452,6 +452,12 @@ function findSubmitButton(config, input) {
       return match;
     }
   }
+  if (config.engineId === "doubao") {
+    const doubaoSubmitButton = findDoubaoSubmitButton(input);
+    if (doubaoSubmitButton) {
+      return doubaoSubmitButton;
+    }
+  }
   const scopedRoot = input.closest("form")
     || input.closest("[role=\"form\"]")
     || input.closest("main")
@@ -463,6 +469,29 @@ function findSubmitButton(config, input) {
   }
   return [...document.querySelectorAll("button, [role=\"button\"]")]
     .find((node) => isClickableButton(node) && isLikelySubmitButton(node)) || null;
+}
+
+function findDoubaoSubmitButton(input) {
+  const inputRect = input.getBoundingClientRect();
+  const maxDistanceY = Math.max(64, inputRect.height + 44);
+  return [...document.querySelectorAll("button, [role=\"button\"], [tabindex], [class*=\"send\"], [class*=\"submit\"], [class*=\"button\"]")]
+    .filter(isClickableElement)
+    .filter((node) => {
+      const rect = node.getBoundingClientRect();
+      const centerY = rect.top + rect.height / 2;
+      return rect.width >= 24
+        && rect.width <= 72
+        && rect.height >= 24
+        && rect.height <= 72
+        && buttonCenterX(node) > inputRect.left + inputRect.width * 0.7
+        && Math.abs(centerY - (inputRect.top + inputRect.height / 2)) <= maxDistanceY;
+    })
+    .sort((a, b) => buttonCenterX(b) - buttonCenterX(a))[0] || null;
+}
+
+function buttonCenterX(node) {
+  const rect = node.getBoundingClientRect();
+  return rect.left + rect.width / 2;
 }
 
 function isWritableInput(node) {
@@ -481,6 +510,15 @@ function isClickableButton(node) {
     && !(node instanceof HTMLButtonElement && node.disabled)
     && node.getAttribute("aria-disabled") !== "true"
     && node.getAttribute("data-disabled") !== "true"
+    && isVisible(node);
+}
+
+function isClickableElement(node) {
+  return node instanceof HTMLElement
+    && !(node instanceof HTMLButtonElement && node.disabled)
+    && node.getAttribute("aria-disabled") !== "true"
+    && node.getAttribute("data-disabled") !== "true"
+    && window.getComputedStyle(node).pointerEvents !== "none"
     && isVisible(node);
 }
 

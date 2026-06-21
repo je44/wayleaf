@@ -586,7 +586,7 @@ const DEFAULT_SEARCH_ENGINES = [
   { id: "gemini", command: "/gemini", label: "Gemini", searchUrl: "https://gemini.google.com/app", queryParam: "q", aiDirect: true, autoSubmit: true, directUrl: "https://gemini.google.com/app", themeColor: "#4285f4" },
   { id: "grok", command: "/grok", label: "Grok", searchUrl: "https://grok.com/", queryParam: "q", aiDirect: true, autoSubmit: true, directUrl: "https://grok.com/", themeColor: "#777f86" },
   { id: "deepseek", command: "/deepseek", commands: ["/deepseek", "/ds"], label: "DeepSeek", searchUrl: "https://chat.deepseek.com/", queryParam: "q", aiDirect: true, autoSubmit: true, directUrl: "https://chat.deepseek.com/", themeColor: "#4d6bfe" },
-  { id: "doubao", command: "/doubao", commands: ["/doubao", "/db"], label: "豆包", searchUrl: "https://www.doubao.com/chat/", queryParam: "q", aiDirect: true, autoSubmit: true, directUrl: "https://www.doubao.com/chat/", themeColor: "#1e37fc" },
+  { id: "doubao", command: "/doubao", commands: ["/doubao", "/db"], label: "豆包", searchUrl: "https://www.doubao.com/chat/", queryParam: "q", aiDirect: true, autoSubmit: true, directUrl: "https://www.doubao.com/chat/", iconUrl: "icons/sites/doubao.png", themeColor: "#1e37fc" },
   { id: "kimi", command: "/kimi", label: "Kimi", searchUrl: "https://www.kimi.com/", queryParam: "q", aiDirect: true, autoSubmit: true, directUrl: "https://www.kimi.com/", themeColor: "#111827" },
   { id: "glm", command: "/glm", commands: ["/glm", "/chatglm", "/zhipu"], label: "GLM", searchUrl: "https://chatglm.cn/", queryParam: "q", aiDirect: true, autoSubmit: true, directUrl: "https://chatglm.cn/", themeColor: "#3859ff" },
   { id: "jimeng", command: "/jimeng", commands: ["/jimeng", "/jm"], label: "即梦", searchUrl: "https://jimeng.jianying.com/ai-tool/home", queryParam: "q", aiDirect: true, autoSubmit: true, directUrl: "https://jimeng.jianying.com/ai-tool/home", themeColor: "#1c6fff", urlPromptFallback: true }
@@ -853,6 +853,7 @@ const GENERIC_SITE_FALLBACK_ICON = `${SITE_ICON_DIRECTORY}/fallback.svg`;
 const GENERIC_SITE_FALLBACK_TILE_COLOR = "#f04424";
 const SITE_ICON_FILE_BY_SITE_KEY = Object.freeze({
   "1688.com": "1688.ico",
+  "alipay.com": "alipay.svg",
   "alibaba.com": "alibabadotcom.svg",
   "analytics.google.com": "googleanalytics.svg",
   "aistudio.google.com": "aistudio.svg",
@@ -1039,6 +1040,7 @@ const SITE_ICON_TILE_COLOR_BY_SITE_KEY = Object.freeze({
   "zhihu.com": "#0084ff"
 });
 const MULTICOLOR_BRAND_ICON_SITE_KEYS = new Set([
+  "alipay.com",
   "bing.com",
   "calendar.google.com",
   "chrome.google.com",
@@ -1178,6 +1180,7 @@ const MESSAGES = {
     quickSearchAiSelected: "当前选择",
     quickSearchEngine: "搜索模式",
     quickSearchWith: "使用 {engine} 搜索",
+    quickSearchWithGoogleAi: "使用 Google AI搜索",
     quickSearchWithAi: "发送到 {engine}",
     quickSearchWithPlatform: "在 {platform} 搜索",
     quickSearchPlatformPlaceholder: "在 {platform} 搜索",
@@ -1349,6 +1352,7 @@ const MESSAGES = {
     quickSearchAiSelected: "目前選擇",
     quickSearchEngine: "搜尋模式",
     quickSearchWith: "使用 {engine} 搜尋",
+    quickSearchWithGoogleAi: "使用 Google AI搜索",
     quickSearchWithAi: "送到 {engine}",
     quickSearchWithPlatform: "在 {platform} 搜尋",
     quickSearchPlatformPlaceholder: "在 {platform} 搜尋",
@@ -1661,6 +1665,7 @@ const MESSAGES = {
     quickSearchAiSelected: "Selected",
     quickSearchEngine: "Search mode",
     quickSearchWith: "Search with {engine}",
+    quickSearchWithGoogleAi: "Search with Google AI",
     quickSearchWithAi: "Send to {engine}",
     quickSearchWithPlatform: "Search on {platform}",
     quickSearchPlatformPlaceholder: "Search on {platform}",
@@ -2349,6 +2354,7 @@ const LOCALE_COMPLETIONS = {
     quickSearchAiSelected: "選択中",
     quickSearchEngine: "検索モード",
     quickSearchWith: "{engine} で検索",
+    quickSearchWithGoogleAi: "Google AI で検索",
     quickSearchWithAi: "{engine} に送信",
     quickSearchWithPlatform: "{platform} で検索",
     quickSearchPlatformPlaceholder: "{platform} で検索",
@@ -2503,6 +2509,7 @@ const LOCALE_COMPLETIONS = {
     quickSearchAiSelected: "선택됨",
     quickSearchEngine: "검색 모드",
     quickSearchWith: "{engine}로 검색",
+    quickSearchWithGoogleAi: "Google AI로 검색",
     quickSearchWithAi: "{engine}에 보내기",
     quickSearchWithPlatform: "{platform}에서 검색",
     quickSearchPlatformPlaceholder: "{platform}에서 검색",
@@ -2657,6 +2664,7 @@ const LOCALE_COMPLETIONS = {
     quickSearchAiSelected: "Seleccionado",
     quickSearchEngine: "Modo de búsqueda",
     quickSearchWith: "Buscar con {engine}",
+    quickSearchWithGoogleAi: "Buscar con Google AI",
     quickSearchWithAi: "Enviar a {engine}",
     quickSearchWithPlatform: "Buscar en {platform}",
     quickSearchPlatformPlaceholder: "Buscar en {platform}",
@@ -2811,6 +2819,7 @@ const LOCALE_COMPLETIONS = {
     quickSearchAiSelected: "Sélectionné",
     quickSearchEngine: "Mode de recherche",
     quickSearchWith: "Rechercher avec {engine}",
+    quickSearchWithGoogleAi: "Rechercher avec Google AI",
     quickSearchWithAi: "Envoyer à {engine}",
     quickSearchWithPlatform: "Rechercher sur {platform}",
     quickSearchPlatformPlaceholder: "Rechercher sur {platform}",
@@ -2965,6 +2974,7 @@ const LOCALE_COMPLETIONS = {
     quickSearchAiSelected: "Ausgewählt",
     quickSearchEngine: "Suchmodus",
     quickSearchWith: "Mit {engine} suchen",
+    quickSearchWithGoogleAi: "Mit Google AI suchen",
     quickSearchWithAi: "An {engine} senden",
     quickSearchWithPlatform: "Auf {platform} suchen",
     quickSearchPlatformPlaceholder: "Auf {platform} suchen",
@@ -3113,6 +3123,7 @@ const lightAccentValue = document.querySelector("#lightAccentValue");
 const darkAccentValue = document.querySelector("#darkAccentValue");
 const quickSearchForm = document.querySelector("#quickSearchForm");
 const quickSearchInput = document.querySelector("#quickSearchInput");
+const quickSearchLeadingIcon = document.querySelector(".search-engine-search-icon");
 const platformActivationHint = document.querySelector("#platformActivationHint");
 const aiEnginePill = document.querySelector("#aiEnginePill");
 const searchSuggestions = document.querySelector("#searchSuggestions");
@@ -3155,6 +3166,7 @@ let activeSurfacePanelId = "";
 let activeSearchEngine = DEFAULT_SEARCH_ENGINE;
 let selectedLocalSearchEngine = DEFAULT_LOCAL_SEARCH_ENGINE;
 let activePlatformSearchTarget = "";
+let googleAiSearchModeActive = false;
 let aiModeExitTimer = 0;
 let portalCategoryState = {};
 let activePortalView = "smart";
@@ -3440,6 +3452,11 @@ function cachedFirstPaintIconRender(iconRenders, site) {
 function restoreFirstPaintIconRender(icon, site, render) {
   storeIconSiteContext(icon, site);
   icon.dataset.siteKey = firstPaintIconCacheKey(site);
+  const localIcon = localIconForUrl(site.url);
+  if (siteIconIndexLoaded && localIcon && render.src !== localIcon && render.source !== localIcon) {
+    applySiteIcon(icon, site);
+    return;
+  }
   if (render.source) {
     icon.dataset.iconSource = render.source;
   }
@@ -4151,6 +4168,9 @@ function setActiveSurfacePanel(panelId) {
   secondaryShell.classList.toggle("surface-open", hasActiveSurfacePanel);
   secondaryShell.classList.toggle("surface-closing", Boolean(!activeSurfacePanelId && previousPanelId));
   if (surfaceBackdrop) {
+    if (!activeSurfacePanelId && surfaceBackdrop.contains(document.activeElement)) {
+      surfaceBackdrop.blur();
+    }
     surfaceBackdrop.hidden = !activeSurfacePanelId && !previousPanelId;
     surfaceBackdrop.setAttribute("aria-hidden", String(!activeSurfacePanelId));
   }
@@ -4318,6 +4338,9 @@ function normalizeSearchSettings(value) {
 function applySearchSettings(settings, options = {}) {
   const normalized = normalizeSearchSettings(settings);
   selectedLocalSearchEngine = normalized.defaultSearchEngine;
+  if (selectedLocalSearchEngine !== "google") {
+    googleAiSearchModeActive = false;
+  }
   searchEngines = DEFAULT_SEARCH_ENGINES.map((engine) => {
     const nextEngine = cloneSearchEngine(engine);
     const aiSettings = normalized.aiEngines[nextEngine.id];
@@ -4555,7 +4578,8 @@ function createEngineSettingsCard({ engine, meta, actionLabel, current = false }
 
 function createSettingsEngineIcon(engine) {
   const engineUrl = engine.searchUrl || engine.directUrl || "";
-  const localIcon = localIconForUrl(engineUrl) || GENERIC_SITE_FALLBACK_ICON;
+  const explicitIcon = doubaoAiIconUrl(engine);
+  const iconSource = explicitIcon || localIconForUrl(engineUrl) || GENERIC_SITE_FALLBACK_ICON;
   const style = SETTINGS_ENGINE_ICON_STYLES[engine.id] || {};
   const label = searchEngineLabel(engine);
   const shell = document.createElement("span");
@@ -4563,16 +4587,16 @@ function createSettingsEngineIcon(engine) {
   shell.dataset.engineIcon = engine.id;
   shell.dataset.siteUrl = engineUrl;
   shell.dataset.siteTitle = label;
-  shell.dataset.iconSource = localIcon;
-  shell.dataset.iconCandidate = localIcon;
+  shell.dataset.iconSource = iconSource;
+  shell.dataset.iconCandidate = iconSource;
   shell.style.setProperty("--settings-engine-icon-tile", style.tile || "#ffffff");
   shell.style.setProperty("--settings-engine-icon-glyph", style.glyph || "#1f2924");
 
   if (style.mode === "mask") {
     const glyph = document.createElement("span");
     glyph.className = "settings-engine-icon-mask";
-    glyph.style.webkitMaskImage = `url("${localIcon}")`;
-    glyph.style.maskImage = `url("${localIcon}")`;
+    glyph.style.webkitMaskImage = `url("${iconSource}")`;
+    glyph.style.maskImage = `url("${iconSource}")`;
     shell.append(glyph);
     return shell;
   }
@@ -4582,9 +4606,12 @@ function createSettingsEngineIcon(engine) {
   icon.alt = "";
   icon.decoding = "async";
   icon.dataset.engineIcon = engine.id;
-  icon.dataset.iconSource = localIcon;
-  icon.dataset.iconCandidate = localIcon;
-  icon.src = localIcon;
+  icon.dataset.iconSource = iconSource;
+  icon.dataset.iconCandidate = iconSource;
+  if (explicitIcon) {
+    icon.dataset.explicitAiIcon = "true";
+  }
+  icon.src = iconSource;
   icon.removeAttribute("srcset");
   shell.append(icon);
   return shell;
@@ -4708,6 +4735,12 @@ function handleGlobalEscape(event) {
   if (event.key !== "Escape") {
     return;
   }
+  if (googleAiSearchModeActive && document.activeElement === quickSearchInput) {
+    event.preventDefault();
+    event.stopPropagation();
+    exitGoogleAiSearchMode();
+    return;
+  }
   if (portalCategoryPicker?.classList.contains("open")) {
     event.preventDefault();
     closePortalCategoryPicker({ restoreFocus: true });
@@ -4728,6 +4761,7 @@ function handleGlobalEscape(event) {
 
 async function setQuickSearchEngine(engineId, options = {}) {
   const nextEngine = searchEngineById(engineId);
+  googleAiSearchModeActive = false;
   if (!nextEngine.local) {
     activePlatformSearchTarget = "";
   }
@@ -4747,8 +4781,17 @@ function updateQuickSearchModeUi() {
   quickSearchForm.style.setProperty("--ai-theme-color", modeTarget.themeColor || "var(--accent)");
   quickSearchInput.placeholder = placeholder;
   quickSearchInput.setAttribute("aria-label", placeholder);
+  updateQuickSearchLeadingIcon();
   renderAiEnginePill(engine, { previousThemeColor });
   renderPlatformActivationHint(quickSearchInput.value);
+}
+
+function updateQuickSearchLeadingIcon() {
+  if (!quickSearchLeadingIcon) {
+    return;
+  }
+  quickSearchLeadingIcon.innerHTML = searchEngineSearchIcon();
+  searchWorkbench?.toggleAttribute("data-google-ai-active", googleAiSearchModeActive);
 }
 
 function renderAiEnginePill(engine, options = {}) {
@@ -4796,10 +4839,16 @@ function renderAiEnginePill(engine, options = {}) {
   icon.alt = "";
   icon.decoding = "async";
   icon.dataset.engineIcon = target.id;
-  applySiteIcon(icon, {
-    url: target.iconUrl || target.searchUrl || target.directUrl || "",
+  const explicitIcon = doubaoAiIconUrl(target);
+  const iconSite = {
+    url: target.searchUrl || target.directUrl || "",
     title: target.label || searchEngineLabel(target)
-  });
+  };
+  if (explicitIcon) {
+    applyExplicitSiteIcon(icon, iconSite, explicitIcon);
+  } else {
+    applySiteIcon(icon, iconSite);
+  }
   if (target.id === "jimeng") {
     applyIconTile(icon, "brand", { light: "#000000", dark: "#000000" }, true);
   }
@@ -5709,6 +5758,12 @@ function handleQuickSearchSubmit(event) {
 }
 
 function handleQuickSearchInputKeydown(event) {
+  if (event.key === "Escape" && !event.isComposing && googleAiSearchModeActive) {
+    event.preventDefault();
+    event.stopPropagation();
+    exitGoogleAiSearchMode();
+    return;
+  }
   if (event.key === "Escape" && !event.isComposing && !normalizeText(quickSearchInput.value)) {
     event.preventDefault();
     event.stopPropagation();
@@ -5723,6 +5778,12 @@ function handleQuickSearchInputKeydown(event) {
     exitDirectQuickSearchMode();
     return;
   }
+  if (event.key === "Backspace" && !event.isComposing && googleAiSearchModeActive && quickSearchInput.value.length === 0) {
+    event.preventDefault();
+    event.stopPropagation();
+    exitGoogleAiSearchMode();
+    return;
+  }
   if (event.key === "Backspace" && !event.isComposing && (!searchEngineById(activeSearchEngine).local || activePlatformSearchTarget) && quickSearchInput.value.length === 0) {
     event.preventDefault();
     event.stopPropagation();
@@ -5730,6 +5791,10 @@ function handleQuickSearchInputKeydown(event) {
     return;
   }
   if (event.key !== "Enter" || event.isComposing) {
+    return;
+  }
+  if (activateGoogleAiSearchModeFromInput()) {
+    event.preventDefault();
     return;
   }
   const platformMatch = searchPlatformPrefix(quickSearchInput.value);
@@ -5743,6 +5808,10 @@ function handleQuickSearchInputKeydown(event) {
 }
 
 function exitDirectQuickSearchMode() {
+  if (googleAiSearchModeActive) {
+    exitGoogleAiSearchMode();
+    return;
+  }
   if (activePlatformSearchTarget) {
     exitPlatformQuickSearchMode();
     return;
@@ -5768,7 +5837,45 @@ function exitPlatformQuickSearchMode() {
   renderLocalSearchSuggestions(normalizeText(quickSearchInput.value));
 }
 
+function activateGoogleAiSearchModeFromInput() {
+  if (googleAiSearchModeActive) {
+    return false;
+  }
+  if (!canActivateGoogleAiSearchMode() || normalizeText(quickSearchInput.value).toLowerCase() !== GOOGLE_AI_MODE_COMMAND) {
+    return false;
+  }
+  activeSearchEngine = DEFAULT_SEARCH_ENGINE;
+  activePlatformSearchTarget = "";
+  googleAiSearchModeActive = true;
+  quickSearchInput.value = "";
+  updateQuickSearchModeUi();
+  hideSearchSuggestions();
+  return true;
+}
+
+function exitGoogleAiSearchMode() {
+  if (!googleAiSearchModeActive) {
+    return;
+  }
+  googleAiSearchModeActive = false;
+  updateQuickSearchModeUi();
+  renderLocalSearchSuggestions(normalizeText(quickSearchInput.value));
+}
+
+function canActivateGoogleAiSearchMode() {
+  return searchEngineById(activeSearchEngine).local
+    && !activePlatformSearchTarget
+    && selectedLocalSearchEngine === "google";
+}
+
 function handleQuickSearchInput() {
+  if (activateGoogleAiSearchModeFromInput()) {
+    return;
+  }
+  if (googleAiSearchModeActive) {
+    renderLocalSearchSuggestions(normalizeText(quickSearchInput.value));
+    return;
+  }
   const commandMatch = searchAiCommand(quickSearchInput.value);
   if (commandMatch) {
     renderPlatformActivationHint("");
@@ -5801,6 +5908,7 @@ function activatePlatformSearchMatch(match) {
 }
 
 function setPlatformQuickSearchTarget(platformId) {
+  googleAiSearchModeActive = false;
   activeSearchEngine = DEFAULT_SEARCH_ENGINE;
   activePlatformSearchTarget = platformSearchTargetById(platformId)?.id || "";
   updateQuickSearchModeUi();
@@ -5977,6 +6085,10 @@ function submitLocalQuickSearch(query) {
     submitPlatformQuickSearch(platform, query);
     return;
   }
+  if (googleAiSearchModeActive) {
+    submitEngineQuickSearch(searchEngineById("google", { strict: true }) || selectedLocalSearchEngineConfig(), query);
+    return;
+  }
   const localUrl = localhostUrl(query);
   if (localUrl) {
     window.location.assign(localUrl);
@@ -5995,9 +6107,8 @@ function submitAggregateQuickSearch(query) {
 }
 
 function submitEngineQuickSearch(engine, query) {
-  const googleAiQuery = googleAiModeQuery(query);
-  if (engine?.id === "google" && googleAiQuery !== null) {
-    window.location.assign(googleAiModeDestination(googleAiQuery));
+  if (engine?.id === "google" && googleAiSearchModeActive) {
+    window.location.assign(googleAiModeDestination(query));
     return;
   }
   const localUrl = localhostUrl(query);
@@ -6049,11 +6160,6 @@ function engineSearchDestination(engine, query) {
   const searchUrl = new URL(engine.searchUrl);
   searchUrl.searchParams.set(engine.queryParam, query);
   return searchUrl.href;
-}
-
-function googleAiModeQuery(query) {
-  const match = String(query || "").match(/^\/ai(?:\s+|$)(.*)$/i);
-  return match ? match[1] || "" : null;
 }
 
 function googleAiModeDestination(query) {
@@ -6231,7 +6337,11 @@ function createSearchEngineSuggestion(query) {
     type: "engine-search",
     title: query,
     meta: "",
-    hint: selectedEngine ? t("quickSearchWith", { engine: selectedEngine.label }) : t("quickSearch"),
+    hint: googleAiSearchModeActive
+      ? t("quickSearchWithGoogleAi")
+      : selectedEngine
+        ? t("quickSearchWith", { engine: selectedEngine.label })
+        : t("quickSearch"),
     query,
     selectedEngineId: selectedEngine?.id || AGGREGATE_SEARCH_ENGINE_IDS[0]
   };
@@ -6269,6 +6379,9 @@ async function localSearchItems(query, options = {}) {
 }
 
 function activeSearchSuggestionScope() {
+  if (googleAiSearchModeActive) {
+    return googleAiSearchSuggestionScope();
+  }
   const platform = platformSearchTargetById(activePlatformSearchTarget);
   if (platform) {
     return searchTargetSuggestionScope(platform);
@@ -6285,6 +6398,10 @@ function searchTargetSuggestionScope(target) {
   return uniqueSiteKeys.length ? { siteKeys: uniqueSiteKeys } : null;
 }
 
+function googleAiSearchSuggestionScope() {
+  return { siteKeys: ["google.com"], googleAiMode: true };
+}
+
 function searchSuggestionSiteKey(url) {
   const parsed = safeUrl(url);
   return parsed && isWebUrl(parsed.href) ? canonicalSiteHost(parsed.hostname) : "";
@@ -6296,7 +6413,13 @@ function localSearchMatchesScope(item, scope) {
   }
   const url = safeUrl(item?.url);
   const siteKey = url ? canonicalSiteHost(url.hostname) : "";
-  return Boolean(siteKey && scope.siteKeys.includes(siteKey));
+  return Boolean(siteKey && scope.siteKeys.includes(siteKey))
+    && (!scope.googleAiMode || googleAiModeHistoryUrl(url));
+}
+
+function googleAiModeHistoryUrl(url) {
+  const path = (url?.pathname || "").replace(/\/+$/, "") || "/";
+  return path === "/ai" || (path === "/search" && url.searchParams.get("udm") === "50");
 }
 
 async function searchHistoryItems(query, scope = null) {
@@ -8962,6 +9085,24 @@ function applySiteIcon(icon, site, options = {}) {
   }
 }
 
+function doubaoAiIconUrl(engine) {
+  const value = String(engine?.iconUrl || "").trim();
+  return engine?.id === "doubao" && value.startsWith(`${SITE_ICON_DIRECTORY}/`) ? value : "";
+}
+
+function applyExplicitSiteIcon(icon, site, iconSource) {
+  storeIconSiteContext(icon, site);
+  applySiteIconTile(icon, site, iconSource);
+  icon.dataset.iconSource = iconSource;
+  icon.dataset.iconCandidate = iconSource;
+  icon.dataset.explicitAiIcon = "true";
+  delete icon.dataset.iconDefaultRescue;
+  delete icon.dataset.iconDefaultProbe;
+  icon.classList.remove("site-icon-generic-fallback");
+  icon.src = iconSource;
+  icon.removeAttribute("srcset");
+}
+
 function refreshRemoteBrandIcon(icon, site) {
   const parsedUrl = safeUrl(site.url);
   const siteKey = siteGroupKey(parsedUrl);
@@ -9479,13 +9620,21 @@ function refreshAdaptiveSiteIcons() {
 
 function refreshRenderedSiteIcons() {
   document.querySelectorAll("img[data-site-url]").forEach((icon) => {
-    if (icon.dataset.iconCacheHydrated === "true") {
-      return;
-    }
-    applySiteIcon(icon, {
+    const site = {
       title: icon.dataset.siteTitle || icon.alt || "",
       url: icon.dataset.siteUrl || ""
-    });
+    };
+    const localIcon = localIconForUrl(site.url);
+    if (
+      icon.dataset.iconCacheHydrated === "true"
+      && (!localIcon || icon.dataset.iconSource === localIcon || icon.getAttribute("src") === localIcon)
+    ) {
+      return;
+    }
+    if (localIcon) {
+      delete icon.dataset.iconCacheHydrated;
+    }
+    applySiteIcon(icon, site);
   });
 }
 
@@ -9713,7 +9862,7 @@ function fuseEmbeddedFaviconTile(icon, sample, color, tileColors) {
     delete icon.dataset.iconFusedTile;
     return;
   }
-  const fused = fusedEmbeddedFaviconPixelData(sample, tileColor);
+  const fused = fusedEmbeddedFaviconPixelData(sample, tileColor, rgbChannelsToHex(color.red, color.green, color.blue));
   if (!fused) {
     delete icon.dataset.iconFusedTile;
     return;
@@ -10484,19 +10633,17 @@ function faviconCandidateNeedsReadableCarrier(color, tileColor) {
 }
 
 function faviconShouldFuseEmbeddedTile(color, tileColor) {
-  const background = normalizeHexColor(tileColor);
-  if (!background || color?.matchMode !== "embedded-tile" || !faviconCandidateHasEmbeddedForeground(color)) {
-    return false;
-  }
-  return rgbChannelsToHex(color.red, color.green, color.blue) === background;
+  return Boolean(normalizeHexColor(tileColor))
+    && color?.matchMode === "embedded-tile"
+    && faviconCandidateHasEmbeddedForeground(color);
 }
 
-function fusedEmbeddedFaviconPixelData(sample, tileColor) {
-  const background = normalizeHexColor(tileColor);
-  if (!sample?.data || !sample.size || !background) {
+function fusedEmbeddedFaviconPixelData(sample, tileColor, embeddedTileColor = "") {
+  const clearColor = normalizeHexColor(embeddedTileColor) || normalizeHexColor(tileColor);
+  if (!sample?.data || !sample.size || !clearColor) {
     return null;
   }
-  const [tileRed, tileGreen, tileBlue] = hexToRgb(background);
+  const [tileRed, tileGreen, tileBlue] = hexToRgb(clearColor);
   const clearLimit = FAVICON_EMBEDDED_TILE_FUSION_CLEAR_DISTANCE;
   const featherLimit = clearLimit + FAVICON_EMBEDDED_TILE_FUSION_FEATHER_DISTANCE;
   const clearLimitSquared = clearLimit ** 2;
@@ -14151,7 +14298,7 @@ function themeModeIcon(mode) {
 }
 
 function searchEngineSearchIcon() {
-  return tdesignIcon("search");
+  return tdesignIcon(googleAiSearchModeActive ? "ai-search" : "search");
 }
 
 function historyPinIcon(active) {

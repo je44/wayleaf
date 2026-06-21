@@ -44,6 +44,7 @@ const SITE_ICON_TILE_COLOR_BY_SITE_KEY_FOR_TEST = Object.freeze({
   "zhihu.com": "#0084ff"
 });
 const MULTICOLOR_BRAND_ICON_SITE_KEYS_FOR_TEST = new Set([
+  "alipay.com",
   "doubao.com",
   "douyin.com",
   "instagram.com",
@@ -299,6 +300,7 @@ function remoteBrandProviderHasSlugForTest(slugs, slug) {
 
 const SITE_ICON_FILE_BY_SITE_KEY_FOR_TEST = Object.freeze({
   "1688.com": "1688.ico",
+  "alipay.com": "alipay.svg",
   "aistudio.google.com": "aistudio.svg",
   "atlassian.net": "jira.svg",
   "aws.amazon.com": "aws.svg",
@@ -1155,19 +1157,17 @@ function faviconCandidateNeedsReadableCarrier(color, tileColor) {
 }
 
 function faviconShouldFuseEmbeddedTile(color, tileColor) {
-  const background = normalizeHexColor(tileColor);
-  if (!background || color?.matchMode !== "embedded-tile" || !faviconCandidateHasEmbeddedForeground(color)) {
-    return false;
-  }
-  return rgbChannelsToHex(color.red, color.green, color.blue) === background;
+  return Boolean(normalizeHexColor(tileColor))
+    && color?.matchMode === "embedded-tile"
+    && faviconCandidateHasEmbeddedForeground(color);
 }
 
-function fusedEmbeddedFaviconPixelData(sample, tileColor) {
-  const background = normalizeHexColor(tileColor);
-  if (!sample?.data || !sample.size || !background) {
+function fusedEmbeddedFaviconPixelData(sample, tileColor, embeddedTileColor = "") {
+  const clearColor = normalizeHexColor(embeddedTileColor) || normalizeHexColor(tileColor);
+  if (!sample?.data || !sample.size || !clearColor) {
     return null;
   }
-  const [tileRed, tileGreen, tileBlue] = hexToRgb(background);
+  const [tileRed, tileGreen, tileBlue] = hexToRgb(clearColor);
   const clearLimit = FAVICON_EMBEDDED_TILE_FUSION_CLEAR_DISTANCE;
   const featherLimit = clearLimit + FAVICON_EMBEDDED_TILE_FUSION_FEATHER_DISTANCE;
   const clearLimitSquared = clearLimit ** 2;
@@ -1888,6 +1888,22 @@ const faviconTileDecision = (sample) => {
 }
 
 {
+  const whiteShellSample = rgbaSample(faviconFixtureSize, (x, y, size) => {
+    const inTile = centeredBox(x, y, size, 5);
+    const inGlyph = (x >= 9 && x <= 23 && y >= 10 && y <= 12)
+      || (x >= 11 && x <= 21 && y >= 16 && y <= 18);
+    return inTile ? hexChannels(inGlyph ? "#1677ff" : "#ffffff") : [0, 0, 0, 0];
+  });
+  const { color, tileColors } = faviconTileDecision(whiteShellSample);
+  const fused = fusedEmbeddedFaviconPixelData(whiteShellSample, tileColors.light, rgbChannelsToHex(color.red, color.green, color.blue));
+  assert.equal(color.matchMode, "embedded-tile", "Alipay-like favicon artwork with a white app tile should use the embedded-tile branch.");
+  assert.equal(faviconShouldFuseEmbeddedTile(color, tileColors.light), true, "Embedded favicon tiles should fuse even when the derived carrier differs from the original app-tile color.");
+  assert.ok(fused, "Derived carrier fusion should still produce adjusted pixel data.");
+  assert.equal(samplePixelAlpha(fused, 6, 6), 0, "Original white app-tile pixels become transparent instead of nesting inside Wayleaf's carrier.");
+  assert.ok(samplePixelAlpha(fused, 16, 11) > 230, "Colored site glyph pixels remain opaque after white app-tile fusion.");
+}
+
+{
   const { color, tileColors } = faviconTileDecision(rgbaSample(faviconFixtureSize, (x, y, size) => {
     const inTile = centeredBox(x, y, size, 5);
     const inGlyph = (x >= 9 && x <= 23 && y >= 10 && y <= 12)
@@ -2201,11 +2217,17 @@ assert.equal(localIconForUrlForTest("https://www.doubao.com/chat/"), "icons/site
 assert.equal(localIconForUrlForTest("https://www.kimi.com/"), "icons/sites/kimi.svg", "Kimi should use the deployed local SVG.");
 assert.equal(localIconForUrlForTest("https://chatglm.cn/"), "icons/sites/glm.svg", "GLM/ChatGLM should use the deployed local SVG.");
 assert.equal(localIconForUrlForTest("https://www.douyin.com/search/"), "icons/sites/douyin.svg", "Douyin should use the deployed multicolor local SVG instead of the legacy ico.");
+assert.equal(localIconForUrlForTest("https://www.alipay.com/"), "icons/sites/alipay.svg", "Alipay should use the deployed multicolor local SVG.");
 assert.equal(localIconForUrlForTest("https://www.instagram.com/"), "icons/sites/instagram.svg", "Instagram should use the deployed multicolor local SVG.");
 assert.equal(localIconForUrlForTest("https://huggingface.co/"), "icons/sites/huggingface.svg", "Hugging Face should use the deployed multicolor local SVG.");
 assert.equal(localIconForUrlForTest("https://jimeng.jianying.com/"), "icons/sites/jimeng.svg", "Jimeng should use the deployed multicolor local SVG.");
 assert.equal(localIconForUrlForTest("https://mimo.mi.com/"), "icons/sites/xiaomimimo.svg", "MiMo should use the deployed local SVG.");
 assert.equal(localIconForUrlForTest("https://www.tiktok.com/"), "icons/sites/tiktok.svg", "TikTok should use the deployed multicolor local SVG.");
+assert.deepEqual(
+  brandIconTileColorsForTest("#1677ff", "alipay.com", "icons/sites/alipay.svg"),
+  { light: "#ffffff", dark: "#f8fafc" },
+  "Alipay should follow the Google-like multicolor white-tile strategy."
+);
 assert.deepEqual(
   brandIconTileColorsForTest("#1e37fc", "doubao.com", "icons/sites/doubao.svg"),
   { light: "#ffffff", dark: "#f8fafc" },
