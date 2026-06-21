@@ -55,7 +55,7 @@
 2. 打开 Chrome 的 `chrome://extensions/`。
 3. 打开右上角「开发者模式」。
 4. 点击「加载已解压的扩展程序」。
-5. 选择刚才解压出来、包含 `manifest.json` 的文件夹。
+5. 选择刚才解压出来、包含 `manifest.json` 的文件夹，不要选择项目仓库根目录。
 6. 新建标签页，确认页面已经切换为 `Wayleaf`。
 
 > Chrome 不会直接加载 zip 文件。必须先解压，再选择解压后的目录。
@@ -136,6 +136,14 @@ cd wayleaf
 
 开发时修改 `manifest.json`、`background.js`、`newtab.html`、`newtab.css`、`newtab.js` 或 `ai-submit.js`，然后在 `chrome://extensions/` 的 `Wayleaf` 卡片上点击刷新，再新建标签页检查效果。
 
+如果需要检查真实安装体积，先生成干净的可加载目录，再在 Chrome 中选择 `dist/wayleaf-v1.6.0/`：
+
+```sh
+./scripts/package-release.sh
+```
+
+脚本同时生成可直接上传 Chrome Web Store 的 `dist/wayleaf-v1.6.0.zip`。
+
 可以用本地静态服务器做布局预览，但 Chrome 扩展 API 只有在扩展环境里才完整可用：
 
 ```sh
@@ -172,8 +180,7 @@ node --check ai-submit.js
 发布前检查 zip 根目录是否直接包含 `manifest.json`：
 
 ```sh
-mkdir -p dist
-zip -r -X dist/wayleaf-v1.6.0.zip manifest.json background.js newtab.html newtab.css newtab.js ai-submit.js theme-preload.js icons vendor docs -x '*/._*' '._*' '*.DS_Store' '*/.DS_Store'
+./scripts/package-release.sh
 unzip -t dist/wayleaf-v1.6.0.zip
 ```
 

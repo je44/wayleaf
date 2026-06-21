@@ -55,7 +55,7 @@ Current version: `1.6.0`
 2. Open `chrome://extensions/` in Chrome.
 3. Turn on Developer mode.
 4. Click Load unpacked.
-5. Select the unzipped folder that contains `manifest.json`.
+5. Select the unzipped folder that contains `manifest.json`, not the repository root.
 6. Open a new tab and confirm that it shows `Wayleaf`.
 
 > Chrome does not load the zip file directly. Unzip it first, then load the unzipped folder.
@@ -136,6 +136,14 @@ cd wayleaf
 
 Edit `manifest.json`, `background.js`, `newtab.html`, `newtab.css`, `newtab.js`, or `ai-submit.js`, then click reload on the `Wayleaf` extension card in `chrome://extensions/` and open a new tab.
 
+To check the real installed size, build the clean loadable directory first, then select `dist/wayleaf-v1.6.0/` in Chrome:
+
+```sh
+./scripts/package-release.sh
+```
+
+The same script also creates `dist/wayleaf-v1.6.0.zip` for Chrome Web Store upload.
+
 You can preview the static page with a local server, but Chrome extension APIs only work fully inside the extension environment:
 
 ```sh
@@ -172,8 +180,7 @@ node --check ai-submit.js
 Verify that the release zip has `manifest.json` at its root:
 
 ```sh
-mkdir -p dist
-zip -r -X dist/wayleaf-v1.6.0.zip manifest.json background.js newtab.html newtab.css newtab.js ai-submit.js theme-preload.js icons vendor docs -x '*/._*' '._*' '*.DS_Store' '*/.DS_Store'
+./scripts/package-release.sh
 unzip -t dist/wayleaf-v1.6.0.zip
 ```
 
