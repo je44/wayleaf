@@ -78,7 +78,6 @@ const FAVORITE_DELETE_CANCEL_MS = 280;
 const SEARCH_SUGGESTIONS_EXIT_MS = 260;
 const SEARCH_SUGGESTIONS_OPEN_PADDING_Y = 18;
 const AI_MODE_EXIT_MS = 300;
-const PLATFORM_CONFLICT_ACTIVATION_DELAY_MS = 800;
 const MAX_BOOKMARK_FOLDER_OPTIONS = 160;
 const MAX_PORTAL_FEATURED_ITEMS = 6;
 const MAX_BOOKMARK_PORTAL_ITEMS = 120;
@@ -1222,7 +1221,7 @@ const MESSAGES = {
     searchSettingsAiHint: "触发词用空格或逗号分隔，例如 /gpt /chatgpt。需要登录的平台请先完成首次登录再使用。",
     searchSettingsPlatformTitle: "平台搜索",
     searchSettingsPlatformDescription: "使用以 * 开头的内置激活词直达常用平台搜索结果",
-    searchSettingsPlatformHint: "输入完整的 *平台缩写或名称（例如 *yt 或 *youtube）即可立即切换到对应平台，无需先输入空格或搜索内容；需要登录的平台请先完成首次登录再使用。",
+    searchSettingsPlatformHint: "输入完整的 *平台缩写或名称（例如 *yt 或 *youtube）即可切换到对应平台；若短激活词也是其他平台的开头（如 *x / *xhs），请按空格或回车确认 *x。需要登录的平台请先完成首次登录再使用。",
     searchSettingsPlatformPrefix: "前缀",
     searchSettingsPlatformQuery: "内容",
     searchSettingsBuiltInBadge: "内置",
@@ -1478,7 +1477,7 @@ const MESSAGES = {
     searchSettingsAiHint: "觸發詞用空格或逗號分隔，例如 /gpt /chatgpt。需要登入的平台請先完成首次登入再使用。",
     searchSettingsPlatformTitle: "平台搜尋",
     searchSettingsPlatformDescription: "使用以 * 開頭的內建啟用詞直達常用平台搜尋結果",
-    searchSettingsPlatformHint: "輸入完整的 *平台縮寫或名稱（例如 *yt 或 *youtube）即可立即切換到對應平台，不必先輸入空格或搜尋內容；需要登入的平台請先完成首次登入再使用。",
+    searchSettingsPlatformHint: "輸入完整的 *平台縮寫或名稱（例如 *yt 或 *youtube）即可切換到對應平台；若短啟用詞也是其他平台的開頭（如 *x / *xhs），請按空格或 Enter 確認 *x。需要登入的平台請先完成首次登入再使用。",
     searchSettingsPlatformPrefix: "前綴",
     searchSettingsPlatformQuery: "內容",
     searchSettingsBuiltInBadge: "內建",
@@ -1703,7 +1702,7 @@ const MESSAGES = {
     searchSettingsAiHint: "Separate triggers with spaces or commas, for example /gpt /chatgpt. Sign in to platforms that require login before first use.",
     searchSettingsPlatformTitle: "Platform search",
     searchSettingsPlatformDescription: "Use built-in *-prefixed activators to jump to common platform search results",
-    searchSettingsPlatformHint: "Type a complete * platform abbreviation or name (for example, *yt or *youtube) to switch immediately, without entering a space or query first. Sign in first when a platform requires login.",
+    searchSettingsPlatformHint: "Type a complete * platform abbreviation or name (for example, *yt or *youtube) to switch platforms. When a short activator also starts another platform (such as *x / *xhs), press Space or Enter to confirm *x. Sign in first when a platform requires login.",
     searchSettingsPlatformPrefix: "Prefix",
     searchSettingsPlatformQuery: "query",
     searchSettingsBuiltInBadge: "Built in",
@@ -1857,7 +1856,7 @@ const MESSAGES = {
     searchSettingsAiHint: "トリガーはスペースまたはカンマで区切ります。例: /gpt /chatgpt。ログインが必要なプラットフォームは初回利用前にログインしてください。",
     searchSettingsPlatformTitle: "プラットフォーム検索",
     searchSettingsPlatformDescription: "* で始まる内蔵アクティベーターで主要プラットフォームの検索結果へ移動",
-    searchSettingsPlatformHint: "完全な * プラットフォーム略称または名前（例: *yt、*youtube）を入力すると、スペースや検索内容なしですぐに切り替わります。ログインが必要な場合は先にログインしてください。",
+    searchSettingsPlatformHint: "完全な * プラットフォーム略称または名前（例: *yt、*youtube）を入力すると切り替わります。短いアクティベーターが別の候補の先頭でもある場合（*x / *xhs など）、*x はスペースまたは Enter で確定します。ログインが必要な場合は先にログインしてください。",
     searchSettingsPlatformPrefix: "プレフィックス",
     searchSettingsPlatformQuery: "query",
     searchSettingsBuiltInBadge: "内蔵",
@@ -1948,7 +1947,7 @@ const MESSAGES = {
     searchSettingsAiHint: "트리거는 공백 또는 쉼표로 구분하세요. 예: /gpt /chatgpt. 로그인이 필요한 플랫폼은 먼저 로그인하세요.",
     searchSettingsPlatformTitle: "플랫폼 검색",
     searchSettingsPlatformDescription: "*로 시작하는 내장 활성어로 주요 플랫폼 검색 결과 열기",
-    searchSettingsPlatformHint: "완전한 * 플랫폼 약칭 또는 이름(예: *yt 또는 *youtube)을 입력하면 공백이나 검색어 없이 즉시 전환됩니다. 로그인이 필요한 경우 먼저 로그인하세요.",
+    searchSettingsPlatformHint: "완전한 * 플랫폼 약칭 또는 이름(예: *yt 또는 *youtube)을 입력하면 전환됩니다. 짧은 활성어가 다른 플랫폼의 시작이기도 한 경우(예: *x / *xhs), 스페이스나 Enter로 *x를 확정하세요. 로그인이 필요한 경우 먼저 로그인하세요.",
     searchSettingsPlatformPrefix: "접두어",
     searchSettingsPlatformQuery: "query",
     searchSettingsBuiltInBadge: "내장",
@@ -2039,7 +2038,7 @@ const MESSAGES = {
     searchSettingsAiHint: "Separa los activadores con espacios o comas, por ejemplo /gpt /chatgpt. Inicia sesión antes en las plataformas que lo requieran.",
     searchSettingsPlatformTitle: "Búsqueda de plataformas",
     searchSettingsPlatformDescription: "Usa activadores integrados que empiezan por * para abrir resultados en plataformas comunes",
-    searchSettingsPlatformHint: "Escribe una abreviatura o nombre de plataforma completo con * (por ejemplo, *yt o *youtube) para cambiar de inmediato, sin introducir antes un espacio ni una consulta. Inicia sesión primero si hace falta.",
+    searchSettingsPlatformHint: "Escribe una abreviatura o nombre de plataforma completo con * (por ejemplo, *yt o *youtube) para cambiar. Si un activador corto también inicia otro (como *x / *xhs), pulsa Espacio o Enter para confirmar *x. Inicia sesión primero si hace falta.",
     searchSettingsPlatformPrefix: "Prefijo",
     searchSettingsPlatformQuery: "query",
     searchSettingsBuiltInBadge: "Integrado",
@@ -2130,7 +2129,7 @@ const MESSAGES = {
     searchSettingsAiHint: "Séparez les déclencheurs par des espaces ou des virgules, par exemple /gpt /chatgpt. Connectez-vous d'abord aux plateformes qui l'exigent.",
     searchSettingsPlatformTitle: "Recherche de plateformes",
     searchSettingsPlatformDescription: "Utiliser des déclencheurs intégrés commençant par * pour ouvrir les résultats de plateformes courantes",
-    searchSettingsPlatformHint: "Saisissez une abréviation ou un nom de plateforme complet avec * (par exemple *yt ou *youtube) pour basculer immédiatement, sans espace ni requête préalable. Connectez-vous d'abord si nécessaire.",
+    searchSettingsPlatformHint: "Saisissez une abréviation ou un nom de plateforme complet avec * (par exemple *yt ou *youtube) pour basculer. Si un activateur court commence aussi un autre activateur (comme *x / *xhs), appuyez sur Espace ou Entrée pour confirmer *x. Connectez-vous d'abord si nécessaire.",
     searchSettingsPlatformPrefix: "Préfixe",
     searchSettingsPlatformQuery: "query",
     searchSettingsBuiltInBadge: "Intégré",
@@ -2221,7 +2220,7 @@ const MESSAGES = {
     searchSettingsAiHint: "Auslöser mit Leerzeichen oder Kommas trennen, z. B. /gpt /chatgpt. Melde dich bei Plattformen mit Loginpflicht vor der ersten Nutzung an.",
     searchSettingsPlatformTitle: "Plattformsuche",
     searchSettingsPlatformDescription: "Mit integrierten, mit * beginnenden Aktivierungswörtern Suchergebnisse auf häufigen Plattformen öffnen",
-    searchSettingsPlatformHint: "Gib eine vollständige Plattformabkürzung oder einen Namen mit * ein (zum Beispiel *yt oder *youtube), um sofort ohne vorheriges Leerzeichen oder Suchwort umzuschalten. Melde dich bei Bedarf zuerst an.",
+    searchSettingsPlatformHint: "Gib eine vollständige Plattformabkürzung oder einen Namen mit * ein (zum Beispiel *yt oder *youtube), um umzuschalten. Wenn ein kurzer Aktivator zugleich der Anfang eines anderen ist (wie *x / *xhs), bestätige *x mit Leertaste oder Enter. Melde dich bei Bedarf zuerst an.",
     searchSettingsPlatformPrefix: "Präfix",
     searchSettingsPlatformQuery: "query",
     searchSettingsBuiltInBadge: "Integriert",
@@ -3129,7 +3128,6 @@ let activeSurfacePanelId = "";
 let activeSearchEngine = DEFAULT_SEARCH_ENGINE;
 let selectedLocalSearchEngine = DEFAULT_LOCAL_SEARCH_ENGINE;
 let activePlatformSearchTarget = "";
-let platformActivationTimer = 0;
 let aiModeExitTimer = 0;
 let portalCategoryState = {};
 let activePortalView = "smart";
@@ -5637,6 +5635,12 @@ function handleQuickSearchInputKeydown(event) {
   if (event.key !== "Enter" || event.isComposing) {
     return;
   }
+  const platformMatch = searchPlatformPrefix(quickSearchInput.value);
+  if (platformMatch && searchEngineById(activeSearchEngine).local && !platformMatch.remainder) {
+    event.preventDefault();
+    activatePlatformSearchMatch(platformMatch);
+    return;
+  }
   event.preventDefault();
   submitQuickSearch();
 }
@@ -5668,7 +5672,6 @@ function exitPlatformQuickSearchMode() {
 }
 
 function handleQuickSearchInput() {
-  clearPendingPlatformActivation();
   const commandMatch = searchAiCommand(quickSearchInput.value);
   if (commandMatch) {
     renderPlatformActivationHint("");
@@ -5680,17 +5683,8 @@ function handleQuickSearchInput() {
   const platformMatch = searchPlatformPrefix(platformInput);
   if (platformMatch && searchEngineById(activeSearchEngine).local) {
     if (!platformMatch.remainder && !/\s$/.test(platformInput) && hasConflictingLongerPlatformActivator(platformMatch)) {
-      const pendingValue = platformInput;
-      renderPlatformActivationHint(pendingValue);
+      renderPlatformActivationHint(platformInput);
       hideSearchSuggestions();
-      platformActivationTimer = window.setTimeout(() => {
-        const pendingMatch = quickSearchInput.value === pendingValue
-          ? searchPlatformPrefix(pendingValue)
-          : null;
-        if (pendingMatch?.prefix === platformMatch.prefix && searchEngineById(activeSearchEngine).local) {
-          activatePlatformSearchMatch(pendingMatch);
-        }
-      }, PLATFORM_CONFLICT_ACTIVATION_DELAY_MS);
       return;
     }
     activatePlatformSearchMatch(platformMatch);
@@ -5703,13 +5697,7 @@ function handleQuickSearchInput() {
   renderLocalSearchSuggestions(normalizeText(quickSearchInput.value));
 }
 
-function clearPendingPlatformActivation() {
-  window.clearTimeout(platformActivationTimer);
-  platformActivationTimer = 0;
-}
-
 function activatePlatformSearchMatch(match) {
-  clearPendingPlatformActivation();
   renderPlatformActivationHint("");
   quickSearchInput.value = match.remainder;
   setPlatformQuickSearchTarget(match.platform.id);

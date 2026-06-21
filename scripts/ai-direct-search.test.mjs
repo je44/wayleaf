@@ -6,6 +6,14 @@ const submitSource = readFileSync(new URL("../ai-submit.js", import.meta.url), "
 const backgroundSource = readFileSync(new URL("../background.js", import.meta.url), "utf8");
 const manifest = JSON.parse(readFileSync(new URL("../manifest.json", import.meta.url), "utf8"));
 
+function searchAiCommand(value) {
+  const match = String(value || "").match(/^\/([a-z][a-z0-9-]*)(?:\s+|$)(.*)$/i);
+  if (!match || !["/gpt", "/chatgpt"].includes(`/${match[1].toLowerCase()}`)) {
+    return null;
+  }
+  return match[2] || "";
+}
+
 assert.match(newtabSource, /const AI_DIRECT_PROMPT_STORAGE_KEY = "aiDirectPrompts";/, "New tab prompt handoff must use the shared local storage key.");
 assert.match(newtabSource, /const AI_DIRECT_PROMPT_TOKEN_PARAM = "_wayleaf_prompt";/, "New tab prompt handoff must include a URL token parameter.");
 assert.match(newtabSource, /const AI_DIRECT_PROMPT_TEXT_PARAM = "_wayleaf_text";/, "New tab prompt handoff must include a URL-fragment prompt fallback.");
@@ -28,6 +36,12 @@ assert.match(newtabSource, /const EDITABLE_AI_ENGINE_IDS = \["chatgpt", "claude"
   );
 });
 assert.match(newtabSource, /\{ id: "jimeng"[\s\S]*commands: \["\/jimeng", "\/jm"\][\s\S]*urlPromptFallback: true/, "Jimeng should be an AI engine with a short command and URL-fragment fallback.");
+assert.equal(searchAiCommand("/g"), null, "A partial AI command should remain ordinary input.");
+assert.equal(searchAiCommand("/chat"), null, "A partial long AI alias should remain ordinary input.");
+assert.equal(searchAiCommand("/gptx"), null, "An AI command must match the complete configured command.");
+assert.equal(searchAiCommand("/gpt"), "", "The complete short AI command should activate without prompt text.");
+assert.equal(searchAiCommand("/chatgpt explain this"), "explain this", "The complete long AI command should activate and preserve the prompt.");
+assert.match(newtabSource, /function searchAiCommand\(value\) \{[\s\S]*\(\?:\\s\+\|\$\)[\s\S]*aiEngineCommands\(item\)\.includes\(command\)/, "Production AI activation should require a complete configured command.");
 
 assert.match(submitSource, /const WAYLEAF_STORAGE_KEY = "aiDirectPrompts";/, "Content script must read the shared prompt storage key.");
 assert.match(submitSource, /const WAYLEAF_PROMPT_TOKEN_PARAM = "_wayleaf_prompt";/, "Content script must read and clean the shared prompt token parameter.");

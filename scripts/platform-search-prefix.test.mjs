@@ -114,6 +114,16 @@ function hasConflictingLongerPlatformActivator(match) {
   ));
 }
 
+function platformActivationDecision(value) {
+  const match = searchPlatformPrefix(value);
+  if (!match) {
+    return "search";
+  }
+  return !match.remainder && !/\s$/.test(value) && hasConflictingLongerPlatformActivator(match)
+    ? "confirm"
+    : `activate:${match.platform.id}`;
+}
+
 {
   const url = new URL(platformSearchDestination(targetById.youtube, "lofi beats/东京"));
   assert.equal(url.hostname, "www.youtube.com", "YouTube search should stay on YouTube.");
@@ -199,9 +209,14 @@ assert.deepEqual(
 );
 assert.equal(hasConflictingLongerPlatformActivator(searchPlatformPrefix("*x")), true, "*x should wait because *xhs belongs to a different platform.");
 assert.equal(hasConflictingLongerPlatformActivator(searchPlatformPrefix("*th")), false, "Same-platform *th/*threads aliases should not delay activation.");
+assert.equal(platformActivationDecision("*x"), "confirm", "*x should require an explicit commit because *xhs is still a valid continuation.");
+assert.equal(platformActivationDecision("*xh"), "search", "An incomplete *xhs activator should not enter X mode.");
+assert.equal(platformActivationDecision("*xhs"), "activate:xiaohongshu", "The complete *xhs activator should enter Xiaohongshu mode.");
+assert.equal(platformActivationDecision("*x "), "activate:x", "A trailing space should explicitly commit the complete *x activator.");
 assert.equal(platformSearchActivationHint("query"), null, "Ordinary search text should not show a platform activator hint.");
 assert.match(source, /function searchPlatformPrefix\(value\) \{[\s\S]*\\\*\[a-z\][\s\S]*\(\?:\\s\+\|\$\)\(\.\*\)\$/, "Platform parsing should allow a complete starred activator with no space or query.");
-assert.match(source, /const PLATFORM_CONFLICT_ACTIVATION_DELAY_MS = 800;[\s\S]*hasConflictingLongerPlatformActivator\(platformMatch\)/, "Cross-platform prefix collisions should use a deliberate decision window so longer activators remain typable.");
+assert.doesNotMatch(source, /PLATFORM_CONFLICT_ACTIVATION_DELAY_MS|platformActivationTimer/, "Cross-platform prefix collisions should not activate on a timer.");
+assert.match(source, /handleQuickSearchInputKeydown[\s\S]*searchPlatformPrefix\(quickSearchInput\.value\)[\s\S]*activatePlatformSearchMatch\(platformMatch\)/, "Enter should explicitly commit a complete ambiguous platform activator.");
 assert.match(source, /!\s*\/\\s\$\/\.test\(platformInput\)[\s\S]*hasConflictingLongerPlatformActivator\(platformMatch\)/, "A trailing space should commit the short starred activator instead of waiting for longer alternatives.");
 assert.match(source, /function hasConflictingLongerPlatformActivator\(match\) \{[\s\S]*item\.platform\.id !== match\.platform\.id[\s\S]*item\.prefix\.startsWith\(match\.prefix\)/, "Only activators owned by a different platform should delay the short activator.");
 assert.doesNotMatch(source, /splitLongPlatformPrefix|isPartialSplitPlatformPrefix/, "Removed phrase-and-space compatibility parsing should not remain in production code.");
