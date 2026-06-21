@@ -1182,6 +1182,7 @@ const MESSAGES = {
     quickSearchWith: "使用 {engine} 搜索",
     quickSearchWithGoogleAi: "使用 Google AI搜索",
     quickSearchWithAi: "发送到 {engine}",
+    quickSearchAiPlaceholder: "使用{engine}进行提问",
     quickSearchWithPlatform: "在 {platform} 搜索",
     quickSearchPlatformPlaceholder: "在 {platform} 搜索",
     quickSearchPlatformActivationHint: "输入 {prefix} 激活 {platform}",
@@ -1354,6 +1355,7 @@ const MESSAGES = {
     quickSearchWith: "使用 {engine} 搜尋",
     quickSearchWithGoogleAi: "使用 Google AI搜索",
     quickSearchWithAi: "送到 {engine}",
+    quickSearchAiPlaceholder: "使用{engine}提問",
     quickSearchWithPlatform: "在 {platform} 搜尋",
     quickSearchPlatformPlaceholder: "在 {platform} 搜尋",
     quickSearchPlatformActivationHint: "輸入 {prefix} 啟用 {platform}",
@@ -1667,6 +1669,7 @@ const MESSAGES = {
     quickSearchWith: "Search with {engine}",
     quickSearchWithGoogleAi: "Search with Google AI",
     quickSearchWithAi: "Send to {engine}",
+    quickSearchAiPlaceholder: "Ask with {engine}",
     quickSearchWithPlatform: "Search on {platform}",
     quickSearchPlatformPlaceholder: "Search on {platform}",
     quickSearchPlatformActivationHint: "Type {prefix} for {platform}",
@@ -2356,6 +2359,7 @@ const LOCALE_COMPLETIONS = {
     quickSearchWith: "{engine} で検索",
     quickSearchWithGoogleAi: "Google AI で検索",
     quickSearchWithAi: "{engine} に送信",
+    quickSearchAiPlaceholder: "{engine} に質問",
     quickSearchWithPlatform: "{platform} で検索",
     quickSearchPlatformPlaceholder: "{platform} で検索",
     quickSearchPlatformActivationHint: "{prefix} で {platform} を有効化",
@@ -2511,6 +2515,7 @@ const LOCALE_COMPLETIONS = {
     quickSearchWith: "{engine}로 검색",
     quickSearchWithGoogleAi: "Google AI로 검색",
     quickSearchWithAi: "{engine}에 보내기",
+    quickSearchAiPlaceholder: "{engine}에 질문",
     quickSearchWithPlatform: "{platform}에서 검색",
     quickSearchPlatformPlaceholder: "{platform}에서 검색",
     quickSearchPlatformActivationHint: "{prefix} 입력 시 {platform} 활성화",
@@ -2666,6 +2671,7 @@ const LOCALE_COMPLETIONS = {
     quickSearchWith: "Buscar con {engine}",
     quickSearchWithGoogleAi: "Buscar con Google AI",
     quickSearchWithAi: "Enviar a {engine}",
+    quickSearchAiPlaceholder: "Preguntar con {engine}",
     quickSearchWithPlatform: "Buscar en {platform}",
     quickSearchPlatformPlaceholder: "Buscar en {platform}",
     quickSearchPlatformActivationHint: "Escribe {prefix} para {platform}",
@@ -2821,6 +2827,7 @@ const LOCALE_COMPLETIONS = {
     quickSearchWith: "Rechercher avec {engine}",
     quickSearchWithGoogleAi: "Rechercher avec Google AI",
     quickSearchWithAi: "Envoyer à {engine}",
+    quickSearchAiPlaceholder: "Interroger {engine}",
     quickSearchWithPlatform: "Rechercher sur {platform}",
     quickSearchPlatformPlaceholder: "Rechercher sur {platform}",
     quickSearchPlatformActivationHint: "Saisissez {prefix} pour {platform}",
@@ -2976,6 +2983,7 @@ const LOCALE_COMPLETIONS = {
     quickSearchWith: "Mit {engine} suchen",
     quickSearchWithGoogleAi: "Mit Google AI suchen",
     quickSearchWithAi: "An {engine} senden",
+    quickSearchAiPlaceholder: "Mit {engine} fragen",
     quickSearchWithPlatform: "Auf {platform} suchen",
     quickSearchPlatformPlaceholder: "Auf {platform} suchen",
     quickSearchPlatformActivationHint: "{prefix} aktiviert {platform}",
@@ -4776,7 +4784,11 @@ function updateQuickSearchModeUi() {
   const modeTarget = platform || engine;
   const placeholder = platform
     ? t("quickSearchPlatformPlaceholder", { platform: platform.label })
-    : t("quickSearchPlaceholder");
+    : googleAiSearchModeActive
+      ? t("quickSearchAiPlaceholder", { engine: "Google AI" })
+      : engine.local
+        ? t("quickSearchPlaceholder")
+        : t("quickSearchAiPlaceholder", { engine: searchEngineLabel(engine) });
   const previousThemeColor = quickSearchForm.style.getPropertyValue("--ai-theme-color");
   quickSearchForm.style.setProperty("--ai-theme-color", modeTarget.themeColor || "var(--accent)");
   quickSearchInput.placeholder = placeholder;

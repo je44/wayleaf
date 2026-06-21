@@ -22,6 +22,13 @@ assert.match(newtabSource, /await saveAiDirectPrompt\(token,[\s\S]*engineId: eng
 assert.match(newtabSource, /let destination = engineSearchDestination\(engine, query\);[\s\S]*destination = aiDirectTargetUrl\(targetUrl, token, engine\.urlPromptFallback \? query : ""\);[\s\S]*console\.warn\("Failed to save AI direct prompt before navigation", error\);[\s\S]*window\.location\.assign\(destination\);/, "AI direct search must fall back to the provider query URL if prompt storage fails.");
 assert.match(newtabSource, /function pruneAiDirectPrompts\(prompts\) \{[\s\S]*now - Number\(item\?\.createdAt \|\| 0\) < AI_DIRECT_PROMPT_TTL_MS/, "New tab prompt handoff must prune expired prompts before storage writes.");
 assert.match(newtabSource, /const EDITABLE_AI_ENGINE_IDS = \["chatgpt", "claude", "gemini", "grok", "deepseek", "doubao", "kimi", "glm", "jimeng"\];/, "Search settings should expose all built-in AI direct engines.");
+assert.match(newtabSource, /quickSearchAiPlaceholder:\s*"使用\{engine\}进行提问"/, "Chinese AI mode placeholder should name the active engine.");
+assert.match(newtabSource, /quickSearchAiPlaceholder:\s*"Ask with \{engine\}"/, "English AI mode placeholder should name the active engine.");
+assert.match(
+  newtabSource,
+  /function updateQuickSearchModeUi\(\) \{[\s\S]*googleAiSearchModeActive[\s\S]*t\("quickSearchAiPlaceholder", \{ engine: "Google AI" \}\)[\s\S]*engine\.local[\s\S]*t\("quickSearchPlaceholder"\)[\s\S]*t\("quickSearchAiPlaceholder", \{ engine: searchEngineLabel\(engine\) \}\)/,
+  "AI active modes should replace the default search placeholder with the active AI engine placeholder."
+);
 [
   ["deepseek", "/deepseek", "https://chat.deepseek.com/"],
   ["doubao", "/doubao", "https://www.doubao.com/chat/"],
