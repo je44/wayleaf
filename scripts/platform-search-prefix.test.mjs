@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 
 const source = readFileSync(new URL("../newtab.js", import.meta.url), "utf8");
 const html = readFileSync(new URL("../newtab.html", import.meta.url), "utf8");
+const styles = readFileSync(new URL("../newtab.css", import.meta.url), "utf8");
 
 const targetsMatch = source.match(/const PLATFORM_SEARCH_TARGETS = Object\.freeze\((\[[\s\S]*?\n\])\);/);
 assert.ok(targetsMatch, "Platform search targets should be declared as a testable built-in config.");
@@ -19,20 +20,27 @@ const prefixOwner = new Map();
 for (const target of targets) {
   for (const prefix of target.prefixes) {
     assert.equal(prefix, prefix.toLowerCase(), `${target.id} prefixes should be lowercase.`);
+    assert.equal(prefix.startsWith("*"), true, `${target.id} prefixes should require an explicit * activator.`);
     assert.equal(prefixOwner.has(prefix), false, `${prefix} should not be shared by multiple platforms.`);
     prefixOwner.set(prefix, target.id);
   }
 }
 
-assert.equal(prefixOwner.get("yt"), "youtube", "yt should activate YouTube search.");
-assert.equal(prefixOwner.get("x"), "x", "x should activate X search.");
-assert.equal(prefixOwner.get("xhs"), "xiaohongshu", "xhs should activate Xiaohongshu search.");
-assert.equal(prefixOwner.get("ig"), "instagram", "ig should activate Instagram search.");
-assert.equal(prefixOwner.get("threads"), "threads", "threads should activate Threads search.");
-assert.equal(prefixOwner.get("dy"), "douyin", "dy should activate Douyin search.");
-assert.equal(prefixOwner.get("zhihu"), "zhihu", "zhihu should activate Zhihu search.");
-assert.equal(prefixOwner.get("bili"), "bilibili", "bili should activate Bilibili search.");
-assert.equal(prefixOwner.get("tt"), "tiktok", "tt should activate TikTok search.");
+assert.deepEqual(
+  Object.fromEntries(targets.map((target) => [target.id, target.prefixes])),
+  {
+    youtube: ["*yt", "*youtube"],
+    x: ["*x", "*twitter"],
+    xiaohongshu: ["*xhs", "*rednote"],
+    instagram: ["*ig", "*instagram"],
+    threads: ["*threads", "*th"],
+    douyin: ["*dy", "*douyin"],
+    zhihu: ["*zhihu", "*zh"],
+    bilibili: ["*bili", "*bilibili"],
+    tiktok: ["*tt", "*tiktok"]
+  },
+  "Every platform abbreviation and full-name activator should start with *."
+);
 
 function platformSearchDestination(platform, query) {
   const searchUrl = new URL(platform.searchUrl);
@@ -48,51 +56,8 @@ function platformSearchDestination(platform, query) {
   return searchUrl.href;
 }
 
-function platformSearchPrefixes() {
-  return targets.flatMap((target) => (
-    target.prefixes.map((prefix) => ({
-      platform: target,
-      prefix: prefix.toLowerCase()
-    }))
-  ));
-}
-
-function splitLongPlatformPrefix(prefix, remainder, currentPlatform = null) {
-  const firstTokenMatch = String(remainder || "").match(/^([a-z0-9-]+)(?:\s+(\S.*))?$/i);
-  if (!firstTokenMatch) {
-    return null;
-  }
-  const combinedPrefix = `${prefix}${firstTokenMatch[1].toLowerCase()}`;
-  const match = platformSearchPrefixes().find((item) => (
-    item.prefix.length > prefix.length
-      && item.prefix === combinedPrefix
-      && item.platform.id !== currentPlatform?.id
-  ));
-  if (!match || typeof firstTokenMatch[2] === "undefined") {
-    return null;
-  }
-  return {
-    platform: match.platform,
-    prefix: match.prefix,
-    remainder: firstTokenMatch[2] || ""
-  };
-}
-
-function isPartialSplitPlatformPrefix(prefix, remainder, currentPlatform = null) {
-  const firstTokenMatch = String(remainder || "").match(/^([a-z0-9-]+)$/i);
-  if (!firstTokenMatch) {
-    return false;
-  }
-  const combinedPrefix = `${prefix}${firstTokenMatch[1].toLowerCase()}`;
-  return platformSearchPrefixes().some((item) => (
-    item.prefix.length > prefix.length
-    && item.platform.id !== currentPlatform?.id
-    && item.prefix.startsWith(combinedPrefix)
-  ));
-}
-
 function searchPlatformPrefix(value) {
-  const match = String(value || "").match(/^([a-z][a-z0-9-]*)\s+(\S.*)$/i);
+  const match = String(value || "").match(/^(\*[a-z][a-z0-9-]*)(?:\s+|$)(.*)$/i);
   if (!match) {
     return null;
   }
@@ -101,13 +66,6 @@ function searchPlatformPrefix(value) {
   const platform = targets.find((target) => (
     target.prefixes.some((item) => item.toLowerCase() === prefix)
   ));
-  const splitPrefixMatch = splitLongPlatformPrefix(prefix, remainder, platform);
-  if (splitPrefixMatch) {
-    return splitPrefixMatch;
-  }
-  if (isPartialSplitPlatformPrefix(prefix, remainder, platform)) {
-    return null;
-  }
   if (!platform) {
     return null;
   }
@@ -116,6 +74,44 @@ function searchPlatformPrefix(value) {
     prefix,
     remainder
   };
+}
+
+function platformSearchActivators() {
+  return targets.flatMap((platform, platformIndex) => (
+    platform.prefixes.map((prefix, prefixIndex) => ({
+      platform,
+      prefix: prefix.toLowerCase(),
+      order: (platformIndex * 10) + prefixIndex
+    }))
+  ));
+}
+
+function platformSearchActivationHint(value) {
+  const input = String(value || "").trim().toLowerCase();
+  if (!/^\*[a-z][a-z0-9-]*$/.test(input)) {
+    return null;
+  }
+  const matches = platformSearchActivators()
+    .filter((item) => item.prefix.startsWith(input))
+    .sort((left, right) => (
+      left.prefix.length - right.prefix.length || left.order - right.order
+    ));
+  const match = matches[0];
+  if (!match) {
+    return null;
+  }
+  return {
+    ...match,
+    alternative: match.prefix === input
+      ? matches.find((item) => item.platform.id !== match.platform.id) || null
+      : null
+  };
+}
+
+function hasConflictingLongerPlatformActivator(match) {
+  return platformSearchActivators().some((item) => (
+    item.platform.id !== match.platform.id && item.prefix.startsWith(match.prefix)
+  ));
 }
 
 {
@@ -162,28 +158,59 @@ function searchPlatformPrefix(value) {
 
 assert.equal(targetById.instagram.fallback, true, "Instagram should be marked as a testable web-search fallback.");
 assert.equal(targetById.threads.fallback, true, "Threads should be marked as a testable web-search fallback.");
-assert.equal(searchPlatformPrefix("x "), null, "A bare short prefix and trailing space should not activate without a query.");
-assert.equal(searchPlatformPrefix("x h"), null, "Typing the middle of xhs should not prematurely activate X.");
-assert.equal(searchPlatformPrefix("x hs"), null, "Typing the split middle of xhs should stay uncommitted until a query exists.");
-assert.equal(searchPlatformPrefix("x design").platform.id, "x", "X should still activate when the query is not a split xhs prefix.");
-assert.equal(searchPlatformPrefix("xhs 咖啡").platform.id, "xiaohongshu", "Complete xhs prefix should activate Xiaohongshu.");
+assert.equal(searchPlatformPrefix("*yt").platform.id, "youtube", "A complete starred abbreviation should activate immediately without a query.");
+assert.equal(searchPlatformPrefix("*youtube").platform.id, "youtube", "A complete starred platform name should activate immediately without a query.");
+assert.equal(searchPlatformPrefix("*x ").platform.id, "x", "A starred activator may still include trailing space without requiring query text.");
+assert.equal(searchPlatformPrefix("x design"), null, "Ordinary searches starting with a platform abbreviation should stay ordinary.");
+assert.equal(searchPlatformPrefix("youtube reviews"), null, "Ordinary searches starting with a platform full name should stay ordinary.");
+assert.equal(searchPlatformPrefix("x hs 咖啡"), null, "The removed split phrase-and-space syntax should not activate platform search.");
+assert.equal(searchPlatformPrefix("*x design").platform.id, "x", "A starred short activator should select X.");
+assert.equal(searchPlatformPrefix("*xhs 咖啡").platform.id, "xiaohongshu", "A starred xhs activator should select Xiaohongshu.");
+assert.equal(searchPlatformPrefix("*youtube lofi").platform.id, "youtube", "A starred full-name activator should select YouTube.");
+assert.equal(searchPlatformPrefix("*th readers").platform.id, "threads", "A starred alias should select Threads.");
+assert.equal(searchPlatformPrefix("*zh 知识").platform.id, "zhihu", "A starred alias should select Zhihu.");
+assert.equal(searchPlatformPrefix("*bili AI").platform.id, "bilibili", "A starred short activator should select Bilibili.");
+assert.equal(searchPlatformPrefix("*jm 生成视频"), null, "Jimeng should remain an AI engine command, not a platform activator.");
+assert.equal(searchPlatformPrefix("*tt edits").platform.id, "tiktok", "A starred short activator should select TikTok.");
+assert.deepEqual(
+  { prefix: platformSearchActivationHint("*y").prefix, platform: platformSearchActivationHint("*y").platform.id },
+  { prefix: "*yt", platform: "youtube" },
+  "A first-letter hint should suggest the shortest matching platform activator."
+);
+assert.deepEqual(
+  { prefix: platformSearchActivationHint("*ti").prefix, platform: platformSearchActivationHint("*ti").platform.id },
+  { prefix: "*tiktok", platform: "tiktok" },
+  "A second-letter hint should narrow to the matching platform."
+);
+assert.deepEqual(
+  { prefix: platformSearchActivationHint("*t").prefix, platform: platformSearchActivationHint("*t").platform.id },
+  { prefix: "*th", platform: "threads" },
+  "Ambiguous hints should prefer the shortest activator and stable platform order."
+);
 assert.deepEqual(
   {
-    platform: searchPlatformPrefix("x hs 咖啡").platform.id,
-    prefix: searchPlatformPrefix("x hs 咖啡").prefix,
-    remainder: searchPlatformPrefix("x hs 咖啡").remainder
+    prefix: platformSearchActivationHint("*x").prefix,
+    platform: platformSearchActivationHint("*x").platform.id,
+    alternativePrefix: platformSearchActivationHint("*x").alternative.prefix,
+    alternativePlatform: platformSearchActivationHint("*x").alternative.platform.id
   },
-  { platform: "xiaohongshu", prefix: "xhs", remainder: "咖啡" },
-  "A split xhs prefix should recover to Xiaohongshu once the real query begins."
+  { prefix: "*x", platform: "x", alternativePrefix: "*xhs", alternativePlatform: "xiaohongshu" },
+  "The *x hint should expose Xiaohongshu as the longer conflicting platform activator."
 );
-assert.equal(searchPlatformPrefix("th readers").platform.id, "threads", "Same-platform th/threads aliases should not be blocked by the split-prefix guard.");
-assert.equal(searchPlatformPrefix("zh 知识").platform.id, "zhihu", "Same-platform zh/zhihu aliases should not be blocked by the split-prefix guard.");
-assert.equal(searchPlatformPrefix("bili AI").platform.id, "bilibili", "Bilibili should activate from its short prefix.");
-assert.equal(searchPlatformPrefix("jm 生成视频"), null, "Jimeng should be handled as an AI engine command, not a platform prefix.");
-assert.equal(searchPlatformPrefix("tt edits").platform.id, "tiktok", "TikTok should activate from its short prefix.");
-assert.match(source, /function searchPlatformPrefix\(value\) \{[\s\S]*\\s\+\(\\S\.\*\)\$[\s\S]*splitLongPlatformPrefix[\s\S]*isPartialSplitPlatformPrefix/, "Platform prefix parsing should require real query text and guard split-prefix conflicts.");
+assert.equal(hasConflictingLongerPlatformActivator(searchPlatformPrefix("*x")), true, "*x should wait because *xhs belongs to a different platform.");
+assert.equal(hasConflictingLongerPlatformActivator(searchPlatformPrefix("*th")), false, "Same-platform *th/*threads aliases should not delay activation.");
+assert.equal(platformSearchActivationHint("query"), null, "Ordinary search text should not show a platform activator hint.");
+assert.match(source, /function searchPlatformPrefix\(value\) \{[\s\S]*\\\*\[a-z\][\s\S]*\(\?:\\s\+\|\$\)\(\.\*\)\$/, "Platform parsing should allow a complete starred activator with no space or query.");
+assert.match(source, /const PLATFORM_CONFLICT_ACTIVATION_DELAY_MS = 800;[\s\S]*hasConflictingLongerPlatformActivator\(platformMatch\)/, "Cross-platform prefix collisions should use a deliberate decision window so longer activators remain typable.");
+assert.match(source, /!\s*\/\\s\$\/\.test\(platformInput\)[\s\S]*hasConflictingLongerPlatformActivator\(platformMatch\)/, "A trailing space should commit the short starred activator instead of waiting for longer alternatives.");
+assert.match(source, /function hasConflictingLongerPlatformActivator\(match\) \{[\s\S]*item\.platform\.id !== match\.platform\.id[\s\S]*item\.prefix\.startsWith\(match\.prefix\)/, "Only activators owned by a different platform should delay the short activator.");
+assert.doesNotMatch(source, /splitLongPlatformPrefix|isPartialSplitPlatformPrefix/, "Removed phrase-and-space compatibility parsing should not remain in production code.");
 assert.match(source, /function submitLocalQuickSearch\(query\) \{[\s\S]*platformSearchTargetById\(activePlatformSearchTarget\)[\s\S]*submitPlatformQuickSearch\(platform, query\);/, "Active platform mode should take precedence over regular local search submission.");
 assert.match(source, /function createSearchEngineSuggestion\(query\) \{[\s\S]*selectedPlatformId: platform\.id/, "Search suggestions should carry the active platform target.");
 assert.match(html, /id="platformSearchSettingsList"/, "Search settings should render the built-in platform search module.");
+assert.match(html, /id="platformActivationHint"[^>]+role="status"[^>]+aria-live="polite"/, "The inline platform activator hint should be exposed as a polite live status.");
+assert.match(styles, /\.platform-activation-hint\s*\{[\s\S]*max-width:\s*min\(220px, 42%\);[\s\S]*text-overflow:\s*ellipsis;/, "The trial hint should stay compact in the search box's right edge.");
+assert.match(source, /function renderPlatformActivationHint\(value\) \{[\s\S]*quickSearchPlatformActivationHint[\s\S]*platformActivationHint\.hidden = false;/, "The partial activator hint should name the completion and target platform.");
+assert.match(source, /match\.alternative[\s\S]*match\.prefix[\s\S]*match\.alternative\.prefix/, "The *x conflict hint should display both platform choices while activation is pending.");
 
 console.log("platform search prefix fixtures passed");

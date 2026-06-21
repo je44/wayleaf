@@ -41,6 +41,7 @@
             </span>
             <div class="quick-search-entry">
               <input id="quickSearchInput" name="q" type="search" autocomplete="off" spellcheck="false" placeholder="Search or enter URL">
+              <span class="platform-activation-hint" id="platformActivationHint" role="status" aria-live="polite" aria-atomic="true" hidden></span>
             </div>
             <span class="quick-search-settings" aria-hidden="true">
               <svg class="tdesign-icon" viewBox="0 0 24 24" focusable="false">
@@ -357,12 +358,12 @@
               <div class="settings-group-heading">
                 <div>
                   <h3 id="searchSettingsPlatformTitle">Platform search</h3>
-                  <p>Use built-in prefixes to open common platform search results</p>
+                  <p>Use built-in *-prefixed activators to open common platform search results</p>
                 </div>
               </div>
               <div class="settings-group-control">
                 <div class="engine-settings-list platform-search-settings-list" id="platformSearchSettingsList"></div>
-                <p class="settings-group-note">Typing formats like yt query, xhs query, or dy query switches the search box to that platform. Sign in first where required.</p>
+                <p class="settings-group-note">Type a complete * activator, such as *yt or *youtube, to switch platform search immediately. Sign in first where required.</p>
               </div>
             </section>
           </form>

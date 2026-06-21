@@ -167,6 +167,12 @@ assert.match(adaptiveIconRefresh, /document\.documentElement\.dataset\.theme ===
 assert.doesNotMatch(adaptiveIconRefresh, /requestAnimationFrame/,
   "Theme switching must not start a per-icon frame loop that can run forever for lower-contrast brand colors.");
 
+const initialIconRender = source.match(/function displayIconSource\(icon, source, options = \{\}\) \{[\s\S]*?\n\}/)?.[0] || "";
+assert.match(initialIconRender, /const requestTheme = document\.documentElement\.dataset\.theme;[\s\S]*iconThemeRequest/,
+  "Initial SVG rendering should capture the theme and share the per-icon request token with theme refreshes.");
+assert.match(initialIconRender, /icon\.dataset\.iconThemeRequest === requestToken[\s\S]*document\.documentElement\.dataset\.theme === requestTheme/,
+  "An initial SVG render from an obsolete theme must not overwrite the current glyph.");
+
 assert.doesNotMatch(
   source,
   /fetch\(`\$\{SITE_ICON_DIRECTORY\}\/index\.json`,\s*\{\s*cache:\s*"no-store"\s*\}\)/,

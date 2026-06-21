@@ -133,7 +133,7 @@ assert.match(
 
 assert.match(
   source,
-  /const SETTINGS_TAB_ICONS = Object\.freeze\(\{[\s\S]*basic:\s*\{ inactive:\s*"setting", active:\s*"setting-filled" \},[\s\S]*search:\s*\{ inactive:\s*"ai-search", active:\s*"ai-search-filled" \}/,
+  /const SETTINGS_TAB_ICONS = Object\.freeze\(\{[\s\S]*basic:\s*\{ inactive:\s*"system-setting", active:\s*"system-setting-filled" \},[\s\S]*search:\s*\{ inactive:\s*"ai-search", active:\s*"ai-search-filled" \}/,
   "Settings tab icons should be data-mapped so future settings sections can be added in code without rendering placeholder slots."
 );
 

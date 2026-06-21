@@ -36,7 +36,7 @@ Most new-tab sessions start with the same small set of actions: open a frequent 
 
 | What you want to do | How Wayleaf handles it |
 | --- | --- |
-| Search or open a site | The search box supports local history/bookmarks, full URLs, Google, Baidu, Bing, aggregate Google+Bing search, and platform prefixes such as `yt query` or `xhs query`. |
+| Search or open a site | The search box supports local history/bookmarks, full URLs, Google, Baidu, Bing, aggregate Google+Bing search, and immediate platform activators such as `*yt` or `*xhs`. |
 | Manage frequent destinations | Built-in categories cover search, social, shopping, developer, productivity, media, design, and AI sites; custom shortcuts are supported. |
 | Continue recent browsing | Recent pages are grouped by repeat visits per site, with pin and delete actions for important or noisy pages. |
 | Show a bookmark folder | Pick one Chrome bookmark folder; Wayleaf highlights sites added in the last 3 days and groups the rest by title initial. |
@@ -66,7 +66,7 @@ Current version: `1.6.0`
 | --- | --- |
 | Type a keyword and press Enter | Search with the current engine. |
 | Type a full URL and press Enter | Open the URL directly. |
-| Type `yt query`, `x query`, `xhs query`, `ig query`, `threads query`, `dy query`, or `zhihu query` | Switch the search box to that platform and open the platform search results on Enter. |
+| Type a complete `*` platform abbreviation or name, such as `*yt` or `*youtube` | Switch immediately without entering a space or query first, then type the query and press Enter. After the first or second letter, an inline hint shows an activator you can complete. |
 | Choose the default engine in Settings | Change the search provider used for regular keyword searches. |
 | Pick a local search result | Open a matching history item or bookmark. |
 | Add an item in the navigation hub | Save a titled `http` or `https` shortcut in a category. |
@@ -91,13 +91,15 @@ Built-in platform search prefixes:
 
 | Prefix | Platform | Behavior |
 | --- | --- | --- |
-| `yt` / `youtube` | YouTube | Opens YouTube search results. |
-| `x` / `twitter` | X | Opens X search results; sign in first if required. |
-| `xhs` / `rednote` | Xiaohongshu / RedNote | Opens Xiaohongshu search results; sign in first if required. |
-| `ig` / `instagram` | Instagram | Uses the Instagram web search entry; if the site limits search, the encoded query remains recoverable. |
-| `threads` / `th` | Threads | Uses the Threads web search entry; if the site limits search, the encoded query remains recoverable. |
-| `dy` / `douyin` | Douyin | Opens Douyin search results; sign in first if required. |
-| `zhihu` / `zh` | Zhihu | Opens Zhihu search results. |
+| `*yt` / `*youtube` | YouTube | Opens YouTube search results. |
+| `*x` / `*twitter` | X | Opens X search results; sign in first if required. |
+| `*xhs` / `*rednote` | Xiaohongshu / RedNote | Opens Xiaohongshu search results; sign in first if required. |
+| `*ig` / `*instagram` | Instagram | Uses the Instagram web search entry; if the site limits search, the encoded query remains recoverable. |
+| `*threads` / `*th` | Threads | Uses the Threads web search entry; if the site limits search, the encoded query remains recoverable. |
+| `*dy` / `*douyin` | Douyin | Opens Douyin search results; sign in first if required. |
+| `*zhihu` / `*zh` | Zhihu | Opens Zhihu search results. |
+| `*bili` / `*bilibili` | Bilibili | Opens Bilibili search results. |
+| `*tt` / `*tiktok` | TikTok | Opens TikTok search results; sign in first if required. |
 
 Search Settings shows the built-in AI engines, triggers, search links, and the platform search prefixes with behavior notes.
 

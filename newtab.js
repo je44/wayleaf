@@ -78,6 +78,7 @@ const FAVORITE_DELETE_CANCEL_MS = 280;
 const SEARCH_SUGGESTIONS_EXIT_MS = 260;
 const SEARCH_SUGGESTIONS_OPEN_PADDING_Y = 18;
 const AI_MODE_EXIT_MS = 300;
+const PLATFORM_CONFLICT_ACTIVATION_DELAY_MS = 800;
 const MAX_BOOKMARK_FOLDER_OPTIONS = 160;
 const MAX_PORTAL_FEATURED_ITEMS = 6;
 const MAX_BOOKMARK_PORTAL_ITEMS = 120;
@@ -316,7 +317,7 @@ const THEME_MODE_ICON_BY_MODE = Object.freeze({
   dark: "moon-filled"
 });
 const SETTINGS_TAB_ICONS = Object.freeze({
-  basic: { inactive: "setting", active: "setting-filled" },
+  basic: { inactive: "system-setting", active: "system-setting-filled" },
   search: { inactive: "ai-search", active: "ai-search-filled" }
 });
 const CUSTOM_THEME_PALETTE_ID = "custom";
@@ -576,15 +577,15 @@ const DEFAULT_SEARCH_ENGINES = [
   { id: "jimeng", command: "/jimeng", commands: ["/jimeng", "/jm"], label: "即梦", searchUrl: "https://jimeng.jianying.com/ai-tool/home", queryParam: "q", aiDirect: true, autoSubmit: true, directUrl: "https://jimeng.jianying.com/ai-tool/home", themeColor: "#1c6fff", urlPromptFallback: true }
 ];
 const PLATFORM_SEARCH_TARGETS = Object.freeze([
-  { id: "youtube", label: "YouTube", prefixes: ["yt", "youtube"], searchUrl: "https://www.youtube.com/results", queryParam: "search_query", iconUrl: "https://www.youtube.com/", themeColor: "#ff0000", behaviorKey: "platformSearchDirectBehavior" },
-  { id: "x", label: "X", prefixes: ["x", "twitter"], searchUrl: "https://x.com/search", queryParam: "q", searchParams: { src: "typed_query" }, iconUrl: "https://x.com/", themeColor: "#000000", behaviorKey: "platformSearchLoginBehavior" },
-  { id: "xiaohongshu", label: "小红书", prefixes: ["xhs", "rednote"], searchUrl: "https://www.xiaohongshu.com/search_result", queryParam: "keyword", searchParams: { source: "web_explore_feed" }, iconUrl: "https://www.xiaohongshu.com/", themeColor: "#ff2442", behaviorKey: "platformSearchLoginBehavior" },
-  { id: "instagram", label: "Instagram", prefixes: ["ig", "instagram"], searchUrl: "https://www.instagram.com/explore/search/keyword/", queryParam: "q", iconUrl: "https://www.instagram.com/", fallback: true, themeColor: "#e4405f", behaviorKey: "platformSearchFallbackBehavior" },
-  { id: "threads", label: "Threads", prefixes: ["threads", "th"], searchUrl: "https://www.threads.com/search", queryParam: "q", iconUrl: "https://www.threads.com/", fallback: true, themeColor: "#000000", behaviorKey: "platformSearchFallbackBehavior" },
-  { id: "douyin", label: "抖音", prefixes: ["dy", "douyin"], searchUrl: "https://www.douyin.com/search/", pathQuery: true, searchParams: { type: "general" }, iconUrl: "https://www.douyin.com/", themeColor: "#000000", behaviorKey: "platformSearchLoginBehavior" },
-  { id: "zhihu", label: "知乎", prefixes: ["zhihu", "zh"], searchUrl: "https://www.zhihu.com/search", queryParam: "q", searchParams: { type: "content" }, iconUrl: "https://www.zhihu.com/", themeColor: "#0084ff", behaviorKey: "platformSearchDirectBehavior" },
-  { id: "bilibili", label: "Bilibili", prefixes: ["bili", "bilibili"], searchUrl: "https://search.bilibili.com/all", queryParam: "keyword", iconUrl: "https://www.bilibili.com/", themeColor: "#00a1d6", behaviorKey: "platformSearchDirectBehavior" },
-  { id: "tiktok", label: "TikTok", prefixes: ["tt", "tiktok"], searchUrl: "https://www.tiktok.com/search", queryParam: "q", iconUrl: "https://www.tiktok.com/", themeColor: "#000000", behaviorKey: "platformSearchLoginBehavior" }
+  { id: "youtube", label: "YouTube", prefixes: ["*yt", "*youtube"], searchUrl: "https://www.youtube.com/results", queryParam: "search_query", iconUrl: "https://www.youtube.com/", themeColor: "#ff0000", behaviorKey: "platformSearchDirectBehavior" },
+  { id: "x", label: "X", prefixes: ["*x", "*twitter"], searchUrl: "https://x.com/search", queryParam: "q", searchParams: { src: "typed_query" }, iconUrl: "https://x.com/", themeColor: "#000000", behaviorKey: "platformSearchLoginBehavior" },
+  { id: "xiaohongshu", label: "小红书", prefixes: ["*xhs", "*rednote"], searchUrl: "https://www.xiaohongshu.com/search_result", queryParam: "keyword", searchParams: { source: "web_explore_feed" }, iconUrl: "https://www.xiaohongshu.com/", themeColor: "#ff2442", behaviorKey: "platformSearchLoginBehavior" },
+  { id: "instagram", label: "Instagram", prefixes: ["*ig", "*instagram"], searchUrl: "https://www.instagram.com/explore/search/keyword/", queryParam: "q", iconUrl: "https://www.instagram.com/", fallback: true, themeColor: "#e4405f", behaviorKey: "platformSearchFallbackBehavior" },
+  { id: "threads", label: "Threads", prefixes: ["*threads", "*th"], searchUrl: "https://www.threads.com/search", queryParam: "q", iconUrl: "https://www.threads.com/", fallback: true, themeColor: "#000000", behaviorKey: "platformSearchFallbackBehavior" },
+  { id: "douyin", label: "抖音", prefixes: ["*dy", "*douyin"], searchUrl: "https://www.douyin.com/search/", pathQuery: true, searchParams: { type: "general" }, iconUrl: "https://www.douyin.com/", themeColor: "#000000", behaviorKey: "platformSearchLoginBehavior" },
+  { id: "zhihu", label: "知乎", prefixes: ["*zhihu", "*zh"], searchUrl: "https://www.zhihu.com/search", queryParam: "q", searchParams: { type: "content" }, iconUrl: "https://www.zhihu.com/", themeColor: "#0084ff", behaviorKey: "platformSearchDirectBehavior" },
+  { id: "bilibili", label: "Bilibili", prefixes: ["*bili", "*bilibili"], searchUrl: "https://search.bilibili.com/all", queryParam: "keyword", iconUrl: "https://www.bilibili.com/", themeColor: "#00a1d6", behaviorKey: "platformSearchDirectBehavior" },
+  { id: "tiktok", label: "TikTok", prefixes: ["*tt", "*tiktok"], searchUrl: "https://www.tiktok.com/search", queryParam: "q", iconUrl: "https://www.tiktok.com/", themeColor: "#000000", behaviorKey: "platformSearchLoginBehavior" }
 ]);
 let searchEngines = DEFAULT_SEARCH_ENGINES.map(cloneSearchEngine);
 const AGGREGATE_SEARCH_ENGINE_IDS = ["google", "baidu", "bing"];
@@ -637,6 +638,7 @@ const BOOKMARK_CATEGORY_RULES = {
 const SITE_NAME_BY_KEY = {
   "b.ai": "B.AI",
   "bilibili.com": "哔哩哔哩",
+  "bitbucket.org": "Bitbucket",
   "chatgpt.com": "ChatGPT",
   "cloudflare.com": "Cloudflare",
   "developer.mozilla.org": "MDN",
@@ -645,6 +647,14 @@ const SITE_NAME_BY_KEY = {
   "docs.b.ai": "B.AI Docs",
   "doubao.com": "豆包",
   "drive.google.com": "Google Drive",
+  "aistudio.google.com": "Google AI Studio",
+  "aws.amazon.com": "AWS",
+  "azure.microsoft.com": "Microsoft Azure",
+  "chrome.google.com": "Chrome Web Store",
+  "cloud.google.com": "Google Cloud",
+  "colab.research.google.com": "Google Colab",
+  "firefly.adobe.com": "Adobe Firefly",
+  "firebase.google.com": "Firebase",
   "figma.com": "Figma",
   "github.com": "GitHub",
   "gmail.com": "Gmail",
@@ -654,9 +664,11 @@ const SITE_NAME_BY_KEY = {
   "linkedin.com": "LinkedIn",
   "npmjs.com": "npm",
   "notion.so": "Notion",
+  "office.com": "Microsoft 365",
   "react.dev": "React",
   "stackoverflow.com": "Stack Overflow",
   "taobao.com": "淘宝",
+  "teams.microsoft.com": "Microsoft Teams",
   "threads.com": "Threads",
   "trip.com": "Trip.com",
   "vercel.com": "Vercel",
@@ -666,6 +678,14 @@ const SITE_NAME_BY_KEY = {
   "zhihu.com": "知乎"
 };
 const SITE_GROUP_OVERRIDES = {
+  "ai.google.dev": "aistudio.google.com",
+  "aistudio.google.com": "aistudio.google.com",
+  "makersuite.google.com": "aistudio.google.com",
+  "cloud.google.com": "cloud.google.com",
+  "console.cloud.google.com": "cloud.google.com",
+  "colab.research.google.com": "colab.research.google.com",
+  "chromewebstore.google.com": "chrome.google.com",
+  "youtu.be": "youtube.com",
   "docs.b.ai": "docs.b.ai",
   "calendar.google.com": "calendar.google.com",
   "drive.google.com": "drive.google.com",
@@ -673,7 +693,21 @@ const SITE_GROUP_OVERRIDES = {
   "console.firebase.google.com": "firebase.google.com",
   "firebase.google.com": "firebase.google.com",
   "mail.google.com": "gmail.com",
+  "chat.openai.com": "chatgpt.com",
+  "hf.co": "huggingface.co",
+  "discord.gg": "discord.com",
+  "discordapp.com": "discord.com",
+  "firefly.adobe.com": "firefly.adobe.com",
+  "console.aws.amazon.com": "aws.amazon.com",
+  "docs.aws.amazon.com": "aws.amazon.com",
+  "signin.aws.amazon.com": "aws.amazon.com",
+  "portal.azure.com": "azure.microsoft.com",
+  "admin.microsoft.com": "office.com",
+  "microsoft365.com": "office.com",
   "teams.microsoft.com": "teams.microsoft.com",
+  "teams.live.com": "teams.microsoft.com",
+  "jira.atlassian.com": "atlassian.net",
+  "bitbucket.atlassian.com": "bitbucket.org",
   "www.office.com": "office.com",
   "music.163.com": "music.163.com",
   "developer.mozilla.org": "developer.mozilla.org",
@@ -686,7 +720,6 @@ const SITE_GROUP_OVERRIDES = {
   "googleads.google.com": "googleads.google.com",
   "chat.deepseek.com": "deepseek.com",
   "chatglm.cn": "chatglm.cn",
-  "drive.google.com": "drive.google.com",
   "jimeng.jianying.com": "jimeng.jianying.com",
   "kimi.moonshot.cn": "kimi.com",
   "maps.google.com": "maps.google.com",
@@ -807,12 +840,19 @@ const SITE_ICON_FILE_BY_SITE_KEY = Object.freeze({
   "1688.com": "1688.ico",
   "alibaba.com": "alibabadotcom.svg",
   "analytics.google.com": "googleanalytics.svg",
+  "aistudio.google.com": "aistudio.svg",
+  "aws.amazon.com": "aws.svg",
   "atlassian.net": "jira.svg",
+  "azure.microsoft.com": "azure.svg",
   "b.ai": "bai.png",
+  "bitbucket.org": "bitbucket.svg",
   "booking.com": "bookingdotcom.svg",
   "bsky.app": "bluesky.svg",
   "calendar.google.com": "googlecalendar.svg",
+  "chrome.google.com": "chrome.svg",
+  "cloud.google.com": "googlecloud.svg",
   "code.visualstudio.com": "visualstudiocode.svg",
+  "colab.research.google.com": "colab.svg",
   "datadoghq.com": "datadog.svg",
   "developer.mozilla.org": "mdn.svg",
   "chatglm.cn": "glm.svg",
@@ -822,6 +862,8 @@ const SITE_ICON_FILE_BY_SITE_KEY = Object.freeze({
   "douyin.com": "douyin.svg",
   "drive.google.com": "googledrive.svg",
   "feishu.cn": "feishu.png",
+  "firefly.adobe.com": "adobefirefly.svg",
+  "firebase.google.com": "firebase.svg",
   "gemini.google.com": "googlegemini.svg",
   "itch.io": "itchdotio.svg",
   "jd.com": "jd.svg",
@@ -903,13 +945,21 @@ const SITE_ICON_TILE_COLOR_BY_SITE_KEY = Object.freeze({
   "anthropic.com": "#191919",
   "apple.com": "#000000",
   "atlassian.com": "#0052cc",
+  "atlassian.net": "#0052cc",
+  "aistudio.google.com": "#4285f4",
+  "aws.amazon.com": "#ff9900",
+  "azure.microsoft.com": "#0078d4",
   "baidu.com": "#2932e1",
   "bilibili.com": "#00a1d6",
   "bing.com": "#258ffa",
+  "bitbucket.org": "#0052cc",
   "canva.com": "#00c4cc",
   "chatgpt.com": "#ffffff",
   "claude.ai": "#d97757",
   "cloudflare.com": "#f38020",
+  "cloud.google.com": "#4285f4",
+  "colab.research.google.com": "#f9ab00",
+  "chrome.google.com": "#4285f4",
   "cursor.com": "#000000",
   "deepseek.com": "#4d6bfe",
   "discord.com": "#5865f2",
@@ -921,6 +971,8 @@ const SITE_ICON_TILE_COLOR_BY_SITE_KEY = Object.freeze({
   "douyin.com": "#000000",
   "duckduckgo.com": "#de5833",
   "figma.com": "#f24e1e",
+  "firefly.adobe.com": "#ff0000",
+  "firebase.google.com": "#dd2c00",
   "framer.com": "#000000",
   "calendar.google.com": "#4285f4",
   "gemini.google.com": "#4285f4",
@@ -962,6 +1014,7 @@ const SITE_ICON_TILE_COLOR_BY_SITE_KEY = Object.freeze({
   "tmall.com": "#ff0036",
   "uizard.io": "#00f9e5",
   "vercel.com": "#000000",
+  "wechat.com": "#07c160",
   "weibo.com": "#e6162d",
   "x.com": "#000000",
   "xiaohongshu.com": "#ff2442",
@@ -973,6 +1026,9 @@ const SITE_ICON_TILE_COLOR_BY_SITE_KEY = Object.freeze({
 const MULTICOLOR_BRAND_ICON_SITE_KEYS = new Set([
   "bing.com",
   "calendar.google.com",
+  "chrome.google.com",
+  "cloud.google.com",
+  "colab.research.google.com",
   "doubao.com",
   "douyin.com",
   "docs.google.com",
@@ -1110,6 +1166,7 @@ const MESSAGES = {
     quickSearchWithAi: "发送到 {engine}",
     quickSearchWithPlatform: "在 {platform} 搜索",
     quickSearchPlatformPlaceholder: "在 {platform} 搜索",
+    quickSearchPlatformActivationHint: "输入 {prefix} 激活 {platform}",
     localSearchHistory: "历史",
     localSearchBookmark: "书签",
     localSearchNoResults: "没有匹配的历史或书签。",
@@ -1164,8 +1221,8 @@ const MESSAGES = {
     searchSettingsAiDescription: "修改内建 AI 引擎的名称、触发词和搜索链接",
     searchSettingsAiHint: "触发词用空格或逗号分隔，例如 /gpt /chatgpt。需要登录的平台请先完成首次登录再使用。",
     searchSettingsPlatformTitle: "平台搜索",
-    searchSettingsPlatformDescription: "使用内置前缀直达常用平台搜索结果",
-    searchSettingsPlatformHint: "输入 yt 内容、x 内容、xhs 内容、ig 内容、threads 内容、dy 内容或 zhihu 内容时，搜索框会切换到对应平台；需要登录的平台请先完成首次登录再使用。",
+    searchSettingsPlatformDescription: "使用以 * 开头的内置激活词直达常用平台搜索结果",
+    searchSettingsPlatformHint: "输入完整的 *平台缩写或名称（例如 *yt 或 *youtube）即可立即切换到对应平台，无需先输入空格或搜索内容；需要登录的平台请先完成首次登录再使用。",
     searchSettingsPlatformPrefix: "前缀",
     searchSettingsPlatformQuery: "内容",
     searchSettingsBuiltInBadge: "内置",
@@ -1279,6 +1336,7 @@ const MESSAGES = {
     quickSearchWithAi: "送到 {engine}",
     quickSearchWithPlatform: "在 {platform} 搜尋",
     quickSearchPlatformPlaceholder: "在 {platform} 搜尋",
+    quickSearchPlatformActivationHint: "輸入 {prefix} 啟用 {platform}",
     portalCategoryItems: "{count} 個入口",
     portalCategories: "智能分類",
     portalCategoriesExpand: "展開",
@@ -1419,8 +1477,8 @@ const MESSAGES = {
     searchSettingsAiDescription: "修改內建 AI 引擎的名稱、觸發詞和搜尋連結",
     searchSettingsAiHint: "觸發詞用空格或逗號分隔，例如 /gpt /chatgpt。需要登入的平台請先完成首次登入再使用。",
     searchSettingsPlatformTitle: "平台搜尋",
-    searchSettingsPlatformDescription: "使用內建前綴直達常用平台搜尋結果",
-    searchSettingsPlatformHint: "輸入 yt 內容、x 內容、xhs 內容、ig 內容、threads 內容、dy 內容或 zhihu 內容時，搜尋框會切換到對應平台；需要登入的平台請先完成首次登入再使用。",
+    searchSettingsPlatformDescription: "使用以 * 開頭的內建啟用詞直達常用平台搜尋結果",
+    searchSettingsPlatformHint: "輸入完整的 *平台縮寫或名稱（例如 *yt 或 *youtube）即可立即切換到對應平台，不必先輸入空格或搜尋內容；需要登入的平台請先完成首次登入再使用。",
     searchSettingsPlatformPrefix: "前綴",
     searchSettingsPlatformQuery: "內容",
     searchSettingsBuiltInBadge: "內建",
@@ -1589,6 +1647,7 @@ const MESSAGES = {
     quickSearchWithAi: "Send to {engine}",
     quickSearchWithPlatform: "Search on {platform}",
     quickSearchPlatformPlaceholder: "Search on {platform}",
+    quickSearchPlatformActivationHint: "Type {prefix} for {platform}",
     localSearchHistory: "History",
     localSearchBookmark: "Bookmark",
     localSearchNoResults: "No matching history or bookmarks.",
@@ -1643,8 +1702,8 @@ const MESSAGES = {
     searchSettingsAiDescription: "Edit built-in AI engine names, triggers, and search links",
     searchSettingsAiHint: "Separate triggers with spaces or commas, for example /gpt /chatgpt. Sign in to platforms that require login before first use.",
     searchSettingsPlatformTitle: "Platform search",
-    searchSettingsPlatformDescription: "Use built-in prefixes to jump to common platform search results",
-    searchSettingsPlatformHint: "Type yt query, x query, xhs query, ig query, threads query, dy query, or zhihu query to switch the search box to that platform. Sign in first when a platform requires login.",
+    searchSettingsPlatformDescription: "Use built-in *-prefixed activators to jump to common platform search results",
+    searchSettingsPlatformHint: "Type a complete * platform abbreviation or name (for example, *yt or *youtube) to switch immediately, without entering a space or query first. Sign in first when a platform requires login.",
     searchSettingsPlatformPrefix: "Prefix",
     searchSettingsPlatformQuery: "query",
     searchSettingsBuiltInBadge: "Built in",
@@ -1797,8 +1856,8 @@ const MESSAGES = {
     searchSettingsAiDescription: "内蔵 AI エンジンの名前、トリガー、検索リンクを編集",
     searchSettingsAiHint: "トリガーはスペースまたはカンマで区切ります。例: /gpt /chatgpt。ログインが必要なプラットフォームは初回利用前にログインしてください。",
     searchSettingsPlatformTitle: "プラットフォーム検索",
-    searchSettingsPlatformDescription: "内蔵プレフィックスで主要プラットフォームの検索結果へ移動",
-    searchSettingsPlatformHint: "yt query、x query、xhs query、ig query、threads query、dy query、zhihu query と入力すると、そのプラットフォーム検索に切り替わります。ログインが必要な場合は先にログインしてください。",
+    searchSettingsPlatformDescription: "* で始まる内蔵アクティベーターで主要プラットフォームの検索結果へ移動",
+    searchSettingsPlatformHint: "完全な * プラットフォーム略称または名前（例: *yt、*youtube）を入力すると、スペースや検索内容なしですぐに切り替わります。ログインが必要な場合は先にログインしてください。",
     searchSettingsPlatformPrefix: "プレフィックス",
     searchSettingsPlatformQuery: "query",
     searchSettingsBuiltInBadge: "内蔵",
@@ -1888,8 +1947,8 @@ const MESSAGES = {
     searchSettingsAiDescription: "내장 AI 엔진의 이름, 트리거, 검색 링크 편집",
     searchSettingsAiHint: "트리거는 공백 또는 쉼표로 구분하세요. 예: /gpt /chatgpt. 로그인이 필요한 플랫폼은 먼저 로그인하세요.",
     searchSettingsPlatformTitle: "플랫폼 검색",
-    searchSettingsPlatformDescription: "내장 접두어로 주요 플랫폼 검색 결과 열기",
-    searchSettingsPlatformHint: "yt query, x query, xhs query, ig query, threads query, dy query, zhihu query 형식으로 입력하면 해당 플랫폼 검색으로 전환됩니다. 로그인이 필요한 경우 먼저 로그인하세요.",
+    searchSettingsPlatformDescription: "*로 시작하는 내장 활성어로 주요 플랫폼 검색 결과 열기",
+    searchSettingsPlatformHint: "완전한 * 플랫폼 약칭 또는 이름(예: *yt 또는 *youtube)을 입력하면 공백이나 검색어 없이 즉시 전환됩니다. 로그인이 필요한 경우 먼저 로그인하세요.",
     searchSettingsPlatformPrefix: "접두어",
     searchSettingsPlatformQuery: "query",
     searchSettingsBuiltInBadge: "내장",
@@ -1979,8 +2038,8 @@ const MESSAGES = {
     searchSettingsAiDescription: "Edita nombres, activadores y enlaces de búsqueda de los motores de IA integrados",
     searchSettingsAiHint: "Separa los activadores con espacios o comas, por ejemplo /gpt /chatgpt. Inicia sesión antes en las plataformas que lo requieran.",
     searchSettingsPlatformTitle: "Búsqueda de plataformas",
-    searchSettingsPlatformDescription: "Usa prefijos integrados para abrir resultados en plataformas comunes",
-    searchSettingsPlatformHint: "Escribe yt query, x query, xhs query, ig query, threads query, dy query o zhihu query para cambiar la búsqueda a esa plataforma. Inicia sesión primero si hace falta.",
+    searchSettingsPlatformDescription: "Usa activadores integrados que empiezan por * para abrir resultados en plataformas comunes",
+    searchSettingsPlatformHint: "Escribe una abreviatura o nombre de plataforma completo con * (por ejemplo, *yt o *youtube) para cambiar de inmediato, sin introducir antes un espacio ni una consulta. Inicia sesión primero si hace falta.",
     searchSettingsPlatformPrefix: "Prefijo",
     searchSettingsPlatformQuery: "query",
     searchSettingsBuiltInBadge: "Integrado",
@@ -2070,8 +2129,8 @@ const MESSAGES = {
     searchSettingsAiDescription: "Modifier les noms, déclencheurs et liens de recherche des moteurs IA intégrés",
     searchSettingsAiHint: "Séparez les déclencheurs par des espaces ou des virgules, par exemple /gpt /chatgpt. Connectez-vous d'abord aux plateformes qui l'exigent.",
     searchSettingsPlatformTitle: "Recherche de plateformes",
-    searchSettingsPlatformDescription: "Utiliser des préfixes intégrés pour ouvrir les résultats de plateformes courantes",
-    searchSettingsPlatformHint: "Saisissez yt query, x query, xhs query, ig query, threads query, dy query ou zhihu query pour basculer vers cette plateforme. Connectez-vous d'abord si nécessaire.",
+    searchSettingsPlatformDescription: "Utiliser des déclencheurs intégrés commençant par * pour ouvrir les résultats de plateformes courantes",
+    searchSettingsPlatformHint: "Saisissez une abréviation ou un nom de plateforme complet avec * (par exemple *yt ou *youtube) pour basculer immédiatement, sans espace ni requête préalable. Connectez-vous d'abord si nécessaire.",
     searchSettingsPlatformPrefix: "Préfixe",
     searchSettingsPlatformQuery: "query",
     searchSettingsBuiltInBadge: "Intégré",
@@ -2161,8 +2220,8 @@ const MESSAGES = {
     searchSettingsAiDescription: "Namen, Auslöser und Suchlinks der integrierten KI-Engines bearbeiten",
     searchSettingsAiHint: "Auslöser mit Leerzeichen oder Kommas trennen, z. B. /gpt /chatgpt. Melde dich bei Plattformen mit Loginpflicht vor der ersten Nutzung an.",
     searchSettingsPlatformTitle: "Plattformsuche",
-    searchSettingsPlatformDescription: "Mit integrierten Präfixen Suchergebnisse auf häufigen Plattformen öffnen",
-    searchSettingsPlatformHint: "Gib yt query, x query, xhs query, ig query, threads query, dy query oder zhihu query ein, um die Suche auf diese Plattform umzuschalten. Melde dich bei Bedarf zuerst an.",
+    searchSettingsPlatformDescription: "Mit integrierten, mit * beginnenden Aktivierungswörtern Suchergebnisse auf häufigen Plattformen öffnen",
+    searchSettingsPlatformHint: "Gib eine vollständige Plattformabkürzung oder einen Namen mit * ein (zum Beispiel *yt oder *youtube), um sofort ohne vorheriges Leerzeichen oder Suchwort umzuschalten. Melde dich bei Bedarf zuerst an.",
     searchSettingsPlatformPrefix: "Präfix",
     searchSettingsPlatformQuery: "query",
     searchSettingsBuiltInBadge: "Integriert",
@@ -2275,6 +2334,7 @@ const LOCALE_COMPLETIONS = {
     quickSearchWithAi: "{engine} に送信",
     quickSearchWithPlatform: "{platform} で検索",
     quickSearchPlatformPlaceholder: "{platform} で検索",
+    quickSearchPlatformActivationHint: "{prefix} で {platform} を有効化",
     localSearchHistory: "履歴",
     localSearchBookmark: "ブックマーク",
     localSearchNoResults: "一致する履歴またはブックマークはありません。",
@@ -2427,6 +2487,7 @@ const LOCALE_COMPLETIONS = {
     quickSearchWithAi: "{engine}에 보내기",
     quickSearchWithPlatform: "{platform}에서 검색",
     quickSearchPlatformPlaceholder: "{platform}에서 검색",
+    quickSearchPlatformActivationHint: "{prefix} 입력 시 {platform} 활성화",
     localSearchHistory: "기록",
     localSearchBookmark: "북마크",
     localSearchNoResults: "일치하는 기록이나 북마크가 없습니다.",
@@ -2579,6 +2640,7 @@ const LOCALE_COMPLETIONS = {
     quickSearchWithAi: "Enviar a {engine}",
     quickSearchWithPlatform: "Buscar en {platform}",
     quickSearchPlatformPlaceholder: "Buscar en {platform}",
+    quickSearchPlatformActivationHint: "Escribe {prefix} para {platform}",
     localSearchHistory: "Historial",
     localSearchBookmark: "Marcador",
     localSearchNoResults: "No hay historial ni marcadores coincidentes.",
@@ -2731,6 +2793,7 @@ const LOCALE_COMPLETIONS = {
     quickSearchWithAi: "Envoyer à {engine}",
     quickSearchWithPlatform: "Rechercher sur {platform}",
     quickSearchPlatformPlaceholder: "Rechercher sur {platform}",
+    quickSearchPlatformActivationHint: "Saisissez {prefix} pour {platform}",
     localSearchHistory: "Historique",
     localSearchBookmark: "Favori",
     localSearchNoResults: "Aucun historique ou favori correspondant.",
@@ -2883,6 +2946,7 @@ const LOCALE_COMPLETIONS = {
     quickSearchWithAi: "An {engine} senden",
     quickSearchWithPlatform: "Auf {platform} suchen",
     quickSearchPlatformPlaceholder: "Auf {platform} suchen",
+    quickSearchPlatformActivationHint: "{prefix} aktiviert {platform}",
     localSearchHistory: "Verlauf",
     localSearchBookmark: "Lesezeichen",
     localSearchNoResults: "Keine passenden Verlaufs- oder Lesezeicheneinträge.",
@@ -3026,6 +3090,7 @@ const lightAccentValue = document.querySelector("#lightAccentValue");
 const darkAccentValue = document.querySelector("#darkAccentValue");
 const quickSearchForm = document.querySelector("#quickSearchForm");
 const quickSearchInput = document.querySelector("#quickSearchInput");
+const platformActivationHint = document.querySelector("#platformActivationHint");
 const aiEnginePill = document.querySelector("#aiEnginePill");
 const searchSuggestions = document.querySelector("#searchSuggestions");
 const searchWorkbench = document.querySelector(".search-workbench");
@@ -3064,6 +3129,7 @@ let activeSurfacePanelId = "";
 let activeSearchEngine = DEFAULT_SEARCH_ENGINE;
 let selectedLocalSearchEngine = DEFAULT_LOCAL_SEARCH_ENGINE;
 let activePlatformSearchTarget = "";
+let platformActivationTimer = 0;
 let aiModeExitTimer = 0;
 let portalCategoryState = {};
 let activePortalView = "smart";
@@ -4416,7 +4482,7 @@ function createAiEngineSettingsCard(engine) {
 }
 
 function createPlatformSearchSettingsCard(platform) {
-  const prefixes = platform.prefixes.map((prefix) => `${prefix} ${t("searchSettingsPlatformQuery")}`).join(", ");
+  const prefixes = platform.prefixes.join(", ");
   const card = createEngineSettingsCard({
     engine: {
       id: platform.id,
@@ -4666,6 +4732,7 @@ function updateQuickSearchModeUi() {
   quickSearchInput.placeholder = placeholder;
   quickSearchInput.setAttribute("aria-label", placeholder);
   renderAiEnginePill(engine, { previousThemeColor });
+  renderPlatformActivationHint(quickSearchInput.value);
 }
 
 function renderAiEnginePill(engine, options = {}) {
@@ -5601,19 +5668,51 @@ function exitPlatformQuickSearchMode() {
 }
 
 function handleQuickSearchInput() {
+  clearPendingPlatformActivation();
   const commandMatch = searchAiCommand(quickSearchInput.value);
   if (commandMatch) {
+    renderPlatformActivationHint("");
     quickSearchInput.value = commandMatch.remainder;
     setQuickSearchEngine(commandMatch.engine.id);
     return;
   }
-  const platformMatch = searchPlatformPrefix(quickSearchInput.value);
+  const platformInput = quickSearchInput.value;
+  const platformMatch = searchPlatformPrefix(platformInput);
   if (platformMatch && searchEngineById(activeSearchEngine).local) {
-    quickSearchInput.value = platformMatch.remainder;
-    setPlatformQuickSearchTarget(platformMatch.platform.id);
+    if (!platformMatch.remainder && !/\s$/.test(platformInput) && hasConflictingLongerPlatformActivator(platformMatch)) {
+      const pendingValue = platformInput;
+      renderPlatformActivationHint(pendingValue);
+      hideSearchSuggestions();
+      platformActivationTimer = window.setTimeout(() => {
+        const pendingMatch = quickSearchInput.value === pendingValue
+          ? searchPlatformPrefix(pendingValue)
+          : null;
+        if (pendingMatch?.prefix === platformMatch.prefix && searchEngineById(activeSearchEngine).local) {
+          activatePlatformSearchMatch(pendingMatch);
+        }
+      }, PLATFORM_CONFLICT_ACTIVATION_DELAY_MS);
+      return;
+    }
+    activatePlatformSearchMatch(platformMatch);
+    return;
+  }
+  if (renderPlatformActivationHint(quickSearchInput.value)) {
+    hideSearchSuggestions();
     return;
   }
   renderLocalSearchSuggestions(normalizeText(quickSearchInput.value));
+}
+
+function clearPendingPlatformActivation() {
+  window.clearTimeout(platformActivationTimer);
+  platformActivationTimer = 0;
+}
+
+function activatePlatformSearchMatch(match) {
+  clearPendingPlatformActivation();
+  renderPlatformActivationHint("");
+  quickSearchInput.value = match.remainder;
+  setPlatformQuickSearchTarget(match.platform.id);
 }
 
 function setPlatformQuickSearchTarget(platformId) {
@@ -5645,7 +5744,7 @@ function searchAiCommand(value) {
 }
 
 function searchPlatformPrefix(value) {
-  const match = String(value || "").match(/^([a-z][a-z0-9-]*)\s+(\S.*)$/i);
+  const match = String(value || "").match(/^(\*[a-z][a-z0-9-]*)(?:\s+|$)(.*)$/i);
   if (!match) {
     return null;
   }
@@ -5654,13 +5753,6 @@ function searchPlatformPrefix(value) {
   const platform = PLATFORM_SEARCH_TARGETS.find((target) => (
     target.prefixes.some((item) => item.toLowerCase() === prefix)
   ));
-  const splitPrefixMatch = splitLongPlatformPrefix(prefix, remainder, platform);
-  if (splitPrefixMatch) {
-    return splitPrefixMatch;
-  }
-  if (isPartialSplitPlatformPrefix(prefix, remainder, platform)) {
-    return null;
-  }
   if (!platform) {
     return null;
   }
@@ -5671,47 +5763,67 @@ function searchPlatformPrefix(value) {
   };
 }
 
-function platformSearchPrefixes() {
-  return PLATFORM_SEARCH_TARGETS.flatMap((target) => (
-    target.prefixes.map((prefix) => ({
-      platform: target,
-      prefix: prefix.toLowerCase()
+function platformSearchActivators() {
+  return PLATFORM_SEARCH_TARGETS.flatMap((platform, platformIndex) => (
+    platform.prefixes.map((prefix, prefixIndex) => ({
+      platform,
+      prefix: prefix.toLowerCase(),
+      order: (platformIndex * 10) + prefixIndex
     }))
   ));
 }
 
-function splitLongPlatformPrefix(prefix, remainder, currentPlatform = null) {
-  const firstTokenMatch = String(remainder || "").match(/^([a-z0-9-]+)(?:\s+(\S.*))?$/i);
-  if (!firstTokenMatch) {
+function hasConflictingLongerPlatformActivator(match) {
+  return platformSearchActivators().some((item) => (
+    item.platform.id !== match.platform.id && item.prefix.startsWith(match.prefix)
+  ));
+}
+
+function platformSearchActivationHint(value) {
+  const input = String(value || "").trim().toLowerCase();
+  if (!/^\*[a-z][a-z0-9-]*$/.test(input)) {
     return null;
   }
-  const combinedPrefix = `${prefix}${firstTokenMatch[1].toLowerCase()}`;
-  const match = platformSearchPrefixes().find((item) => (
-    item.prefix.length > prefix.length
-      && item.prefix === combinedPrefix
-      && item.platform.id !== currentPlatform?.id
-  ));
-  if (!match || typeof firstTokenMatch[2] === "undefined") {
+  const matches = platformSearchActivators()
+    .filter((item) => item.prefix.startsWith(input))
+    .sort((left, right) => (
+      left.prefix.length - right.prefix.length || left.order - right.order
+    ));
+  const match = matches[0];
+  if (!match) {
     return null;
   }
   return {
-    platform: match.platform,
-    prefix: match.prefix,
-    remainder: firstTokenMatch[2] || ""
+    ...match,
+    alternative: match.prefix === input
+      ? matches.find((item) => item.platform.id !== match.platform.id) || null
+      : null
   };
 }
 
-function isPartialSplitPlatformPrefix(prefix, remainder, currentPlatform = null) {
-  const firstTokenMatch = String(remainder || "").match(/^([a-z0-9-]+)$/i);
-  if (!firstTokenMatch) {
+function renderPlatformActivationHint(value) {
+  if (!platformActivationHint) {
     return false;
   }
-  const combinedPrefix = `${prefix}${firstTokenMatch[1].toLowerCase()}`;
-  return platformSearchPrefixes().some((item) => (
-    item.prefix.length > prefix.length
-    && item.platform.id !== currentPlatform?.id
-    && item.prefix.startsWith(combinedPrefix)
-  ));
+  const match = searchEngineById(activeSearchEngine).local && !activePlatformSearchTarget
+    ? platformSearchActivationHint(value)
+    : null;
+  if (!match) {
+    platformActivationHint.hidden = true;
+    platformActivationHint.textContent = "";
+    platformActivationHint.removeAttribute("title");
+    return false;
+  }
+  const label = match.alternative
+    ? `${match.prefix}: ${match.platform.label} · ${match.alternative.prefix}: ${match.alternative.platform.label}`
+    : t("quickSearchPlatformActivationHint", {
+      prefix: match.prefix,
+      platform: match.platform.label
+    });
+  platformActivationHint.textContent = label;
+  platformActivationHint.title = label;
+  platformActivationHint.hidden = false;
+  return true;
 }
 
 function aiEngineCommands(engine) {
@@ -9039,8 +9151,19 @@ function displayIconSource(icon, source, options = {}) {
   if (options.awaitDisplayIcon) {
     return coloredSvgIconSource(source, glyphColor);
   }
+  const requestTheme = document.documentElement.dataset.theme;
+  const requestToken = String(Number(icon.dataset.iconThemeRequest || 0) + 1);
+  icon.dataset.iconThemeRequest = requestToken;
   coloredSvgIconSource(source, glyphColor).then((displaySource) => {
-    if (icon.dataset.iconCandidate === source || icon.src.endsWith(source) || icon.getAttribute("src") === source) {
+    const stillRenderingSource = icon.dataset.iconCandidate === source
+      || icon.src.endsWith(source)
+      || icon.getAttribute("src") === source;
+    if (
+      icon.isConnected
+      && stillRenderingSource
+      && icon.dataset.iconThemeRequest === requestToken
+      && document.documentElement.dataset.theme === requestTheme
+    ) {
       icon.src = displaySource;
     }
   });
@@ -13901,6 +14024,8 @@ const TDESIGN_ICON_MARKUP = Object.freeze({
   search: '<g fill="none"><path d="M15.803 15.803A7.5 7.5 0 1 1 5.197 5.197a7.5 7.5 0 0 1 10.606 10.606"/><path stroke="currentColor" stroke-linecap="square" stroke-width="2" d="m15.803 15.804l5.303 5.303m-5.303-5.304A7.5 7.5 0 1 1 5.197 5.197a7.5 7.5 0 0 1 10.606 10.606Z"/></g>',
   setting: '<g fill="none"><path d="M20.66 7L12 2L3.34 7v10L12 22l8.66-5zM12 16a4 4 0 1 0 0-8a4 4 0 0 0 0 8" clip-rule="evenodd"/><path d="M16 12a4 4 0 1 1-8 0a4 4 0 0 1 8 0"/><path stroke="currentColor" stroke-linecap="square" stroke-width="2" d="m12 2l8.66 5v10L12 22l-8.66-5V7z"/><path stroke="currentColor" stroke-linecap="square" stroke-width="2" d="M16 12a4 4 0 1 1-8 0a4 4 0 0 1 8 0Z"/></g>',
   "setting-filled": '<path fill="currentColor" d="M21.66 6.423L12 .845L2.34 6.423v11.154L12 23.155l9.66-5.578zM12 16a4 4 0 1 1 0-8a4 4 0 0 1 0 8"/>',
+  "system-setting": '<g fill="none"><path d="M21.5 17.5a3 3 0 1 1-6 0a3 3 0 0 1 6 0"/><path stroke="currentColor" stroke-linecap="square" stroke-width="2" d="M22 9.5V3H2v14h8.5M4 21h6.5m8-6.5v-1.25m0 1.25a3 3 0 0 0 0 6m0-6a3 3 0 1 1 0 6m0 0v1.25M15.902 16l-1.083-.625M21.098 19l1.083.625M21.098 16l1.083-.625M15.9 19l-1.082.625"/></g>',
+  "system-setting-filled": '<path fill="currentColor" d="M23 2H1v16h10.768a6.7 6.7 0 0 1 .96-4.002H3v-10h18v7.23a6.8 6.8 0 0 1 2 1.24zM3 20h9.228a6.8 6.8 0 0 0 1.24 2H3z"/><path fill="currentColor" d="M19.5 13.376V12h-2v1.376a4 4 0 0 0-1.854 1.072l-1.193-.689l-1 1.732l1.192.688a4 4 0 0 0 0 2.142l-1.192.688l1 1.732l1.193-.689a4 4 0 0 0 1.854 1.072V22.5h2v-1.376a4 4 0 0 0 1.854-1.072l1.192.689l1-1.732l-1.191-.688a4 4 0 0 0 0-2.142l1.191-.688l-1-1.732l-1.192.688a4 4 0 0 0-1.854-1.071m-2.715 2.844a2 2 0 0 1 3.43 0l.036.063c.159.287.249.616.249.967c0 .35-.09.68-.249.967l-.037.063a2 2 0 0 1-3.429 0l-.037-.063a2 2 0 0 1-.248-.967a2 2 0 0 1 .248-.967z"/>',
   "view-list": '<path fill="none" stroke="currentColor" stroke-linecap="square" stroke-width="2" d="M3 5h18M3 12h18M3 19h18"/>'
 });
 

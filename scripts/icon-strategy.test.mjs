@@ -10,13 +10,22 @@ const availableSiteIconFiles = new Set(siteIconIndex);
 const LOCAL_BRAND_CARRIER_CONTRAST_MIN = 2.75;
 const SITE_ICON_TILE_COLOR_BY_SITE_KEY_FOR_TEST = Object.freeze({
   "1688.com": "#ff6000",
+  "aistudio.google.com": "#4285f4",
+  "aws.amazon.com": "#ff9900",
+  "azure.microsoft.com": "#0078d4",
   "b.ai": "#111827",
   "baidu.com": "#2932e1",
   "bilibili.com": "#00a1d6",
+  "bitbucket.org": "#0052cc",
+  "chrome.google.com": "#4285f4",
+  "cloud.google.com": "#4285f4",
+  "colab.research.google.com": "#f9ab00",
   "developer.mozilla.org": "#15141a",
   "chatglm.cn": "#3859ff",
   "doubao.com": "#1e37fc",
   "douyin.com": "#000000",
+  "firefly.adobe.com": "#ff0000",
+  "firebase.google.com": "#dd2c00",
   "google.com": "#4285f4",
   "grok.com": "#000000",
   "huggingface.co": "#ffd21e",
@@ -290,14 +299,24 @@ function remoteBrandProviderHasSlugForTest(slugs, slug) {
 
 const SITE_ICON_FILE_BY_SITE_KEY_FOR_TEST = Object.freeze({
   "1688.com": "1688.ico",
+  "aistudio.google.com": "aistudio.svg",
+  "atlassian.net": "jira.svg",
+  "aws.amazon.com": "aws.svg",
+  "azure.microsoft.com": "azure.svg",
   "b.ai": "bai.png",
+  "bitbucket.org": "bitbucket.svg",
   "calendar.google.com": "googlecalendar.svg",
+  "chrome.google.com": "chrome.svg",
   "chatglm.cn": "glm.svg",
+  "cloud.google.com": "googlecloud.svg",
+  "colab.research.google.com": "colab.svg",
   "developer.mozilla.org": "mdn.svg",
   "doubao.com": "doubao.svg",
   "douyin.com": "douyin.svg",
   "docs.google.com": "googledocs.svg",
   "drive.google.com": "googledrive.svg",
+  "firefly.adobe.com": "adobefirefly.svg",
+  "firebase.google.com": "firebase.svg",
   "gemini.google.com": "googlegemini.svg",
   "jimeng.jianying.com": "jimeng.svg",
   "maps.google.com": "googlemaps.svg",
@@ -2015,6 +2034,53 @@ assert.deepEqual(
     ["notion.so", "icons/sites/notion.svg", false]
   ],
   "Representative deployed local SVG icons should be resolved locally and skip the remote provider branch."
+);
+
+assert.deepEqual(
+  [
+    ["ai.google.dev", "aistudio.google.com"],
+    ["makersuite.google.com", "aistudio.google.com"],
+    ["console.cloud.google.com", "cloud.google.com"],
+    ["colab.research.google.com", "colab.research.google.com"],
+    ["chromewebstore.google.com", "chrome.google.com"],
+    ["console.firebase.google.com", "firebase.google.com"],
+    ["firefly.adobe.com", "firefly.adobe.com"],
+    ["console.aws.amazon.com", "aws.amazon.com"],
+    ["portal.azure.com", "azure.microsoft.com"],
+    ["microsoft365.com", "office.com"],
+    ["teams.live.com", "teams.microsoft.com"],
+    ["jira.atlassian.com", "atlassian.net"],
+    ["bitbucket.atlassian.com", "bitbucket.org"],
+    ["chat.openai.com", "chatgpt.com"],
+    ["hf.co", "huggingface.co"],
+    ["discord.gg", "discord.com"],
+    ["youtu.be", "youtube.com"]
+  ].map(([host, siteKey]) => [
+    host,
+    source.includes(`"${host}": "${siteKey}"`),
+    localIconForSiteKeyForTest(siteKey),
+    remoteProviderCanRunForSiteKeyForTest(siteKey)
+  ]),
+  [
+    ["ai.google.dev", true, "icons/sites/aistudio.svg", false],
+    ["makersuite.google.com", true, "icons/sites/aistudio.svg", false],
+    ["console.cloud.google.com", true, "icons/sites/googlecloud.svg", false],
+    ["colab.research.google.com", true, "icons/sites/colab.svg", false],
+    ["chromewebstore.google.com", true, "icons/sites/chrome.svg", false],
+    ["console.firebase.google.com", true, "icons/sites/firebase.svg", false],
+    ["firefly.adobe.com", true, "icons/sites/adobefirefly.svg", false],
+    ["console.aws.amazon.com", true, "icons/sites/aws.svg", false],
+    ["portal.azure.com", true, "icons/sites/azure.svg", false],
+    ["microsoft365.com", true, "icons/sites/microsoftoffice.svg", false],
+    ["teams.live.com", true, "icons/sites/microsoftteams.svg", false],
+    ["jira.atlassian.com", true, "icons/sites/jira.svg", false],
+    ["bitbucket.atlassian.com", true, "icons/sites/bitbucket.svg", false],
+    ["chat.openai.com", true, "icons/sites/chatgpt.svg", false],
+    ["hf.co", true, "icons/sites/huggingface.svg", false],
+    ["discord.gg", true, "icons/sites/discord.svg", false],
+    ["youtu.be", true, "icons/sites/youtube.svg", false]
+  ],
+  "High-confidence product domains should normalize to deployed local icon keys before cloud, favicon, or fallback paths."
 );
 
 assert.deepEqual(
