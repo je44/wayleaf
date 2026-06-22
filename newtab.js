@@ -256,6 +256,7 @@ const DEFAULT_FAVICON_NEUTRAL_GLYPH_MAX_COVERAGE = 0.52;
 const DEFAULT_FAVICON_NEUTRAL_GLYPH_MIN_NEUTRAL_RATIO = 0.78;
 const DEFAULT_FAVICON_NEUTRAL_GLYPH_MAX_COLOR_RATIO = 0.14;
 const DEFAULT_FAVICON_NEUTRAL_GLYPH_MAX_EDGE_OPACITY = 0.2;
+const REMOTE_BRAND_ICON_DIRECT_FETCH_SCORE_MIN = 90;
 let gsapPluginsRegistered = false;
 
 function getGsap() {
@@ -7989,7 +7990,10 @@ async function fetchRemoteBrandIconDataUrl(parsedUrl) {
   for (const candidate of candidates) {
     for (const provider of REMOTE_BRAND_ICON_PROVIDERS) {
       try {
-        if (!(await remoteBrandProviderHasSlug(provider, candidate.slug))) {
+        if (
+          !(await remoteBrandProviderHasSlug(provider, candidate.slug))
+          && candidate.score < REMOTE_BRAND_ICON_DIRECT_FETCH_SCORE_MIN
+        ) {
           continue;
         }
         const iconDataUrl = await fetchRemoteBrandSvgDataUrl(provider.urlForSlug(candidate.slug), {
@@ -9694,11 +9698,14 @@ function refreshRenderedSiteIcons() {
       url: icon.dataset.siteUrl || ""
     };
     const localIcon = localIconForUrl(site.url);
-    if (
-      icon.dataset.iconCacheHydrated === "true"
-      && (!localIcon || icon.dataset.iconSource === localIcon || icon.getAttribute("src") === localIcon)
-    ) {
-      return;
+    if (icon.dataset.iconCacheHydrated === "true") {
+      if (!localIcon) {
+        refreshRemoteBrandIcon(icon, site);
+        return;
+      }
+      if (icon.dataset.iconSource === localIcon || icon.getAttribute("src") === localIcon) {
+        return;
+      }
     }
     if (localIcon) {
       delete icon.dataset.iconCacheHydrated;

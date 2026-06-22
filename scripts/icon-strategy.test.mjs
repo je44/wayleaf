@@ -57,6 +57,7 @@ const ORIGINAL_ARTWORK_BRAND_TILE_SITE_KEYS_FOR_TEST = new Set([
   "developer.mozilla.org",
   "jd.com"
 ]);
+const REMOTE_BRAND_ICON_DIRECT_FETCH_SCORE_MIN = 90;
 
 assert.match(source, /viewbox=auto/, "Simple Icons CDN requests should normalize the SVG viewBox.");
 assert.match(source, /@lobehub\/icons-static-svg/, "LobeHub static SVG package must be available as a supplemental remote provider.");
@@ -296,6 +297,11 @@ function remoteBrandSlugsFromFileListForTest(files, pattern) {
 function remoteBrandProviderHasSlugForTest(slugs, slug) {
   const normalizedSlug = remoteBrandIconSlug(slug);
   return Boolean(normalizedSlug && slugs.has(normalizedSlug));
+}
+
+function remoteBrandShouldFetchCandidateForTest(slugs, candidate) {
+  return remoteBrandProviderHasSlugForTest(slugs, candidate.slug)
+    || candidate.score >= REMOTE_BRAND_ICON_DIRECT_FETCH_SCORE_MIN;
 }
 
 const SITE_ICON_FILE_BY_SITE_KEY_FOR_TEST = Object.freeze({
@@ -1448,6 +1454,10 @@ class TestIcon {
     this.src = "";
   }
 
+  getAttribute(name) {
+    return name === "src" ? this.src : "";
+  }
+
   removeAttribute(name) {
     if (name === "srcset") {
       this.srcset = "";
@@ -1630,6 +1640,19 @@ function discoverRemoteBrandIconDataUrlForTest(siteUrl, provider) {
     return "";
   }
   return provider(siteKeyForUrlForTest(siteUrl));
+}
+
+function refreshRenderedSiteIconDecisionForTest(icon, site) {
+  const localIcon = localIconForUrlForTest(site.url);
+  if (icon.dataset.iconCacheHydrated === "true") {
+    if (!localIcon) {
+      return "refresh-remote-brand";
+    }
+    if (icon.dataset.iconSource === localIcon || icon.getAttribute("src") === localIcon) {
+      return "keep-local-cache";
+    }
+  }
+  return localIcon ? "rerender-local" : "rerender-site";
 }
 
 assert.equal(localBrandGlyphColor("#00a1d6"), "#ffffff", "Local bilibili keeps a white glyph on the blue tile.");
@@ -2022,6 +2045,20 @@ const simpleIconProviderSlugs = remoteBrandSlugsFromFileListForTest([
 ], /^\/icons\/(.+)\.svg$/i);
 assert.equal(remoteBrandProviderHasSlugForTest(simpleIconProviderSlugs, "raycast"), true, "Simple Icons package index should allow existing slugs before provider fetch.");
 assert.equal(remoteBrandProviderHasSlugForTest(simpleIconProviderSlugs, "missing-brand"), false, "Simple Icons package index should suppress missing slug fetches instead of probing 404s.");
+{
+  const [teslaCandidate, teslaComCandidate] = remoteBrandIconSlugCandidatesForTest("tesla.com", "Tesla");
+  assert.deepEqual(
+    [teslaCandidate, teslaComCandidate].map((candidate) => [
+      candidate.slug,
+      remoteBrandShouldFetchCandidateForTest(new Set(), candidate)
+    ]),
+    [
+      ["tesla", true],
+      ["teslacom", false]
+    ],
+    "High-confidence registrable slugs should get one direct cloud fetch when a stale provider index misses, while low-score host guesses stay suppressed."
+  );
+}
 
 const lobeHubProviderSlugs = remoteBrandSlugsFromFileListForTest([
   { name: "/icons/xai.svg" },
@@ -2223,6 +2260,29 @@ assert.equal(localIconForUrlForTest("https://huggingface.co/"), "icons/sites/hug
 assert.equal(localIconForUrlForTest("https://jimeng.jianying.com/"), "icons/sites/jimeng.svg", "Jimeng should use the deployed multicolor local SVG.");
 assert.equal(localIconForUrlForTest("https://mimo.mi.com/"), "icons/sites/xiaomimimo.svg", "MiMo should use the deployed local SVG.");
 assert.equal(localIconForUrlForTest("https://www.tiktok.com/"), "icons/sites/tiktok.svg", "TikTok should use the deployed multicolor local SVG.");
+{
+  const icon = new TestIcon();
+  icon.dataset.iconCacheHydrated = "true";
+  icon.src = "data:image/png;base64,old-tesla-favicon";
+  assert.equal(localIconForUrlForTest("https://www.tesla.com/model3"), "", "Tesla should stay cloud-provider eligible when no deployed local SVG exists.");
+  assert.equal(remoteBrandIconSlugCandidatesForTest("tesla.com", "Tesla")[0].slug, "tesla", "Tesla should produce the Simple Icons provider slug.");
+  assert.equal(
+    refreshRenderedSiteIconDecisionForTest(icon, { url: "https://www.tesla.com/model3" }),
+    "refresh-remote-brand",
+    "First-paint cached favicons without local assets must still trigger remote brand refresh."
+  );
+}
+{
+  const icon = new TestIcon();
+  icon.dataset.iconCacheHydrated = "true";
+  icon.dataset.iconSource = "icons/sites/doubao.svg";
+  icon.src = "icons/sites/doubao.svg";
+  assert.equal(
+    refreshRenderedSiteIconDecisionForTest(icon, { url: "https://www.doubao.com/chat/" }),
+    "keep-local-cache",
+    "First-paint cached local SVGs should keep the cheap local short-circuit."
+  );
+}
 assert.deepEqual(
   brandIconTileColorsForTest("#1677ff", "alipay.com", "icons/sites/alipay.svg"),
   { light: "#ffffff", dark: "#f8fafc" },
