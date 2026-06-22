@@ -51,6 +51,18 @@ assert.match(
 
 assert.match(
   source,
+  /let googleAiModeExitTimer = 0;/,
+  "Google AI mode should keep a timer for its soft exit animation."
+);
+
+assert.match(
+  source,
+  /const GOOGLE_AI_MODE_EXIT_MS = 480;/,
+  "Google AI mode should use a softer dedicated exit duration than the compact AI pill exit."
+);
+
+assert.match(
+  source,
   /function handleQuickSearchInput\(\) \{[\s\S]*activateGoogleAiSearchModeFromInput\(\)[\s\S]*searchAiCommand\(quickSearchInput\.value\)/,
   "Typing the complete /ai command should activate Google AI mode before regular AI command parsing."
 );
@@ -97,6 +109,24 @@ assert.match(
   "Escape or Backspace on an empty input should exit Google AI mode without blurring the search box."
 );
 
+assert.match(
+  source,
+  /function exitGoogleAiSearchMode\(\) \{[\s\S]*googleAiSearchModeActive = false;[\s\S]*startGoogleAiModeExit\(\);[\s\S]*updateQuickSearchModeUi\(\);/,
+  "Exiting Google AI mode should enter a soft visual exit state before normal search styling fully returns."
+);
+
+assert.match(
+  source,
+  /function startGoogleAiModeExit\(\) \{[\s\S]*setAttribute\("data-google-ai-exiting", ""\);[\s\S]*window\.clearTimeout\(googleAiModeExitTimer\);[\s\S]*removeAttribute\("data-google-ai-exiting"\);[\s\S]*prefersReducedMotion\(\) \? 0 : GOOGLE_AI_MODE_EXIT_MS/,
+  "Google AI mode exit state should clean itself up after the shared AI-mode exit duration."
+);
+
+assert.match(
+  source,
+  /function updateQuickSearchLeadingIcon\(\) \{[\s\S]*toggleAttribute\("data-google-ai-active", googleAiSearchModeActive\);[\s\S]*if \(googleAiSearchModeActive\) \{[\s\S]*window\.clearTimeout\(googleAiModeExitTimer\);[\s\S]*removeAttribute\("data-google-ai-exiting"\);/,
+  "Re-entering Google AI mode should cancel any pending soft-exit state."
+);
+
 assert.doesNotMatch(
   source,
   /function googleAiModeQuery/,
@@ -129,14 +159,62 @@ assert.match(
 
 assert.match(
   styles,
-  /\.search-workbench\[data-google-ai-active\] \.search-panel\s*\{[\s\S]*border:\s*1px solid transparent;[\s\S]*conic-gradient\(from var\(--google-ai-border-angle\), #4285f4, #34a853, #fbbc05, #ea4335, #a142f4, #4285f4\) border-box;[\s\S]*animation:\s*googleAiBorderFlow 1\.8s linear infinite;/,
-  "Google AI mode should render a 1px animated rainbow gradient search-box outline."
+  /@property --google-ai-edge-alpha\s*\{[\s\S]*syntax:\s*"<number>";[\s\S]*initial-value:\s*1;/,
+  "Google AI mode should animate a typed alpha property for soft exit."
+);
+
+assert.match(
+  styles,
+  /\.search-workbench\[data-google-ai-active\],\s*\.search-workbench\[data-google-ai-exiting\]\s*\{[\s\S]*--google-ai-edge-alpha:\s*1;/,
+  "Google AI mode active and exiting states should start from a visible rainbow edge."
+);
+
+assert.match(
+  styles,
+  /\.search-workbench\[data-google-ai-exiting\]\s*\{[\s\S]*animation:\s*googleAiModeEdgeExit 480ms linear forwards;/,
+  "Google AI exiting state should softly fade the rainbow edge over its dedicated exit duration."
+);
+
+const googleAiGlowRule = styles.match(/\.search-workbench\[data-google-ai-active\]::before,\s*\.search-workbench\[data-google-ai-exiting\]::before\s*\{[^}]*\}/)?.[0] || "";
+
+assert.match(
+  googleAiGlowRule,
+  /z-index:\s*1;[\s\S]*height:\s*64px;[\s\S]*rgb\(66 133 244 \/ var\(--google-ai-edge-alpha\)\)[\s\S]*filter:\s*blur\(8px\);[\s\S]*transform:\s*scale\(var\(--search-panel-scale\)\);[\s\S]*animation:\s*googleAiBorderFlow 1\.8s linear infinite;/,
+  "Google AI mode should add an 8px animated rainbow edge glow around the active search box."
+);
+
+const googleAiPanelRule = styles.match(/\.search-workbench\[data-google-ai-active\] \.search-panel,\s*\.search-workbench\[data-google-ai-exiting\] \.search-panel\s*\{[^}]*\}/)?.[0] || "";
+
+assert.match(
+  googleAiPanelRule,
+  /border-color:\s*var\(--line\);/,
+  "Google AI active and exiting states should keep the panel body on the ordinary background and border to avoid interior flicker."
+);
+
+const googleAiPanelEdgeRule = styles.match(/\.search-workbench\[data-google-ai-active\] \.search-panel::before,\s*\.search-workbench\[data-google-ai-exiting\] \.search-panel::before\s*\{[^}]*\}/)?.[0] || "";
+
+assert.match(
+  googleAiPanelEdgeRule,
+  /padding:\s*1px;[\s\S]*rgb\(66 133 244 \/ var\(--google-ai-edge-alpha\)\)[\s\S]*animation:\s*googleAiBorderFlow 1\.8s linear infinite;[\s\S]*mask-composite:\s*exclude;/,
+  "Google AI outline should render as a separate 1px edge layer instead of changing the panel background stack."
+);
+
+assert.match(
+  styles,
+  /\.search-panel\s*\{[\s\S]*z-index:\s*2;[\s\S]*overflow:\s*hidden;[\s\S]*background:\s*var\(--input-bg\);/,
+  "The opaque search panel should sit above the glow layer so the glow only appears around the edge."
 );
 
 assert.match(
   styles,
   /@keyframes googleAiBorderFlow\s*\{[\s\S]*--google-ai-border-angle:\s*450deg;/,
   "Google AI mode should flow the rainbow outline around the search box."
+);
+
+assert.match(
+  styles,
+  /@keyframes googleAiModeEdgeExit\s*\{[\s\S]*--google-ai-edge-alpha:\s*0;/,
+  "Google AI mode should fade its rainbow edge out during exit."
 );
 
 console.log("google ai mode search fixtures passed");

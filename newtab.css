@@ -159,6 +159,12 @@
   initial-value: 90deg;
 }
 
+@property --google-ai-edge-alpha {
+  syntax: "<number>";
+  inherits: true;
+  initial-value: 1;
+}
+
 * {
   scrollbar-color: var(--line-strong) transparent;
   scrollbar-width: thin;
@@ -615,21 +621,88 @@ body.surface-open .surface-backdrop {
   will-change: transform;
 }
 
+.search-workbench[data-google-ai-active],
+.search-workbench[data-google-ai-exiting] {
+  --google-ai-edge-alpha: 1;
+}
+
+.search-workbench[data-google-ai-exiting] {
+  animation: googleAiModeEdgeExit 480ms linear forwards;
+}
+
+.search-workbench[data-google-ai-active]::before,
+.search-workbench[data-google-ai-exiting]::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto;
+  z-index: 1;
+  width: 100%;
+  height: 64px;
+  border-radius: 12px;
+  background: conic-gradient(
+    from var(--google-ai-border-angle),
+    rgb(66 133 244 / var(--google-ai-edge-alpha)),
+    rgb(52 168 83 / var(--google-ai-edge-alpha)),
+    rgb(251 188 5 / var(--google-ai-edge-alpha)),
+    rgb(234 67 53 / var(--google-ai-edge-alpha)),
+    rgb(161 66 244 / var(--google-ai-edge-alpha)),
+    rgb(66 133 244 / var(--google-ai-edge-alpha))
+  );
+  opacity: 0.5;
+  filter: blur(8px);
+  transform: scale(var(--search-panel-scale));
+  transform-origin: center top;
+  pointer-events: none;
+  animation: googleAiBorderFlow 1.8s linear infinite;
+}
+
 .search-workbench.suggestions-open .search-panel {
   border-color: var(--line-strong);
 }
 
-.search-workbench[data-google-ai-active] .search-panel {
-  border: 1px solid transparent;
-  background:
-    linear-gradient(var(--input-bg), var(--input-bg)) padding-box,
-    conic-gradient(from var(--google-ai-border-angle), #4285f4, #34a853, #fbbc05, #ea4335, #a142f4, #4285f4) border-box;
+.search-workbench[data-google-ai-active] .search-panel,
+.search-workbench[data-google-ai-exiting] .search-panel {
+  border-color: var(--line);
+}
+
+.search-workbench[data-google-ai-active] .search-panel::before,
+.search-workbench[data-google-ai-exiting] .search-panel::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  padding: 1px;
+  border-radius: inherit;
+  background: conic-gradient(
+    from var(--google-ai-border-angle),
+    rgb(66 133 244 / var(--google-ai-edge-alpha)),
+    rgb(52 168 83 / var(--google-ai-edge-alpha)),
+    rgb(251 188 5 / var(--google-ai-edge-alpha)),
+    rgb(234 67 53 / var(--google-ai-edge-alpha)),
+    rgb(161 66 244 / var(--google-ai-edge-alpha)),
+    rgb(66 133 244 / var(--google-ai-edge-alpha))
+  );
+  pointer-events: none;
   animation: googleAiBorderFlow 1.8s linear infinite;
+  -webkit-mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  mask-composite: exclude;
 }
 
 @keyframes googleAiBorderFlow {
   to {
     --google-ai-border-angle: 450deg;
+  }
+}
+
+@keyframes googleAiModeEdgeExit {
+  to {
+    --google-ai-edge-alpha: 0;
   }
 }
 

@@ -92,6 +92,7 @@ const FAVORITE_DELETE_CANCEL_MS = 280;
 const SEARCH_SUGGESTIONS_EXIT_MS = 260;
 const SEARCH_SUGGESTIONS_OPEN_PADDING_Y = 18;
 const AI_MODE_EXIT_MS = 300;
+const GOOGLE_AI_MODE_EXIT_MS = 480;
 const MAX_BOOKMARK_FOLDER_OPTIONS = 160;
 const MAX_PORTAL_FEATURED_ITEMS = 6;
 const MAX_BOOKMARK_PORTAL_ITEMS = 120;
@@ -3188,6 +3189,7 @@ let activeSearchEngine = DEFAULT_SEARCH_ENGINE;
 let selectedLocalSearchEngine = DEFAULT_LOCAL_SEARCH_ENGINE;
 let activePlatformSearchTarget = "";
 let googleAiSearchModeActive = false;
+let googleAiModeExitTimer = 0;
 let aiModeExitTimer = 0;
 let portalCategoryState = {};
 let activePortalView = "smart";
@@ -4788,7 +4790,11 @@ function handleGlobalEscape(event) {
 
 async function setQuickSearchEngine(engineId, options = {}) {
   const nextEngine = searchEngineById(engineId);
+  const wasGoogleAiSearchModeActive = googleAiSearchModeActive;
   googleAiSearchModeActive = false;
+  if (wasGoogleAiSearchModeActive) {
+    startGoogleAiModeExit();
+  }
   if (!nextEngine.local) {
     activePlatformSearchTarget = "";
   }
@@ -4824,6 +4830,10 @@ function updateQuickSearchLeadingIcon() {
   }
   quickSearchLeadingIcon.innerHTML = searchEngineSearchIcon();
   searchWorkbench?.toggleAttribute("data-google-ai-active", googleAiSearchModeActive);
+  if (googleAiSearchModeActive) {
+    window.clearTimeout(googleAiModeExitTimer);
+    searchWorkbench?.removeAttribute("data-google-ai-exiting");
+  }
 }
 
 function renderAiEnginePill(engine, options = {}) {
@@ -5890,8 +5900,17 @@ function exitGoogleAiSearchMode() {
     return;
   }
   googleAiSearchModeActive = false;
+  startGoogleAiModeExit();
   updateQuickSearchModeUi();
   renderLocalSearchSuggestions(normalizeText(quickSearchInput.value));
+}
+
+function startGoogleAiModeExit() {
+  searchWorkbench?.setAttribute("data-google-ai-exiting", "");
+  window.clearTimeout(googleAiModeExitTimer);
+  googleAiModeExitTimer = window.setTimeout(() => {
+    searchWorkbench?.removeAttribute("data-google-ai-exiting");
+  }, prefersReducedMotion() ? 0 : GOOGLE_AI_MODE_EXIT_MS);
 }
 
 function canActivateGoogleAiSearchMode() {
