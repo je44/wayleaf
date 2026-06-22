@@ -1,0 +1,68 @@
+# Permissions, Privacy, And Chrome Web Store Notes
+
+This document explains the current Manifest V3 permission surface. It does not recommend changing permissions in the current release.
+
+## Permission Use
+
+| Permission | Current use |
+| --- | --- |
+| `bookmarks` | Reads the user-selected bookmark folder, renders bookmark cards, watches bookmark changes, and removes a bookmark only when the user triggers deletion. |
+| `history` | Reads recent browser history, groups repeated site visits, reads visit counts, and deletes history URLs only when the user triggers deletion. |
+| `favicon` | Uses Chrome favicon URLs as one step in the site icon fallback chain. |
+| `storage` | Stores theme, language, favorite sites, custom portals, bookmark folder choice, pinned history, search settings, feed settings, sync metadata, icon cache, and short-lived AI prompt handoff data. |
+| `tabs` | Opens multi-target searches and reads open tabs to include long-open pages in recent browsing. |
+| `scripting` | Injects `ai-submit.js` for AI direct-submit handoff after navigation. |
+| `alarms` | Schedules daily automatic settings sync while the extension is enabled. |
+| `http://*/*`, `https://*/*` | Allows favicon/site icon discovery for arbitrary visited or saved web pages and allows AI handoff support on provider pages. |
+
+## Host And Content Script Scope
+
+The broad host permission supports icon discovery for arbitrary user history, bookmarks, favorites, and custom shortcuts. The content script itself is narrower and currently matches only supported AI providers in `manifest.json`.
+
+If host permissions are narrowed later, verify that these still work before shipping:
+
+- local history and bookmark icon fallback for arbitrary sites
+- custom shortcut icon discovery
+- Chrome favicon fallback
+- AI prompt handoff on every supported provider
+- remote brand icon fallback where no local icon exists
+
+Permission narrowing may affect visible icon quality, so treat it as a long-term review item, not a drive-by cleanup.
+
+## Data Handling
+
+Wayleaf has no backend service. Browser history, bookmarks, settings, and caches stay in the browser extension environment.
+
+Network behavior is user-driven or display-driven:
+
+- Search queries go to the selected search engine.
+- AI prompts go to the selected AI provider.
+- Feed requests go to built-in or user-added RSS/JSON sources.
+- Icon discovery may request a target site's root page, manifest, icon file, Chrome favicon endpoint, or remote brand icon provider.
+
+Short-lived AI prompt handoff uses `aiDirectPrompts` plus `_wayleaf_prompt`. Some providers also use `_wayleaf_text` in the URL fragment as a fallback, then `ai-submit.js` cleans the token/fragment from the URL.
+
+## Chrome Web Store Form Notes
+
+Use the current implementation as the source of truth when filling the CWS privacy form:
+
+- Single purpose: new-tab productivity workspace with search, shortcuts, selected bookmarks, recent browsing, feeds, theming, sync, and AI page handoff.
+- Data collection: no off-browser backend collection by Wayleaf.
+- Browsing history: used locally to render recent browsing and local search suggestions.
+- Bookmarks: used locally to render the selected folder and support deletion from the extension UI.
+- Website content / web activity: host access is used for icon discovery and AI provider handoff.
+- User content: AI prompts are sent to the provider chosen by the user; provider policies apply after navigation.
+- Authentication: Wayleaf does not manage user accounts or provider tokens.
+
+## Reviewer Explanation
+
+If Chrome Web Store review asks about broad host permissions, use this concise explanation:
+
+> Wayleaf replaces the new tab page and renders user-selected bookmarks, recent browsing, custom shortcuts, and site icons for arbitrary web pages. Broad host access is used to discover site icons and manifests for those user-visible URLs, while AI helper content scripts are limited to the supported AI provider pages declared in `content_scripts`.
+
+## Current Non-Goals
+
+- Do not add telemetry.
+- Do not upload history or bookmarks to a Wayleaf service.
+- Do not move icon caches or AI prompt handoff data into `chrome.storage.sync`.
+- Do not broaden content script matches beyond the current provider list without a separate review.
