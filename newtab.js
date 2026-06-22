@@ -6838,9 +6838,11 @@ function handleSearchSuggestionDismiss(event) {
 }
 
 function looksLikeUrl(value) {
-  return /^[a-z][a-z\d+.-]*:\/\//i.test(value)
-    || /^[\w.-]+\.[a-z]{2,}(?:[/:?#]|$)/i.test(value)
-    || /^localhost(?::\d+)?(?:[/?#]|$)/i.test(value);
+  const input = String(value || "").trim();
+  // ponytail: bare dotted tokens are ambiguous with filenames; require an explicit URL signal instead of maintaining extension/TLD lists.
+  return /^https?:\/\//i.test(input)
+    || /^www\.[^\s/?#]+(?:[/?#]|$)/i.test(input)
+    || /^localhost(?::\d+)?(?:[/?#]|$)/i.test(input);
 }
 
 function localhostUrl(value) {
