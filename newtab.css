@@ -578,6 +578,7 @@ body.surface-open .surface-backdrop {
 
 .search-workbench {
   --search-leading-icon-offset: 4px;
+  --search-icon-size: 26.58px;
   --search-active-panel-scale: 1.055;
   --search-panel-scale: 1;
   --ai-engine-column-width: 52px;
@@ -690,8 +691,8 @@ body.surface-open .surface-backdrop {
   grid-area: 1 / 1;
   display: grid;
   place-items: center;
-  width: 25.2px;
-  height: 25.2px;
+  width: var(--search-icon-size);
+  height: var(--search-icon-size);
   color: var(--faint);
   line-height: 0;
   transform: translateX(var(--search-leading-icon-offset));
@@ -720,8 +721,8 @@ body.surface-open .surface-backdrop {
 }
 
 .search-engine-search-icon svg {
-  width: 25.2px;
-  height: 25.2px;
+  width: var(--search-icon-size);
+  height: var(--search-icon-size);
 }
 
 .quick-search-entry {
@@ -733,6 +734,60 @@ body.surface-open .surface-backdrop {
   height: 100%;
   gap: 8px;
   transition: margin-left 220ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.google-image-search-button {
+  display: grid;
+  flex: 0 0 var(--search-icon-size);
+  place-items: center;
+  width: var(--search-icon-size);
+  height: var(--search-icon-size);
+  margin: 0 18px 0 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--faint);
+  line-height: 0;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition:
+    color var(--theme-transition-duration) var(--theme-transition-ease),
+    opacity 160ms ease,
+    visibility 0s linear 160ms;
+}
+
+.google-image-search-button[hidden] {
+  display: none;
+}
+
+.search-workbench.search-active .google-image-search-button:not([hidden]) {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+  transition-delay: 0s;
+}
+
+.google-image-search-button:not(:disabled):is(:hover, :focus-visible) {
+  color: var(--ink);
+}
+
+.google-image-search-button svg {
+  display: block;
+  width: var(--search-icon-size);
+  height: var(--search-icon-size);
+}
+
+.google-image-search-button .google-image-search-icon-filled {
+  display: none;
+}
+
+.google-image-search-button:not(:disabled):is(:hover, :focus-visible, :active) .google-image-search-icon-outline {
+  display: none;
+}
+
+.google-image-search-button:not(:disabled):is(:hover, :focus-visible, :active) .google-image-search-icon-filled {
+  display: block;
 }
 
 .search-workbench[data-ai-active] .quick-search-entry,
@@ -6594,9 +6649,11 @@ a.history-page-link:hover {
   }
 
   .search-engine-search-icon,
-  .search-engine-search-icon svg {
-    width: 25.2px;
-    height: 25.2px;
+  .search-engine-search-icon svg,
+  .google-image-search-button,
+  .google-image-search-button svg {
+    width: var(--search-icon-size);
+    height: var(--search-icon-size);
   }
 
   .search-workbench {

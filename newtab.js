@@ -3132,6 +3132,10 @@ const darkAccentValue = document.querySelector("#darkAccentValue");
 const quickSearchForm = document.querySelector("#quickSearchForm");
 const quickSearchInput = document.querySelector("#quickSearchInput");
 const quickSearchLeadingIcon = document.querySelector(".search-engine-search-icon");
+const googleImageSearchButton = document.querySelector("#googleImageSearchButton");
+const googleImageSearchForm = document.querySelector("#googleImageSearchForm");
+const googleImageSearchInput = document.querySelector("#googleImageSearchInput");
+const googleImageSearchFilename = document.querySelector("#googleImageSearchFilename");
 const platformActivationHint = document.querySelector("#platformActivationHint");
 const aiEnginePill = document.querySelector("#aiEnginePill");
 const searchSuggestions = document.querySelector("#searchSuggestions");
@@ -4062,6 +4066,8 @@ async function init() {
   quickSearchInput.addEventListener("input", handleQuickSearchInput);
   quickSearchInput.addEventListener("focus", handleQuickSearchFocus);
   quickSearchInput.addEventListener("blur", handleQuickSearchBlur);
+  googleImageSearchButton?.addEventListener("click", handleGoogleImageSearchButtonClick);
+  googleImageSearchInput?.addEventListener("change", handleGoogleImageSearchInputChange);
   portalModeTabs.forEach((tab) => {
     tab.addEventListener("click", () => activatePortalView(tab.dataset.portalView));
   });
@@ -4794,6 +4800,7 @@ function updateQuickSearchModeUi() {
   quickSearchInput.placeholder = placeholder;
   quickSearchInput.setAttribute("aria-label", placeholder);
   updateQuickSearchLeadingIcon();
+  updateGoogleImageSearchButton();
   renderAiEnginePill(engine, { previousThemeColor });
   renderPlatformActivationHint(quickSearchInput.value);
 }
@@ -5932,6 +5939,41 @@ function handleQuickSearchFocus() {
   handleQuickSearchInput();
 }
 
+function handleGoogleImageSearchButtonClick() {
+  if (!googleImageSearchInput) {
+    return;
+  }
+  quickSearchInput.focus({ preventScroll: true });
+  googleImageSearchInput.value = "";
+  googleImageSearchInput.click();
+}
+
+function handleGoogleImageSearchInputChange() {
+  const file = googleImageSearchInput?.files?.[0];
+  if (!file || (file.type && !file.type.startsWith("image/")) || !googleImageSearchForm) {
+    return;
+  }
+  if (googleImageSearchFilename) {
+    googleImageSearchFilename.value = file.name;
+  }
+  googleImageSearchForm.requestSubmit();
+}
+
+function updateGoogleImageSearchButton() {
+  if (!googleImageSearchButton) {
+    return;
+  }
+  const engine = searchEngineById(activeSearchEngine);
+  const available = engine.local
+    && !activePlatformSearchTarget
+    && !googleAiSearchModeActive
+    && selectedLocalSearchEngine === "google";
+  const active = available && Boolean(searchWorkbench?.classList.contains("search-active"));
+  googleImageSearchButton.hidden = !available;
+  googleImageSearchButton.disabled = !active;
+  googleImageSearchButton.tabIndex = active ? 0 : -1;
+}
+
 function searchAiCommand(value) {
   const match = String(value || "").match(/^\/([a-z][a-z0-9-]*)(?:\s+|$)(.*)$/i);
   if (!match) {
@@ -6063,6 +6105,7 @@ function handleQuickSearchBlur() {
 
 function setQuickSearchActive(isActive) {
   searchWorkbench?.classList.toggle("search-active", isActive);
+  updateGoogleImageSearchButton();
   favoriteStrip?.setAttribute("aria-disabled", String(isActive));
   favoriteStrip?.querySelectorAll(".favorite-link, .favorite-remove").forEach((control) => {
     if (isActive) {

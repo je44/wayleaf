@@ -42,12 +42,30 @@
             <div class="quick-search-entry">
               <input id="quickSearchInput" name="q" type="search" autocomplete="off" spellcheck="false" placeholder="Search or enter URL">
               <span class="platform-activation-hint" id="platformActivationHint" role="status" aria-live="polite" aria-atomic="true" hidden></span>
+              <button class="google-image-search-button" id="googleImageSearchButton" type="button" aria-label="Search by image with Google" title="Search by image with Google" tabindex="-1" disabled hidden>
+                <svg class="tdesign-icon google-image-search-icon-outline" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                  <g fill="none">
+                    <path d="M17.654 21.808a4.154 4.154 0 1 1 0-8.308a4.154 4.154 0 0 1 0 8.308"></path>
+                    <path stroke="currentColor" stroke-linecap="square" stroke-width="2" d="M21 10V3H3v18h7m1.5-8.5L9 10l-5.5 5.5m14.25-7.25a2 2 0 1 1-4 0a2 2 0 0 1 4 0Z"></path>
+                    <path stroke="currentColor" stroke-linecap="square" stroke-width="2" d="M20.592 20.59a4.154 4.154 0 1 0-5.877-5.872a4.154 4.154 0 0 0 5.877 5.872Zm0 0L22.5 22.5"></path>
+                  </g>
+                </svg>
+                <svg class="tdesign-icon google-image-search-icon-filled" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                  <path fill="currentColor" d="M22 2H2v20h10.506A6.72 6.72 0 0 1 11 17.75a6.73 6.73 0 0 1 2.189-4.976L9 8.586l-5 5V4h16v7.384c.733.26 1.408.641 2 1.122z"></path>
+                  <path fill="currentColor" d="M16 5.25a2.75 2.75 0 1 0 0 5.5a2.75 2.75 0 0 0 0-5.5m1.654 7.25a5.154 5.154 0 1 0 2.87 9.436l1.975 1.978l1.415-1.413l-1.977-1.98a5.154 5.154 0 0 0-4.283-8.021M14.5 17.654a3.154 3.154 0 1 1 6.308 0a3.154 3.154 0 0 1-6.308 0"></path>
+                </svg>
+              </button>
             </div>
             <span class="quick-search-settings" aria-hidden="true">
               <svg class="tdesign-icon" viewBox="0 0 24 24" focusable="false">
                 <path fill="currentColor" d="M21.66 6.423L12 .845L2.34 6.423v11.154L12 23.155l9.66-5.578zM12 16a4 4 0 1 1 0-8a4 4 0 0 1 0 8"></path>
               </svg>
             </span>
+          </form>
+          <form id="googleImageSearchForm" action="https://www.google.com/searchbyimage/upload" method="post" enctype="multipart/form-data" hidden>
+            <input id="googleImageSearchInput" name="encoded_image" type="file" accept="image/*">
+            <input id="googleImageSearchFilename" name="filename" type="hidden">
+            <input name="image_content" type="hidden" value="">
           </form>
           <div class="search-suggestions" id="searchSuggestions" role="listbox" aria-label="Search suggestions" hidden></div>
         </div>
