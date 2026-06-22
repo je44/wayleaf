@@ -257,25 +257,41 @@
               <div class="settings-group-heading">
                 <div>
                   <h3 id="appearanceModeTitle">Appearance</h3>
-                  <p>Choose Wayleaf's appearance mode</p>
                 </div>
               </div>
               <div class="settings-group-control">
                 <div class="settings-theme-mode-control theme-mode-control" id="themeModeControl" role="group" aria-label="Appearance" data-active-index="0">
                   <button class="theme-mode-button" type="button" data-theme-mode="system" aria-label="System">
-                    <span class="button-icon" aria-hidden="true"></span>
+                    <span class="theme-mode-preview" aria-hidden="true">
+                      <img src="assets/appearance/theme-system.svg" alt="">
+                      <span class="theme-mode-check">
+                        <svg viewBox="0 0 20 20" focusable="false"><path d="m5 10 3.2 3.2L15 6.8"></path></svg>
+                      </span>
+                    </span>
+                    <span class="button-icon theme-mode-legacy-icon" aria-hidden="true"></span>
                     <span class="theme-mode-label">System</span>
                   </button>
                   <button class="theme-mode-button" type="button" data-theme-mode="light" aria-label="Light">
-                    <span class="button-icon" aria-hidden="true"></span>
+                    <span class="theme-mode-preview" aria-hidden="true">
+                      <img src="assets/appearance/theme-light.svg" alt="">
+                      <span class="theme-mode-check">
+                        <svg viewBox="0 0 20 20" focusable="false"><path d="m5 10 3.2 3.2L15 6.8"></path></svg>
+                      </span>
+                    </span>
+                    <span class="button-icon theme-mode-legacy-icon" aria-hidden="true"></span>
                     <span class="theme-mode-label">Light</span>
                   </button>
                   <button class="theme-mode-button" type="button" data-theme-mode="dark" aria-label="Dark">
-                    <span class="button-icon" aria-hidden="true"></span>
+                    <span class="theme-mode-preview" aria-hidden="true">
+                      <img src="assets/appearance/theme-dark.svg" alt="">
+                      <span class="theme-mode-check">
+                        <svg viewBox="0 0 20 20" focusable="false"><path d="m5 10 3.2 3.2L15 6.8"></path></svg>
+                      </span>
+                    </span>
+                    <span class="button-icon theme-mode-legacy-icon" aria-hidden="true"></span>
                     <span class="theme-mode-label">Dark</span>
                   </button>
                 </div>
-                <p class="settings-group-note">Automatically switches light or dark mode from system settings.</p>
               </div>
             </section>
 
@@ -283,7 +299,6 @@
               <div class="settings-group-heading">
                 <div>
                   <h3 id="languageSettingsTitle">Language</h3>
-                  <p>Choose Wayleaf's display language</p>
                 </div>
               </div>
               <div class="settings-group-control">
@@ -295,12 +310,10 @@
               <div class="settings-group-heading">
                 <div>
                   <h3 id="presetPaletteTitle">Colors</h3>
-                  <p>Choose the default accent pair for light and dark modes</p>
                 </div>
               </div>
               <div class="settings-group-control">
                 <div class="palette-preset-grid" id="palettePresetGrid" role="radiogroup" aria-labelledby="presetPaletteTitle"></div>
-                <p class="settings-group-note">Used for buttons, links, selected states, and hints.</p>
               </div>
             </section>
 
@@ -308,7 +321,6 @@
               <div class="settings-group-heading">
                 <div>
                   <h3 id="syncSettingsTitle">Cloud sync</h3>
-                  <p>Sync your settings across devices</p>
                 </div>
               </div>
               <div class="settings-group-control">

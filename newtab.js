@@ -1209,16 +1209,11 @@ const MESSAGES = {
     settingsBasicTab: "基本设置",
     settingsSearchTab: "搜索设置",
     languageSettingsTitle: "语言",
-    languageSettingsDescription: "选择 Wayleaf 的显示语言",
     appearanceModeTitle: "外观",
-    appearanceModeDescription: "选择 Wayleaf 的外观",
-    appearanceModeHint: "根据系统设置自动切换浅色或深色模式。",
     themeModeSystem: "跟随系统",
     themeModeLight: "浅色",
     themeModeDark: "深色",
     presetPaletteTitle: "色彩",
-    presetPaletteDescription: "为浅色与深色模式选择一组默认强调色",
-    presetPaletteHint: "用于按钮、链接、选中态与提示色。",
     themePaletteSage: "松叶",
     themePaletteForest: "墨绿",
     themePaletteAmber: "琥珀",
@@ -1226,7 +1221,6 @@ const MESSAGES = {
     themePalettePeach: "珊瑚",
     themePaletteNeutral: "中性",
     syncSettingsTitle: "云端同步",
-    syncSettingsDescription: "跨设备同步你的配置",
     syncSettingsReady: "配置会跟随 Chrome 账号同步",
     syncSettingsReadyDetail: "同一 Google 账号安装后会自动恢复；扩展启用时每天自动同步一次。",
     syncSettingsUnavailable: "当前浏览器不支持同步",
@@ -1469,16 +1463,11 @@ const MESSAGES = {
     settingsBasicTab: "基本設定",
     settingsSearchTab: "搜尋設定",
     languageSettingsTitle: "語言",
-    languageSettingsDescription: "選擇 Wayleaf 的顯示語言",
     appearanceModeTitle: "外觀",
-    appearanceModeDescription: "選擇 Wayleaf 的外觀",
-    appearanceModeHint: "根據系統設定自動切換淺色或深色模式。",
     themeModeSystem: "跟隨系統",
     themeModeLight: "淺色",
     themeModeDark: "深色",
     presetPaletteTitle: "色彩",
-    presetPaletteDescription: "為淺色與深色模式選擇一組預設強調色",
-    presetPaletteHint: "用於按鈕、連結、選取狀態與提示色。",
     themePaletteSage: "松葉",
     themePaletteForest: "墨綠",
     themePaletteAmber: "琥珀",
@@ -1486,7 +1475,6 @@ const MESSAGES = {
     themePalettePeach: "珊瑚",
     themePaletteNeutral: "中性",
     syncSettingsTitle: "雲端同步",
-    syncSettingsDescription: "跨裝置同步你的設定",
     syncSettingsReady: "設定會跟隨 Chrome 帳號同步",
     syncSettingsReadyDetail: "同一 Google 帳號安裝後會自動恢復；擴充功能啟用時每天自動同步一次。",
     syncSettingsUnavailable: "目前瀏覽器不支援同步",
@@ -1698,16 +1686,11 @@ const MESSAGES = {
     settingsBasicTab: "Basic",
     settingsSearchTab: "Search",
     languageSettingsTitle: "Language",
-    languageSettingsDescription: "Choose Wayleaf's display language",
     appearanceModeTitle: "Appearance",
-    appearanceModeDescription: "Choose Wayleaf's appearance mode",
-    appearanceModeHint: "Automatically switches light or dark mode from system settings.",
     themeModeSystem: "System",
     themeModeLight: "Light",
     themeModeDark: "Dark",
     presetPaletteTitle: "Colors",
-    presetPaletteDescription: "Choose the default accent pair for light and dark modes",
-    presetPaletteHint: "Used for buttons, links, selected states, and hints.",
     themePaletteSage: "Sage",
     themePaletteForest: "Forest",
     themePaletteAmber: "Amber",
@@ -1715,7 +1698,6 @@ const MESSAGES = {
     themePalettePeach: "Coral",
     themePaletteNeutral: "Neutral",
     syncSettingsTitle: "Cloud sync",
-    syncSettingsDescription: "Sync your settings across devices",
     syncSettingsReady: "Settings sync with your Chrome account",
     syncSettingsReadyDetail: "Install with the same Google account to restore; auto sync runs once daily while the extension is enabled.",
     syncSettingsUnavailable: "Sync is unavailable in this browser",
@@ -1853,16 +1835,11 @@ const MESSAGES = {
     settingsBasicTab: "基本",
     settingsSearchTab: "検索",
     languageSettingsTitle: "言語",
-    languageSettingsDescription: "Wayleaf の表示言語を選択",
     appearanceModeTitle: "外観",
-    appearanceModeDescription: "Wayleaf の外観モードを選択",
-    appearanceModeHint: "システム設定に合わせてライトまたはダークモードを自動で切り替えます。",
     themeModeSystem: "システム",
     themeModeLight: "ライト",
     themeModeDark: "ダーク",
     presetPaletteTitle: "カラー",
-    presetPaletteDescription: "ライト/ダークモードの既定アクセント色ペアを選択",
-    presetPaletteHint: "ボタン、リンク、選択状態、ヒントに使用されます。",
     themePaletteSage: "セージ",
     themePaletteForest: "フォレスト",
     themePaletteAmber: "アンバー",
@@ -1870,7 +1847,6 @@ const MESSAGES = {
     themePalettePeach: "コーラル",
     themePaletteNeutral: "ニュートラル",
     syncSettingsTitle: "クラウド同期",
-    syncSettingsDescription: "デバイス間で設定を同期",
     syncSettingsReady: "Chrome アカウントで設定を同期します",
     syncSettingsReadyDetail: "同じ Google アカウントでインストールすると復元されます。拡張機能が有効な間は1日1回自動同期します。",
     syncSettingsUnavailable: "このブラウザでは同期を利用できません",
@@ -1944,16 +1920,11 @@ const MESSAGES = {
     settingsBasicTab: "기본",
     settingsSearchTab: "검색",
     languageSettingsTitle: "언어",
-    languageSettingsDescription: "Wayleaf 표시 언어를 선택하세요",
     appearanceModeTitle: "모양",
-    appearanceModeDescription: "Wayleaf의 모양 모드를 선택하세요",
-    appearanceModeHint: "시스템 설정에 따라 라이트/다크 모드를 자동 전환합니다.",
     themeModeSystem: "시스템",
     themeModeLight: "라이트",
     themeModeDark: "다크",
     presetPaletteTitle: "색상",
-    presetPaletteDescription: "라이트/다크 모드의 기본 강조색 조합을 선택하세요",
-    presetPaletteHint: "버튼, 링크, 선택 상태, 안내 색상에 사용됩니다.",
     themePaletteSage: "세이지",
     themePaletteForest: "포레스트",
     themePaletteAmber: "앰버",
@@ -1961,7 +1932,6 @@ const MESSAGES = {
     themePalettePeach: "코럴",
     themePaletteNeutral: "중립",
     syncSettingsTitle: "클라우드 동기화",
-    syncSettingsDescription: "기기 간 설정 동기화",
     syncSettingsReady: "Chrome 계정과 설정이 동기화됩니다",
     syncSettingsReadyDetail: "같은 Google 계정으로 설치하면 복원됩니다. 확장 프로그램이 활성화된 동안 하루에 한 번 자동 동기화됩니다.",
     syncSettingsUnavailable: "이 브라우저에서는 동기화를 사용할 수 없습니다",
@@ -2035,16 +2005,11 @@ const MESSAGES = {
     settingsBasicTab: "Básico",
     settingsSearchTab: "Búsqueda",
     languageSettingsTitle: "Idioma",
-    languageSettingsDescription: "Elige el idioma de visualización de Wayleaf",
     appearanceModeTitle: "Apariencia",
-    appearanceModeDescription: "Elige el modo de apariencia de Wayleaf",
-    appearanceModeHint: "Cambia automáticamente entre modo claro u oscuro según el sistema.",
     themeModeSystem: "Sistema",
     themeModeLight: "Claro",
     themeModeDark: "Oscuro",
     presetPaletteTitle: "Colores",
-    presetPaletteDescription: "Elige el par de acentos predeterminado para los modos claro y oscuro",
-    presetPaletteHint: "Se usa en botones, enlaces, estados seleccionados y ayudas.",
     themePaletteSage: "Salvia",
     themePaletteForest: "Bosque",
     themePaletteAmber: "Ámbar",
@@ -2052,7 +2017,6 @@ const MESSAGES = {
     themePalettePeach: "Coral",
     themePaletteNeutral: "Neutro",
     syncSettingsTitle: "Sincronización en la nube",
-    syncSettingsDescription: "Sincroniza tus ajustes entre dispositivos",
     syncSettingsReady: "Los ajustes se sincronizan con tu cuenta de Chrome",
     syncSettingsReadyDetail: "Instala con la misma cuenta de Google para restaurarlos; la sincronización automática se ejecuta una vez al día mientras la extensión esté activa.",
     syncSettingsUnavailable: "La sincronización no está disponible en este navegador",
@@ -2126,16 +2090,11 @@ const MESSAGES = {
     settingsBasicTab: "Général",
     settingsSearchTab: "Recherche",
     languageSettingsTitle: "Langue",
-    languageSettingsDescription: "Choisissez la langue d'affichage de Wayleaf",
     appearanceModeTitle: "Apparence",
-    appearanceModeDescription: "Choisir le mode d'apparence de Wayleaf",
-    appearanceModeHint: "Bascule automatiquement entre clair et sombre selon le système.",
     themeModeSystem: "Système",
     themeModeLight: "Clair",
     themeModeDark: "Sombre",
     presetPaletteTitle: "Couleurs",
-    presetPaletteDescription: "Choisir la paire d'accents par défaut pour les modes clair et sombre",
-    presetPaletteHint: "Utilisée pour les boutons, liens, états sélectionnés et indications.",
     themePaletteSage: "Sauge",
     themePaletteForest: "Forêt",
     themePaletteAmber: "Ambre",
@@ -2143,7 +2102,6 @@ const MESSAGES = {
     themePalettePeach: "Corail",
     themePaletteNeutral: "Neutre",
     syncSettingsTitle: "Synchronisation cloud",
-    syncSettingsDescription: "Synchroniser vos paramètres entre appareils",
     syncSettingsReady: "Les paramètres se synchronisent avec votre compte Chrome",
     syncSettingsReadyDetail: "Installez avec le même compte Google pour les restaurer ; la synchronisation automatique s'exécute une fois par jour quand l'extension est activée.",
     syncSettingsUnavailable: "La synchronisation n'est pas disponible dans ce navigateur",
@@ -2217,16 +2175,11 @@ const MESSAGES = {
     settingsBasicTab: "Allgemein",
     settingsSearchTab: "Suche",
     languageSettingsTitle: "Sprache",
-    languageSettingsDescription: "Anzeigesprache von Wayleaf auswählen",
     appearanceModeTitle: "Darstellung",
-    appearanceModeDescription: "Darstellungsmodus von Wayleaf auswählen",
-    appearanceModeHint: "Wechselt anhand der Systemeinstellung automatisch zwischen Hell- und Dunkelmodus.",
     themeModeSystem: "System",
     themeModeLight: "Hell",
     themeModeDark: "Dunkel",
     presetPaletteTitle: "Farben",
-    presetPaletteDescription: "Standard-Akzentpaar für hellen und dunklen Modus auswählen",
-    presetPaletteHint: "Für Buttons, Links, ausgewählte Zustände und Hinweise.",
     themePaletteSage: "Salbei",
     themePaletteForest: "Wald",
     themePaletteAmber: "Bernstein",
@@ -2234,7 +2187,6 @@ const MESSAGES = {
     themePalettePeach: "Koralle",
     themePaletteNeutral: "Neutral",
     syncSettingsTitle: "Cloud-Synchronisierung",
-    syncSettingsDescription: "Einstellungen geräteübergreifend synchronisieren",
     syncSettingsReady: "Einstellungen werden mit deinem Chrome-Konto synchronisiert",
     syncSettingsReadyDetail: "Mit demselben Google-Konto installieren, um sie wiederherzustellen; die automatische Synchronisierung läuft einmal täglich, solange die Erweiterung aktiv ist.",
     syncSettingsUnavailable: "Synchronisierung ist in diesem Browser nicht verfügbar",
@@ -3813,21 +3765,15 @@ function applySettingsLocale() {
   settingsSearchTab.querySelector(".settings-tab-label").textContent = t("settingsSearchTab");
   settingsBasicTab.setAttribute("aria-label", t("settingsBasicTab"));
   settingsSearchTab.setAttribute("aria-label", t("settingsSearchTab"));
-  settingsBasicTab.title = t("settingsBasicTab");
-  settingsSearchTab.title = t("settingsSearchTab");
-  document.querySelector("#languageSettingsTitle").textContent = t("languageSettingsTitle");
-  document.querySelector(".settings-language-group .settings-group-heading p").textContent = t("languageSettingsDescription");
-  renderLanguageOptions();
-  document.querySelector("#themeModeControl")?.setAttribute("aria-label", t("appearanceModeTitle"));
-  document.querySelector("#appearanceModeTitle").textContent = t("appearanceModeTitle");
-  document.querySelector(".settings-mode-group .settings-group-heading p").textContent = t("appearanceModeDescription");
-  document.querySelector(".settings-mode-group .settings-group-note").textContent = t("appearanceModeHint");
-  document.querySelector("#presetPaletteTitle").textContent = t("presetPaletteTitle");
-  document.querySelector('[aria-labelledby="presetPaletteTitle"] .settings-group-heading p').textContent = t("presetPaletteDescription");
-  document.querySelector('[aria-labelledby="presetPaletteTitle"] .settings-group-note').textContent = t("presetPaletteHint");
-  document.querySelector("#syncSettingsTitle").textContent = t("syncSettingsTitle");
-  document.querySelector('[aria-labelledby="syncSettingsTitle"] .settings-group-heading p').textContent = t("syncSettingsDescription");
-  document.querySelector("#searchSettingsDefaultTitle").textContent = t("searchSettingsDefaultTitle");
+	  settingsBasicTab.title = t("settingsBasicTab");
+	  settingsSearchTab.title = t("settingsSearchTab");
+	  document.querySelector("#languageSettingsTitle").textContent = t("languageSettingsTitle");
+	  renderLanguageOptions();
+	  document.querySelector("#themeModeControl")?.setAttribute("aria-label", t("appearanceModeTitle"));
+	  document.querySelector("#appearanceModeTitle").textContent = t("appearanceModeTitle");
+	  document.querySelector("#presetPaletteTitle").textContent = t("presetPaletteTitle");
+	  document.querySelector("#syncSettingsTitle").textContent = t("syncSettingsTitle");
+	  document.querySelector("#searchSettingsDefaultTitle").textContent = t("searchSettingsDefaultTitle");
   document.querySelector('[aria-labelledby="searchSettingsDefaultTitle"] .settings-group-heading p').textContent = t("searchSettingsDefaultDescription");
   document.querySelector('[aria-labelledby="searchSettingsDefaultTitle"] .settings-group-note').textContent = t("searchSettingsDefaultHint");
   document.querySelector("#searchSettingsAiTitle").textContent = t("searchSettingsAiTitle");

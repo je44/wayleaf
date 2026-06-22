@@ -2321,6 +2321,124 @@ html.theme-transitioning .search-workbench[data-ai-exiting] .favorite-icon {
   white-space: nowrap;
 }
 
+#themeModeControl {
+  --appearance-mode-card-width: calc((420px - 28px) / 3);
+  width: min(100%, 420px);
+  justify-self: end;
+  grid-template-columns: repeat(3, minmax(0, var(--appearance-mode-card-width)));
+  gap: 14px;
+  min-height: 0;
+  padding: 0;
+  overflow: visible;
+  background: transparent;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+
+#themeModeControl::before {
+  display: none;
+}
+
+#themeModeControl .theme-mode-button {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  justify-items: center;
+  gap: 8px;
+  min-height: 0;
+  padding: 0;
+  border-radius: 10px;
+  font-size: 13px;
+  text-align: center;
+}
+
+#themeModeControl .theme-mode-preview {
+  position: relative;
+  display: block;
+  width: 100%;
+  aspect-ratio: 5 / 3;
+  overflow: hidden;
+  border: 0;
+  border-radius: 12px;
+  background: var(--panel-soft);
+  outline: 1px solid color-mix(in srgb, var(--ink) 20%, transparent);
+  box-shadow: none;
+  transition: none;
+}
+
+#themeModeControl .theme-mode-preview img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+#themeModeControl .theme-mode-legacy-icon {
+  display: none;
+}
+
+#themeModeControl .theme-mode-label {
+  width: 100%;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 680;
+  line-height: 1.25;
+  text-align: center;
+  transition: color 160ms ease;
+}
+
+#themeModeControl .theme-mode-check {
+  position: absolute;
+  right: 6px;
+  bottom: 6px;
+  display: grid;
+  width: 20.3px;
+  height: 20.3px;
+  place-items: center;
+  border: 0;
+  border-radius: 999px;
+  background: var(--accent);
+  color: var(--on-accent);
+  box-shadow: none;
+  opacity: 0;
+  transform: scale(0.72);
+  transition:
+    opacity 160ms ease,
+    transform 180ms cubic-bezier(0.2, 0, 0, 1);
+}
+
+#themeModeControl .theme-mode-check svg {
+  width: 12.9px;
+  height: 12.9px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 2.2;
+}
+
+#themeModeControl .theme-mode-button:focus-visible {
+  outline: 0;
+}
+
+#themeModeControl .theme-mode-button:focus-visible .theme-mode-preview {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+#themeModeControl .theme-mode-button.active .theme-mode-preview {
+  outline: 1px solid var(--accent);
+  box-shadow: none;
+}
+
+#themeModeControl .theme-mode-button.active .theme-mode-label {
+  color: var(--ink);
+}
+
+#themeModeControl .theme-mode-button.active .theme-mode-check {
+  opacity: 1;
+  transform: scale(1);
+}
+
 .theme-toggle-icon {
   display: inline-grid;
   width: var(--topbar-action-icon-box-size);
@@ -3252,15 +3370,29 @@ html.theme-transitioning .search-workbench[data-ai-exiting] .favorite-icon {
 }
 
 .settings-mode-group {
-  min-height: 142px;
+  grid-template-columns: minmax(220px, 1fr) minmax(0, 420px);
+  column-gap: 32px;
+  row-gap: 10px;
+  align-items: start;
+  min-height: 0;
+  padding: 28px 32px 26px;
+}
+
+.settings-mode-group .settings-group-heading {
+  grid-column: 1;
+  grid-row: 1;
+  align-self: start;
+  padding-bottom: 0;
 }
 
 .settings-mode-group .settings-group-control {
-  gap: 16px;
+  display: contents;
 }
 
-.settings-mode-group .settings-group-note {
-  margin-top: 0;
+.settings-mode-group #themeModeControl {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+  align-self: start;
 }
 
 .color-picker-row output {
@@ -6651,6 +6783,29 @@ a.history-page-link:hover {
     padding: 22px 20px;
   }
 
+  .settings-mode-group {
+    display: grid;
+    grid-template-columns: 1fr;
+    row-gap: 18px;
+    align-items: start;
+  }
+
+  .settings-mode-group .settings-group-heading,
+  .settings-mode-group #themeModeControl,
+  .settings-mode-group .settings-group-note {
+    grid-column: auto;
+    grid-row: auto;
+  }
+
+  .settings-mode-group .settings-group-heading,
+  .settings-mode-group .settings-group-note {
+    align-self: start;
+  }
+
+  .settings-mode-group .settings-group-control {
+    display: grid;
+  }
+
   .palette-preset-grid {
     grid-template-columns: repeat(4, minmax(0, 1fr));
   }
@@ -6956,20 +7111,14 @@ a.history-page-link:hover {
   }
 
   #themeModeControl {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    justify-content: stretch;
+    gap: 12px;
+    width: 100%;
   }
 
-  #themeModeControl::before {
-    width: calc(100% - (var(--theme-mode-padding) * 2));
-    height: calc((100% - (var(--theme-mode-padding) * 2) - (var(--theme-mode-gap) * 2)) / 3);
-  }
-
-  #themeModeControl[data-active-index="1"]::before {
-    transform: translateY(calc(100% + var(--theme-mode-gap)));
-  }
-
-  #themeModeControl[data-active-index="2"]::before {
-    transform: translateY(calc((100% + var(--theme-mode-gap)) * 2));
+  #themeModeControl .theme-mode-label {
+    font-size: 12px;
   }
 
   .settings-language-control {

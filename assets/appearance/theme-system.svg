@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="600" height="360" viewBox="0 0 600 360">
+  <clipPath id="left-half"><rect width="300" height="360"/></clipPath>
+  <clipPath id="right-half"><rect x="300" width="300" height="360"/></clipPath>
+  <g clip-path="url(#left-half)">
+    <rect width="600" height="360" fill="#101512"/>
+    <rect x="70" y="116" width="560" height="128" rx="24" fill="#121815" stroke="#eff6f3" stroke-opacity=".12" stroke-width="2"/>
+    <g transform="translate(118 154) scale(2.72)" fill="none">
+      <path stroke="#83918b" stroke-linecap="square" stroke-width="1.65" d="m15.803 15.804 5.303 5.303m-5.303-5.304A7.5 7.5 0 1 1 5.197 5.197a7.5 7.5 0 0 1 10.606 10.606Z"/>
+    </g>
+  </g>
+  <g clip-path="url(#right-half)">
+    <rect width="600" height="360" fill="#f7f8f3"/>
+    <rect x="370" y="116" width="560" height="128" rx="24" fill="#fffefa" stroke="#131915" stroke-opacity=".12" stroke-width="2"/>
+    <g transform="translate(418 154) scale(2.72)" fill="none">
+      <path stroke="#6d7872" stroke-linecap="square" stroke-width="1.75" d="m15.803 15.804 5.303 5.303m-5.303-5.304A7.5 7.5 0 1 1 5.197 5.197a7.5 7.5 0 0 1 10.606 10.606Z"/>
+    </g>
+  </g>
+</svg>

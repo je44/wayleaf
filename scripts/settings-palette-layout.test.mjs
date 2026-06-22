@@ -7,26 +7,14 @@ const source = readFileSync(new URL("../newtab.js", import.meta.url), "utf8");
 
 assert.match(
   html,
-  /<h3 id="presetPaletteTitle">Colors<\/h3>\s*<p>Choose the default accent pair for light and dark modes<\/p>/,
-  "Default HTML palette copy should use the English baseline before locale hydration."
+  /<h3 id="presetPaletteTitle">Colors<\/h3>\s*<\/div>/,
+  "Palette settings should not render descriptive copy below the title."
 );
 
 assert.match(
   html,
   /<button class="settings-page-return" id="closeSettingsButton" type="button" aria-label="Back home" title="Back home">\s*<span class="button-icon" aria-hidden="true"><\/span>\s*<\/button>/,
   "Settings return should render as an arrow icon button with the English baseline accessible label."
-);
-
-assert.match(
-  source,
-  /presetPaletteTitle:\s*"色彩"[\s\S]*presetPaletteDescription:\s*"为浅色与深色模式选择一组默认强调色"/,
-  "Chinese palette settings copy should stay aligned with the updated meaning."
-);
-
-assert.match(
-  source,
-  /presetPaletteTitle:\s*"Colors"[\s\S]*presetPaletteDescription:\s*"Choose the default accent pair for light and dark modes"/,
-  "English palette settings copy should stay aligned with the updated meaning."
 );
 
 assert.match(
@@ -135,4 +123,48 @@ assert.doesNotMatch(
   styles,
   /grid-template-columns:\s*repeat\(4,\s*76px\);/,
   "Palette presets must not return to fixed-width cards that leave the content area ragged."
+);
+
+for (const mode of ["system", "light", "dark"]) {
+  assert.match(
+    html,
+    new RegExp(`data-theme-mode="${mode}"[\\s\\S]*assets/appearance/theme-${mode}\\.svg`),
+    `The ${mode} appearance option should embed its real Wayleaf preview asset.`
+  );
+}
+
+assert.match(
+  styles,
+  /#themeModeControl \.theme-mode-button\.active \.theme-mode-preview\s*\{[\s\S]*outline:\s*1px solid var\(--accent\);[\s\S]*box-shadow:\s*none;/,
+  "The selected appearance preview should keep one 1px accent outline without shadow."
+);
+
+assert.match(
+  styles,
+  /#themeModeControl\s*\{[\s\S]*--appearance-mode-card-width:\s*calc\(\(420px - 28px\) \/ 3\);[\s\S]*width:\s*min\(100%,\s*420px\);[\s\S]*justify-self:\s*end;[\s\S]*grid-template-columns:\s*repeat\(3,\s*minmax\(0,\s*var\(--appearance-mode-card-width\)\)\);[\s\S]*gap:\s*14px;[\s\S]*#themeModeControl \.theme-mode-button\s*\{[\s\S]*justify-items:\s*center;[\s\S]*text-align:\s*center;[\s\S]*#themeModeControl \.theme-mode-preview\s*\{[\s\S]*aspect-ratio:\s*5\s*\/\s*3;[\s\S]*overflow:\s*hidden;[\s\S]*border:\s*0;[\s\S]*outline:\s*1px solid color-mix\(in srgb,\s*var\(--ink\) 20%,\s*transparent\);[\s\S]*box-shadow:\s*none;/,
+  "Appearance cards should keep compact card width in the right column with only a subtle 1px unselected outline."
+);
+
+assert.match(
+  styles,
+  /#themeModeControl \.theme-mode-check\s*\{[\s\S]*width:\s*20\.3px;[\s\S]*height:\s*20\.3px;[\s\S]*#themeModeControl \.theme-mode-check svg\s*\{[\s\S]*width:\s*12\.9px;[\s\S]*height:\s*12\.9px;/,
+  "The selected appearance check icon should be scaled down by about 15% in area."
+);
+
+assert.doesNotMatch(
+  styles,
+  /#themeModeControl \.theme-mode-button:hover \.theme-mode-preview/,
+  "Appearance preview cards should not animate or shift on hover."
+);
+
+assert.match(
+  styles,
+  /\.settings-mode-group\s*\{[\s\S]*grid-template-columns:\s*minmax\(220px,\s*1fr\) minmax\(0,\s*420px\);[\s\S]*column-gap:\s*32px;[\s\S]*row-gap:\s*10px;[\s\S]*align-items:\s*start;[\s\S]*\.settings-mode-group \.settings-group-heading\s*\{[\s\S]*grid-column:\s*1;[\s\S]*grid-row:\s*1;[\s\S]*align-self:\s*start;[\s\S]*\.settings-mode-group \.settings-group-control\s*\{[\s\S]*display:\s*contents;[\s\S]*\.settings-mode-group #themeModeControl\s*\{[\s\S]*grid-column:\s*2;[\s\S]*grid-row:\s*1 \/ span 2;[\s\S]*align-self:\s*start;/,
+  "Appearance settings group should keep title text in the left column and cards in the right column."
+);
+
+assert.match(
+  styles,
+  /@media \(max-width: 900px\)[\s\S]*\.settings-mode-group\s*\{[\s\S]*grid-template-columns:\s*1fr;[\s\S]*\.settings-mode-group \.settings-group-control\s*\{[\s\S]*display:\s*grid;/,
+  "Appearance settings group should collapse cleanly on narrower screens."
 );

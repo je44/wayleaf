@@ -31,8 +31,8 @@ assert.match(
 
 assert.match(
   html,
-  /<h3 id="appearanceModeTitle">Appearance<\/h3>\s*<p>Choose Wayleaf's appearance mode<\/p>/,
-  "Default HTML appearance copy should use the English baseline before locale hydration."
+  /<h3 id="appearanceModeTitle">Appearance<\/h3>\s*<\/div>/,
+  "Appearance settings should not render descriptive copy below the title."
 );
 
 assert.equal(
