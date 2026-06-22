@@ -1173,6 +1173,7 @@ const MESSAGES = {
     pinnedTitle: "置顶",
     recentTitle: "最近 · 时间流",
     quickSearchPlaceholder: "搜索或输入网址",
+    googleImageSearch: "使用 Google 以图搜索",
     quickSearch: "搜索",
     quickSearchLocal: "打开",
     quickSearchAggregate: "聚合搜索",
@@ -1346,6 +1347,7 @@ const MESSAGES = {
     portalCategoryDesign: "設計",
     portalCategoryOther: "其他",
     quickSearchPlaceholder: "搜尋或輸入網址",
+    googleImageSearch: "使用 Google 以圖搜尋",
     quickSearch: "搜尋",
     quickSearchLocal: "打開",
     quickSearchAggregate: "聚合搜尋",
@@ -1660,6 +1662,7 @@ const MESSAGES = {
     pinnedTitle: "Pinned",
     recentTitle: "Recent timeline",
     quickSearchPlaceholder: "Search or enter URL",
+    googleImageSearch: "Search by image with Google",
     quickSearch: "Search",
     quickSearchLocal: "Open",
     quickSearchAggregate: "Aggregate search",
@@ -2351,6 +2354,7 @@ const LOCALE_COMPLETIONS = {
     historyNextPage: "次の最近ページ",
     refreshHistory: "履歴を更新",
     quickSearchPlaceholder: "検索または URL を入力",
+    googleImageSearch: "Google で画像検索",
     quickSearch: "検索",
     quickSearchLocal: "開く",
     quickSearchAiCommandHint: "/gpt、/claude、/gemini、/grok、/deepseek、/doubao、/kimi、/glm で AI を切り替え",
@@ -2507,6 +2511,7 @@ const LOCALE_COMPLETIONS = {
     historyNextPage: "다음 최근 페이지",
     refreshHistory: "기록 새로고침",
     quickSearchPlaceholder: "검색 또는 URL 입력",
+    googleImageSearch: "Google로 이미지 검색",
     quickSearch: "검색",
     quickSearchLocal: "열기",
     quickSearchAiCommandHint: "/gpt, /claude, /gemini, /grok, /deepseek, /doubao, /kimi, /glm으로 AI 전환",
@@ -2663,6 +2668,7 @@ const LOCALE_COMPLETIONS = {
     historyNextPage: "Página reciente siguiente",
     refreshHistory: "Actualizar historial",
     quickSearchPlaceholder: "Buscar o escribir URL",
+    googleImageSearch: "Buscar por imagen con Google",
     quickSearch: "Buscar",
     quickSearchLocal: "Abrir",
     quickSearchAiCommandHint: "Escribe /gpt, /claude, /gemini, /grok, /deepseek, /doubao, /kimi o /glm para cambiar de IA",
@@ -2819,6 +2825,7 @@ const LOCALE_COMPLETIONS = {
     historyNextPage: "Page récente suivante",
     refreshHistory: "Actualiser l'historique",
     quickSearchPlaceholder: "Rechercher ou saisir une URL",
+    googleImageSearch: "Rechercher par image avec Google",
     quickSearch: "Rechercher",
     quickSearchLocal: "Ouvrir",
     quickSearchAiCommandHint: "Tapez /gpt, /claude, /gemini, /grok, /deepseek, /doubao, /kimi ou /glm pour changer d'IA",
@@ -2975,6 +2982,7 @@ const LOCALE_COMPLETIONS = {
     historyNextPage: "Nächste aktuelle Seite",
     refreshHistory: "Verlauf aktualisieren",
     quickSearchPlaceholder: "Suchen oder URL eingeben",
+    googleImageSearch: "Mit Google per Bild suchen",
     quickSearch: "Suchen",
     quickSearchLocal: "Öffnen",
     quickSearchAiCommandHint: "Mit /gpt, /claude, /gemini, /grok, /deepseek, /doubao, /kimi oder /glm die KI wechseln",
@@ -3663,6 +3671,10 @@ function applyLocale() {
   applySettingsLocale();
   quickSearchInput.placeholder = t("quickSearchPlaceholder");
   quickSearchInput.setAttribute("aria-label", t("quickSearchPlaceholder"));
+  googleImageSearchButton?.setAttribute("aria-label", t("googleImageSearch"));
+  if (googleImageSearchButton) {
+    googleImageSearchButton.title = t("googleImageSearch");
+  }
   quickSearchInput.labels?.forEach((label) => {
     label.textContent = t("quickSearchPlaceholder");
   });
