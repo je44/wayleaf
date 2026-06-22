@@ -222,56 +222,62 @@ assert.match(
 
 assert.match(
   html,
-  /<button class="portal-category-trigger settings-language-trigger" id="languageTrigger"[^>]+aria-haspopup="listbox"[^>]+aria-controls="languageOptions"/,
-  "Basic settings should use Wayleaf's custom listbox trigger."
+  /<div class="theme-mode-control settings-language-control" id="languageOptions" role="radiogroup" aria-labelledby="languageSettingsTitle" data-active-index="0"><\/div>/,
+  "Basic settings should expose all language choices through the existing appearance segmented-control style."
 );
 
 assert.doesNotMatch(
   html,
-  /<select[^>]+id="languageSelect"/,
-  "Language settings should not invoke the native system select menu."
+  /id="languageTrigger"|id="languagePicker"|<select[^>]+id="languageSelect"/,
+  "Language settings should not keep a dropdown trigger or invoke the native system select menu."
 );
 
 assert.match(
   source,
-  /document\.querySelector\("\.settings-language-trigger-icon"\)\.innerHTML = chevronDownIcon\(\);/,
-  "The language menu trigger should use Wayleaf's existing TDesign chevron."
+  /option\.className = "theme-mode-button settings-language-option";/,
+  "Language choices should reuse the appearance button style without duplicating its CSS."
 );
 
 assert.match(
   source,
-  /icon\.innerHTML = tdesignIcon\("check"\);/,
-  "The selected language should use a TDesign check icon."
+  /option\.setAttribute\("role", "radio"\);/,
+  "Language choices should remain an isolated accessible radio group."
 );
 
 assert.match(
   css,
-  /\.settings-language-trigger:focus,[\s\S]*?border-color: var\(--accent-border\);[\s\S]*?outline: 0;[\s\S]*?box-shadow: none;/,
-  "The custom language trigger should replace the native blue focus ring with Wayleaf's accent border."
+  /\.settings-language-control\s*\{\s*grid-template-columns: repeat\(6, minmax\(0, 1fr\)\);\s*\}/,
+  "All six language choices should stay in one horizontal row."
 );
 
 assert.match(
   css,
-  /\.settings-language-trigger \{\s*min-height: 40px;\s*\}/,
-  "The language trigger should match the 40px active appearance control height."
+  /\.settings-language-control::before\s*\{\s*width: calc\(\(100% - \(var\(--theme-mode-padding\) \* 2\) - \(var\(--theme-mode-gap\) \* 5\)\) \/ 6\);\s*\}/,
+  "The reused appearance selection indicator should fit one of six language columns."
 );
 
 assert.match(
   css,
-  /\.settings-language-option \{\s*min-height: 40px;/,
-  "Every expanded language option should match the 40px trigger height."
+  /@media \(max-width: 560px\)[\s\S]*?\.settings-language-control\s*\{[\s\S]*?--theme-mode-gap: 2px;[\s\S]*?\.settings-language-control \.theme-mode-button\s*\{[\s\S]*?padding: 0 2px;[\s\S]*?font-size: 11px;/,
+  "Narrow settings should keep all six language labels readable on one row."
 );
 
 assert.match(
   css,
-  /\.settings-language-options \{[\s\S]*?position: absolute;[\s\S]*?top: calc\(100% \+ 6px\);/,
-  "Opening the language menu should overlay the settings page instead of changing its layout height."
+  /\.theme-mode-control\[data-active-index="5"\]::before\s*\{\s*transform: translateX\(calc\(\(100% \+ var\(--theme-mode-gap\)\) \* 5\)\);\s*\}/,
+  "The shared appearance indicator should reach the sixth language choice."
+);
+
+assert.doesNotMatch(
+  css,
+  /settings-language-trigger|settings-language-options|settings-language-option-icon/,
+  "Legacy dropdown-only language styles should be removed."
 );
 
 assert.match(
   source,
-  /openLanguagePicker\(\{ focusOption: event\?\.detail === 0 \}\);/,
-  "Pointer-opened language menus should keep trigger focus and avoid scrolling the settings page."
+  /languageOptions\.setAttribute\("data-active-index", String\(activeIndex\)\);[\s\S]*option\.setAttribute\("aria-checked", String\(isSelected\)\);/,
+  "Language selection state should remain isolated from appearance state while driving the shared UI."
 );
 
 assert.match(

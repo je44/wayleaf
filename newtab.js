@@ -3117,9 +3117,6 @@ const closeSettingsButton = document.querySelector("#closeSettingsButton");
 const settingsTabsShell = document.querySelector(".settings-tabs-shell");
 const settingsTabButtons = [...document.querySelectorAll("[data-settings-tab]")];
 const settingsTabPanels = [...document.querySelectorAll("[data-settings-panel]")];
-const languagePicker = document.querySelector("#languagePicker");
-const languageTrigger = document.querySelector("#languageTrigger");
-const languageCurrent = document.querySelector("#languageCurrent");
 const languageOptions = document.querySelector("#languageOptions");
 const palettePresetGrid = document.querySelector("#palettePresetGrid");
 const syncSettingsRow = document.querySelector("#syncSettingsRow");
@@ -3752,7 +3749,6 @@ function setStaticButtonIcons() {
   });
   togglePortalFormButton.querySelector(".button-icon").innerHTML = plusIcon();
   document.querySelector(".portal-category-trigger-icon").innerHTML = chevronDownIcon();
-  document.querySelector(".settings-language-trigger-icon").innerHTML = chevronDownIcon();
   refreshBookmarkFolderButton.querySelector(".button-icon").innerHTML = refreshIcon();
   bookmarkFavoriteAddButton.querySelector(".button-icon").innerHTML = plusIcon();
   chooseBookmarkFolderButton.querySelector(".button-icon").innerHTML = pageTabFilledIcon();
@@ -3882,75 +3878,42 @@ function applySettingsLocale() {
 }
 
 function renderLanguageOptions() {
-  if (!languageOptions || !languageCurrent) {
+  if (!languageOptions) {
     return;
   }
   languageOptions.replaceChildren(...LANGUAGE_PREFERENCES.map((preference) => {
     const option = document.createElement("button");
-    option.className = "portal-category-option settings-language-option";
+    option.className = "theme-mode-button settings-language-option";
     option.type = "button";
     option.dataset.languagePreference = preference;
     option.id = `languageOption-${preference}`;
-    option.setAttribute("role", "option");
+    option.setAttribute("role", "radio");
     const label = document.createElement("span");
+    label.className = "theme-mode-label";
     label.textContent = languagePreferenceLabel(preference);
-    const icon = document.createElement("span");
-    icon.className = "button-icon settings-language-option-icon";
-    icon.setAttribute("aria-hidden", "true");
-    icon.innerHTML = tdesignIcon("check");
-    option.append(label, icon);
-    option.addEventListener("pointerdown", (event) => event.preventDefault());
+    option.append(label);
     return option;
   }));
-  updateLanguagePicker();
+  updateLanguageControl();
 }
 
 function languagePreferenceLabel(preference) {
   return preference === "system" ? t("themeModeSystem") : LANGUAGE_OPTION_LABELS[preference];
 }
 
-function updateLanguagePicker() {
-  if (languageCurrent) {
-    languageCurrent.textContent = languagePreferenceLabel(activeLanguagePreference);
+function updateLanguageControl() {
+  if (!languageOptions) {
+    return;
   }
-  languageOptions?.querySelectorAll(".settings-language-option").forEach((option) => {
+  const options = [...languageOptions.querySelectorAll(".settings-language-option")];
+  const activeIndex = Math.max(0, options.findIndex((option) => option.dataset.languagePreference === activeLanguagePreference));
+  languageOptions.setAttribute("data-active-index", String(activeIndex));
+  options.forEach((option) => {
     const isSelected = option.dataset.languagePreference === activeLanguagePreference;
-    option.setAttribute("aria-selected", String(isSelected));
+    option.classList.toggle("active", isSelected);
+    option.setAttribute("aria-checked", String(isSelected));
     option.tabIndex = isSelected ? 0 : -1;
   });
-  languageTrigger?.setAttribute("aria-activedescendant", `languageOption-${activeLanguagePreference}`);
-}
-
-function toggleLanguagePicker(event) {
-  if (languagePicker?.classList.contains("open")) {
-    closeLanguagePicker({ restoreFocus: true });
-  } else {
-    openLanguagePicker({ focusOption: event?.detail === 0 });
-  }
-}
-
-function openLanguagePicker(options = {}) {
-  if (!languagePicker || !languageTrigger || !languageOptions) {
-    return;
-  }
-  languagePicker.classList.add("open");
-  languageTrigger.setAttribute("aria-expanded", "true");
-  languageOptions.hidden = false;
-  if (options.focusOption) {
-    languageOptions.querySelector('[aria-selected="true"]')?.focus({ preventScroll: true });
-  }
-}
-
-function closeLanguagePicker(options = {}) {
-  if (!languagePicker || !languageTrigger || !languageOptions) {
-    return;
-  }
-  languagePicker.classList.remove("open");
-  languageTrigger.setAttribute("aria-expanded", "false");
-  languageOptions.hidden = true;
-  if (options.restoreFocus) {
-    languageTrigger.focus({ preventScroll: true });
-  }
 }
 
 function handleLanguageOptionClick(event) {
@@ -3959,16 +3922,13 @@ function handleLanguageOptionClick(event) {
     return;
   }
   void setLanguagePreference(option.dataset.languagePreference);
-  closeLanguagePicker({ restoreFocus: true });
 }
 
 function handleLanguageOptionsKeydown(event) {
   const options = [...languageOptions.querySelectorAll(".settings-language-option")];
   const currentIndex = options.findIndex((option) => option === document.activeElement);
   if (event.key === "Escape") {
-    event.preventDefault();
-    event.stopPropagation();
-    closeLanguagePicker({ restoreFocus: true });
+    document.activeElement?.blur();
     return;
   }
   if (event.key === "Enter" || event.key === " ") {
@@ -3977,11 +3937,10 @@ function handleLanguageOptionsKeydown(event) {
     const currentOption = options[currentIndex];
     if (currentOption) {
       void setLanguagePreference(currentOption.dataset.languagePreference);
-      closeLanguagePicker({ restoreFocus: true });
     }
     return;
   }
-  if (!["ArrowDown", "ArrowUp", "Home", "End"].includes(event.key)) {
+  if (!["ArrowRight", "ArrowLeft", "ArrowDown", "ArrowUp", "Home", "End"].includes(event.key)) {
     return;
   }
   event.preventDefault();
@@ -3990,21 +3949,10 @@ function handleLanguageOptionsKeydown(event) {
     ? 0
     : event.key === "End"
       ? lastIndex
-      : event.key === "ArrowUp"
+      : event.key === "ArrowUp" || event.key === "ArrowLeft"
         ? Math.max(0, currentIndex - 1)
         : Math.min(lastIndex, currentIndex + 1);
   options[nextIndex]?.focus({ preventScroll: true });
-}
-
-function handleLanguagePickerDismiss(event) {
-  if (!languagePicker?.classList.contains("open")) {
-    return;
-  }
-  const target = event.target;
-  if (target instanceof Element && languagePicker.contains(target)) {
-    return;
-  }
-  closeLanguagePicker();
 }
 
 async function initLanguagePreference() {
@@ -4103,7 +4051,6 @@ async function init() {
   window.addEventListener("resize", updateSettingsTabsStickyVisualState);
   window.addEventListener("resize", positionOnboardingStep);
   syncSettingsNowButton?.addEventListener("click", handleManualSyncSettings);
-  languageTrigger?.addEventListener("click", toggleLanguagePicker);
   languageOptions?.addEventListener("click", handleLanguageOptionClick);
   languageOptions?.addEventListener("keydown", handleLanguageOptionsKeydown);
   settingsTabButtons.forEach((button) => {
@@ -4133,7 +4080,6 @@ async function init() {
   document.addEventListener("pointerdown", handleFavoriteDeleteDismiss, true);
   document.addEventListener("pointerdown", handleSurfacePanelDismiss, true);
   document.addEventListener("pointerdown", handlePortalCategoryPickerDismiss, true);
-  document.addEventListener("pointerdown", handleLanguagePickerDismiss, true);
   document.addEventListener("pointerdown", handleSearchSuggestionDismiss, true);
   document.addEventListener("pointerdown", handleSettingsPanelDismiss, true);
   document.addEventListener("keydown", handleBookmarkDeleteEscape);
@@ -5460,7 +5406,7 @@ async function saveThemePaletteSettings() {
 function updateThemeSettingsUi() {
   const themeModeOptions = [...document.querySelectorAll("[data-theme-mode]")];
   const activeThemeModeIndex = Math.max(0, themeModeOptions.findIndex((button) => button.dataset.themeMode === activeThemeMode));
-  document.querySelector(".theme-mode-control")?.setAttribute("data-active-index", String(activeThemeModeIndex));
+  document.querySelector("#themeModeControl")?.setAttribute("data-active-index", String(activeThemeModeIndex));
   themeModeOptions.forEach((button) => {
     const isActive = button.dataset.themeMode === activeThemeMode;
     button.classList.toggle("active", isActive);
@@ -5646,7 +5592,6 @@ function closeSettingsPanel() {
     return;
   }
   window.clearTimeout(settingsPanelCloseTimer);
-  closeLanguagePicker();
   settingsPanel.dataset.open = "false";
   settingsShell.classList.remove("page-active");
   settingsShell.classList.add("page-closing");
