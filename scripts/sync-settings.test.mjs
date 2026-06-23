@@ -71,6 +71,13 @@ function wayleafConfigFileNameFixture(now, random) {
   return sandbox.wayleafConfigFileName(now, random);
 }
 
+function cloudSyncPayloadFixture(values) {
+  const sandbox = { FAVORITE_SITES_STORAGE_KEY: "favoriteSites" };
+  vm.createContext(sandbox);
+  vm.runInContext(`${sourceBetween("function favoriteSitesForCloudSync", "function readFirstPaintCache")}\nglobalThis.cloudSyncPayload = cloudSyncPayload;`, sandbox);
+  return plain(sandbox.cloudSyncPayload(values));
+}
+
 assert.equal(
   manifest.background?.service_worker,
   "background.js",
@@ -126,6 +133,24 @@ assert.deepEqual(
     themeMode: "dark"
   },
   "Wayleaf .wy import should only accept sync-managed config keys and exclude sync metadata."
+);
+
+assert.deepEqual(
+  cloudSyncPayloadFixture({
+    favoriteSites: [{ id: "1", title: "Example", url: "https://example.com", icon: `data:image/png;base64,${"a".repeat(12000)}` }],
+    themeMode: "dark",
+    themePalette: { palette: "custom" },
+    languagePreference: "zh-TW",
+    searchSettings: { defaultSearchEngine: "google" }
+  }),
+  {
+    favoriteSites: [{ id: "1", title: "Example", url: "https://example.com" }],
+    themeMode: "dark",
+    themePalette: { palette: "custom" },
+    languagePreference: "zh-TW",
+    searchSettings: { defaultSearchEngine: "google" }
+  },
+  "Cloud sync should preserve favorite-site identity and all customizable settings without quota-heavy icon data."
 );
 
 assert.throws(
@@ -262,8 +287,20 @@ assert.match(
 
 assert.match(
   source,
-  /async function handleImportSettingsFile\(file\) \{[\s\S]*\.endsWith\("\.wy"\)[\s\S]*await setStoredValues\(settings\);[\s\S]*chrome\.storage\.sync\.set\(settings\);[\s\S]*\}/,
+  /async function handleImportSettingsFile\(file\) \{[\s\S]*\.endsWith\("\.wy"\)[\s\S]*await setStoredValues\(settings\);[\s\S]*chrome\.storage\.sync\.set\(cloudSyncPayload\(settings\)\);[\s\S]*\}/,
   "Wayleaf config import should require .wy files, write local settings, and sync them when available."
+);
+
+assert.match(
+  source,
+  /const CUSTOMIZABLE_SETTINGS_STORAGE_KEYS = \[[\s\S]*THEME_STORAGE_KEY,[\s\S]*THEME_PALETTE_STORAGE_KEY,[\s\S]*LANGUAGE_STORAGE_KEY,[\s\S]*SEARCH_SETTINGS_STORAGE_KEY[\s\S]*\];[\s\S]*SYNC_STORAGE_KEYS = new Set\([\s\S]*FAVORITE_SITES_STORAGE_KEY,[\s\S]*\.\.\.CUSTOMIZABLE_SETTINGS_STORAGE_KEYS/,
+  "Manual sync and Wayleaf export should include favorite sites and every customizable settings key."
+);
+
+assert.match(
+  source,
+  /async function handleManualSyncSettings\(\) \{[\s\S]*chrome\.storage\.sync\.set\(cloudSyncPayload\(payload\)\)/,
+  "Manual sync should upload the quota-safe favorite sites and all settings."
 );
 
 assert.match(
@@ -316,6 +353,12 @@ assert.match(
 
 assert.match(
   background,
-  /const LANGUAGE_STORAGE_KEY = "languagePreference";[\s\S]*SYNC_STORAGE_KEYS = \[[\s\S]*LANGUAGE_STORAGE_KEY,[\s\S]*SEARCH_SETTINGS_STORAGE_KEY/,
-  "Auto sync should include the visible language preference."
+  /const CUSTOMIZABLE_SETTINGS_STORAGE_KEYS = \[[\s\S]*THEME_STORAGE_KEY,[\s\S]*THEME_PALETTE_STORAGE_KEY,[\s\S]*LANGUAGE_STORAGE_KEY,[\s\S]*SEARCH_SETTINGS_STORAGE_KEY[\s\S]*\];[\s\S]*SYNC_STORAGE_KEYS = \[[\s\S]*FAVORITE_SITES_STORAGE_KEY,[\s\S]*\.\.\.CUSTOMIZABLE_SETTINGS_STORAGE_KEYS/,
+  "Auto sync should include favorite sites and every customizable settings key."
+);
+
+assert.match(
+  background,
+  /async function runAutoSyncSettings\(\) \{[\s\S]*\.\.\.cloudSyncPayload\(values\),[\s\S]*source:\s*"auto"/,
+  "Auto sync should upload the quota-safe favorite sites and all settings."
 );

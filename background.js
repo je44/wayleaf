@@ -32,18 +32,41 @@ const AI_DIRECT_PROVIDER_HOSTS = new Set([
   "jimeng.jianying.com"
 ]);
 const pendingAiDirectRequests = new Map();
+const CUSTOMIZABLE_SETTINGS_STORAGE_KEYS = [
+  THEME_STORAGE_KEY,
+  THEME_PALETTE_STORAGE_KEY,
+  LANGUAGE_STORAGE_KEY,
+  SEARCH_SETTINGS_STORAGE_KEY
+];
 const SYNC_STORAGE_KEYS = [
   CUSTOM_PORTALS_STORAGE_KEY,
   FAVORITE_SITES_STORAGE_KEY,
   PINNED_HISTORY_STORAGE_KEY,
   BOOKMARK_FOLDER_STORAGE_KEY,
   PORTAL_CATEGORY_STATE_STORAGE_KEY,
-  THEME_STORAGE_KEY,
-  THEME_PALETTE_STORAGE_KEY,
-  LANGUAGE_STORAGE_KEY,
-  SEARCH_SETTINGS_STORAGE_KEY,
+  ...CUSTOMIZABLE_SETTINGS_STORAGE_KEYS,
   CUSTOM_MEDIA_FEEDS_STORAGE_KEY
 ];
+
+function favoriteSitesForCloudSync(sites) {
+  return Array.isArray(sites)
+    ? sites.map((site) => {
+      if (!site || typeof site !== "object" || Array.isArray(site)) {
+        return site;
+      }
+      const { icon: _icon, ...portableSite } = site;
+      return portableSite;
+    })
+    : sites;
+}
+
+function cloudSyncPayload(values = {}) {
+  const payload = { ...values };
+  if (Object.prototype.hasOwnProperty.call(payload, FAVORITE_SITES_STORAGE_KEY)) {
+    payload[FAVORITE_SITES_STORAGE_KEY] = favoriteSitesForCloudSync(payload[FAVORITE_SITES_STORAGE_KEY]);
+  }
+  return payload;
+}
 
 async function ensureDailyAutoSyncAlarm() {
   if (!chrome.alarms?.create) {
@@ -67,7 +90,7 @@ async function runAutoSyncSettings() {
   const sourceStorage = chrome.storage?.local || chrome.storage.sync;
   const values = await sourceStorage.get(SYNC_STORAGE_KEYS);
   await chrome.storage.sync.set({
-    ...values,
+    ...cloudSyncPayload(values),
     [SYNC_META_STORAGE_KEY]: {
       syncedAt: Date.now(),
       source: "auto"

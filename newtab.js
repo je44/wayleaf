@@ -188,16 +188,19 @@ const MEDIA_FEED_DISCOVERY_SOURCES = [
 const CUSTOM_MEDIA_FEEDS_STORAGE_KEY = "customMediaFeeds";
 const MEDIA_FEED_FEEDBACK_STORAGE_KEY = "mediaFeedFeedback";
 const WAYLEAF_CONFIG_EXPORT_VERSION = 1;
+const CUSTOMIZABLE_SETTINGS_STORAGE_KEYS = [
+  THEME_STORAGE_KEY,
+  THEME_PALETTE_STORAGE_KEY,
+  LANGUAGE_STORAGE_KEY,
+  SEARCH_SETTINGS_STORAGE_KEY
+];
 const SYNC_STORAGE_KEYS = new Set([
   CUSTOM_PORTALS_STORAGE_KEY,
   FAVORITE_SITES_STORAGE_KEY,
   PINNED_HISTORY_STORAGE_KEY,
   BOOKMARK_FOLDER_STORAGE_KEY,
   PORTAL_CATEGORY_STATE_STORAGE_KEY,
-  THEME_STORAGE_KEY,
-  THEME_PALETTE_STORAGE_KEY,
-  LANGUAGE_STORAGE_KEY,
-  SEARCH_SETTINGS_STORAGE_KEY,
+  ...CUSTOMIZABLE_SETTINGS_STORAGE_KEYS,
   CUSTOM_MEDIA_FEEDS_STORAGE_KEY,
   SYNC_META_STORAGE_KEY
 ]);
@@ -3377,6 +3380,26 @@ async function setStoredValues(values = {}) {
   }
 }
 
+function favoriteSitesForCloudSync(sites) {
+  return Array.isArray(sites)
+    ? sites.map((site) => {
+      if (!site || typeof site !== "object" || Array.isArray(site)) {
+        return site;
+      }
+      const { icon: _icon, ...portableSite } = site;
+      return portableSite;
+    })
+    : sites;
+}
+
+function cloudSyncPayload(values = {}) {
+  const payload = { ...values };
+  if (Object.prototype.hasOwnProperty.call(payload, FAVORITE_SITES_STORAGE_KEY)) {
+    payload[FAVORITE_SITES_STORAGE_KEY] = favoriteSitesForCloudSync(payload[FAVORITE_SITES_STORAGE_KEY]);
+  }
+  return payload;
+}
+
 function readFirstPaintCache() {
   try {
     const cache = JSON.parse(localStorage.getItem(FIRST_PAINT_CACHE_STORAGE_KEY) || "{}");
@@ -3609,7 +3632,7 @@ async function migrateSyncStorageFromLocal() {
     });
     await Promise.all([
       Object.keys(missingLocalValues).length ? chrome.storage.local.set(missingLocalValues) : Promise.resolve(),
-      Object.keys(missingSyncValues).length ? chrome.storage.sync.set(missingSyncValues) : Promise.resolve()
+      Object.keys(missingSyncValues).length ? chrome.storage.sync.set(cloudSyncPayload(missingSyncValues)) : Promise.resolve()
     ]);
   } catch (error) {
     console.warn("Failed to migrate synced settings", error);
@@ -5602,7 +5625,7 @@ async function handleImportSettingsFile(file) {
   }
   await setStoredValues(settings);
   if (storageSyncAvailable() && chrome.storage?.sync !== chrome.storage?.local) {
-    await chrome.storage.sync.set(settings);
+    await chrome.storage.sync.set(cloudSyncPayload(settings));
   }
 }
 
@@ -5643,7 +5666,7 @@ async function handleManualSyncSettings() {
       source: "manual"
     };
     await Promise.all([
-      chrome.storage.sync.set(payload),
+      chrome.storage.sync.set(cloudSyncPayload(payload)),
       chrome.storage?.local ? chrome.storage.local.set({ [SYNC_META_STORAGE_KEY]: payload[SYNC_META_STORAGE_KEY] }) : Promise.resolve()
     ]);
     updateSyncSettingsUi("done");
