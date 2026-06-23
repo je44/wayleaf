@@ -1307,6 +1307,10 @@ body.surface-open .surface-backdrop {
   transform: translateY(100px);
 }
 
+.recent-folders[hidden] {
+  display: none;
+}
+
 .recent-folders-header {
   display: flex;
   align-items: center;

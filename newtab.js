@@ -32,6 +32,7 @@ const FAVORITE_SITES_STORAGE_KEY = "favoriteSites";
 const SITE_ICON_CACHE_STORAGE_KEY = "siteIconCache";
 const PINNED_HISTORY_STORAGE_KEY = "pinnedHistory";
 const OPEN_TAB_ACTIVITY_STORAGE_KEY = "openTabActivity";
+const RECENT_HISTORY_STARTED_AT_STORAGE_KEY = "recentHistoryStartedAt";
 const BOOKMARK_FOLDER_STORAGE_KEY = "bookmarkFolderId";
 const PORTAL_CATEGORY_STATE_STORAGE_KEY = "portalCategoryState";
 const THEME_STORAGE_KEY = "themeMode";
@@ -40,14 +41,13 @@ const LANGUAGE_STORAGE_KEY = "languagePreference";
 const THEME_BOOT_STORAGE_KEY = "__wayleaf_theme_boot__";
 const SEARCH_SETTINGS_STORAGE_KEY = "searchSettings";
 const FIRST_PAINT_CACHE_STORAGE_KEY = "__wayleaf_first_paint_cache__";
-const FIRST_PAINT_CACHE_VERSION = 4;
+const FIRST_PAINT_CACHE_VERSION = 5;
 const AI_DIRECT_PROMPT_STORAGE_KEY = "aiDirectPrompts";
 const SYNC_META_STORAGE_KEY = "syncMeta";
 const ONBOARDING_GUIDE_STORAGE_KEY = "onboardingGuideDismissed";
 const ONBOARDING_STEPS = [
   { target: ".search-panel", titleKey: "onboardingPrivacyTitle", bodyKey: "onboardingPrivacyBody", placement: "bottom" },
   { target: "#favoriteStrip", titleKey: "onboardingPermissionTitle", bodyKey: "onboardingPermissionBody", placement: "bottom" },
-  { target: ".recent-folders", titleKey: "onboardingSyncTitle", bodyKey: "onboardingSyncBody", placement: "top" },
   { target: "#portalSurfaceButton", titleKey: "onboardingAiTitle", bodyKey: "onboardingAiBody", placement: "right" },
   { target: "#settingsButton", titleKey: "onboardingStartTitle", bodyKey: "onboardingStartBody", placement: "left" }
 ];
@@ -5588,14 +5588,6 @@ async function openOnboardingGuide() {
 
 async function renderOnboardingPreview() {
   await renderFavoriteSiteList(ONBOARDING_PREVIEW_FAVORITES);
-  const now = Date.now();
-  renderRecentFolders(groupHistoryBySite([
-    { title: "Pull requests · GitHub", url: "https://github.com/pulls", lastVisitTime: now, visitCount: 8 },
-    { title: "Issues · GitHub", url: "https://github.com/issues", lastVisitTime: now - 4 * 60 * 1000, visitCount: 6 },
-    { title: "Project workspace", url: "https://www.notion.so/product", lastVisitTime: now - 12 * 60 * 1000, visitCount: 5 },
-    { title: "Recent files", url: "https://www.figma.com/files/recently-viewed", lastVisitTime: now - 28 * 60 * 1000, visitCount: 4 },
-    { title: "Subscriptions", url: "https://www.youtube.com/feed/subscriptions", lastVisitTime: now - 42 * 60 * 1000, visitCount: 3 }
-  ], { maxPagesPerSite: MAX_HISTORY_PAGES_PER_SITE }));
 }
 
 function showOnboardingStep() {
@@ -9389,8 +9381,7 @@ function displayIconSource(icon, source, options = {}) {
       || icon.src.endsWith(source)
       || icon.getAttribute("src") === source;
     if (
-      icon.isConnected
-      && stillRenderingSource
+      stillRenderingSource
       && icon.dataset.iconThemeRequest === requestToken
       && document.documentElement.dataset.theme === requestTheme
     ) {
@@ -12898,7 +12889,12 @@ function setMediaFeedState(state, title, body) {
 
 async function refreshHistory() {
   try {
-    const recentStartTime = Date.now() - RECENT_HISTORY_LOOKBACK_MS;
+    const stored = await getStoredValues({ [RECENT_HISTORY_STARTED_AT_STORAGE_KEY]: 0 });
+    const recentHistoryStartedAt = Number(stored[RECENT_HISTORY_STARTED_AT_STORAGE_KEY] || 0);
+    const recentStartTime = Math.max(
+      Date.now() - RECENT_HISTORY_LOOKBACK_MS,
+      Number.isFinite(recentHistoryStartedAt) ? recentHistoryStartedAt : 0
+    );
     const [items, pinnedItems, openTabItems] = await Promise.all([
       chrome.history.search({
         text: "",
@@ -12927,11 +12923,7 @@ async function refreshHistory() {
   } catch (error) {
     pinnedGrid.innerHTML = "";
     historyGrid.innerHTML = emptyState(t("historyReadFailed"));
-    recentHistoryFolders.innerHTML = emptyState(t("historyReadFailed"));
-    latestRecentFolderGroups = [];
-    recentFolderPageIndex = 0;
-    pendingRecentPreviousKeys = null;
-    updateRecentFolderSwitchControls();
+    renderRecentFolders([]);
   }
 }
 
@@ -13143,8 +13135,9 @@ function renderHistory(groups) {
 function renderRecentFolders(groups, options = {}) {
   latestRecentFolderGroups = orderedRecentHistoryGroups(groups);
   clearRecentFolderPageSwitchAnimation();
+  recentHistoryFolders.closest(".recent-folders").hidden = !latestRecentFolderGroups.length;
   if (!latestRecentFolderGroups.length) {
-    recentHistoryFolders.innerHTML = emptyState(t("noHistoryItems"));
+    recentHistoryFolders.replaceChildren();
     pendingRecentPreviousKeys = null;
     recentFolderPageIndex = 0;
     updateRecentFolderSwitchControls();
@@ -13448,7 +13441,12 @@ function animateRecentFolderPageSwitch(outgoingLayer, nextKeys, previousKeys, di
 }
 
 function createRecentFolderItem(group, options = {}) {
-  const pages = group.pages.slice(0, MAX_HISTORY_PAGES_PER_SITE);
+  const homeUrl = group.homeUrl || siteHomeUrl(group.key, group.url);
+  const homeKey = normalizeHistoryKey(homeUrl);
+  const pages = [
+    { title: compactHistoryUrl(safeUrl(homeUrl)) || group.name, url: homeUrl },
+    ...group.pages.filter((page) => normalizeHistoryKey(page.url) !== homeKey)
+  ].slice(0, MAX_HISTORY_PAGES_PER_SITE);
   const item = pages[0];
   const title = normalizeText(group.name) || historyFallbackTitle(safeUrl(item?.url || group.url));
   const card = document.createElement("article");

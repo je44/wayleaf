@@ -4,6 +4,7 @@ import { readFileSync } from "node:fs";
 const source = readFileSync(new URL("../newtab.js", import.meta.url), "utf8");
 const styles = readFileSync(new URL("../newtab.css", import.meta.url), "utf8");
 const html = readFileSync(new URL("../newtab.html", import.meta.url), "utf8");
+const background = readFileSync(new URL("../background.js", import.meta.url), "utf8");
 
 assert.match(source, /const MAX_HISTORY_PAGES_PER_SITE = 4;/, "Same-site recent cards must keep a strict four-page cap.");
 assert.match(source, /const RECENT_FOLDER_PAGE_SWITCH_MS = 330;/, "Recent card body switches should be soft but not slow.");
@@ -11,7 +12,13 @@ assert.match(source, /const RECENT_FOLDER_PAGE_SWITCH_EXIT_MS = 240;/, "Recent c
 assert.match(source, /const RECENT_FOLDER_PAGE_SWITCH_STAGGER_MS = 28;/, "Recent card body switches should stagger cards as one cohesive entrance.");
 assert.doesNotMatch(source, /maxPagesPerSite:\s*MAX_HISTORY_PAGES_PER_SITE\s*\+\s*1/, "Recent card grouping must not request more than four same-site pages.");
 assert.match(source, /maxPagesPerSite:\s*MAX_HISTORY_PAGES_PER_SITE/, "Recent refresh should pass the strict same-site page cap into grouping.");
-assert.match(source, /const pages = group\.pages\.slice\(0,\s*MAX_HISTORY_PAGES_PER_SITE\);/, "Recent card rendering must still clamp same-site pages defensively.");
+assert.match(background, /onInstalled\?\.addListener\(\(details\) => \{[\s\S]*details\.reason === "install"[\s\S]*RECENT_HISTORY_STARTED_AT_STORAGE_KEY[\s\S]*Date\.now\(\)/, "A fresh install must record when Wayleaf may begin showing recent history.");
+assert.match(source, /const recentStartTime = Math\.max\([\s\S]*Date\.now\(\) - RECENT_HISTORY_LOOKBACK_MS,[\s\S]*recentHistoryStartedAt/, "Recent history must exclude visits from before Wayleaf was installed.");
+assert.match(html, /<section class="recent-folders"[^>]*hidden>/, "The recent-browsing module must start hidden to avoid a first-install flash.");
+assert.match(styles, /\.recent-folders\[hidden\]\s*\{\s*display:\s*none;/, "The recent-browsing layout must respect its hidden state.");
+assert.match(source, /recentHistoryFolders\.closest\("\.recent-folders"\)\.hidden = !latestRecentFolderGroups\.length;/, "The whole recent-browsing module must only be visible when it has real groups.");
+assert.match(source, /const homeUrl = group\.homeUrl \|\| siteHomeUrl\(group\.key, group\.url\);[\s\S]*const pages = \[[\s\S]*url: homeUrl[\s\S]*group\.pages\.filter[\s\S]*\.slice\(0, MAX_HISTORY_PAGES_PER_SITE\);/, "Every recent card must keep its site home as page one while preserving the strict four-page cap.");
+assert.match(source, /setActivePage\(0\);\s*return card;/, "Recent cards must open on their site-home page by default.");
 assert.match(html, /class="recent-folder-switch-controls"[\s\S]*id="recentFoldersPreviousButton"[\s\S]*id="recentFoldersNextButton"/, "Recent browsing header needs previous/next buttons to switch the whole card body.");
 assert.match(source, /const recentFoldersPreviousButton = document\.querySelector\("#recentFoldersPreviousButton"\);/, "Recent card body switch previous button must be wired.");
 assert.match(source, /const recentFoldersNextButton = document\.querySelector\("#recentFoldersNextButton"\);/, "Recent card body switch next button must be wired.");

@@ -172,6 +172,8 @@ assert.match(initialIconRender, /const requestTheme = document\.documentElement\
   "Initial SVG rendering should capture the theme and share the per-icon request token with theme refreshes.");
 assert.match(initialIconRender, /icon\.dataset\.iconThemeRequest === requestToken[\s\S]*document\.documentElement\.dataset\.theme === requestTheme/,
   "An initial SVG render from an obsolete theme must not overwrite the current glyph.");
+assert.doesNotMatch(initialIconRender, /icon\.isConnected/,
+  "Initial SVG rendering must also settle while favorite cards are still in a DocumentFragment.");
 
 assert.doesNotMatch(
   source,

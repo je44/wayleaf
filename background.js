@@ -5,6 +5,7 @@ const AUTO_SYNC_PERIOD_MINUTES = 24 * 60;
 const CUSTOM_PORTALS_STORAGE_KEY = "customPortals";
 const FAVORITE_SITES_STORAGE_KEY = "favoriteSites";
 const PINNED_HISTORY_STORAGE_KEY = "pinnedHistory";
+const RECENT_HISTORY_STARTED_AT_STORAGE_KEY = "recentHistoryStartedAt";
 const BOOKMARK_FOLDER_STORAGE_KEY = "bookmarkFolderId";
 const PORTAL_CATEGORY_STATE_STORAGE_KEY = "portalCategoryState";
 const THEME_STORAGE_KEY = "themeMode";
@@ -218,7 +219,11 @@ function submitJimengPrompt(prompt) {
   }, 250);
 }
 
-chrome.runtime?.onInstalled?.addListener(() => {
+chrome.runtime?.onInstalled?.addListener((details) => {
+  if (details.reason === "install") {
+    chrome.storage?.local?.set({ [RECENT_HISTORY_STARTED_AT_STORAGE_KEY]: Date.now() })
+      .catch(reportBackgroundError);
+  }
   ensureDailyAutoSyncAlarm().catch(reportBackgroundError);
 });
 
