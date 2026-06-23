@@ -1,5 +1,7 @@
 "use strict";
 
+importScripts("video-pip-coordinator.js");
+
 const AUTO_SYNC_ALARM_NAME = "wayleaf-daily-auto-sync";
 const AUTO_SYNC_PERIOD_MINUTES = 24 * 60;
 const CUSTOM_PORTALS_STORAGE_KEY = "customPortals";
@@ -19,7 +21,9 @@ const AI_DIRECT_PROMPT_TOKEN_PARAM = "_wayleaf_prompt";
 const AI_DIRECT_PROMPT_TEXT_PARAM = "_wayleaf_text";
 const AI_DIRECT_MAX_PROMPT_LENGTH = 12000;
 const VIDEO_PIP_TOGGLE_ACTION = "wayleaf:toggle-video-pip-pin";
-const VIDEO_PIP_SUPPORTED_HOSTS = ["youtube.com", "bilibili.com"];
+const VIDEO_PIP_REQUEST_ACTION = "wayleaf:video-pip-request";
+const VIDEO_PIP_COMMAND_ACTION = "wayleaf:video-pip-command";
+const VIDEO_PIP_OWNER_STORAGE_KEY = "videoPipOwner";
 const AI_DIRECT_PROVIDER_HOSTS = new Set([
   "chatgpt.com",
   "claude.ai",
@@ -106,13 +110,60 @@ function reportBackgroundError(error) {
 
 function supportsVideoPip(url) {
   try {
-    const host = new URL(url).hostname.toLowerCase();
-    return VIDEO_PIP_SUPPORTED_HOSTS.some((supportedHost) => (
-      host === supportedHost || host.endsWith(`.${supportedHost}`)
-    ));
+    return ["http:", "https:"].includes(new URL(url).protocol);
   } catch {
     return false;
   }
+}
+
+let fallbackVideoPipOwner = null;
+
+async function loadVideoPipOwner() {
+  if (!chrome.storage?.session) {
+    return fallbackVideoPipOwner;
+  }
+  const stored = await chrome.storage.session.get({ [VIDEO_PIP_OWNER_STORAGE_KEY]: null });
+  return stored[VIDEO_PIP_OWNER_STORAGE_KEY] || null;
+}
+
+async function saveVideoPipOwner(owner) {
+  fallbackVideoPipOwner = owner;
+  if (chrome.storage?.session) {
+    await chrome.storage.session.set({ [VIDEO_PIP_OWNER_STORAGE_KEY]: owner });
+  }
+}
+
+function videoPipMessageTarget(target) {
+  if (target.documentId) {
+    return { documentId: target.documentId };
+  }
+  return { frameId: Number.isInteger(target.frameId) ? target.frameId : 0 };
+}
+
+async function sendVideoPipCommand(target, command) {
+  return chrome.tabs.sendMessage(
+    target.tabId,
+    { action: VIDEO_PIP_COMMAND_ACTION, command },
+    videoPipMessageTarget(target)
+  );
+}
+
+const videoPipCoordinator = globalThis.WayleafVideoPipCoordinator.create({
+  command: sendVideoPipCommand,
+  loadOwner: loadVideoPipOwner,
+  saveOwner: saveVideoPipOwner
+});
+
+function videoPipTargetFromSender(sender, score = 0) {
+  if (!Number.isInteger(sender?.tab?.id)) {
+    return null;
+  }
+  return {
+    tabId: sender.tab.id,
+    frameId: Number.isInteger(sender.frameId) ? sender.frameId : 0,
+    documentId: typeof sender.documentId === "string" ? sender.documentId : "",
+    score: Math.max(0, Number(score || 0))
+  };
 }
 
 async function toggleVideoPipPin(tabId) {
@@ -133,7 +184,7 @@ async function handleVideoPipAction(tab) {
   }
   if (!supportsVideoPip(tab.url || "")) {
     await chrome.action.setBadgeText({ tabId: tab.id, text: "" });
-    await chrome.action.setTitle({ tabId: tab.id, title: "Wayleaf · Video PiP supports YouTube and Bilibili" });
+    await chrome.action.setTitle({ tabId: tab.id, title: "Wayleaf · Video PiP requires an HTTP(S) video page" });
     return;
   }
   try {
@@ -316,6 +367,24 @@ chrome.action?.onClicked?.addListener((tab) => {
   handleVideoPipAction(tab).catch(reportBackgroundError);
 });
 
+chrome.runtime?.onMessage?.addListener((message, sender, sendResponse) => {
+  if (message?.action !== VIDEO_PIP_REQUEST_ACTION) {
+    return;
+  }
+  const target = videoPipTargetFromSender(sender, message.score);
+  if (!target) {
+    sendResponse({ ok: false });
+    return;
+  }
+  videoPipCoordinator.handle(message, target)
+    .then(sendResponse)
+    .catch((error) => {
+      console.warn("Wayleaf video PiP coordination failed", error);
+      sendResponse({ ok: false });
+    });
+  return true;
+});
+
 chrome.tabs?.onUpdated?.addListener((tabId, changeInfo, tab) => {
   if (changeInfo.url) {
     chrome.action?.setBadgeText({ tabId, text: "" }).catch(reportBackgroundError);
@@ -338,6 +407,7 @@ chrome.tabs?.onUpdated?.addListener((tabId, changeInfo, tab) => {
 
 chrome.tabs?.onRemoved?.addListener((tabId) => {
   pendingAiDirectRequests.delete(tabId);
+  videoPipCoordinator.handle({ type: "removed" }, { tabId }).catch(reportBackgroundError);
 });
 
 ensureDailyAutoSyncAlarm().catch(reportBackgroundError);

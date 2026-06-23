@@ -1,20 +1,21 @@
 "use strict";
 
 (() => {
-  if (window.__wayleafVideoPipController || window.top !== window.self) {
+  if (window.__wayleafVideoPipController) {
     return;
   }
   window.__wayleafVideoPipController = true;
 
   const GLOBAL_ENABLED_STORAGE_KEY = "videoPipGlobalEnabled";
   const TOGGLE_PIN_ACTION = "wayleaf:toggle-video-pip-pin";
+  const REQUEST_ACTION = "wayleaf:video-pip-request";
+  const COMMAND_ACTION = "wayleaf:video-pip-command";
   let globalEnabled = false;
   let pinned = false;
   let entering = false;
   let exiting = false;
   let managedPipNeedsCleanup = false;
   let managedPipVideo = null;
-  let exitFrame = 0;
 
   function enabled() {
     return globalEnabled || pinned;
@@ -45,12 +46,19 @@
       .sort((left, right) => videoArea(right) - videoArea(left))[0] || null;
   }
 
-  function cancelScheduledExit() {
-    if (!exitFrame) {
+  function notifyCoordinator(type) {
+    if (type === "enter") {
+      if (!enabled() || document.visibilityState !== "hidden") {
+        return;
+      }
+      const video = pickPlayingVideo();
+      if (!video || document.pictureInPictureEnabled !== true) {
+        return;
+      }
+      chrome.runtime.sendMessage({ action: REQUEST_ACTION, type, score: videoArea(video) }).catch(() => {});
       return;
     }
-    cancelAnimationFrame(exitFrame);
-    exitFrame = 0;
+    chrome.runtime.sendMessage({ action: REQUEST_ACTION, type }).catch(() => {});
   }
 
   async function enterPictureInPicture() {
@@ -101,24 +109,12 @@
     }
   }
 
-  function scheduleManagedPictureInPictureExit() {
-    if (exitFrame || !managedPipNeedsCleanup) {
-      return;
-    }
-    exitFrame = requestAnimationFrame(() => {
-      exitFrame = requestAnimationFrame(() => {
-        exitFrame = 0;
-        void exitManagedPictureInPicture();
-      });
-    });
-  }
-
   function bindAutomaticPictureInPicture() {
     if (!enabled() || !navigator.mediaSession?.setActionHandler) {
       return;
     }
     try {
-      navigator.mediaSession.setActionHandler("enterpictureinpicture", enterPictureInPicture);
+      navigator.mediaSession.setActionHandler("enterpictureinpicture", () => notifyCoordinator("enter"));
     } catch {
       // Older Chromium builds may not expose this media session action.
     }
@@ -128,18 +124,14 @@
     globalEnabled = value === true;
     if (enabled()) {
       bindAutomaticPictureInPicture();
+      notifyCoordinator("enter");
       return;
     }
-    void exitManagedPictureInPicture();
+    notifyCoordinator("exit");
   }
 
   function handleVisibilityChange() {
-    if (document.visibilityState === "hidden") {
-      cancelScheduledExit();
-      void enterPictureInPicture();
-      return;
-    }
-    scheduleManagedPictureInPictureExit();
+    notifyCoordinator(document.visibilityState === "hidden" ? "enter" : "exit");
   }
 
   function handleVideoPlayback(event) {
@@ -147,9 +139,7 @@
       return;
     }
     bindAutomaticPictureInPicture();
-    if (document.visibilityState === "hidden") {
-      void enterPictureInPicture();
-    }
+    notifyCoordinator("enter");
   }
 
   chrome.storage.local.get({ [GLOBAL_ENABLED_STORAGE_KEY]: false }, (result) => {
@@ -161,16 +151,32 @@
     }
   });
   chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
-    if (message?.action !== TOGGLE_PIN_ACTION) {
+    if (message?.action === TOGGLE_PIN_ACTION) {
+      pinned = !pinned;
+      if (enabled()) {
+        bindAutomaticPictureInPicture();
+        notifyCoordinator("enter");
+      } else {
+        notifyCoordinator("exit");
+      }
+      sendResponse({ ok: true, pinned, globalEnabled, enabled: enabled() });
       return;
     }
-    pinned = !pinned;
-    if (enabled()) {
-      bindAutomaticPictureInPicture();
-    } else {
-      void exitManagedPictureInPicture();
+    if (message?.action !== COMMAND_ACTION) {
+      return;
     }
-    sendResponse({ ok: true, pinned, globalEnabled, enabled: enabled() });
+    (async () => {
+      if (message.command === "enter") {
+        sendResponse({ entered: await enterPictureInPicture() });
+        return;
+      }
+      if (message.command === "exit") {
+        sendResponse({ exited: await exitManagedPictureInPicture() });
+        return;
+      }
+      sendResponse({ ok: false });
+    })();
+    return true;
   });
 
   document.addEventListener("visibilitychange", handleVisibilityChange, true);
@@ -179,9 +185,9 @@
   document.addEventListener("loadedmetadata", handleVideoPlayback, true);
   document.addEventListener("leavepictureinpicture", (event) => {
     if (event.target === managedPipVideo) {
-      cancelScheduledExit();
       managedPipNeedsCleanup = false;
       managedPipVideo = null;
+      notifyCoordinator("left");
     }
   }, true);
 })();

@@ -17,6 +17,8 @@ runtime_items=(
   newtab.js
   theme-preload.js
   vendor
+  video-pip-coordinator.js
+  video-pip.js
 )
 
 rm -rf "$out_dir" "$zip_file"

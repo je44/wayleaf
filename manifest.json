@@ -45,14 +45,13 @@
     },
     {
       "matches": [
-        "*://youtube.com/*",
-        "*://*.youtube.com/*",
-        "*://bilibili.com/*",
-        "*://*.bilibili.com/*"
+        "http://*/*",
+        "https://*/*"
       ],
       "js": [
         "video-pip.js"
       ],
+      "all_frames": true,
       "run_at": "document_idle"
     }
   ],
