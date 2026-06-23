@@ -25,8 +25,8 @@ const fontPath = new URL("../vendor/fonts/VujahdayScript-Regular.ttf", import.me
 
 assert.match(
   html,
-  /<div class="settings-brand" aria-hidden="true">WayLeaf<\/div>\s*<div class="settings-tabs-shell">[\s\S]*id="settingsBasicTab"[\s\S]*settings-tab-icon[\s\S]*id="settingsSearchTab"[\s\S]*settings-tab-icon/,
-  "Settings page should keep the WayLeaf wordmark and render both settings destinations as icon controls."
+  /<div class="settings-brand" aria-hidden="true">WayLeaf<\/div>\s*<div class="settings-tabs-shell">[\s\S]*id="settingsBasicTab"[\s\S]*settings-tab-icon[\s\S]*id="settingsSearchTab"[\s\S]*settings-tab-icon[\s\S]*id="settingsLaboratoryTab"[\s\S]*settings-tab-icon/,
+  "Settings page should keep the WayLeaf wordmark and render all settings destinations as icon controls."
 );
 
 assert.match(
@@ -85,7 +85,7 @@ assert.doesNotMatch(
 
 assert.match(
   settingsTabsBlock,
-  /min-width:\s*88px;[\s\S]*border:\s*1px solid var\(--line\);[\s\S]*border-radius:\s*4px;[\s\S]*background:\s*var\(--settings-tabs-bg\);/,
+  /min-width:\s*132px;[\s\S]*border:\s*1px solid var\(--line\);[\s\S]*border-radius:\s*4px;[\s\S]*background:\s*var\(--settings-tabs-bg\);/,
   "Settings icon rail should match the settings card background with a 4px outlined mask and no visible reserved slot."
 );
 
@@ -103,7 +103,7 @@ assert.match(
 
 assert.match(
   styles,
-  /@media \(min-width: 1120px\)[\s\S]*\.settings-page\s*\{[\s\S]*--settings-titlebar-height:\s*70px;[\s\S]*\.settings-tabs-shell\s*\{[\s\S]*position:\s*fixed;[\s\S]*top:\s*149px;[\s\S]*left:\s*calc\(50% - 440px\);[\s\S]*width:\s*44px;[\s\S]*\.settings-tabs\s*\{[\s\S]*grid-auto-flow:\s*row;[\s\S]*grid-auto-rows:\s*44px;[\s\S]*min-height:\s*88px;[\s\S]*\.settings-tab \+ \.settings-tab::before\s*\{[\s\S]*width:\s*26px;[\s\S]*height:\s*1px;/,
+  /@media \(min-width: 1120px\)[\s\S]*\.settings-page\s*\{[\s\S]*--settings-titlebar-height:\s*70px;[\s\S]*\.settings-tabs-shell\s*\{[\s\S]*position:\s*fixed;[\s\S]*top:\s*149px;[\s\S]*left:\s*calc\(50% - 440px\);[\s\S]*width:\s*44px;[\s\S]*\.settings-tabs\s*\{[\s\S]*grid-auto-flow:\s*row;[\s\S]*grid-auto-rows:\s*44px;[\s\S]*min-height:\s*132px;[\s\S]*\.settings-tab \+ \.settings-tab::before\s*\{[\s\S]*width:\s*26px;[\s\S]*height:\s*1px;/,
   "Desktop settings navigation should be a compact vertical icon rail beside the first settings card, without rendering future empty slots."
 );
 
@@ -133,7 +133,7 @@ assert.match(
 
 assert.match(
   source,
-  /const SETTINGS_TAB_ICONS = Object\.freeze\(\{[\s\S]*basic:\s*\{ inactive:\s*"system-setting", active:\s*"system-setting-filled" \},[\s\S]*search:\s*\{ inactive:\s*"ai-search", active:\s*"ai-search-filled" \}/,
+  /const SETTINGS_TAB_ICONS = Object\.freeze\(\{[\s\S]*basic:\s*\{ inactive:\s*"system-setting", active:\s*"system-setting-filled" \},[\s\S]*search:\s*\{ inactive:\s*"ai-search", active:\s*"ai-search-filled" \},[\s\S]*laboratory:\s*\{ inactive:\s*"filter-2", active:\s*"filter-2-filled" \}/,
   "Settings tab icons should be data-mapped so future settings sections can be added in code without rendering placeholder slots."
 );
 

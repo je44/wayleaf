@@ -2851,7 +2851,7 @@ html.theme-transitioning .search-workbench[data-ai-exiting] .favorite-icon {
   grid-auto-flow: column;
   align-items: center;
   justify-self: start;
-  min-width: 88px;
+  min-width: 132px;
   min-height: 44px;
   gap: 0;
   margin: 0;
@@ -3011,7 +3011,7 @@ html.theme-transitioning .search-workbench[data-ai-exiting] .favorite-icon {
     grid-auto-rows: 44px;
     width: 100%;
     min-width: 0;
-    min-height: 88px;
+    min-height: 132px;
     gap: 0;
     padding: 0;
   }
@@ -3167,6 +3167,85 @@ html.theme-transitioning .search-workbench[data-ai-exiting] .favorite-icon {
   min-width: 0;
   gap: 16px;
   align-content: start;
+}
+
+.settings-laboratory-body {
+  max-width: 100%;
+}
+
+.laboratory-toggle-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 24px;
+  align-items: center;
+  min-height: 48px;
+}
+
+.laboratory-toggle-copy {
+  display: grid;
+  min-width: 0;
+  gap: 5px;
+}
+
+.laboratory-toggle-copy strong {
+  color: var(--ink);
+  font-size: 15px;
+  font-weight: 720;
+  line-height: 1.35;
+}
+
+.laboratory-toggle-copy span {
+  color: var(--faint);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.laboratory-switch {
+  position: relative;
+  display: inline-flex;
+  width: 52px;
+  height: 30px;
+  flex: 0 0 auto;
+  align-items: center;
+  padding: 3px;
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  appearance: none;
+  -webkit-appearance: none;
+  background: color-mix(in srgb, var(--muted) 20%, var(--panel));
+  cursor: pointer;
+  transition:
+    border-color 160ms ease,
+    background 180ms ease;
+}
+
+.laboratory-switch:hover {
+  border-color: var(--accent-border);
+}
+
+.laboratory-switch:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 3px;
+}
+
+.laboratory-switch[aria-checked="true"] {
+  border-color: var(--accent);
+  background: var(--accent);
+}
+
+.laboratory-switch-thumb {
+  display: block;
+  width: 22px;
+  height: 22px;
+  border-radius: 999px;
+  background: var(--panel);
+  box-shadow: 0 1px 3px rgb(0 0 0 / 0.22);
+  transform: translateX(0);
+  transition: transform 200ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.laboratory-switch[aria-checked="true"] .laboratory-switch-thumb {
+  transform: translateX(22px);
 }
 
 .settings-form-field {
@@ -7246,6 +7325,11 @@ a.history-page-link:hover {
 
   .settings-form-status {
     text-align: left;
+  }
+
+  .laboratory-toggle-row {
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 14px;
   }
 
   .color-picker-row output {

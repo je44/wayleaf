@@ -189,6 +189,6 @@ assert.doesNotMatch(
 
 assert.match(
   source,
-  /async function handleManualSyncSettings\(\)[\s\S]*chrome\.storage\.sync\.set\(payload\)/,
+  /async function handleManualSyncSettings\(\)[\s\S]*chrome\.storage\.sync\.set\(cloudSyncPayload\(payload\)\)/,
   "Manual sync should still explicitly write local settings to chrome.storage.sync."
 );

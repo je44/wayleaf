@@ -42,6 +42,18 @@
         "ai-submit.js"
       ],
       "run_at": "document_idle"
+    },
+    {
+      "matches": [
+        "*://youtube.com/*",
+        "*://*.youtube.com/*",
+        "*://bilibili.com/*",
+        "*://*.bilibili.com/*"
+      ],
+      "js": [
+        "video-pip.js"
+      ],
+      "run_at": "document_idle"
     }
   ],
   "action": {

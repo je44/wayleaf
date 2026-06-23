@@ -18,6 +18,8 @@ const AI_DIRECT_PROMPT_STORAGE_KEY = "aiDirectPrompts";
 const AI_DIRECT_PROMPT_TOKEN_PARAM = "_wayleaf_prompt";
 const AI_DIRECT_PROMPT_TEXT_PARAM = "_wayleaf_text";
 const AI_DIRECT_MAX_PROMPT_LENGTH = 12000;
+const VIDEO_PIP_TOGGLE_ACTION = "wayleaf:toggle-video-pip-pin";
+const VIDEO_PIP_SUPPORTED_HOSTS = ["youtube.com", "bilibili.com"];
 const AI_DIRECT_PROVIDER_HOSTS = new Set([
   "chatgpt.com",
   "claude.ai",
@@ -100,6 +102,54 @@ async function runAutoSyncSettings() {
 
 function reportBackgroundError(error) {
   console.warn("Wayleaf background sync failed", error);
+}
+
+function supportsVideoPip(url) {
+  try {
+    const host = new URL(url).hostname.toLowerCase();
+    return VIDEO_PIP_SUPPORTED_HOSTS.some((supportedHost) => (
+      host === supportedHost || host.endsWith(`.${supportedHost}`)
+    ));
+  } catch {
+    return false;
+  }
+}
+
+async function toggleVideoPipPin(tabId) {
+  try {
+    return await chrome.tabs.sendMessage(tabId, { action: VIDEO_PIP_TOGGLE_ACTION });
+  } catch {
+    await chrome.scripting.executeScript({
+      target: { tabId },
+      files: ["video-pip.js"]
+    });
+    return chrome.tabs.sendMessage(tabId, { action: VIDEO_PIP_TOGGLE_ACTION });
+  }
+}
+
+async function handleVideoPipAction(tab) {
+  if (!Number.isInteger(tab?.id)) {
+    return;
+  }
+  if (!supportsVideoPip(tab.url || "")) {
+    await chrome.action.setBadgeText({ tabId: tab.id, text: "" });
+    await chrome.action.setTitle({ tabId: tab.id, title: "Wayleaf · Video PiP supports YouTube and Bilibili" });
+    return;
+  }
+  try {
+    const result = await toggleVideoPipPin(tab.id);
+    const pinned = Boolean(result?.pinned);
+    await chrome.action.setBadgeBackgroundColor({ tabId: tab.id, color: "#3f7f68" });
+    await chrome.action.setBadgeText({ tabId: tab.id, text: pinned ? "PIP" : "" });
+    await chrome.action.setTitle({
+      tabId: tab.id,
+      title: pinned
+        ? "Wayleaf · Video PiP pinned"
+        : (result?.globalEnabled ? "Wayleaf · Global video PiP enabled" : "Wayleaf")
+    });
+  } catch (error) {
+    console.warn("Wayleaf video PiP pin failed", error);
+  }
 }
 
 function aiDirectPromptRequest(url) {
@@ -262,7 +312,15 @@ chrome.alarms?.onAlarm?.addListener((alarm) => {
   }
 });
 
+chrome.action?.onClicked?.addListener((tab) => {
+  handleVideoPipAction(tab).catch(reportBackgroundError);
+});
+
 chrome.tabs?.onUpdated?.addListener((tabId, changeInfo, tab) => {
+  if (changeInfo.url) {
+    chrome.action?.setBadgeText({ tabId, text: "" }).catch(reportBackgroundError);
+    chrome.action?.setTitle({ tabId, title: "Wayleaf" }).catch(reportBackgroundError);
+  }
   const url = changeInfo.url || tab.url || "";
   const request = aiDirectPromptRequest(url);
   if (request) {

@@ -68,8 +68,12 @@ for (const [locale, completion] of Object.entries(completions)) {
 }
 
 const baselineLocaleKeys = Object.keys(messages.en);
+const intentionallyEmptyLocaleKeys = new Set(["syncSettingsReadyDetail"]);
 for (const locale of supportedLocales) {
-  const missingKeys = baselineLocaleKeys.filter((key) => typeof messages[locale]?.[key] !== "string" || !messages[locale][key].trim());
+  const missingKeys = baselineLocaleKeys.filter((key) => (
+    typeof messages[locale]?.[key] !== "string" ||
+    (!intentionallyEmptyLocaleKeys.has(key) && !messages[locale][key].trim())
+  ));
   assert.deepEqual(missingKeys, [], `${locale} should cover every English baseline UI key without falling back to another language.`);
 }
 
@@ -95,6 +99,11 @@ const settingsLocaleKeys = [
   "settingsTabsLabel",
   "settingsBasicTab",
   "settingsSearchTab",
+  "settingsLaboratoryTab",
+  "videoPipLabTitle",
+  "videoPipLabDescription",
+  "videoPipGlobalLabel",
+  "videoPipGlobalHint",
   "languageSettingsTitle",
   "appearanceModeTitle",
   "themeModeSystem",
@@ -109,7 +118,6 @@ const settingsLocaleKeys = [
   "themePaletteNeutral",
   "syncSettingsTitle",
   "syncSettingsReady",
-  "syncSettingsReadyDetail",
   "syncSettingsUnavailable",
   "syncSettingsUnavailableDetail",
   "syncSettingsDone",
@@ -186,13 +194,13 @@ assert.match(
 
 assert.match(
   source,
-  /settingsBasicTab\.querySelector\("\.settings-tab-label"\)\.textContent = t\("settingsBasicTab"\);[\s\S]*settingsSearchTab\.querySelector\("\.settings-tab-label"\)\.textContent = t\("settingsSearchTab"\);[\s\S]*settingsBasicTab\.setAttribute\("aria-label", t\("settingsBasicTab"\)\);[\s\S]*settingsSearchTab\.setAttribute\("aria-label", t\("settingsSearchTab"\)\);/,
+  /settingsBasicTab\.querySelector\("\.settings-tab-label"\)\.textContent = t\("settingsBasicTab"\);[\s\S]*settingsSearchTab\.querySelector\("\.settings-tab-label"\)\.textContent = t\("settingsSearchTab"\);[\s\S]*settingsLaboratoryTab\.querySelector\("\.settings-tab-label"\)\.textContent = t\("settingsLaboratoryTab"\);[\s\S]*settingsBasicTab\.setAttribute\("aria-label", t\("settingsBasicTab"\)\);[\s\S]*settingsSearchTab\.setAttribute\("aria-label", t\("settingsSearchTab"\)\);[\s\S]*settingsLaboratoryTab\.setAttribute\("aria-label", t\("settingsLaboratoryTab"\)\);/,
   "Icon-only settings tabs should localize their hidden labels and accessible names without replacing their icons."
 );
 
 assert.doesNotMatch(
   source,
-  /document\.querySelector\("#settings(?:Basic|Search)Tab"\)\.textContent/,
+  /document\.querySelector\("#settings(?:Basic|Search|Laboratory)Tab"\)\.textContent/,
   "Settings localization must not replace icon-only tab contents with visible text."
 );
 

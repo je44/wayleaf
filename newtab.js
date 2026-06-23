@@ -40,6 +40,7 @@ const THEME_PALETTE_STORAGE_KEY = "themePalette";
 const LANGUAGE_STORAGE_KEY = "languagePreference";
 const THEME_BOOT_STORAGE_KEY = "__wayleaf_theme_boot__";
 const SEARCH_SETTINGS_STORAGE_KEY = "searchSettings";
+const VIDEO_PIP_GLOBAL_ENABLED_STORAGE_KEY = "videoPipGlobalEnabled";
 const FIRST_PAINT_CACHE_STORAGE_KEY = "__wayleaf_first_paint_cache__";
 const FIRST_PAINT_CACHE_VERSION = 5;
 const AI_DIRECT_PROMPT_STORAGE_KEY = "aiDirectPrompts";
@@ -337,7 +338,8 @@ const THEME_MODE_ICON_BY_MODE = Object.freeze({
 });
 const SETTINGS_TAB_ICONS = Object.freeze({
   basic: { inactive: "system-setting", active: "system-setting-filled" },
-  search: { inactive: "ai-search", active: "ai-search-filled" }
+  search: { inactive: "ai-search", active: "ai-search-filled" },
+  laboratory: { inactive: "filter-2", active: "filter-2-filled" }
 });
 const CUSTOM_THEME_PALETTE_ID = "custom";
 const DEFAULT_CUSTOM_THEME_COLORS = Object.freeze({
@@ -1212,6 +1214,11 @@ const MESSAGES = {
     settingsTabsLabel: "设置分类",
     settingsBasicTab: "基本设置",
     settingsSearchTab: "搜索设置",
+    settingsLaboratoryTab: "实验室",
+    videoPipLabTitle: "视频自动画中画",
+    videoPipLabDescription: "播放中的视频标签页切到后台时，自动打开系统小窗播放器。",
+    videoPipGlobalLabel: "全局允许视频自动画中画",
+    videoPipGlobalHint: "第一版支持 YouTube 和哔哩哔哩；也可在视频标签页点击 Wayleaf 工具栏图标，仅钉选当前标签页。",
     languageSettingsTitle: "语言",
     appearanceModeTitle: "外观",
     themeModeSystem: "跟随系统",
@@ -1475,6 +1482,11 @@ const MESSAGES = {
     settingsTabsLabel: "設定分類",
     settingsBasicTab: "基本設定",
     settingsSearchTab: "搜尋設定",
+    settingsLaboratoryTab: "實驗室",
+    videoPipLabTitle: "影片自動畫中畫",
+    videoPipLabDescription: "播放中的影片標籤頁切到背景時，自動開啟系統小窗播放器。",
+    videoPipGlobalLabel: "全域允許影片自動畫中畫",
+    videoPipGlobalHint: "第一版支援 YouTube 和 Bilibili；也可在影片標籤頁點擊 Wayleaf 工具列圖標，只釘選目前標籤頁。",
     languageSettingsTitle: "語言",
     appearanceModeTitle: "外觀",
     themeModeSystem: "跟隨系統",
@@ -1707,6 +1719,11 @@ const MESSAGES = {
     settingsTabsLabel: "Settings categories",
     settingsBasicTab: "Basic",
     settingsSearchTab: "Search",
+    settingsLaboratoryTab: "Laboratory",
+    videoPipLabTitle: "Automatic video Picture-in-Picture",
+    videoPipLabDescription: "Open the system floating player when a playing video tab moves to the background.",
+    videoPipGlobalLabel: "Allow automatic video Picture-in-Picture globally",
+    videoPipGlobalHint: "YouTube and Bilibili are supported first. Click the Wayleaf toolbar icon on a video tab to pin only that tab.",
     languageSettingsTitle: "Language",
     appearanceModeTitle: "Appearance",
     themeModeSystem: "System",
@@ -1865,6 +1882,11 @@ const MESSAGES = {
     settingsTabsLabel: "設定カテゴリ",
     settingsBasicTab: "基本",
     settingsSearchTab: "検索",
+    settingsLaboratoryTab: "ラボ",
+    videoPipLabTitle: "動画の自動ピクチャーインピクチャー",
+    videoPipLabDescription: "再生中の動画タブをバックグラウンドに移すと、システムの小窓プレーヤーを自動で開きます。",
+    videoPipGlobalLabel: "動画の自動ピクチャーインピクチャーを全体で許可",
+    videoPipGlobalHint: "初期対応は YouTube と Bilibili です。動画タブで Wayleaf のツールバーアイコンを押すと、そのタブだけを固定できます。",
     languageSettingsTitle: "言語",
     appearanceModeTitle: "外観",
     themeModeSystem: "システム",
@@ -1959,6 +1981,11 @@ const MESSAGES = {
     settingsTabsLabel: "설정 분류",
     settingsBasicTab: "기본",
     settingsSearchTab: "검색",
+    settingsLaboratoryTab: "실험실",
+    videoPipLabTitle: "동영상 자동 화면 속 화면",
+    videoPipLabDescription: "재생 중인 동영상 탭을 백그라운드로 전환하면 시스템 플로팅 플레이어를 자동으로 엽니다.",
+    videoPipGlobalLabel: "동영상 자동 화면 속 화면 전역 허용",
+    videoPipGlobalHint: "첫 버전은 YouTube와 Bilibili를 지원합니다. 동영상 탭에서 Wayleaf 도구 모음 아이콘을 누르면 해당 탭만 고정할 수 있습니다.",
     languageSettingsTitle: "언어",
     appearanceModeTitle: "모양",
     themeModeSystem: "시스템",
@@ -2053,6 +2080,11 @@ const MESSAGES = {
     settingsTabsLabel: "Categorías de configuración",
     settingsBasicTab: "Básico",
     settingsSearchTab: "Búsqueda",
+    settingsLaboratoryTab: "Laboratorio",
+    videoPipLabTitle: "Vídeo automático en imagen dentro de imagen",
+    videoPipLabDescription: "Abre el reproductor flotante del sistema al mover al fondo una pestaña con vídeo en reproducción.",
+    videoPipGlobalLabel: "Permitir vídeo automático en imagen dentro de imagen globalmente",
+    videoPipGlobalHint: "La primera versión admite YouTube y Bilibili. Pulsa el icono de Wayleaf en una pestaña de vídeo para fijar solo esa pestaña.",
     languageSettingsTitle: "Idioma",
     appearanceModeTitle: "Apariencia",
     themeModeSystem: "Sistema",
@@ -2147,6 +2179,11 @@ const MESSAGES = {
     settingsTabsLabel: "Catégories de paramètres",
     settingsBasicTab: "Général",
     settingsSearchTab: "Recherche",
+    settingsLaboratoryTab: "Laboratoire",
+    videoPipLabTitle: "Vidéo automatique en mode image dans l’image",
+    videoPipLabDescription: "Ouvre le lecteur flottant du système lorsqu’un onglet vidéo en lecture passe en arrière-plan.",
+    videoPipGlobalLabel: "Autoriser globalement la vidéo automatique en mode image dans l’image",
+    videoPipGlobalHint: "La première version prend en charge YouTube et Bilibili. Cliquez sur l’icône Wayleaf dans un onglet vidéo pour n’épingler que cet onglet.",
     languageSettingsTitle: "Langue",
     appearanceModeTitle: "Apparence",
     themeModeSystem: "Système",
@@ -2241,6 +2278,11 @@ const MESSAGES = {
     settingsTabsLabel: "Einstellungskategorien",
     settingsBasicTab: "Allgemein",
     settingsSearchTab: "Suche",
+    settingsLaboratoryTab: "Labor",
+    videoPipLabTitle: "Automatisches Video-Bild-in-Bild",
+    videoPipLabDescription: "Öffnet den schwebenden Systemplayer, wenn ein laufender Video-Tab in den Hintergrund wechselt.",
+    videoPipGlobalLabel: "Automatisches Video-Bild-in-Bild global erlauben",
+    videoPipGlobalHint: "Die erste Version unterstützt YouTube und Bilibili. Klicke im Video-Tab auf das Wayleaf-Symbol, um nur diesen Tab anzupinnen.",
     languageSettingsTitle: "Sprache",
     appearanceModeTitle: "Darstellung",
     themeModeSystem: "System",
@@ -3161,6 +3203,7 @@ const aiEngineSettingsList = document.querySelector("#aiEngineSettingsList");
 const platformSearchSettingsList = document.querySelector("#platformSearchSettingsList");
 const resetSearchSettingsButton = document.querySelector("#resetSearchSettingsButton");
 const searchSettingsStatus = document.querySelector("#searchSettingsStatus");
+const videoPipGlobalToggle = document.querySelector("#videoPipGlobalToggle");
 const lightAccentInput = document.querySelector("#lightAccentInput");
 const lightAccentStrongInput = document.querySelector("#lightAccentStrongInput");
 const darkAccentInput = document.querySelector("#darkAccentInput");
@@ -3246,6 +3289,7 @@ let activeRecentFolderPageSwitchAnimation = null;
 let favoriteSitesHydrated = false;
 let onboardingStepIndex = 0;
 let onboardingPreviewActive = false;
+let videoPipGlobalEnabled = false;
 let availableSiteIconFiles = new Set();
 let siteIconIndexLoaded = false;
 const whiteSvgIconDataUrlCache = new Map();
@@ -3879,19 +3923,23 @@ function applySettingsLocale() {
   document.querySelector(".settings-tabs")?.setAttribute("aria-label", t("settingsTabsLabel"));
   const settingsBasicTab = document.querySelector("#settingsBasicTab");
   const settingsSearchTab = document.querySelector("#settingsSearchTab");
+  const settingsLaboratoryTab = document.querySelector("#settingsLaboratoryTab");
   settingsBasicTab.querySelector(".settings-tab-label").textContent = t("settingsBasicTab");
   settingsSearchTab.querySelector(".settings-tab-label").textContent = t("settingsSearchTab");
+  settingsLaboratoryTab.querySelector(".settings-tab-label").textContent = t("settingsLaboratoryTab");
   settingsBasicTab.setAttribute("aria-label", t("settingsBasicTab"));
   settingsSearchTab.setAttribute("aria-label", t("settingsSearchTab"));
-	  settingsBasicTab.title = t("settingsBasicTab");
-	  settingsSearchTab.title = t("settingsSearchTab");
-	  document.querySelector("#languageSettingsTitle").textContent = t("languageSettingsTitle");
-	  renderLanguageOptions();
-	  document.querySelector("#themeModeControl")?.setAttribute("aria-label", t("appearanceModeTitle"));
-	  document.querySelector("#appearanceModeTitle").textContent = t("appearanceModeTitle");
-	  document.querySelector("#presetPaletteTitle").textContent = t("presetPaletteTitle");
-	  document.querySelector("#syncSettingsTitle").textContent = t("syncSettingsTitle");
-	  document.querySelector("#searchSettingsDefaultTitle").textContent = t("searchSettingsDefaultTitle");
+  settingsLaboratoryTab.setAttribute("aria-label", t("settingsLaboratoryTab"));
+  settingsBasicTab.title = t("settingsBasicTab");
+  settingsSearchTab.title = t("settingsSearchTab");
+  settingsLaboratoryTab.title = t("settingsLaboratoryTab");
+  document.querySelector("#languageSettingsTitle").textContent = t("languageSettingsTitle");
+  renderLanguageOptions();
+  document.querySelector("#themeModeControl")?.setAttribute("aria-label", t("appearanceModeTitle"));
+  document.querySelector("#appearanceModeTitle").textContent = t("appearanceModeTitle");
+  document.querySelector("#presetPaletteTitle").textContent = t("presetPaletteTitle");
+  document.querySelector("#syncSettingsTitle").textContent = t("syncSettingsTitle");
+  document.querySelector("#searchSettingsDefaultTitle").textContent = t("searchSettingsDefaultTitle");
   document.querySelector('[aria-labelledby="searchSettingsDefaultTitle"] .settings-group-heading p').textContent = t("searchSettingsDefaultDescription");
   document.querySelector('[aria-labelledby="searchSettingsDefaultTitle"] .settings-group-note').textContent = t("searchSettingsDefaultHint");
   document.querySelector("#searchSettingsAiTitle").textContent = t("searchSettingsAiTitle");
@@ -3902,6 +3950,11 @@ function applySettingsLocale() {
   document.querySelector('[aria-labelledby="searchSettingsPlatformTitle"] .settings-group-note').textContent = t("searchSettingsPlatformHint");
   document.querySelector("#resetSearchSettingsButton").textContent = t("searchSettingsReset");
   document.querySelector("#searchSettingsForm button[type='submit']").textContent = t("searchSettingsSave");
+  document.querySelector("#videoPipLabTitle").textContent = t("videoPipLabTitle");
+  document.querySelector("#videoPipLabDescription").textContent = t("videoPipLabDescription");
+  document.querySelector("#videoPipGlobalLabel").textContent = t("videoPipGlobalLabel");
+  document.querySelector("#videoPipGlobalHint").textContent = t("videoPipGlobalHint");
+  updateVideoPipGlobalToggle();
   const customPaletteTitle = document.querySelector("#customPaletteTitle");
   if (customPaletteTitle) {
     customPaletteTitle.textContent = t("customPaletteTitle");
@@ -3940,6 +3993,32 @@ function applySettingsLocale() {
   lightAccentInput?.closest("label")?.querySelector("span")?.replaceChildren(document.createTextNode(t("lightAccent")));
   darkAccentInput?.closest("label")?.querySelector("span")?.replaceChildren(document.createTextNode(t("darkAccent")));
   updateSettingsActiveSummary(settingsTabButtons.find((button) => button.classList.contains("active"))?.dataset.settingsTab);
+}
+
+function updateVideoPipGlobalToggle() {
+  if (!videoPipGlobalToggle) {
+    return;
+  }
+  videoPipGlobalToggle.setAttribute("aria-checked", String(videoPipGlobalEnabled));
+  setButtonLabel(videoPipGlobalToggle, t("videoPipGlobalLabel"));
+}
+
+async function initVideoPipGlobalSetting() {
+  const stored = await getStoredValues({ [VIDEO_PIP_GLOBAL_ENABLED_STORAGE_KEY]: false });
+  videoPipGlobalEnabled = stored[VIDEO_PIP_GLOBAL_ENABLED_STORAGE_KEY] === true;
+  updateVideoPipGlobalToggle();
+}
+
+async function toggleVideoPipGlobalSetting() {
+  videoPipGlobalEnabled = !videoPipGlobalEnabled;
+  updateVideoPipGlobalToggle();
+  try {
+    await setStoredValues({ [VIDEO_PIP_GLOBAL_ENABLED_STORAGE_KEY]: videoPipGlobalEnabled });
+  } catch (error) {
+    videoPipGlobalEnabled = !videoPipGlobalEnabled;
+    updateVideoPipGlobalToggle();
+    console.warn("Failed to save video Picture-in-Picture setting", error);
+  }
 }
 
 function renderLanguageOptions() {
@@ -4059,6 +4138,7 @@ async function init() {
   siteIconIndexReady.then(refreshRenderedSiteIcons).catch(() => {});
   const themeModeReady = initThemeMode();
   const searchSettingsReady = initSearchSettings();
+  const videoPipSettingReady = initVideoPipGlobalSetting();
   await initQuickSearchEngine();
   renderFavoriteSites();
   renderPortals();
@@ -4066,6 +4146,7 @@ async function init() {
   refreshHistory();
   void searchSettingsReady;
   void themeModeReady;
+  void videoPipSettingReady;
 
   chooseBookmarkFolderButton.addEventListener("click", openBookmarkPicker);
   refreshBookmarkFolderButton.addEventListener("click", renderSelectedBookmarkFolder);
@@ -4119,6 +4200,7 @@ async function init() {
   exportSettingsButton?.addEventListener("click", handleExportSettings);
   importSettingsButton?.addEventListener("click", () => importSettingsInput?.click());
   importSettingsInput?.addEventListener("change", handleImportSettingsChange);
+  videoPipGlobalToggle?.addEventListener("click", toggleVideoPipGlobalSetting);
   languageOptions?.addEventListener("click", handleLanguageOptionClick);
   languageOptions?.addEventListener("keydown", handleLanguageOptionsKeydown);
   settingsTabButtons.forEach((button) => {
@@ -14497,6 +14579,8 @@ const TDESIGN_ICON_MARKUP = Object.freeze({
   "delete-filled": '<path fill="currentColor" d="M7.5 3h9V1h-9zM22 6V4H2v2h2.029l.5 17h14.942l.5-17zM11 19V8h2v11z"/>',
   "file-export": '<g fill="none" stroke="currentColor" stroke-linecap="square" stroke-width="2"><path d="M14 2H6.5A1.5 1.5 0 0 0 5 3.5v17A1.5 1.5 0 0 0 6.5 22h11a1.5 1.5 0 0 0 1.5-1.5V7z"/><path d="M14 2v5h5M9 14h8m0 0l-3-3m3 3l-3 3"/></g>',
   "file-import": '<g fill="none" stroke="currentColor" stroke-linecap="square" stroke-width="2"><path d="M14 2H6.5A1.5 1.5 0 0 0 5 3.5v17A1.5 1.5 0 0 0 6.5 22h11a1.5 1.5 0 0 0 1.5-1.5V7z"/><path d="M14 2v5h5M16 14H8m0 0l3-3m-3 3l3 3"/></g>',
+  "filter-2": '<g fill="none"><path d="m3.563 18.491l3.735 3.735L17.554 11.97L13.82 8.235z"/><path d="m20.973 8.55l-3.735-3.734l-3.418 3.42l3.734 3.734z"/><path stroke="currentColor" stroke-linecap="square" stroke-width="2" d="m17.238 4.816l3.735 3.735m-3.735-3.735L3.563 18.491l3.735 3.735L20.973 8.55m-3.735-3.735l-3.418 3.42l3.734 3.734l3.419-3.42"/><path stroke="currentColor" stroke-width="2" d="m7.75 3.5l.415.835L9 4.75l-.835.415L7.75 6l-.415-.835L6.5 4.75l.835-.415zM21.625 3l.041.083l.084.042l-.084.042l-.041.083l-.041-.083l-.084-.042l.084-.042z"/></g>',
+  "filter-2-filled": '<g transform="translate(-.5 0)"><path fill="currentColor" d="m19.318 3.05l1.568-.78l.781-1.569l.781 1.569l1.569.78l-1.569.782l-.78 1.569l-.782-1.57zm-10.263.669L7.958 1.515L6.86 3.719L4.657 4.816L6.86 5.913l1.097 2.204l1.097-2.204l2.204-1.097zm8.499 9.664l-5.148-5.15L2.148 18.492l5.149 5.149zm4.832-4.833l-5.149-5.148L13.82 6.819l5.149 5.149z"/></g>',
   "folder-add": '<path fill="none" stroke="currentColor" stroke-linecap="square" stroke-width="2" d="M22 11V6H11L9 3.5H2V20h11m7-5v3m0 0v3m0-3h-3m3 0h3"/>',
   "format-vertical-align-left": '<path fill="none" stroke="currentColor" stroke-linecap="square" stroke-width="2" d="M3 5h18M3 12h12M3 19h18"/>',
   "help-circle": '<g fill="none"><path d="M21.5 12a9.5 9.5 0 1 1-19 0a9.5 9.5 0 0 1 19 0"/><path stroke="currentColor" stroke-linecap="square" stroke-width="2" d="M9.6 9.25a2.6 2.6 0 1 1 3.8 2.3c-.86.47-1.4 1.04-1.4 2.2m0 3.25h.01M21.5 12a9.5 9.5 0 1 1-19 0a9.5 9.5 0 0 1 19 0Z"/></g>',
