@@ -318,26 +318,35 @@
             </section>
 
             <section class="settings-group" aria-labelledby="syncSettingsTitle">
-              <div class="settings-group-heading">
-                <div>
+              <div class="settings-group-heading sync-settings-heading">
+                <div class="sync-settings-title-line">
                   <h3 id="syncSettingsTitle">Cloud sync</h3>
+                  <button class="sync-settings-auto-pill" id="syncSettingsAutoButton" type="button" aria-label="Auto sync" aria-disabled="true">
+                    <span class="sync-settings-auto-label">Auto sync</span>
+                    <span class="sync-settings-auto-hint">Daily auto sync</span>
+                  </button>
                 </div>
               </div>
               <div class="settings-group-control">
                 <div class="sync-settings-row" id="syncSettingsRow" data-status="ready">
                   <span class="sync-settings-copy">
                     <strong id="syncSettingsStatus">Settings sync with your Chrome account</strong>
-                    <span id="syncSettingsDetail">Install with the same Google account to restore.</span>
+                    <span id="syncSettingsDetail" hidden></span>
                   </span>
                   <span class="sync-settings-actions" aria-label="Sync methods">
                     <button class="text-button sync-settings-action sync-settings-action-manual" id="syncSettingsNowButton" type="button" aria-label="Sync now">
                       <span class="button-icon" aria-hidden="true"></span>
                       <span class="sync-settings-action-label">Sync now</span>
                     </button>
-                    <button class="text-button sync-settings-action sync-settings-action-auto" id="syncSettingsAutoButton" type="button" aria-label="Auto sync" aria-disabled="true" disabled>
+                    <button class="text-button sync-settings-action" id="exportSettingsButton" type="button" aria-label="Export Wayleaf">
                       <span class="button-icon" aria-hidden="true"></span>
-                      <span class="sync-settings-action-label">Auto sync</span>
+                      <span class="sync-settings-action-label">Export</span>
                     </button>
+                    <button class="text-button sync-settings-action" id="importSettingsButton" type="button" aria-label="Import Wayleaf">
+                      <span class="button-icon" aria-hidden="true"></span>
+                      <span class="sync-settings-action-label">Import</span>
+                    </button>
+                    <input id="importSettingsInput" type="file" accept=".wy" hidden>
                   </span>
                 </div>
               </div>

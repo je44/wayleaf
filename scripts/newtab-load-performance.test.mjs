@@ -20,7 +20,13 @@ assert.match(
 assert.doesNotMatch(
   source,
   /function storageAreaForKey\(key\) \{[\s\S]*SYNC_STORAGE_KEYS\.has\(key\)[\s\S]*return chrome\.storage\.sync;/,
-  "Normal new-tab reads must not route sync-managed keys through chrome.storage.sync."
+  "Normal new-tab writes must not route sync-managed keys directly through chrome.storage.sync."
+);
+
+assert.match(
+  source,
+  /async function getStoredValues\(defaults = \{\}\) \{[\s\S]*const syncedKeys = keys\.filter\(\(key\) => SYNC_STORAGE_KEYS\.has\(key\)\);[\s\S]*chrome\.storage\.local\.get\(keys\),[\s\S]*chrome\.storage\.sync\.get\(syncedKeys\)[\s\S]*typeof localValues\[key\] !== "undefined"[\s\S]*typeof syncValues\[key\] !== "undefined" \? syncValues\[key\] : defaults\[key\]/,
+  "Synced settings should fall back to chrome.storage.sync when local storage is empty after reinstall."
 );
 
 const initBody = source.match(/async function init\(\) \{([\s\S]*?)\n\}/)?.[1] || "";

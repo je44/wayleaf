@@ -187,6 +187,7 @@ const MEDIA_FEED_DISCOVERY_SOURCES = [
 ];
 const CUSTOM_MEDIA_FEEDS_STORAGE_KEY = "customMediaFeeds";
 const MEDIA_FEED_FEEDBACK_STORAGE_KEY = "mediaFeedFeedback";
+const WAYLEAF_CONFIG_EXPORT_VERSION = 1;
 const SYNC_STORAGE_KEYS = new Set([
   CUSTOM_PORTALS_STORAGE_KEY,
   FAVORITE_SITES_STORAGE_KEY,
@@ -1222,13 +1223,22 @@ const MESSAGES = {
     themePaletteNeutral: "中性",
     syncSettingsTitle: "云端同步",
     syncSettingsReady: "配置会跟随 Chrome 账号同步",
-    syncSettingsReadyDetail: "同一 Google 账号安装后会自动恢复；扩展启用时每天自动同步一次。",
+    syncSettingsReadyDetail: "",
     syncSettingsUnavailable: "当前浏览器不支持同步",
     syncSettingsUnavailableDetail: "仍会保存在这台设备。",
     syncSettingsDone: "刚刚写入同步区",
     syncSettingsDoneDetail: "Chrome 会自动分发到同账号设备。",
     syncSettingsNow: "手动同步",
     syncSettingsAuto: "自动同步",
+    syncSettingsAutoHint: "每日同步",
+    syncSettingsExport: "导出",
+    syncSettingsImport: "导入",
+    syncSettingsExported: "配置已导出",
+    syncSettingsExportedDetail: "已保存 Wayleaf 全局配置文件。",
+    syncSettingsImported: "配置已导入",
+    syncSettingsImportedDetail: "正在刷新 Wayleaf。",
+    syncSettingsImportFailed: "导入失败",
+    syncSettingsImportFailedDetail: "请选择 Wayleaf .wy 配置文件。",
     syncSettingsActionsLabel: "同步方式",
     searchSettingsDefaultTitle: "基本搜索",
     searchSettingsDefaultDescription: "设置普通关键词默认使用的搜索入口",
@@ -1476,13 +1486,22 @@ const MESSAGES = {
     themePaletteNeutral: "中性",
     syncSettingsTitle: "雲端同步",
     syncSettingsReady: "設定會跟隨 Chrome 帳號同步",
-    syncSettingsReadyDetail: "同一 Google 帳號安裝後會自動恢復；擴充功能啟用時每天自動同步一次。",
+    syncSettingsReadyDetail: "",
     syncSettingsUnavailable: "目前瀏覽器不支援同步",
     syncSettingsUnavailableDetail: "仍會保存在這台裝置。",
     syncSettingsDone: "剛剛寫入同步區",
     syncSettingsDoneDetail: "Chrome 會自動分發到同帳號裝置。",
     syncSettingsNow: "手動同步",
     syncSettingsAuto: "自動同步",
+    syncSettingsAutoHint: "每日同步",
+    syncSettingsExport: "匯出",
+    syncSettingsImport: "匯入",
+    syncSettingsExported: "設定已匯出",
+    syncSettingsExportedDetail: "已儲存 Wayleaf 全域設定檔。",
+    syncSettingsImported: "設定已匯入",
+    syncSettingsImportedDetail: "正在重新整理 Wayleaf。",
+    syncSettingsImportFailed: "匯入失敗",
+    syncSettingsImportFailedDetail: "請選擇 Wayleaf .wy 設定檔。",
     syncSettingsActionsLabel: "同步方式",
     searchSettingsDefaultTitle: "基本搜尋",
     searchSettingsDefaultDescription: "設定普通關鍵字預設使用的搜尋入口",
@@ -1699,13 +1718,22 @@ const MESSAGES = {
     themePaletteNeutral: "Neutral",
     syncSettingsTitle: "Cloud sync",
     syncSettingsReady: "Settings sync with your Chrome account",
-    syncSettingsReadyDetail: "Install with the same Google account to restore; auto sync runs once daily while the extension is enabled.",
+    syncSettingsReadyDetail: "",
     syncSettingsUnavailable: "Sync is unavailable in this browser",
     syncSettingsUnavailableDetail: "Settings still stay on this device.",
     syncSettingsDone: "Written to sync storage",
     syncSettingsDoneDetail: "Chrome will distribute it to signed-in devices.",
     syncSettingsNow: "Sync now",
     syncSettingsAuto: "Auto sync",
+    syncSettingsAutoHint: "Daily sync",
+    syncSettingsExport: "Export",
+    syncSettingsImport: "Import",
+    syncSettingsExported: "Config exported",
+    syncSettingsExportedDetail: "Wayleaf global config file was saved.",
+    syncSettingsImported: "Config imported",
+    syncSettingsImportedDetail: "Refreshing Wayleaf.",
+    syncSettingsImportFailed: "Import failed",
+    syncSettingsImportFailedDetail: "Choose a Wayleaf .wy config file.",
     syncSettingsActionsLabel: "Sync method",
     searchSettingsDefaultTitle: "Basic search",
     searchSettingsDefaultDescription: "Configure the search entry used for regular queries",
@@ -1848,13 +1876,22 @@ const MESSAGES = {
     themePaletteNeutral: "ニュートラル",
     syncSettingsTitle: "クラウド同期",
     syncSettingsReady: "Chrome アカウントで設定を同期します",
-    syncSettingsReadyDetail: "同じ Google アカウントでインストールすると復元されます。拡張機能が有効な間は1日1回自動同期します。",
+    syncSettingsReadyDetail: "",
     syncSettingsUnavailable: "このブラウザでは同期を利用できません",
     syncSettingsUnavailableDetail: "設定はこのデバイスに保存されます。",
     syncSettingsDone: "同期ストレージに書き込みました",
     syncSettingsDoneDetail: "Chrome が同じアカウントのデバイスへ配信します。",
     syncSettingsNow: "今すぐ同期",
     syncSettingsAuto: "自動同期",
+    syncSettingsAutoHint: "毎日同期",
+    syncSettingsExport: "エクスポート",
+    syncSettingsImport: "インポート",
+    syncSettingsExported: "設定をエクスポートしました",
+    syncSettingsExportedDetail: "Wayleaf の全体設定ファイルを保存しました。",
+    syncSettingsImported: "設定をインポートしました",
+    syncSettingsImportedDetail: "Wayleaf を更新しています。",
+    syncSettingsImportFailed: "インポートに失敗しました",
+    syncSettingsImportFailedDetail: "Wayleaf .wy 設定ファイルを選択してください。",
     syncSettingsActionsLabel: "同期方法",
     searchSettingsDefaultTitle: "基本検索",
     searchSettingsDefaultDescription: "通常のキーワードで使う検索先を設定",
@@ -1933,13 +1970,22 @@ const MESSAGES = {
     themePaletteNeutral: "중립",
     syncSettingsTitle: "클라우드 동기화",
     syncSettingsReady: "Chrome 계정과 설정이 동기화됩니다",
-    syncSettingsReadyDetail: "같은 Google 계정으로 설치하면 복원됩니다. 확장 프로그램이 활성화된 동안 하루에 한 번 자동 동기화됩니다.",
+    syncSettingsReadyDetail: "",
     syncSettingsUnavailable: "이 브라우저에서는 동기화를 사용할 수 없습니다",
     syncSettingsUnavailableDetail: "설정은 이 기기에 계속 저장됩니다.",
     syncSettingsDone: "동기화 저장소에 기록했습니다",
     syncSettingsDoneDetail: "Chrome이 같은 계정의 기기로 배포합니다.",
     syncSettingsNow: "지금 동기화",
     syncSettingsAuto: "자동 동기화",
+    syncSettingsAutoHint: "매일 동기화",
+    syncSettingsExport: "내보내기",
+    syncSettingsImport: "가져오기",
+    syncSettingsExported: "설정을 내보냈습니다",
+    syncSettingsExportedDetail: "Wayleaf 전역 설정 파일을 저장했습니다.",
+    syncSettingsImported: "설정을 가져왔습니다",
+    syncSettingsImportedDetail: "Wayleaf를 새로고침합니다.",
+    syncSettingsImportFailed: "가져오기 실패",
+    syncSettingsImportFailedDetail: "Wayleaf .wy 설정 파일을 선택하세요.",
     syncSettingsActionsLabel: "동기화 방식",
     searchSettingsDefaultTitle: "기본 검색",
     searchSettingsDefaultDescription: "일반 키워드에 사용할 기본 검색 항목 설정",
@@ -2018,13 +2064,22 @@ const MESSAGES = {
     themePaletteNeutral: "Neutro",
     syncSettingsTitle: "Sincronización en la nube",
     syncSettingsReady: "Los ajustes se sincronizan con tu cuenta de Chrome",
-    syncSettingsReadyDetail: "Instala con la misma cuenta de Google para restaurarlos; la sincronización automática se ejecuta una vez al día mientras la extensión esté activa.",
+    syncSettingsReadyDetail: "",
     syncSettingsUnavailable: "La sincronización no está disponible en este navegador",
     syncSettingsUnavailableDetail: "Los ajustes seguirán en este dispositivo.",
     syncSettingsDone: "Escrito en el almacenamiento de sincronización",
     syncSettingsDoneDetail: "Chrome lo distribuirá a los dispositivos de la misma cuenta.",
     syncSettingsNow: "Sincronizar",
     syncSettingsAuto: "Sincronización automática",
+    syncSettingsAutoHint: "Sync diaria",
+    syncSettingsExport: "Exportar",
+    syncSettingsImport: "Importar",
+    syncSettingsExported: "Configuración exportada",
+    syncSettingsExportedDetail: "Se guardó el archivo global de Wayleaf.",
+    syncSettingsImported: "Configuración importada",
+    syncSettingsImportedDetail: "Actualizando Wayleaf.",
+    syncSettingsImportFailed: "Error al importar",
+    syncSettingsImportFailedDetail: "Elige un archivo .wy de Wayleaf.",
     syncSettingsActionsLabel: "Método de sincronización",
     searchSettingsDefaultTitle: "Búsqueda básica",
     searchSettingsDefaultDescription: "Configura el buscador para consultas normales",
@@ -2103,13 +2158,22 @@ const MESSAGES = {
     themePaletteNeutral: "Neutre",
     syncSettingsTitle: "Synchronisation cloud",
     syncSettingsReady: "Les paramètres se synchronisent avec votre compte Chrome",
-    syncSettingsReadyDetail: "Installez avec le même compte Google pour les restaurer ; la synchronisation automatique s'exécute une fois par jour quand l'extension est activée.",
+    syncSettingsReadyDetail: "",
     syncSettingsUnavailable: "La synchronisation n'est pas disponible dans ce navigateur",
     syncSettingsUnavailableDetail: "Les paramètres restent sur cet appareil.",
     syncSettingsDone: "Écrit dans le stockage synchronisé",
     syncSettingsDoneDetail: "Chrome le diffusera aux appareils du même compte.",
     syncSettingsNow: "Synchroniser",
     syncSettingsAuto: "Synchro auto",
+    syncSettingsAutoHint: "Sync quotidienne",
+    syncSettingsExport: "Exporter",
+    syncSettingsImport: "Importer",
+    syncSettingsExported: "Configuration exportée",
+    syncSettingsExportedDetail: "Le fichier global Wayleaf a été enregistré.",
+    syncSettingsImported: "Configuration importée",
+    syncSettingsImportedDetail: "Actualisation de Wayleaf.",
+    syncSettingsImportFailed: "Échec de l'import",
+    syncSettingsImportFailedDetail: "Choisissez un fichier Wayleaf .wy.",
     syncSettingsActionsLabel: "Méthode de synchronisation",
     searchSettingsDefaultTitle: "Recherche de base",
     searchSettingsDefaultDescription: "Configurer le moteur utilisé pour les requêtes normales",
@@ -2188,13 +2252,22 @@ const MESSAGES = {
     themePaletteNeutral: "Neutral",
     syncSettingsTitle: "Cloud-Synchronisierung",
     syncSettingsReady: "Einstellungen werden mit deinem Chrome-Konto synchronisiert",
-    syncSettingsReadyDetail: "Mit demselben Google-Konto installieren, um sie wiederherzustellen; die automatische Synchronisierung läuft einmal täglich, solange die Erweiterung aktiv ist.",
+    syncSettingsReadyDetail: "",
     syncSettingsUnavailable: "Synchronisierung ist in diesem Browser nicht verfügbar",
     syncSettingsUnavailableDetail: "Einstellungen bleiben auf diesem Gerät.",
     syncSettingsDone: "In den Sync-Speicher geschrieben",
     syncSettingsDoneDetail: "Chrome verteilt sie an Geräte mit demselben Konto.",
     syncSettingsNow: "Jetzt synchronisieren",
     syncSettingsAuto: "Automatisch",
+    syncSettingsAutoHint: "Täglich syncen",
+    syncSettingsExport: "Exportieren",
+    syncSettingsImport: "Importieren",
+    syncSettingsExported: "Konfiguration exportiert",
+    syncSettingsExportedDetail: "Die globale Wayleaf-Konfigurationsdatei wurde gespeichert.",
+    syncSettingsImported: "Konfiguration importiert",
+    syncSettingsImportedDetail: "Wayleaf wird aktualisiert.",
+    syncSettingsImportFailed: "Import fehlgeschlagen",
+    syncSettingsImportFailedDetail: "Wähle eine Wayleaf-.wy-Datei.",
     syncSettingsActionsLabel: "Synchronisierungsart",
     searchSettingsDefaultTitle: "Basissuche",
     searchSettingsDefaultDescription: "Suchziel für normale Suchanfragen konfigurieren",
@@ -3076,6 +3149,9 @@ const syncSettingsStatus = document.querySelector("#syncSettingsStatus");
 const syncSettingsDetail = document.querySelector("#syncSettingsDetail");
 const syncSettingsNowButton = document.querySelector("#syncSettingsNowButton");
 const syncSettingsAutoButton = document.querySelector("#syncSettingsAutoButton");
+const exportSettingsButton = document.querySelector("#exportSettingsButton");
+const importSettingsButton = document.querySelector("#importSettingsButton");
+const importSettingsInput = document.querySelector("#importSettingsInput");
 const searchSettingsForm = document.querySelector("#searchSettingsForm");
 const basicSearchEngineList = document.querySelector("#basicSearchEngineList");
 const aiEngineSettingsList = document.querySelector("#aiEngineSettingsList");
@@ -3274,6 +3350,22 @@ function storageAreaForKey(key) {
 }
 
 async function getStoredValues(defaults = {}) {
+  if (chrome.storage?.local && chrome.storage?.sync && chrome.storage.local !== chrome.storage.sync) {
+    const keys = Object.keys(defaults);
+    const syncedKeys = keys.filter((key) => SYNC_STORAGE_KEYS.has(key));
+    if (syncedKeys.length) {
+      const [localValues, syncValues] = await Promise.all([
+        chrome.storage.local.get(keys),
+        chrome.storage.sync.get(syncedKeys)
+      ]);
+      return Object.fromEntries(keys.map((key) => [
+        key,
+        typeof localValues[key] !== "undefined"
+          ? localValues[key]
+          : (SYNC_STORAGE_KEYS.has(key) && typeof syncValues[key] !== "undefined" ? syncValues[key] : defaults[key])
+      ]));
+    }
+  }
   const storage = storageAreaForKey();
   return storage ? storage.get(defaults) : { ...defaults };
 }
@@ -3584,10 +3676,13 @@ function themePaletteLabel(palette) {
 }
 
 function messageTemplate(key) {
-  if (MESSAGES[LOCALE]?.[key]) {
+  if (Object.prototype.hasOwnProperty.call(MESSAGES[LOCALE] || {}, key)) {
     return MESSAGES[LOCALE][key];
   }
-  return MESSAGES[DEFAULT_LOCALE][key] || MESSAGES.en[key] || key;
+  if (Object.prototype.hasOwnProperty.call(MESSAGES[DEFAULT_LOCALE] || {}, key)) {
+    return MESSAGES[DEFAULT_LOCALE][key];
+  }
+  return Object.prototype.hasOwnProperty.call(MESSAGES.en || {}, key) ? MESSAGES.en[key] : key;
 }
 
 function applyLocale() {
@@ -3815,6 +3910,7 @@ function applySettingsLocale() {
   });
   setButtonLabel(syncSettingsNowButton, t("syncSettingsNow"));
   setButtonLabel(syncSettingsAutoButton, t("syncSettingsAuto"));
+  syncSettingsAutoButton.title = t("syncSettingsAutoHint");
   document.querySelector(".sync-settings-actions")?.setAttribute("aria-label", t("syncSettingsActionsLabel"));
   updateSyncSettingsUi();
   renderSearchSettingsForm();
@@ -3997,6 +4093,9 @@ async function init() {
   window.addEventListener("resize", updateSettingsTabsStickyVisualState);
   window.addEventListener("resize", positionOnboardingStep);
   syncSettingsNowButton?.addEventListener("click", handleManualSyncSettings);
+  exportSettingsButton?.addEventListener("click", handleExportSettings);
+  importSettingsButton?.addEventListener("click", () => importSettingsInput?.click());
+  importSettingsInput?.addEventListener("change", handleImportSettingsChange);
   languageOptions?.addEventListener("click", handleLanguageOptionClick);
   languageOptions?.addEventListener("keydown", handleLanguageOptionsKeydown);
   settingsTabButtons.forEach((button) => {
@@ -5369,32 +5468,157 @@ function updateSyncSettingsUi(status = storageSyncAvailable() ? "ready" : "unava
   if (!syncSettingsRow || !syncSettingsStatus || !syncSettingsDetail || !syncSettingsNowButton || !syncSettingsAutoButton) {
     return;
   }
-  const normalizedStatus = status === "done" ? "done" : (storageSyncAvailable() ? "ready" : "unavailable");
+  const localStatus = ["done", "exported", "imported", "importFailed"].includes(status) ? status : "";
+  const syncUnavailable = !storageSyncAvailable();
+  const normalizedStatus = localStatus || (syncUnavailable ? "unavailable" : "ready");
   syncSettingsRow.dataset.status = normalizedStatus;
-  syncSettingsNowButton.disabled = normalizedStatus === "unavailable";
+  syncSettingsNowButton.disabled = syncUnavailable;
   syncSettingsNowButton.setAttribute("aria-disabled", String(syncSettingsNowButton.disabled));
-  syncSettingsAutoButton.disabled = true;
   syncSettingsAutoButton.setAttribute("aria-disabled", "true");
+  setButtonLabel(syncSettingsNowButton, t("syncSettingsNow"));
+  setButtonLabel(syncSettingsAutoButton, t("syncSettingsAuto"));
+  syncSettingsAutoButton.title = t("syncSettingsAutoHint");
   syncSettingsNowButton.querySelector(".button-icon").innerHTML = refreshIcon();
   syncSettingsNowButton.querySelector(".sync-settings-action-label").textContent = t("syncSettingsNow");
-  syncSettingsAutoButton.querySelector(".button-icon").innerHTML = backupFilledIcon();
-  syncSettingsAutoButton.querySelector(".sync-settings-action-label").textContent = t("syncSettingsAuto");
+  syncSettingsAutoButton.querySelector(".sync-settings-auto-label").textContent = t("syncSettingsAuto");
+  syncSettingsAutoButton.querySelector(".sync-settings-auto-hint").textContent = t("syncSettingsAutoHint");
+  if (exportSettingsButton) {
+    exportSettingsButton.disabled = false;
+    exportSettingsButton.setAttribute("aria-disabled", "false");
+    setButtonLabel(exportSettingsButton, t("syncSettingsExport"));
+    exportSettingsButton.querySelector(".button-icon").innerHTML = fileExportIcon();
+    exportSettingsButton.querySelector(".sync-settings-action-label").textContent = t("syncSettingsExport");
+  }
+  if (importSettingsButton) {
+    importSettingsButton.disabled = false;
+    importSettingsButton.setAttribute("aria-disabled", "false");
+    setButtonLabel(importSettingsButton, t("syncSettingsImport"));
+    importSettingsButton.querySelector(".button-icon").innerHTML = fileImportIcon();
+    importSettingsButton.querySelector(".sync-settings-action-label").textContent = t("syncSettingsImport");
+  }
   if (normalizedStatus === "done") {
     syncSettingsStatus.textContent = t("syncSettingsDone");
-    syncSettingsDetail.textContent = t("syncSettingsDoneDetail");
+    setSyncSettingsDetail(t("syncSettingsDoneDetail"));
+    return;
+  }
+  if (normalizedStatus === "exported") {
+    syncSettingsStatus.textContent = t("syncSettingsExported");
+    setSyncSettingsDetail(t("syncSettingsExportedDetail"));
+    return;
+  }
+  if (normalizedStatus === "imported") {
+    syncSettingsStatus.textContent = t("syncSettingsImported");
+    setSyncSettingsDetail(t("syncSettingsImportedDetail"));
+    return;
+  }
+  if (normalizedStatus === "importFailed") {
+    syncSettingsStatus.textContent = t("syncSettingsImportFailed");
+    setSyncSettingsDetail(t("syncSettingsImportFailedDetail"));
     return;
   }
   if (normalizedStatus === "unavailable") {
     syncSettingsStatus.textContent = t("syncSettingsUnavailable");
-    syncSettingsDetail.textContent = t("syncSettingsUnavailableDetail");
+    setSyncSettingsDetail(t("syncSettingsUnavailableDetail"));
     return;
   }
   syncSettingsStatus.textContent = t("syncSettingsReady");
-  syncSettingsDetail.textContent = t("syncSettingsReadyDetail");
+  setSyncSettingsDetail("");
+}
+
+function setSyncSettingsDetail(message) {
+  syncSettingsDetail.textContent = message;
+  syncSettingsDetail.hidden = !message;
 }
 
 function storageSyncAvailable() {
   return Boolean(chrome.storage?.sync);
+}
+
+function wayleafConfigKeys() {
+  return [...SYNC_STORAGE_KEYS].filter((key) => key !== SYNC_META_STORAGE_KEY);
+}
+
+async function readWayleafConfigSettings() {
+  const keys = wayleafConfigKeys();
+  const defaults = Object.fromEntries(keys.map((key) => [key, undefined]));
+  const values = await getStoredValues(defaults);
+  return Object.fromEntries(keys
+    .filter((key) => typeof values[key] !== "undefined")
+    .map((key) => [key, values[key]]));
+}
+
+function parseWayleafConfigPackage(text) {
+  const parsed = JSON.parse(text);
+  const settings = parsed?.settings;
+  if (!settings || typeof settings !== "object" || Array.isArray(settings)) {
+    throw new Error("Invalid Wayleaf config package.");
+  }
+  return Object.fromEntries(wayleafConfigKeys()
+    .filter((key) => Object.prototype.hasOwnProperty.call(settings, key) && typeof settings[key] !== "undefined")
+    .map((key) => [key, settings[key]]));
+}
+
+function wayleafConfigFileName(now = new Date(), random = Math.random()) {
+  const pad = (value, length = 2) => String(value).padStart(length, "0");
+  const date = `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}`;
+  const time = `${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;
+  return `wayleaf-settings-${date}-${time}-${pad(Math.floor(random * 1000), 3)}.wy`;
+}
+
+function downloadWayleafConfig(settings) {
+  const blob = new Blob([JSON.stringify({
+    app: "Wayleaf",
+    version: WAYLEAF_CONFIG_EXPORT_VERSION,
+    exportedAt: new Date().toISOString(),
+    settings
+  }, null, 2)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = wayleafConfigFileName();
+  document.body.append(link);
+  link.click();
+  link.remove();
+  window.setTimeout(() => URL.revokeObjectURL(url), 0);
+}
+
+async function handleExportSettings() {
+  try {
+    downloadWayleafConfig(await readWayleafConfigSettings());
+    updateSyncSettingsUi("exported");
+  } catch (error) {
+    console.warn("Failed to export Wayleaf config", error);
+    updateSyncSettingsUi("importFailed");
+  }
+}
+
+async function handleImportSettingsFile(file) {
+  if (!file || !String(file.name || "").toLowerCase().endsWith(".wy")) {
+    throw new Error("Invalid Wayleaf config file.");
+  }
+  const settings = parseWayleafConfigPackage(await file.text());
+  if (!Object.keys(settings).length) {
+    throw new Error("Wayleaf config package has no settings.");
+  }
+  await setStoredValues(settings);
+  if (storageSyncAvailable() && chrome.storage?.sync !== chrome.storage?.local) {
+    await chrome.storage.sync.set(settings);
+  }
+}
+
+async function handleImportSettingsChange(event) {
+  const file = event.currentTarget?.files?.[0];
+  if (event.currentTarget) {
+    event.currentTarget.value = "";
+  }
+  try {
+    await handleImportSettingsFile(file);
+    updateSyncSettingsUi("imported");
+    window.setTimeout(() => window.location.reload(), 450);
+  } catch (error) {
+    console.warn("Failed to import Wayleaf config", error);
+    updateSyncSettingsUi("importFailed");
+  }
 }
 
 async function handleManualSyncSettings() {
@@ -5403,7 +5627,7 @@ async function handleManualSyncSettings() {
     return;
   }
   try {
-    const keys = [...SYNC_STORAGE_KEYS].filter((key) => key !== SYNC_META_STORAGE_KEY);
+    const keys = wayleafConfigKeys();
     const defaults = Object.fromEntries(keys.map((key) => [key, undefined]));
     const values = chrome.storage?.local
       ? await chrome.storage.local.get(defaults)
@@ -14236,7 +14460,6 @@ const TDESIGN_ICON_MARKUP = Object.freeze({
   app: '<g fill="none"><path d="M3 3h7v7H3zm11 11h7v7h-7zM3 14h7v7H3zm18.5-7.5a4 4 0 1 1-8 0a4 4 0 0 1 8 0"/><path stroke="currentColor" stroke-width="2" d="M3 3h7v7H3zm11 11h7v7h-7zM3 14h7v7H3zm18.5-7.5a4 4 0 1 1-8 0a4 4 0 0 1 8 0Z"/></g>',
   "arrow-left": '<path fill="none" stroke="currentColor" stroke-linecap="square" stroke-width="2" d="M11 6.5L5.5 12l5.5 5.5M6.75 12h13"/>',
   "bookmark-double-filled": '<path fill="currentColor" d="M23.003 18.419L23 0L10.001.002v2H21v14.413z"/><path fill="currentColor" d="M19 4H3v19.943l8-5.714l8 5.714z"/>',
-  "backup-filled": '<path fill="currentColor" d="M12 2c3.728 0 6.82 2.72 7.402 6.283A6.502 6.502 0 0 1 17.5 21h-11A6.5 6.5 0 0 1 4.598 8.283A7.5 7.5 0 0 1 12 2m3 10.914l1.414-1.414L12 7.086L7.586 11.5L9 12.914l2-2V17h2v-6.086z"/>',
   "ai-search": '<g fill="none" stroke="currentColor" stroke-width="2"><path d="m16.75 2.5l.52 1.23l1.23.52l-1.23.52L16.75 6l-.52-1.23L15 4.25l1.23-.52z"/><path stroke-linecap="square" d="m15.803 15.804l5.303 5.303m-5.303-5.303A7.5 7.5 0 1 1 10 3.017m5.803 12.787A7.47 7.47 0 0 0 17.983 11"/></g>',
   "ai-search-filled": '<path fill="currentColor" d="M10.648 2.072a6.5 6.5 0 0 0 8.348 8.348a8.56 8.56 0 0 1-1.822 5.41l5.346 5.346l-1.414 1.414l-5.346-5.347a8.48 8.48 0 0 1-5.26 1.826c-4.635 0-8.5-3.87-8.5-8.5c0-4.238 3.335-7.993 7.584-8.45a8 8 0 0 1 1.064-.047"/><path fill="currentColor" d="M18.032 3.036L21.07 4.32l-3.037 1.283l-1.282 3.037l-1.283-3.037l-3.036-1.283l3.036-1.283L16.75 0z"/>',
   calendar: '<path fill="none" stroke="currentColor" stroke-linecap="square" stroke-width="2" d="M7 2v4m10-4v4M3.5 9.5h17M5 4.5h14a1.5 1.5 0 0 1 1.5 1.5v14A1.5 1.5 0 0 1 19 21.5H5A1.5 1.5 0 0 1 3.5 20V6A1.5 1.5 0 0 1 5 4.5Z"/>',
@@ -14249,6 +14472,8 @@ const TDESIGN_ICON_MARKUP = Object.freeze({
   close: '<path fill="none" stroke="currentColor" stroke-linecap="square" stroke-width="2" d="M16.95 7.05L12 12m0 0l-4.95 4.95M12 12l4.95 4.95M12 12L7.05 7.05"/>',
   delete: '<g fill="none"><path d="M5 5h14l-.5 17h-13z"/><path stroke="currentColor" stroke-linecap="square" stroke-width="2" d="M21 5H3m2 0h14l-.5 17h-13zm3.5-3h7v3h-7zM12 9v9"/></g>',
   "delete-filled": '<path fill="currentColor" d="M7.5 3h9V1h-9zM22 6V4H2v2h2.029l.5 17h14.942l.5-17zM11 19V8h2v11z"/>',
+  "file-export": '<g fill="none" stroke="currentColor" stroke-linecap="square" stroke-width="2"><path d="M14 2H6.5A1.5 1.5 0 0 0 5 3.5v17A1.5 1.5 0 0 0 6.5 22h11a1.5 1.5 0 0 0 1.5-1.5V7z"/><path d="M14 2v5h5M9 14h8m0 0l-3-3m3 3l-3 3"/></g>',
+  "file-import": '<g fill="none" stroke="currentColor" stroke-linecap="square" stroke-width="2"><path d="M14 2H6.5A1.5 1.5 0 0 0 5 3.5v17A1.5 1.5 0 0 0 6.5 22h11a1.5 1.5 0 0 0 1.5-1.5V7z"/><path d="M14 2v5h5M16 14H8m0 0l3-3m-3 3l3 3"/></g>',
   "folder-add": '<path fill="none" stroke="currentColor" stroke-linecap="square" stroke-width="2" d="M22 11V6H11L9 3.5H2V20h11m7-5v3m0 0v3m0-3h-3m3 0h3"/>',
   "format-vertical-align-left": '<path fill="none" stroke="currentColor" stroke-linecap="square" stroke-width="2" d="M3 5h18M3 12h12M3 19h18"/>',
   "help-circle": '<g fill="none"><path d="M21.5 12a9.5 9.5 0 1 1-19 0a9.5 9.5 0 0 1 19 0"/><path stroke="currentColor" stroke-linecap="square" stroke-width="2" d="M9.6 9.25a2.6 2.6 0 1 1 3.8 2.3c-.86.47-1.4 1.04-1.4 2.2m0 3.25h.01M21.5 12a9.5 9.5 0 1 1-19 0a9.5 9.5 0 0 1 19 0Z"/></g>',
@@ -14297,8 +14522,12 @@ function refreshIcon() {
   return tdesignIcon("refresh");
 }
 
-function backupFilledIcon() {
-  return tdesignIcon("backup-filled");
+function fileExportIcon() {
+  return tdesignIcon("file-export");
+}
+
+function fileImportIcon() {
+  return tdesignIcon("file-import");
 }
 
 function helpCircleIcon() {
