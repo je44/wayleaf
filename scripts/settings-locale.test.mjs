@@ -68,11 +68,13 @@ for (const [locale, completion] of Object.entries(completions)) {
 }
 
 const baselineLocaleKeys = Object.keys(messages.en);
-const intentionallyEmptyLocaleKeys = new Set(["syncSettingsReadyDetail"]);
+function isIntentionallyEmptyLocaleKey(locale, key) {
+  return key === "syncSettingsReadyDetail" || (locale === "zh-TW" && key === "videoPipLabDescription");
+}
 for (const locale of supportedLocales) {
   const missingKeys = baselineLocaleKeys.filter((key) => (
     typeof messages[locale]?.[key] !== "string" ||
-    (!intentionallyEmptyLocaleKeys.has(key) && !messages[locale][key].trim())
+    (!isIntentionallyEmptyLocaleKey(locale, key) && !messages[locale][key].trim())
   ));
   assert.deepEqual(missingKeys, [], `${locale} should cover every English baseline UI key without falling back to another language.`);
 }
@@ -162,7 +164,9 @@ for (const locale of supportedLocales) {
   assert.ok(messages[locale], `${locale} messages should exist.`);
   for (const key of settingsLocaleKeys) {
     assert.equal(typeof messages[locale][key], "string", `${locale}.${key} should be translated without fallback.`);
-    assert.ok(messages[locale][key].trim(), `${locale}.${key} should not be empty.`);
+    if (!isIntentionallyEmptyLocaleKey(locale, key)) {
+      assert.ok(messages[locale][key].trim(), `${locale}.${key} should not be empty.`);
+    }
   }
 }
 
@@ -208,6 +212,12 @@ assert.match(
   source,
   /document\.querySelector\("\.sync-settings-actions"\)\?\.setAttribute\("aria-label", t\("syncSettingsActionsLabel"\)\);/,
   "Sync action group aria label should be localized."
+);
+
+assert.match(
+  source,
+  /videoPipLabDescription\.hidden = !videoPipLabDescriptionText\.trim\(\);/,
+  "Empty Laboratory description copy should remove the spare description line."
 );
 
 assert.match(

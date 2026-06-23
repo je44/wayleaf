@@ -1484,9 +1484,9 @@ const MESSAGES = {
     settingsSearchTab: "搜尋設定",
     settingsLaboratoryTab: "實驗室",
     videoPipLabTitle: "影片自動畫中畫",
-    videoPipLabDescription: "播放中的影片標籤頁切到背景時，自動開啟系統小窗播放器。",
-    videoPipGlobalLabel: "全域允許影片自動畫中畫",
-    videoPipGlobalHint: "支援使用標準 HTML5 影片的網頁；特殊播放器可透過平台適配擴充。也可在影片標籤頁點擊 Wayleaf 工具列圖標，只釘選目前標籤頁。",
+    videoPipLabDescription: "",
+    videoPipGlobalLabel: "全域影片自動畫中畫",
+    videoPipGlobalHint: "支援標準 HTML5 影片；特殊播放器可用平台適配擴充。點 Wayleaf 工具列圖標可只釘目前分頁。",
     languageSettingsTitle: "語言",
     appearanceModeTitle: "外觀",
     themeModeSystem: "跟隨系統",
@@ -3951,7 +3951,10 @@ function applySettingsLocale() {
   document.querySelector("#resetSearchSettingsButton").textContent = t("searchSettingsReset");
   document.querySelector("#searchSettingsForm button[type='submit']").textContent = t("searchSettingsSave");
   document.querySelector("#videoPipLabTitle").textContent = t("videoPipLabTitle");
-  document.querySelector("#videoPipLabDescription").textContent = t("videoPipLabDescription");
+  const videoPipLabDescription = document.querySelector("#videoPipLabDescription");
+  const videoPipLabDescriptionText = t("videoPipLabDescription");
+  videoPipLabDescription.textContent = videoPipLabDescriptionText;
+  videoPipLabDescription.hidden = !videoPipLabDescriptionText.trim();
   document.querySelector("#videoPipGlobalLabel").textContent = t("videoPipGlobalLabel");
   document.querySelector("#videoPipGlobalHint").textContent = t("videoPipGlobalHint");
   updateVideoPipGlobalToggle();

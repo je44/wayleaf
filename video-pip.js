@@ -34,11 +34,37 @@
     return renderedArea || (Number(video.videoWidth || 0) * Number(video.videoHeight || 0));
   }
 
+  function queryVideos(root = document, seen = new Set()) {
+    if (!root?.querySelectorAll || seen.has(root)) {
+      return [];
+    }
+    seen.add(root);
+    const videos = [...root.querySelectorAll("video")];
+    for (const node of root.querySelectorAll("*")) {
+      if (node.shadowRoot) {
+        videos.push(...queryVideos(node.shadowRoot, seen));
+      }
+    }
+    return videos;
+  }
+
+  function allowPictureInPicture(video) {
+    if (!video.disablePictureInPicture) {
+      return true;
+    }
+    try {
+      video.disablePictureInPicture = false;
+      video.removeAttribute?.("disablepictureinpicture");
+    } catch {
+      return false;
+    }
+    return !video.disablePictureInPicture;
+  }
+
   function pickPlayingVideo() {
-    return [...document.querySelectorAll("video")]
+    return queryVideos()
       .filter((video) => (
         isPlaying(video) &&
-        !video.disablePictureInPicture &&
         Number(video.videoWidth || 0) > 0 &&
         Number(video.videoHeight || 0) > 0 &&
         typeof video.requestPictureInPicture === "function"
@@ -67,6 +93,9 @@
     }
     const video = pickPlayingVideo();
     if (!video || document.pictureInPictureEnabled !== true) {
+      return false;
+    }
+    if (!allowPictureInPicture(video)) {
       return false;
     }
     entering = true;

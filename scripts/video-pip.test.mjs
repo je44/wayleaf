@@ -22,7 +22,11 @@ for (const locale of ["zh-CN", "zh-TW", "en", "ja", "ko", "es", "fr", "de"]) {
     "videoPipGlobalLabel",
     "videoPipGlobalHint"
   ]) {
-    assert.ok(messages[locale]?.[key]?.trim(), `${locale}.${key} should be translated.`);
+    if (locale === "zh-TW" && key === "videoPipLabDescription") {
+      assert.equal(messages[locale]?.[key], "", `${locale}.${key} should be removed.`);
+    } else {
+      assert.ok(messages[locale]?.[key]?.trim(), `${locale}.${key} should be translated.`);
+    }
   }
 }
 
@@ -48,9 +52,14 @@ assert.match(
   "Settings should expose the Laboratory destination and accessible global PiP switch."
 );
 assert.match(
+  html,
+  /id="videoPipGlobalHint"[\s\S]*standard HTML5 video/,
+  "The static Laboratory fallback copy should describe generic HTML5 video support."
+);
+assert.match(
   css,
-  /\.laboratory-switch\s*\{[\s\S]*width:\s*52px;[\s\S]*height:\s*30px;[\s\S]*border-radius:\s*999px;[\s\S]*\.laboratory-switch-thumb\s*\{[\s\S]*border-radius:\s*999px;[\s\S]*\.laboratory-switch\[aria-checked="true"\] \.laboratory-switch-thumb\s*\{[\s\S]*translateX\(22px\)/,
-  "The Laboratory control should keep the requested round capsule switch treatment."
+  /\.laboratory-switch\s*\{[\s\S]*width:\s*52px;[\s\S]*height:\s*30px;[\s\S]*transform:\s*scale\(0\.8\);[\s\S]*\.laboratory-switch-thumb\s*\{[\s\S]*width:\s*22px;[\s\S]*height:\s*22px;[\s\S]*border-radius:\s*999px;[\s\S]*\.laboratory-switch\[aria-checked="true"\] \.laboratory-switch-thumb\s*\{[\s\S]*translateX\(22px\)/,
+  "The Laboratory control should keep its layout position while rendering 20% smaller."
 );
 
 class FakeVideo {}
@@ -214,8 +223,28 @@ function createControllerHarness() {
   };
 }
 
+function querySelectorAllForLightAndShadow(videos, shadowVideos = []) {
+  const shadowHost = {
+    shadowRoot: {
+      querySelectorAll(selector) {
+        return selector === "video" ? shadowVideos : [];
+      }
+    }
+  };
+  return (selector) => {
+    if (selector === "video") {
+      return videos;
+    }
+    if (selector === "*") {
+      return shadowVideos.length ? [shadowHost] : [];
+    }
+    return [];
+  };
+}
+
 const harness = createControllerHarness();
 const { documentMock, runtimeListeners, storageListeners, video, replacementVideo, dispatch } = harness;
+documentMock.querySelectorAll = querySelectorAllForLightAndShadow([video]);
 
 async function settle() {
   await Promise.resolve();
@@ -291,6 +320,7 @@ assert.equal((await harness.command("enter"))?.entered, true, "A cleaned-up tab 
 assert.equal(harness.requestCount, 4, "A tab should be able to re-enter PiP after the source page cleanup path.");
 
 const externalHarness = createControllerHarness();
+externalHarness.documentMock.querySelectorAll = querySelectorAllForLightAndShadow([externalHarness.replacementVideo]);
 externalHarness.documentMock.pictureInPictureElement = externalHarness.replacementVideo;
 externalHarness.setQueryVideos([externalHarness.replacementVideo]);
 externalHarness.documentMock.visibilityState = "hidden";
@@ -302,6 +332,7 @@ await externalHarness.command("exit");
 assert.equal(externalHarness.exitCount, 0, "Wayleaf should not close PiP windows it did not open.");
 
 const visibleLeaveHarness = createControllerHarness();
+visibleLeaveHarness.documentMock.querySelectorAll = querySelectorAllForLightAndShadow([visibleLeaveHarness.video]);
 visibleLeaveHarness.runtimeListeners[0]({ action: "wayleaf:toggle-video-pip-pin" }, {}, () => {});
 visibleLeaveHarness.video.paused = false;
 visibleLeaveHarness.documentMock.visibilityState = "hidden";
@@ -316,6 +347,26 @@ visibleLeaveHarness.documentMock.pictureInPictureElement = visibleLeaveHarness.r
 visibleLeaveHarness.dispatch("visibilitychange");
 await visibleLeaveHarness.command("exit");
 assert.equal(visibleLeaveHarness.exitCount, 0, "Visible PiP leave should clear Wayleaf state before another PiP window appears.");
+
+const disabledHarness = createControllerHarness();
+disabledHarness.documentMock.querySelectorAll = querySelectorAllForLightAndShadow([disabledHarness.video]);
+disabledHarness.storageListeners[0]({ videoPipGlobalEnabled: { newValue: true } }, "local");
+disabledHarness.video.paused = false;
+disabledHarness.video.disablePictureInPicture = true;
+disabledHarness.documentMock.visibilityState = "hidden";
+disabledHarness.dispatch("playing", disabledHarness.video);
+await settle();
+assert.equal((await disabledHarness.command("enter"))?.entered, true, "Generic PiP should retry videos that expose disablePictureInPicture.");
+assert.equal(disabledHarness.video.disablePictureInPicture, false, "Wayleaf should clear the per-video PiP disabled flag before requesting PiP.");
+
+const shadowHarness = createControllerHarness();
+shadowHarness.video.paused = false;
+shadowHarness.documentMock.querySelectorAll = querySelectorAllForLightAndShadow([], [shadowHarness.video]);
+shadowHarness.storageListeners[0]({ videoPipGlobalEnabled: { newValue: true } }, "local");
+shadowHarness.documentMock.visibilityState = "hidden";
+shadowHarness.dispatch("playing", shadowHarness.video);
+await settle();
+assert.equal((await shadowHarness.command("enter"))?.entered, true, "Generic PiP should find playable videos inside open shadow DOM.");
 
 const coordinatorContext = {};
 coordinatorContext.globalThis = coordinatorContext;

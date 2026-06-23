@@ -3214,9 +3214,11 @@ html.theme-transitioning .search-workbench[data-ai-exiting] .favorite-icon {
   -webkit-appearance: none;
   background: color-mix(in srgb, var(--muted) 20%, var(--panel));
   cursor: pointer;
+  transform: scale(0.8);
   transition:
     border-color 160ms ease,
-    background 180ms ease;
+    background 180ms ease,
+    transform 180ms ease;
 }
 
 .laboratory-switch:hover {
