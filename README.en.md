@@ -12,7 +12,7 @@
 <p align="center">
   <a href="README.md">中文</a> | English ·
   <a href="https://github.com/je44/wayleaf/releases/latest">Releases</a> ·
-  <a href="https://github.com/je44/wayleaf/releases/download/v1.6/wayleaf-v1.6.0.zip">Download v1.6.0</a>
+  <a href="https://github.com/je44/wayleaf/releases/download/v1.0/wayleaf-v1.0.0.zip">Download v1.0.0</a>
 </p>
 
 ## Preview
@@ -49,9 +49,9 @@ The interface follows the browser language for Chinese, English, Japanese, Korea
 
 ## Quick Install
 
-Current version: `1.6.0`
+Current version: `1.0.0`
 
-1. Download [wayleaf-v1.6.0.zip](https://github.com/je44/wayleaf/releases/download/v1.6/wayleaf-v1.6.0.zip) and unzip it.
+1. Download [wayleaf-v1.0.0.zip](https://github.com/je44/wayleaf/releases/download/v1.0/wayleaf-v1.0.0.zip) and unzip it.
 2. Open `chrome://extensions/` in Chrome.
 3. Turn on Developer mode.
 4. Click Load unpacked.
@@ -138,13 +138,13 @@ cd wayleaf
 
 Edit `manifest.json`, `background.js`, `newtab.html`, `newtab.css`, `newtab.js`, or `ai-submit.js`, then click reload on the `Wayleaf` extension card in `chrome://extensions/` and open a new tab.
 
-To check the real installed size, build the clean loadable directory first, then select `dist/wayleaf-v1.6.0/` in Chrome:
+To check the real installed size, build the clean loadable directory first, then select `dist/wayleaf-v1.0.0/` in Chrome:
 
 ```sh
 ./scripts/package-release.sh
 ```
 
-The same script also creates `dist/wayleaf-v1.6.0.zip` for Chrome Web Store upload.
+The same script also creates `dist/wayleaf-v1.0.0.zip` for Chrome Web Store upload.
 
 You can preview the static page with a local server, but Chrome extension APIs only work fully inside the extension environment:
 
@@ -183,7 +183,7 @@ Verify that the release zip has `manifest.json` at its root:
 
 ```sh
 ./scripts/package-release.sh
-unzip -t dist/wayleaf-v1.6.0.zip
+unzip -t dist/wayleaf-v1.0.0.zip
 ```
 
 Release checklist:

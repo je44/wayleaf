@@ -12,7 +12,7 @@
 <p align="center">
   中文 | <a href="README.en.md">English</a> ·
   <a href="https://github.com/je44/wayleaf/releases/latest">Releases</a> ·
-  <a href="https://github.com/je44/wayleaf/releases/download/v1.6/wayleaf-v1.6.0.zip">下载 v1.6.0</a>
+  <a href="https://github.com/je44/wayleaf/releases/download/v1.0/wayleaf-v1.0.0.zip">下载 v1.0.0</a>
 </p>
 
 ## 预览
@@ -49,9 +49,9 @@
 
 ## 快速安装
 
-当前版本：`1.6.0`
+当前版本：`1.0.0`
 
-1. 下载 [wayleaf-v1.6.0.zip](https://github.com/je44/wayleaf/releases/download/v1.6/wayleaf-v1.6.0.zip) 并解压。
+1. 下载 [wayleaf-v1.0.0.zip](https://github.com/je44/wayleaf/releases/download/v1.0/wayleaf-v1.0.0.zip) 并解压。
 2. 打开 Chrome 的 `chrome://extensions/`。
 3. 打开右上角「开发者模式」。
 4. 点击「加载已解压的扩展程序」。
@@ -138,13 +138,13 @@ cd wayleaf
 
 开发时修改 `manifest.json`、`background.js`、`newtab.html`、`newtab.css`、`newtab.js` 或 `ai-submit.js`，然后在 `chrome://extensions/` 的 `Wayleaf` 卡片上点击刷新，再新建标签页检查效果。
 
-如果需要检查真实安装体积，先生成干净的可加载目录，再在 Chrome 中选择 `dist/wayleaf-v1.6.0/`：
+如果需要检查真实安装体积，先生成干净的可加载目录，再在 Chrome 中选择 `dist/wayleaf-v1.0.0/`：
 
 ```sh
 ./scripts/package-release.sh
 ```
 
-脚本同时生成可直接上传 Chrome Web Store 的 `dist/wayleaf-v1.6.0.zip`。
+脚本同时生成可直接上传 Chrome Web Store 的 `dist/wayleaf-v1.0.0.zip`。
 
 可以用本地静态服务器做布局预览，但 Chrome 扩展 API 只有在扩展环境里才完整可用：
 
@@ -183,7 +183,7 @@ node --check ai-submit.js
 
 ```sh
 ./scripts/package-release.sh
-unzip -t dist/wayleaf-v1.6.0.zip
+unzip -t dist/wayleaf-v1.0.0.zip
 ```
 
 发布清单：
