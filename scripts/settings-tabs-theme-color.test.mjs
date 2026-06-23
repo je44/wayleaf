@@ -21,6 +21,11 @@ const settingsTabsBlock = cssBlock(".settings-tabs");
 const settingsTabsShellBlock = cssBlock(".settings-tabs-shell");
 const settingsTabBlock = cssBlock(".settings-tab");
 const settingsTabActiveBlock = cssBlock(".settings-tab.active");
+const settingsLanguageControlBlock = cssBlock(".settings-language-control");
+const settingsLanguageControlIndicatorBlock = cssBlock(".settings-language-control::before");
+const desktopSettingsTitlebarBlock = styles.match(
+  /@media \(min-width: 1120px\)[\s\S]*?\.settings-page::before\s*\{(?<body>[\s\S]*?)\n  \}/
+)?.groups?.body || "";
 const fontPath = new URL("../vendor/fonts/VujahdayScript-Regular.ttf", import.meta.url);
 
 assert.match(
@@ -105,6 +110,24 @@ assert.match(
   styles,
   /@media \(min-width: 1120px\)[\s\S]*\.settings-page\s*\{[\s\S]*--settings-titlebar-height:\s*70px;[\s\S]*\.settings-tabs-shell\s*\{[\s\S]*position:\s*fixed;[\s\S]*top:\s*149px;[\s\S]*left:\s*calc\(50% - 440px\);[\s\S]*width:\s*44px;[\s\S]*\.settings-tabs\s*\{[\s\S]*grid-auto-flow:\s*row;[\s\S]*grid-auto-rows:\s*44px;[\s\S]*min-height:\s*132px;[\s\S]*\.settings-tab \+ \.settings-tab::before\s*\{[\s\S]*width:\s*26px;[\s\S]*height:\s*1px;/,
   "Desktop settings navigation should be a compact vertical icon rail beside the first settings card, without rendering future empty slots."
+);
+
+assert.doesNotMatch(
+  desktopSettingsTitlebarBlock,
+  /transition:[\s\S]*background/,
+  "Desktop settings titlebar should not tween its background during theme switches."
+);
+
+assert.match(
+  settingsLanguageControlBlock,
+  /transition:\s*color 160ms ease;/,
+  "Language settings control should keep only text color transition during theme switches."
+);
+
+assert.match(
+  settingsLanguageControlIndicatorBlock,
+  /transition:\s*transform 180ms cubic-bezier\(0\.2, 0, 0, 1\);/,
+  "Language settings indicator should move without tweening theme backgrounds."
 );
 
 assert.match(

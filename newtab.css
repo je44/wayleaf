@@ -2954,8 +2954,7 @@ html.theme-transitioning .search-workbench[data-ai-exiting] .favorite-icon {
     backdrop-filter: blur(16px) saturate(1.08);
     transition:
       border-color 160ms ease,
-      box-shadow 280ms cubic-bezier(0.22, 1, 0.36, 1),
-      background 160ms ease;
+      box-shadow 280ms cubic-bezier(0.22, 1, 0.36, 1);
   }
 
   .settings-page[data-stuck="true"]::before {
@@ -2964,8 +2963,7 @@ html.theme-transitioning .search-workbench[data-ai-exiting] .favorite-icon {
     box-shadow: 0 8px 18px rgb(0 0 0 / 0.14);
     transition:
       border-color 160ms ease,
-      box-shadow 180ms ease-out,
-      background 160ms ease;
+      box-shadow 180ms ease-out;
   }
 
   .settings-brand {
@@ -4404,10 +4402,12 @@ select:focus-visible {
 
 .settings-language-control {
   grid-template-columns: repeat(6, minmax(0, 1fr));
+  transition: color 160ms ease;
 }
 
 .settings-language-control::before {
   width: calc((100% - (var(--theme-mode-padding) * 2) - (var(--theme-mode-gap) * 5)) / 6);
+  transition: transform 180ms cubic-bezier(0.2, 0, 0, 1);
 }
 
 .portal-form input:focus,
