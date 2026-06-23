@@ -9,7 +9,7 @@ This document explains the current Manifest V3 permission surface. It does not r
 | `bookmarks` | Reads the user-selected bookmark folder, renders bookmark cards, watches bookmark changes, and removes a bookmark only when the user triggers deletion. |
 | `history` | Reads recent browser history, groups repeated site visits, reads visit counts, and deletes history URLs only when the user triggers deletion. |
 | `favicon` | Uses Chrome favicon URLs as one step in the site icon fallback chain. |
-| `storage` | Stores theme, language, favorite sites, custom portals, bookmark folder choice, pinned history, search settings, sync metadata, icon cache, and short-lived AI prompt handoff data. |
+| `storage` | Stores theme, language, favorite sites, custom portals, bookmark folder choice, search settings, sync metadata, icon cache, and short-lived AI prompt handoff data. |
 | `tabs` | Opens multi-target searches, reads open tabs to include long-open pages in recent browsing, and coordinates video Picture-in-Picture state. |
 | `scripting` | Injects helper scripts for AI direct-submit handoff after navigation and video Picture-in-Picture support on video pages. |
 | `alarms` | Schedules daily automatic settings sync while the extension is enabled. |

@@ -30,7 +30,6 @@ const PORTALS = [
 const CUSTOM_PORTALS_STORAGE_KEY = "customPortals";
 const FAVORITE_SITES_STORAGE_KEY = "favoriteSites";
 const SITE_ICON_CACHE_STORAGE_KEY = "siteIconCache";
-const PINNED_HISTORY_STORAGE_KEY = "pinnedHistory";
 const OPEN_TAB_ACTIVITY_STORAGE_KEY = "openTabActivity";
 const RECENT_HISTORY_STARTED_AT_STORAGE_KEY = "recentHistoryStartedAt";
 const BOOKMARK_FOLDER_STORAGE_KEY = "bookmarkFolderId";
@@ -65,7 +64,6 @@ const AI_DIRECT_PROMPT_TTL_MS = 2 * 60 * 1000;
 const MAX_HISTORY_SITE_GROUPS = 9;
 const MAX_HISTORY_PAGES_PER_SITE = 4;
 const MAX_RECENT_FOLDER_ITEMS = 4;
-const MAX_PINNED_HISTORY_ITEMS = 6;
 const RECENT_HISTORY_LOOKBACK_MS = 24 * 60 * 60 * 1000;
 const MIN_RECENT_DOMAIN_VISITS = 2;
 const RECENT_OPEN_TAB_MIN_OPEN_MS = 2 * 60 * 60 * 1000;
@@ -111,7 +109,6 @@ const CUSTOMIZABLE_SETTINGS_STORAGE_KEYS = [
 const SYNC_STORAGE_KEYS = new Set([
   CUSTOM_PORTALS_STORAGE_KEY,
   FAVORITE_SITES_STORAGE_KEY,
-  PINNED_HISTORY_STORAGE_KEY,
   BOOKMARK_FOLDER_STORAGE_KEY,
   PORTAL_CATEGORY_STATE_STORAGE_KEY,
   ...CUSTOMIZABLE_SETTINGS_STORAGE_KEYS,
@@ -1025,15 +1022,11 @@ const MESSAGES = {
     chooseBookmarkFolderPrompt: "选择一个书签文件夹",
     historyTitle: "最近浏览",
     openPortalSurface: "打开导航中枢",
-    openHistorySurface: "打开最近浏览",
     recentFoldersSwitch: "切换最近浏览卡片",
     recentFoldersPrevious: "上一组最近浏览",
     recentFoldersNext: "下一组最近浏览",
     historyPreviousPage: "上一条最近浏览",
     historyNextPage: "下一条最近浏览",
-    refreshHistory: "刷新历史记录",
-    pinnedTitle: "置顶",
-    recentTitle: "最近 · 时间流",
     quickSearchPlaceholder: "搜索或输入网址",
     googleImageSearch: "使用 Google 以图搜索",
     quickSearch: "搜索",
@@ -1177,23 +1170,10 @@ const MESSAGES = {
     bookmarkRoot: "书签",
     bookmarkCount: "{count} 个网站",
     pageCount: "{count} 个页面",
-    historySitePageMeta: "{count} 个相关页面",
-    historyExpandPages: "展开 {count} 个相关页面",
-    historyCollapsePages: "收起相关页面",
-    historyRelatedPages: "相关页面",
-    historyPrimaryPage: "最近页面",
-    historyJustNow: "刚刚",
-    historyMinutesAgo: "{count} 分钟前",
-    historyHoursAgo: "{count} 小时前",
-    historyReadFailed: "无法读取历史记录，请确认扩展已获得 history 权限。",
     deleteHistory: "删除 {title}",
     deleteHistoryFailed: "删除失败，可能已在其他位置变更。",
-    noPinnedItems: "还没有置顶项目。",
-    noHistoryItems: "暂无最近浏览记录。",
     openSiteHome: "打开 {name} 首页",
     openPage: "打开 {title}",
-    unpin: "取消置顶",
-    pin: "置顶",
     unnamedPage: "未命名页面",
     website: "网站"
   },
@@ -1239,9 +1219,6 @@ const MESSAGES = {
     portalCategory: "分類",
     portalNamePlaceholder: "例如：Notion",
     portalUrlPlaceholder: "https://www.notion.so",
-    historyJustNow: "剛剛",
-    historyMinutesAgo: "{count} 分鐘前",
-    historyHoursAgo: "{count} 小時前",
     portalName: "名稱",
     portalUrl: "網址",
     cancel: "取消",
@@ -1254,15 +1231,11 @@ const MESSAGES = {
     chooseBookmarkFolderPrompt: "選擇一個書籤資料夾",
     historyTitle: "最近瀏覽",
     openPortalSurface: "打開導航中樞",
-    openHistorySurface: "打開最近瀏覽",
     recentFoldersSwitch: "切換最近瀏覽卡片",
     recentFoldersPrevious: "上一組最近瀏覽",
     recentFoldersNext: "下一組最近瀏覽",
     historyPreviousPage: "上一條最近瀏覽",
     historyNextPage: "下一條最近瀏覽",
-    refreshHistory: "刷新歷史記錄",
-    pinnedTitle: "釘選",
-    recentTitle: "最近",
     unnamedFolder: "未命名資料夾",
     bookmarkRoot: "書籤",
     bookmarkMeta: "{folder} · {count} 個網站",
@@ -1280,10 +1253,6 @@ const MESSAGES = {
     favoriteSiteExists: "{title} 已在常用網站中。",
     deleteCustomPortal: "刪除自訂入口",
     deleteBookmarkAction: "刪除",
-    historyExpandPages: "展開 {count} 個相關頁面",
-    historyCollapsePages: "收起相關頁面",
-    historyRelatedPages: "相關頁面",
-    historyPrimaryPage: "最近頁面",
     openSettings: "設定",
     closeSettings: "返回首頁",
     settingsBackHome: "返回首頁",
@@ -1395,16 +1364,10 @@ const MESSAGES = {
     bookmarkFolderReadFailed: "無法讀取書籤資料夾。",
     noBookmarkFolders: "沒有找到包含網站書籤的資料夾。",
     pageCount: "{count} 個頁面",
-    historySitePageMeta: "{count} 個相關頁面",
-    historyReadFailed: "無法讀取歷史記錄，請確認擴充功能已獲得 history 權限。",
     deleteHistory: "刪除 {title}",
     deleteHistoryFailed: "刪除失敗，可能已在其他位置變更。",
-    noPinnedItems: "還沒有釘選項目。",
-    noHistoryItems: "暫無最近瀏覽記錄。",
     openSiteHome: "打開 {name} 首頁",
     openPage: "打開 {title}",
-    unpin: "取消釘選",
-    pin: "釘選",
     unnamedPage: "未命名頁面",
     website: "網站"
   },
@@ -1446,15 +1409,11 @@ const MESSAGES = {
     chooseBookmarkFolderPrompt: "Choose a bookmark folder",
     historyTitle: "Recent browsing",
     openPortalSurface: "Open navigation hub",
-    openHistorySurface: "Open recent browsing",
     recentFoldersSwitch: "Switch recent cards",
     recentFoldersPrevious: "Previous recent cards",
     recentFoldersNext: "Next recent cards",
     historyPreviousPage: "Previous recent page",
     historyNextPage: "Next recent page",
-    refreshHistory: "Refresh history",
-    pinnedTitle: "Pinned",
-    recentTitle: "Recent timeline",
     quickSearchPlaceholder: "Search or enter URL",
     googleImageSearch: "Search by image with Google",
     quickSearch: "Search",
@@ -1598,23 +1557,10 @@ const MESSAGES = {
     bookmarkRoot: "Bookmarks",
     bookmarkCount: "{count} sites",
     pageCount: "{count} pages",
-    historySitePageMeta: "{count} related pages",
-    historyExpandPages: "Show {count} related pages",
-    historyCollapsePages: "Hide related pages",
-    historyRelatedPages: "Related pages",
-    historyPrimaryPage: "Latest page",
-    historyJustNow: "Just now",
-    historyMinutesAgo: "{count} min ago",
-    historyHoursAgo: "{count} hr ago",
-    historyReadFailed: "Could not read history. Check that the extension has history permission.",
     deleteHistory: "Remove {title}",
     deleteHistoryFailed: "Could not remove it. It may have changed elsewhere.",
-    noPinnedItems: "No pinned items yet.",
-    noHistoryItems: "No recent browsing yet.",
     openSiteHome: "Open {name} home page",
     openPage: "Open {title}",
-    unpin: "Unpin",
-    pin: "Pin",
     unnamedPage: "Untitled page",
     website: "Website"
   },
@@ -1629,8 +1575,6 @@ const MESSAGES = {
     back: "戻る",
     chooseBookmarkFolderPrompt: "ブックマークフォルダを選択",
     historyTitle: "最近の閲覧",
-    pinnedTitle: "固定",
-    recentTitle: "最近",
     unnamedFolder: "名称未設定のフォルダ",
     bookmarkRoot: "ブックマーク",
     bookmarkMeta: "{folder} · {count} 件のサイト",
@@ -1728,8 +1672,6 @@ const MESSAGES = {
     back: "뒤로",
     chooseBookmarkFolderPrompt: "북마크 폴더 선택",
     historyTitle: "최근 방문",
-    pinnedTitle: "고정",
-    recentTitle: "최근",
     unnamedFolder: "이름 없는 폴더",
     bookmarkRoot: "북마크",
     bookmarkMeta: "{folder} · 사이트 {count}개",
@@ -1827,8 +1769,6 @@ const MESSAGES = {
     back: "Volver",
     chooseBookmarkFolderPrompt: "Elige una carpeta de marcadores",
     historyTitle: "Recientes",
-    pinnedTitle: "Fijados",
-    recentTitle: "Recientes",
     unnamedFolder: "Carpeta sin título",
     bookmarkRoot: "Marcadores",
     bookmarkMeta: "{folder} · {count} sitios",
@@ -1926,8 +1866,6 @@ const MESSAGES = {
     back: "Retour",
     chooseBookmarkFolderPrompt: "Choisir un dossier de favoris",
     historyTitle: "Navigation récente",
-    pinnedTitle: "Épinglés",
-    recentTitle: "Récents",
     unnamedFolder: "Dossier sans titre",
     bookmarkRoot: "Favoris",
     bookmarkMeta: "{folder} · {count} sites",
@@ -2025,8 +1963,6 @@ const MESSAGES = {
     back: "Zurück",
     chooseBookmarkFolderPrompt: "Lesezeichenordner auswählen",
     historyTitle: "Zuletzt besucht",
-    pinnedTitle: "Angeheftet",
-    recentTitle: "Zuletzt",
     unnamedFolder: "Unbenannter Ordner",
     bookmarkRoot: "Lesezeichen",
     bookmarkMeta: "{folder} · {count} Websites",
@@ -2144,13 +2080,11 @@ const LOCALE_COMPLETIONS = {
     chooseBookmarkFolder: "ブックマークフォルダを選択",
     collapseSurface: "パネルを閉じる",
     openPortalSurface: "ナビゲーションハブを開く",
-    openHistorySurface: "最近の閲覧を開く",
     recentFoldersSwitch: "最近カードを切り替え",
     recentFoldersPrevious: "前の最近カード",
     recentFoldersNext: "次の最近カード",
     historyPreviousPage: "前の最近ページ",
     historyNextPage: "次の最近ページ",
-    refreshHistory: "履歴を更新",
     quickSearchPlaceholder: "検索または URL を入力",
     googleImageSearch: "Google で画像検索",
     quickSearch: "検索",
@@ -2211,23 +2145,10 @@ const LOCALE_COMPLETIONS = {
     bookmarkFolderReadFailed: "ブックマークフォルダを読み込めません。",
     noBookmarkFolders: "Web ブックマークを含むフォルダが見つかりません。",
     pageCount: "{count} ページ",
-    historySitePageMeta: "{count} 件の関連ページ",
-    historyExpandPages: "{count} 件の関連ページを表示",
-    historyCollapsePages: "関連ページを隠す",
-    historyRelatedPages: "関連ページ",
-    historyPrimaryPage: "最新ページ",
-    historyJustNow: "たった今",
-    historyMinutesAgo: "{count} 分前",
-    historyHoursAgo: "{count} 時間前",
-    historyReadFailed: "履歴を読み込めません。拡張機能に history 権限があるか確認してください。",
     deleteHistory: "{title} を削除",
     deleteHistoryFailed: "削除できませんでした。別の場所で変更された可能性があります。",
-    noPinnedItems: "固定項目はまだありません。",
-    noHistoryItems: "最近の閲覧はまだありません。",
     openSiteHome: "{name} のホームページを開く",
     openPage: "{title} を開く",
-    unpin: "固定解除",
-    pin: "固定"
   },
   ko: {
     topbarLabel: "상단 바",
@@ -2258,13 +2179,11 @@ const LOCALE_COMPLETIONS = {
     chooseBookmarkFolder: "북마크 폴더 선택",
     collapseSurface: "패널 접기",
     openPortalSurface: "탐색 허브 열기",
-    openHistorySurface: "최근 방문 열기",
     recentFoldersSwitch: "최근 카드 전환",
     recentFoldersPrevious: "이전 최근 카드",
     recentFoldersNext: "다음 최근 카드",
     historyPreviousPage: "이전 최근 페이지",
     historyNextPage: "다음 최근 페이지",
-    refreshHistory: "기록 새로고침",
     quickSearchPlaceholder: "검색 또는 URL 입력",
     googleImageSearch: "Google로 이미지 검색",
     quickSearch: "검색",
@@ -2325,23 +2244,10 @@ const LOCALE_COMPLETIONS = {
     bookmarkFolderReadFailed: "북마크 폴더를 읽을 수 없습니다.",
     noBookmarkFolders: "웹사이트 북마크가 있는 폴더를 찾지 못했습니다.",
     pageCount: "페이지 {count}개",
-    historySitePageMeta: "관련 페이지 {count}개",
-    historyExpandPages: "관련 페이지 {count}개 보기",
-    historyCollapsePages: "관련 페이지 숨기기",
-    historyRelatedPages: "관련 페이지",
-    historyPrimaryPage: "최신 페이지",
-    historyJustNow: "방금",
-    historyMinutesAgo: "{count}분 전",
-    historyHoursAgo: "{count}시간 전",
-    historyReadFailed: "기록을 읽을 수 없습니다. 확장 프로그램에 history 권한이 있는지 확인하세요.",
     deleteHistory: "{title} 삭제",
     deleteHistoryFailed: "삭제할 수 없습니다. 다른 곳에서 변경되었을 수 있습니다.",
-    noPinnedItems: "아직 고정된 항목이 없습니다.",
-    noHistoryItems: "최근 방문 기록이 없습니다.",
     openSiteHome: "{name} 홈페이지 열기",
     openPage: "{title} 열기",
-    unpin: "고정 해제",
-    pin: "고정"
   },
   es: {
     topbarLabel: "Barra superior",
@@ -2372,13 +2278,11 @@ const LOCALE_COMPLETIONS = {
     chooseBookmarkFolder: "Elegir carpeta de marcadores",
     collapseSurface: "Contraer panel",
     openPortalSurface: "Abrir centro de navegación",
-    openHistorySurface: "Abrir recientes",
     recentFoldersSwitch: "Cambiar tarjetas recientes",
     recentFoldersPrevious: "Tarjetas recientes anteriores",
     recentFoldersNext: "Tarjetas recientes siguientes",
     historyPreviousPage: "Página reciente anterior",
     historyNextPage: "Página reciente siguiente",
-    refreshHistory: "Actualizar historial",
     quickSearchPlaceholder: "Buscar o escribir URL",
     googleImageSearch: "Buscar por imagen con Google",
     quickSearch: "Buscar",
@@ -2439,23 +2343,10 @@ const LOCALE_COMPLETIONS = {
     bookmarkFolderReadFailed: "No se pudieron leer las carpetas de marcadores.",
     noBookmarkFolders: "No se encontraron carpetas con marcadores web.",
     pageCount: "{count} páginas",
-    historySitePageMeta: "{count} páginas relacionadas",
-    historyExpandPages: "Mostrar {count} páginas relacionadas",
-    historyCollapsePages: "Ocultar páginas relacionadas",
-    historyRelatedPages: "Páginas relacionadas",
-    historyPrimaryPage: "Página más reciente",
-    historyJustNow: "Ahora mismo",
-    historyMinutesAgo: "Hace {count} min",
-    historyHoursAgo: "Hace {count} h",
-    historyReadFailed: "No se pudo leer el historial. Comprueba el permiso history.",
     deleteHistory: "Eliminar {title}",
     deleteHistoryFailed: "No se pudo eliminar. Puede haber cambiado en otro lugar.",
-    noPinnedItems: "Aún no hay elementos fijados.",
-    noHistoryItems: "Aún no hay navegación reciente.",
     openSiteHome: "Abrir inicio de {name}",
     openPage: "Abrir {title}",
-    unpin: "Desfijar",
-    pin: "Fijar"
   },
   fr: {
     topbarLabel: "Barre supérieure",
@@ -2486,13 +2377,11 @@ const LOCALE_COMPLETIONS = {
     chooseBookmarkFolder: "Choisir un dossier de favoris",
     collapseSurface: "Réduire le panneau",
     openPortalSurface: "Ouvrir le centre de navigation",
-    openHistorySurface: "Ouvrir la navigation récente",
     recentFoldersSwitch: "Changer les cartes récentes",
     recentFoldersPrevious: "Cartes récentes précédentes",
     recentFoldersNext: "Cartes récentes suivantes",
     historyPreviousPage: "Page récente précédente",
     historyNextPage: "Page récente suivante",
-    refreshHistory: "Actualiser l'historique",
     quickSearchPlaceholder: "Rechercher ou saisir une URL",
     googleImageSearch: "Rechercher par image avec Google",
     quickSearch: "Rechercher",
@@ -2553,23 +2442,10 @@ const LOCALE_COMPLETIONS = {
     bookmarkFolderReadFailed: "Impossible de lire les dossiers de favoris.",
     noBookmarkFolders: "Aucun dossier avec des favoris Web trouvé.",
     pageCount: "{count} pages",
-    historySitePageMeta: "{count} pages associées",
-    historyExpandPages: "Afficher {count} pages associées",
-    historyCollapsePages: "Masquer les pages associées",
-    historyRelatedPages: "Pages associées",
-    historyPrimaryPage: "Dernière page",
-    historyJustNow: "À l'instant",
-    historyMinutesAgo: "Il y a {count} min",
-    historyHoursAgo: "Il y a {count} h",
-    historyReadFailed: "Impossible de lire l'historique. Vérifiez l'autorisation history.",
     deleteHistory: "Supprimer {title}",
     deleteHistoryFailed: "Impossible de supprimer. Il a peut-être changé ailleurs.",
-    noPinnedItems: "Aucun élément épinglé pour l'instant.",
-    noHistoryItems: "Aucune navigation récente.",
     openSiteHome: "Ouvrir l'accueil de {name}",
     openPage: "Ouvrir {title}",
-    unpin: "Désépingler",
-    pin: "Épingler"
   },
   de: {
     topbarLabel: "Obere Leiste",
@@ -2600,13 +2476,11 @@ const LOCALE_COMPLETIONS = {
     chooseBookmarkFolder: "Lesezeichenordner auswählen",
     collapseSurface: "Panel einklappen",
     openPortalSurface: "Navigationszentrale öffnen",
-    openHistorySurface: "Zuletzt besucht öffnen",
     recentFoldersSwitch: "Aktuelle Karten wechseln",
     recentFoldersPrevious: "Vorherige aktuelle Karten",
     recentFoldersNext: "Nächste aktuelle Karten",
     historyPreviousPage: "Vorherige aktuelle Seite",
     historyNextPage: "Nächste aktuelle Seite",
-    refreshHistory: "Verlauf aktualisieren",
     quickSearchPlaceholder: "Suchen oder URL eingeben",
     googleImageSearch: "Mit Google per Bild suchen",
     quickSearch: "Suchen",
@@ -2667,23 +2541,10 @@ const LOCALE_COMPLETIONS = {
     bookmarkFolderReadFailed: "Lesezeichenordner konnten nicht gelesen werden.",
     noBookmarkFolders: "Keine Ordner mit Website-Lesezeichen gefunden.",
     pageCount: "{count} Seiten",
-    historySitePageMeta: "{count} zugehörige Seiten",
-    historyExpandPages: "{count} zugehörige Seiten anzeigen",
-    historyCollapsePages: "Zugehörige Seiten ausblenden",
-    historyRelatedPages: "Zugehörige Seiten",
-    historyPrimaryPage: "Neueste Seite",
-    historyJustNow: "Gerade eben",
-    historyMinutesAgo: "Vor {count} Min.",
-    historyHoursAgo: "Vor {count} Std.",
-    historyReadFailed: "Verlauf konnte nicht gelesen werden. Prüfe die history-Berechtigung.",
     deleteHistory: "{title} entfernen",
     deleteHistoryFailed: "Konnte nicht entfernt werden. Es wurde möglicherweise anderswo geändert.",
-    noPinnedItems: "Noch keine angehefteten Einträge.",
-    noHistoryItems: "Noch keine zuletzt besuchten Seiten.",
     openSiteHome: "{name}-Startseite öffnen",
     openPage: "{title} öffnen",
-    unpin: "Lösen",
-    pin: "Anheften"
   }
 };
 for (const [locale, messages] of Object.entries(LOCALE_COMPLETIONS)) {
@@ -2711,12 +2572,9 @@ const refreshBookmarkFolderButton = document.querySelector("#refreshBookmarkFold
 const bookmarkFavoriteAddButton = document.querySelector("#bookmarkFavoriteAddButton");
 const closeBookmarkPickerButton = document.querySelector("#closeBookmarkPickerButton");
 const bookmarkPickerTitle = document.querySelector("#bookmarkPickerTitle");
-const pinnedGrid = document.querySelector("#pinnedGrid");
-const historyGrid = document.querySelector("#historyGrid");
 const recentHistoryFolders = document.querySelector("#recentHistoryFolders");
 const recentFoldersPreviousButton = document.querySelector("#recentFoldersPreviousButton");
 const recentFoldersNextButton = document.querySelector("#recentFoldersNextButton");
-const refreshHistoryButton = document.querySelector("#refreshHistoryButton");
 const siteCardTemplate = document.querySelector("#siteCardTemplate");
 const settingsButton = document.querySelector("#settingsButton");
 const settingsShell = document.querySelector("#settingsShell");
@@ -3287,16 +3145,12 @@ function applyLocale() {
   document.querySelector("#portal-title").textContent = t("portalTitle");
   document.querySelector("#smartPortalTab").textContent = t("smartPortalTab");
   document.querySelector("#bookmarkPortalTab").textContent = t("bookmarkPortalTab");
-  document.querySelector("#history-title").textContent = t("historyTitle");
-  document.querySelector("#pinned-title").textContent = t("pinnedTitle");
-  document.querySelector("#recent-title").textContent = t("recentTitle");
   setMobileTabLabel("portalPanel", t("mobilePortalTab"));
 
   setButtonLabel(togglePortalFormButton, t("addPortal"));
   setButtonLabel(refreshBookmarkFolderButton, t("refreshBookmarkFolder"));
   setButtonLabel(bookmarkFavoriteAddButton, t("addFavoriteSite"));
   setButtonLabel(chooseBookmarkFolderButton, t("chooseBookmarkFolder"));
-  setButtonLabel(refreshHistoryButton, t("refreshHistory"));
   setButtonLabel(settingsButton, t("openSettings"));
   setButtonLabel(closeSettingsButton, t("settingsBackHome"));
   settingsShell?.setAttribute("aria-label", t("settingsTitle"));
@@ -3386,7 +3240,6 @@ function setStaticButtonIcons() {
   bookmarkFavoriteAddButton.querySelector(".button-icon").innerHTML = plusIcon();
   chooseBookmarkFolderButton.querySelector(".button-icon").innerHTML = pageTabFilledIcon();
   closeBookmarkPickerButton.querySelector(".button-icon").innerHTML = arrowLeftIcon();
-  refreshHistoryButton.querySelector(".button-icon").innerHTML = refreshIcon();
   const recentFoldersPreviousIcon = recentFoldersPreviousButton?.querySelector(".button-icon");
   const recentFoldersNextIcon = recentFoldersNextButton?.querySelector(".button-icon");
   if (recentFoldersPreviousIcon) {
@@ -3645,7 +3498,6 @@ async function init() {
   refreshBookmarkFolderButton.addEventListener("click", renderSelectedBookmarkFolder);
   bookmarkFavoriteAddButton?.addEventListener("click", toggleFavoriteForm);
   closeBookmarkPickerButton.addEventListener("click", closeBookmarkPicker);
-  refreshHistoryButton.addEventListener("click", refreshHistory);
   recentFoldersPreviousButton?.addEventListener("click", (event) => {
     showRecentFolderPage(recentFolderPageIndex - 1, "previous");
     if (event.detail > 0) {
@@ -3772,7 +3624,7 @@ function toggleSurfacePanel(panelId) {
 
 function setActiveSurfacePanel(panelId) {
   const previousPanelId = activeSurfacePanelId;
-  activeSurfacePanelId = panelId === "portalPanel" || panelId === "historyPanel" ? panelId : "";
+  activeSurfacePanelId = panelId === "portalPanel" ? panelId : "";
   const hasActiveSurfacePanel = Boolean(activeSurfacePanelId);
   const isOpeningSurfacePanel = hasActiveSurfacePanel && !previousPanelId;
   if (surfaceBackdrop && isOpeningSurfacePanel) {
@@ -3801,9 +3653,6 @@ function setActiveSurfacePanel(panelId) {
   });
   portalSurfaceButton.setAttribute("aria-expanded", String(activeSurfacePanelId === "portalPanel"));
   portalSurfaceButton.classList.toggle("active", activeSurfacePanelId === "portalPanel");
-  if (activeSurfacePanelId === "historyPanel") {
-    refreshHistory();
-  }
   if (activeSurfacePanelId === "portalPanel" && activePortalView === "bookmarks" && bookmarkPicker.hidden) {
     renderSelectedBookmarkFolder();
   }
@@ -11517,22 +11366,18 @@ async function refreshHistory() {
       Date.now() - RECENT_HISTORY_LOOKBACK_MS,
       Number.isFinite(recentHistoryStartedAt) ? recentHistoryStartedAt : 0
     );
-    const [items, pinnedItems, openTabItems] = await Promise.all([
+    const [items, openTabItems] = await Promise.all([
       chrome.history.search({
         text: "",
         startTime: recentStartTime,
         maxResults: 80
       }),
-      loadPinnedHistory(),
       openTabHistoryItems()
     ]);
-    const pinnedKeys = new Set(pinnedItems.map((item) => normalizeHistoryKey(item.url)));
     const recentItems = mergeHistoryItems(
       await repeatDomainHistoryItems(items, recentStartTime),
       openTabItems
-    )
-      .filter((item) => !pinnedKeys.has(normalizeHistoryKey(item.url)));
-    renderPinnedHistory(pinnedItems);
+    );
     const recentGroups = groupHistoryBySite(recentItems, {
       maxPagesPerSite: MAX_HISTORY_PAGES_PER_SITE
     });
@@ -11541,10 +11386,7 @@ async function refreshHistory() {
     }
     writeFirstPaintCache({ recentGroups: serializeRecentGroupsForFirstPaint(recentGroups) });
     renderRecentFolders(recentGroups);
-    renderHistory(recentGroups);
   } catch (error) {
-    pinnedGrid.innerHTML = "";
-    historyGrid.innerHTML = emptyState(t("historyReadFailed"));
     renderRecentFolders([]);
   }
 }
@@ -11720,38 +11562,6 @@ function mergeHistoryItems(...itemGroups) {
 
   return [...merged.values()]
     .sort((a, b) => Number(b.lastVisitTime || 0) - Number(a.lastVisitTime || 0));
-}
-
-function renderPinnedHistory(items) {
-  if (!items.length) {
-    pinnedGrid.innerHTML = emptyState(t("noPinnedItems"));
-    return;
-  }
-
-  const fragment = document.createDocumentFragment();
-  const groups = groupHistoryBySite(items, {
-    maxGroups: MAX_PINNED_HISTORY_ITEMS,
-    maxPagesPerSite: MAX_PINNED_HISTORY_ITEMS
-  });
-
-  groups.forEach((group) => {
-    fragment.appendChild(createHistorySiteGroup(group, { pinned: true }));
-  });
-  pinnedGrid.replaceChildren(fragment);
-}
-
-function renderHistory(groups) {
-  if (!groups.length) {
-    historyGrid.innerHTML = emptyState(t("noHistoryItems"));
-    return;
-  }
-
-  const fragment = document.createDocumentFragment();
-  groups.forEach((group) => {
-    fragment.appendChild(createHistoryFeedGroup(group));
-  });
-
-  historyGrid.replaceChildren(fragment);
 }
 
 function renderRecentFolders(groups, options = {}) {
@@ -12439,287 +12249,6 @@ function historyGroupRecentVisitTime(group) {
   ), 0);
 }
 
-function createHistorySiteGroup(group, options = {}) {
-  const card = document.createElement("section");
-  const header = document.createElement("div");
-  const isPinned = Boolean(options.pinned);
-  const homeLink = document.createElement(isPinned ? "span" : "a");
-  const icon = document.createElement("img");
-  const name = document.createElement("strong");
-  const count = document.createElement("span");
-  const list = document.createElement("div");
-  const singlePinnedPage = isPinned && group.pages.length === 1 ? group.pages[0] : null;
-  const singlePinnedTitle = singlePinnedPage
-    ? (normalizeText(singlePinnedPage.title) || historyFallbackTitle(safeUrl(singlePinnedPage.url)))
-    : "";
-  const isSinglePinnedDuplicate = isPinned
-    && group.pages.length === 1
-    && singlePinnedTitle === normalizeText(group.name);
-  const homeHref = isSinglePinnedDuplicate
-    ? singlePinnedPage.url
-    : (group.homeUrl || siteHomeUrl(group.key, group.url));
-  const homeLabel = isSinglePinnedDuplicate
-    ? t("openPage", { title: singlePinnedTitle })
-    : t("openSiteHome", { name: group.name });
-
-  card.className = "history-site-group";
-  card.classList.toggle("pinned", isPinned);
-  card.classList.toggle("single-page-duplicate", isSinglePinnedDuplicate);
-  header.className = "history-site-header";
-  homeLink.className = "history-site-home";
-  if (!isPinned) {
-    homeLink.href = homeHref;
-    homeLink.setAttribute("aria-label", homeLabel);
-  }
-  icon.className = "history-site-logo";
-  applyHistoryIcon(icon, {
-    title: group.name,
-    url: group.homeUrl || group.url
-  });
-  icon.alt = "";
-  name.className = "history-site-name";
-  name.textContent = group.name;
-  count.className = "history-site-count";
-  count.textContent = String(group.pages.length);
-  list.className = "history-page-list";
-
-  group.pages.forEach((item) => {
-    list.appendChild(createHistoryPageItem(item, options));
-  });
-
-  homeLink.append(icon, name);
-  header.append(homeLink, count);
-  card.append(header, list);
-  return card;
-}
-
-function createHistoryPageItem(item, options = {}) {
-  const url = safeUrl(item.url);
-  const title = normalizeText(item.title) || historyFallbackTitle(url);
-  const row = document.createElement("div");
-  const time = document.createElement("time");
-  const timelineCard = document.createElement("span");
-  const isPinned = Boolean(options.pinned);
-  const showTimeline = Boolean(options.timeline);
-  const link = document.createElement("a");
-  const label = document.createElement("span");
-  const actions = document.createElement("span");
-  const pinButton = document.createElement("button");
-  const deleteButton = document.createElement("button");
-
-  row.className = "history-page-item";
-  row.classList.toggle("timeline", showTimeline);
-  if (showTimeline) {
-    time.className = "history-page-time";
-    time.dateTime = historyDateTimeAttribute(item.lastVisitTime);
-    time.textContent = formatHistoryAnchorTime(item.lastVisitTime);
-  }
-  link.className = "history-page-link";
-  link.href = item.url;
-  link.setAttribute("aria-label", t("openPage", { title }));
-  link.textContent = title;
-  if (options.label) {
-    label.className = "history-page-label";
-    label.textContent = options.label;
-    link.prepend(label);
-  }
-  pinButton.className = "history-page-pin";
-  pinButton.classList.toggle("active", isPinned);
-  pinButton.type = "button";
-  pinButton.innerHTML = historyPinIcon(isPinned);
-  pinButton.setAttribute("aria-label", `${isPinned ? t("unpin") : t("pin")} ${title}`);
-  pinButton.addEventListener("click", () => {
-    if (isPinned) {
-      unpinHistoryItem(item.url);
-      return;
-    }
-    pinHistoryItem(item);
-  });
-
-  deleteButton.className = "history-page-delete";
-  deleteButton.type = "button";
-  deleteButton.innerHTML = trashIcon();
-  deleteButton.setAttribute("aria-label", t("deleteHistory", { title }));
-  deleteButton.addEventListener("click", () => deleteHistoryItem(item.url));
-
-  actions.className = "history-page-actions";
-  actions.append(pinButton, deleteButton);
-  if (showTimeline) {
-    timelineCard.className = "history-page-card";
-    timelineCard.append(link, actions);
-    row.append(time, timelineCard);
-  } else {
-    row.append(link, actions);
-  }
-  return row;
-}
-
-function createHistoryFeedGroup(group) {
-  const item = group.pages[0];
-  const title = normalizeText(item?.title) || historyFallbackTitle(safeUrl(group.url));
-  const row = document.createElement("article");
-  const homeLink = document.createElement("a");
-  const icon = document.createElement("img");
-  const copy = document.createElement("span");
-  const name = document.createElement("strong");
-  const pageLink = document.createElement("a");
-  const meta = document.createElement("span");
-  const summary = document.createElement("div");
-  const actions = document.createElement("span");
-  const expandButton = document.createElement("button");
-  const pinButton = document.createElement("button");
-  const deleteButton = document.createElement("button");
-  const pageList = document.createElement("div");
-  const pageListInner = document.createElement("div");
-  const relatedPages = group.pages.slice(1);
-  const isExpandable = relatedPages.length > 0;
-
-  row.className = "history-feed-item";
-  row.classList.toggle("expandable", isExpandable);
-  row.addEventListener("click", (event) => {
-    const target = event.target;
-    if (!isExpandable || (target instanceof Element && target.closest("a, button"))) {
-      return;
-    }
-    toggleHistoryFeedGroup(row);
-  });
-  homeLink.className = "history-feed-home";
-  homeLink.href = group.homeUrl || siteHomeUrl(group.key, group.url);
-  homeLink.setAttribute("aria-label", t("openSiteHome", { name: group.name }));
-  icon.className = "history-site-logo";
-  applyHistoryIcon(icon, {
-    title: group.name,
-    url: group.homeUrl || group.url
-  });
-  icon.alt = "";
-  homeLink.appendChild(icon);
-
-  copy.className = "history-feed-copy";
-  name.className = "history-site-name";
-  name.textContent = group.name;
-  pageLink.className = "history-page-link history-feed-page-link";
-  pageLink.href = item?.url || group.url;
-  pageLink.setAttribute("aria-label", t("openPage", { title }));
-  pageLink.textContent = group.name;
-  meta.className = "history-feed-meta";
-  meta.textContent = [
-    group.pages.length > 1
-      ? t("historySitePageMeta", { count: group.pages.length })
-      : compactHistoryUrl(safeUrl(item?.url || group.url)),
-    formatHistoryTime(item?.lastVisitTime)
-  ].filter(Boolean).join(" · ");
-  copy.append(isExpandable ? name : pageLink, meta);
-
-  expandButton.className = "history-feed-expand";
-  expandButton.type = "button";
-  expandButton.innerHTML = chevronDownIcon();
-  expandButton.setAttribute("aria-label", t("historyExpandPages", { count: relatedPages.length }));
-  expandButton.setAttribute("aria-expanded", "false");
-  expandButton.setAttribute("aria-hidden", String(!isExpandable));
-  expandButton.tabIndex = isExpandable ? 0 : -1;
-  expandButton.disabled = !isExpandable;
-  expandButton.addEventListener("click", () => toggleHistoryFeedGroup(row));
-
-  pinButton.className = "history-page-pin";
-  pinButton.type = "button";
-  pinButton.innerHTML = historyPinIcon(false);
-  pinButton.setAttribute("aria-label", `${t("pin")} ${title}`);
-  pinButton.addEventListener("click", () => pinHistoryItem(item || {
-    title,
-    url: group.url
-  }));
-
-  deleteButton.className = "history-page-delete";
-  deleteButton.type = "button";
-  deleteButton.innerHTML = trashIcon();
-  deleteButton.setAttribute("aria-label", t("deleteHistory", { title: group.name }));
-  deleteButton.addEventListener("click", () => deleteHistoryGroup(group));
-
-  pageList.className = "history-feed-pages";
-  pageList.id = `history-feed-pages-${group.key.replace(/[^a-z0-9_-]+/gi, "-")}`;
-  pageList.dataset.relatedCount = String(relatedPages.length);
-  pageList.setAttribute("aria-hidden", "true");
-  pageList.inert = true;
-  pageListInner.className = "history-feed-pages-inner";
-  pageList.appendChild(pageListInner);
-  if (isExpandable) {
-    const listTitle = document.createElement("span");
-    listTitle.className = "history-feed-pages-title";
-    listTitle.textContent = t("historyRelatedPages");
-    pageListInner.appendChild(listTitle);
-    pageListInner.appendChild(createHistoryPageItem(item, {
-      label: t("historyPrimaryPage"),
-      timeline: true
-    }));
-    relatedPages.forEach((relatedItem) => {
-      pageListInner.appendChild(createHistoryPageItem(relatedItem, { timeline: true }));
-    });
-  }
-
-  actions.className = "history-feed-actions";
-  actions.appendChild(expandButton);
-  if (isExpandable) {
-    expandButton.setAttribute("aria-controls", pageList.id);
-    requestAnimationFrame(() => {
-      pageList.style.setProperty("--history-feed-pages-height", `${pageListInner.scrollHeight}px`);
-    });
-  }
-  actions.append(pinButton, deleteButton);
-  summary.className = "history-feed-summary";
-  summary.append(homeLink, copy, actions);
-  row.append(summary, pageList);
-  return row;
-}
-
-function toggleHistoryFeedGroup(row) {
-  const isExpanded = row.classList.toggle("expanded");
-  const button = row.querySelector(".history-feed-expand");
-  const pageList = row.querySelector(".history-feed-pages");
-  if (button) {
-    const count = Number(pageList?.dataset.relatedCount || 0);
-    button.setAttribute("aria-expanded", String(isExpanded));
-    button.setAttribute("aria-label", isExpanded ? t("historyCollapsePages") : t("historyExpandPages", { count }));
-  }
-  if (pageList) {
-    pageList.setAttribute("aria-hidden", String(!isExpanded));
-    pageList.inert = !isExpanded;
-  }
-}
-
-function formatHistoryTime(timestamp) {
-  const time = Number(timestamp);
-  if (!Number.isFinite(time) || time <= 0) {
-    return "";
-  }
-  const visitDate = new Date(time);
-  const now = Date.now();
-  const minutesAgo = Math.max(0, Math.round((now - time) / 60000));
-  if (minutesAgo < 1) {
-    return t("historyJustNow");
-  }
-  if (minutesAgo < 60) {
-    return t("historyMinutesAgo", { count: minutesAgo });
-  }
-  if (minutesAgo < 60 * 24) {
-    return t("historyHoursAgo", { count: Math.floor(minutesAgo / 60) });
-  }
-  return new Intl.DateTimeFormat(LOCALE, {
-    month: "numeric",
-    day: "numeric"
-  }).format(visitDate);
-}
-
-function formatHistoryAnchorTime(timestamp) {
-  const time = Number(timestamp);
-  if (!Number.isFinite(time) || time <= 0) {
-    return "--:--";
-  }
-  return new Intl.DateTimeFormat(LOCALE, {
-    hour: "2-digit",
-    minute: "2-digit"
-  }).format(new Date(time));
-}
-
 function formatHistoryFullTime(timestamp) {
   const time = Number(timestamp);
   if (!Number.isFinite(time) || time <= 0) {
@@ -12737,101 +12266,20 @@ function formatHistoryTimestamp(timestamp) {
   return formatHistoryFullTime(timestamp);
 }
 
-function historyDateTimeAttribute(timestamp) {
-  const time = Number(timestamp);
-  if (!Number.isFinite(time) || time <= 0) {
-    return "";
-  }
-  return new Date(time).toISOString();
-}
-
-async function loadPinnedHistory() {
-  try {
-    const result = await getStoredValues({ [PINNED_HISTORY_STORAGE_KEY]: [] });
-    const parsed = result[PINNED_HISTORY_STORAGE_KEY];
-    if (!Array.isArray(parsed)) {
-      return [];
-    }
-    return parsed
-      .filter((item) => item?.url && isDisplayableHistoryUrl(safeUrl(item.url)))
-      .sort((a, b) => Number(b.pinnedAt || 0) - Number(a.pinnedAt || 0))
-      .slice(0, MAX_PINNED_HISTORY_ITEMS);
-  } catch (error) {
-    console.warn("Failed to load pinned history", error);
-    return [];
-  }
-}
-
-async function savePinnedHistory(items) {
-  await setStoredValues({ [PINNED_HISTORY_STORAGE_KEY]: items.slice(0, MAX_PINNED_HISTORY_ITEMS) });
-}
-
-async function pinHistoryItem(item) {
-  try {
-    if (!isDisplayableHistoryUrl(safeUrl(item?.url))) {
-      return;
-    }
-    const key = normalizeHistoryKey(item.url);
-    if (!key) {
-      return;
-    }
-    const pinnedItems = await loadPinnedHistory();
-    const nextItems = [
-      {
-        url: item.url,
-        title: normalizeText(item.title),
-        pinnedAt: Date.now()
-      },
-      ...pinnedItems.filter((pinnedItem) => normalizeHistoryKey(pinnedItem.url) !== key)
-    ];
-    await savePinnedHistory(nextItems);
-    refreshHistory();
-  } catch (error) {
-    console.warn("Failed to pin history item", error);
-  }
-}
-
-async function unpinHistoryItem(url) {
-  try {
-    const key = normalizeHistoryKey(url);
-    const nextItems = (await loadPinnedHistory()).filter((item) => normalizeHistoryKey(item.url) !== key);
-    await savePinnedHistory(nextItems);
-    refreshHistory();
-  } catch (error) {
-    console.warn("Failed to unpin history item", error);
-  }
-}
-
-async function deleteHistoryItem(url) {
-  const deleteUrl = normalizeHistoryDeleteUrl(url);
-  if (!deleteUrl) {
-    return;
-  }
-  await deleteHistoryUrls([deleteUrl]);
-}
-
 async function deleteHistoryGroup(group) {
   const urls = Array.isArray(group.deleteUrls) && group.deleteUrls.length
     ? group.deleteUrls
     : group.pages.map((item) => normalizeHistoryDeleteUrl(item.url)).filter(Boolean);
-  await deleteHistoryUrls(urls, group.key);
+  await deleteHistoryUrls(urls);
 }
 
-async function deleteHistoryUrls(urls, siteKey = "") {
+async function deleteHistoryUrls(urls) {
   const uniqueUrls = [...new Set(urls.map(normalizeHistoryDeleteUrl).filter(Boolean))];
   if (!uniqueUrls.length) {
     return;
   }
   try {
     await Promise.all(uniqueUrls.map((url) => chrome.history.deleteUrl({ url })));
-    const deletedKeys = new Set(uniqueUrls.map(normalizeHistoryKey).filter(Boolean));
-    const nextPinnedItems = (await loadPinnedHistory()).filter((item) => {
-      if (deletedKeys.has(normalizeHistoryKey(item.url))) {
-        return false;
-      }
-      return !siteKey || siteGroupKey(safeUrl(item.url)) !== siteKey;
-    });
-    await savePinnedHistory(nextPinnedItems);
     refreshHistory();
   } catch (error) {
     console.warn("Failed to delete history item", error);
@@ -12844,10 +12292,14 @@ function renderHistoryTransientMessage(message) {
   if (previousMessage) {
     previousMessage.remove();
   }
+  const recentSection = recentHistoryFolders?.closest(".recent-folders");
+  if (!recentSection) {
+    return;
+  }
   const messageNode = document.createElement("p");
   messageNode.className = "history-transient-message";
   messageNode.textContent = message;
-  document.querySelector(".recent-group")?.prepend(messageNode);
+  recentSection.prepend(messageNode);
   window.setTimeout(() => {
     messageNode.remove();
   }, 2400);
@@ -12880,11 +12332,8 @@ const TDESIGN_ICON_MARKUP = Object.freeze({
   desktop: '<g fill="none"><path d="M2 4h20v13H2z"/><path stroke="currentColor" stroke-linecap="square" stroke-width="2" d="M12 17v4m-4 0h8M2 4h20v13H2z"/></g>',
   "sunny-filled": '<path fill="currentColor" d="M13 1v3h-2V1zm7.485 3.928L18.364 7.05L16.95 5.636l2.121-2.122zM4.93 3.514l2.12 2.122L5.636 7.05L3.515 4.929zM6 12a6 6 0 1 1 12 0a6 6 0 0 1-12 0m-5-1h3v2H1zm19 0h3v2h-3zM7.05 18.363l-2.12 2.123l-1.415-1.416l2.121-2.122zm11.314-1.414l2.121 2.122l-1.414 1.414l-2.121-2.121zM13 20v3h-2v-3z"/>',
   "moon-filled": '<path fill="currentColor" d="M2 12C2 6.477 6.477 2 12 2h1.734l-.868 1.5C12.287 4.5 12 5.689 12 7a7 7 0 0 0 8.348 6.87l1.682-.327l-.543 1.626C20.162 19.137 16.417 22 12 22C6.477 22 2 17.523 2 12"/>',
-  history: '<path fill="none" stroke="currentColor" stroke-linecap="square" stroke-width="2" d="M2.552 13c.5 4.777 4.539 8.5 9.448 8.5a9.5 9.5 0 0 0 0-19c-1.628 0-3.16.41-4.5 1.131A9.54 9.54 0 0 0 3.38 8M12 7v5l2.5 2.5m-12-11v5h5"/>',
   more: '<path fill="none" stroke="currentColor" stroke-linecap="square" stroke-width="2" d="M11.5 4h1v1h-1zm0 7.5h1v1h-1zm0 7.5h1v1h-1z"/>',
   "page-tab-filled": '<path fill="currentColor" d="m9.48 2.5l.301.375l2.9 3.625H23V21H1V2.5z"/><path fill="currentColor" d="M23 2.5v2H13v-2z"/>',
-  pin: '<g fill="none"><path d="M21.962 6.282L17.72 2.04L9.94 8.399L7.82 6.277l-4.245 4.245l9.9 9.9l4.244-4.245l-2.12-2.121z"/><path stroke="currentColor" stroke-linecap="square" stroke-width="2" d="m2.16 21.836l6.364-6.364M17.72 2.04l4.242 4.242l-6.365 7.774l2.121 2.12l-4.244 4.246l-9.9-9.9L7.82 6.277L9.94 8.4z"/></g>',
-  "pin-filled": '<path fill="currentColor" d="m18.076.981l4.949 4.95l-6.365 7.773l2.121 2.12l-5.305 5.306l-4.596-4.596l-6.718 6.718l-1.414-1.415l6.718-6.717l-4.597-4.596l5.306-5.306l2.121 2.122z"/>',
   refresh: '<path fill="none" stroke="currentColor" stroke-linecap="square" stroke-width="2" d="M21.448 13c-.5 4.777-4.539 8.5-9.448 8.5A9.5 9.5 0 0 1 3.38 16m-.88 4.5v-5h3M2.552 11C3.052 6.223 7.09 2.5 12 2.5A9.5 9.5 0 0 1 20.62 8m.88-4.5v5h-3"/>',
   search: '<g fill="none"><path d="M15.803 15.803A7.5 7.5 0 1 1 5.197 5.197a7.5 7.5 0 0 1 10.606 10.606"/><path stroke="currentColor" stroke-linecap="square" stroke-width="2" d="m15.803 15.804l5.303 5.303m-5.303-5.304A7.5 7.5 0 1 1 5.197 5.197a7.5 7.5 0 0 1 10.606 10.606Z"/></g>',
   setting: '<g fill="none"><path d="M20.66 7L12 2L3.34 7v10L12 22l8.66-5zM12 16a4 4 0 1 0 0-8a4 4 0 0 0 0 8" clip-rule="evenodd"/><path d="M16 12a4 4 0 1 1-8 0a4 4 0 0 1 8 0"/><path stroke="currentColor" stroke-linecap="square" stroke-width="2" d="m12 2l8.66 5v10L12 22l-8.66-5V7z"/><path stroke="currentColor" stroke-linecap="square" stroke-width="2" d="M16 12a4 4 0 1 1-8 0a4 4 0 0 1 8 0Z"/></g>',
@@ -12910,10 +12359,6 @@ function searchEngineSearchIcon() {
   return tdesignIcon(googleAiSearchModeActive ? "ai-search" : "search");
 }
 
-function historyPinIcon(active) {
-  return tdesignIcon(active ? "pin-filled" : "pin");
-}
-
 function plusIcon() {
   return tdesignIcon("add");
 }
@@ -12936,10 +12381,6 @@ function helpCircleIcon() {
 
 function githubIcon() {
   return '<svg class="brand-icon github-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path fill="currentColor" d="M12 .297c-6.63 0-12 5.373-12 12c0 5.303 3.438 9.8 8.205 11.385c.6.113.82-.258.82-.577c0-.285-.01-1.04-.015-2.04c-3.338.724-4.042-1.61-4.042-1.61c-.546-1.385-1.335-1.755-1.335-1.755c-1.087-.744.084-.729.084-.729c1.205.084 1.838 1.236 1.838 1.236c1.07 1.835 2.809 1.305 3.495.998c.108-.776.417-1.305.76-1.605c-2.665-.3-5.466-1.332-5.466-5.93c0-1.31.465-2.38 1.235-3.22c-.135-.303-.54-1.523.105-3.176c0 0 1.005-.322 3.3 1.23c.96-.267 1.98-.399 3-.405c1.02.006 2.04.138 3 .405c2.28-1.552 3.285-1.23 3.285-1.23c.645 1.653.24 2.873.12 3.176c.765.84 1.23 1.91 1.23 3.22c0 4.61-2.805 5.625-5.475 5.92c.42.36.81 1.096.81 2.22c0 1.606-.015 2.896-.015 3.286c0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12Z"/></svg>';
-}
-
-function historyIcon() {
-  return tdesignIcon("history");
 }
 
 function folderPlusIcon() {

@@ -4,8 +4,9 @@ import vm from "node:vm";
 
 const source = readFileSync(new URL("../newtab.js", import.meta.url), "utf8");
 const start = source.indexOf("function groupHistoryBySite(");
-const end = source.indexOf("function createHistorySiteGroup(", start);
+const end = source.indexOf("function formatHistoryFullTime(", start);
 assert.ok(start >= 0 && end > start, "Recent history grouping functions should be extractable.");
+assert.equal(source.includes("pinnedHistory"), false, "Recent browsing must not keep the removed pinned-history storage path.");
 const tabTimeStart = source.indexOf("function normalizedTabLastAccessed(");
 const tabTimeEnd = source.indexOf("function normalizeOpenTabActivity(", tabTimeStart);
 assert.ok(tabTimeStart >= 0 && tabTimeEnd > tabTimeStart, "Open-tab timestamp helper should be extractable.");

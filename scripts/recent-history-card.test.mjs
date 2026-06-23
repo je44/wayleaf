@@ -15,6 +15,8 @@ assert.match(source, /maxPagesPerSite:\s*MAX_HISTORY_PAGES_PER_SITE/, "Recent re
 assert.match(background, /onInstalled\?\.addListener\(\(details\) => \{[\s\S]*details\.reason === "install"[\s\S]*RECENT_HISTORY_STARTED_AT_STORAGE_KEY[\s\S]*Date\.now\(\)/, "A fresh install must record when Wayleaf may begin showing recent history.");
 assert.match(source, /const recentStartTime = Math\.max\([\s\S]*Date\.now\(\) - RECENT_HISTORY_LOOKBACK_MS,[\s\S]*recentHistoryStartedAt/, "Recent history must exclude visits from before Wayleaf was installed.");
 assert.match(html, /<section class="recent-folders"[^>]*hidden>/, "The recent-browsing module must start hidden to avoid a first-install flash.");
+assert.doesNotMatch(html, /id="historyPanel"/, "The unreachable legacy recent-browsing panel must stay removed.");
+assert.doesNotMatch(source, /pinnedHistory|history-page-pin|pinHistoryItem|unpinHistoryItem/, "Recent browsing cards must not expose the removed pinning path.");
 assert.match(styles, /\.recent-folders\[hidden\]\s*\{\s*display:\s*none;/, "The recent-browsing layout must respect its hidden state.");
 assert.match(source, /recentHistoryFolders\.closest\("\.recent-folders"\)\.hidden = !latestRecentFolderGroups\.length;/, "The whole recent-browsing module must only be visible when it has real groups.");
 assert.match(source, /const homeUrl = group\.homeUrl \|\| siteHomeUrl\(group\.key, group\.url\);[\s\S]*const pages = \[[\s\S]*url: homeUrl[\s\S]*group\.pages\.filter[\s\S]*\.slice\(0, MAX_HISTORY_PAGES_PER_SITE\);/, "Every recent card must keep its site home as page one while preserving the strict four-page cap.");
@@ -60,4 +62,4 @@ assert.match(styles, /\.recent-card-page-dot\s*\{[\s\S]*background:\s*color-mix\
 assert.match(styles, /\.recent-card-page-dot\.active\s*\{[\s\S]*background:\s*#f2c94c;/, "The active indicator must be yellow.");
 assert.match(styles, /\.recent-card-bottom-bar\s*\{[\s\S]*align-items:\s*center;[\s\S]*justify-content:\s*space-between;/, "Drawer content should align indicators and switch controls on one horizontal row.");
 assert.match(styles, /\.recent-folder-page-title-snapshot\s*\{[\s\S]*z-index:\s*3;[\s\S]*pointer-events:\s*none;/, "Outgoing recent page title snapshots need their own layer above the incoming title.");
-assert.match(styles, /\.recent-folder-logo\.site-icon-generic-fallback,\s*\.history-site-logo\.site-icon-generic-fallback,[\s\S]*padding:\s*0;[\s\S]*object-fit:\s*cover;/, "Recent/history generic fallback icons must render the complete fallback SVG without an extra padded tile.");
+assert.match(styles, /\.recent-folder-logo\.site-icon-generic-fallback,[\s\S]*padding:\s*0;[\s\S]*object-fit:\s*cover;/, "Recent generic fallback icons must render the complete fallback SVG without an extra padded tile.");
