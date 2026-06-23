@@ -11,7 +11,7 @@ Wayleaf uses browser extension APIs to show and manage the new tab workspace:
 - Browsing history: read locally to show recent browsing, repeated site groups, local search suggestions, and user-triggered history deletion.
 - Bookmarks: read locally to show a selected bookmark folder and support user-triggered bookmark deletion.
 - Tabs: used to open search and AI pages, support multi-search, include long-open pages in recent browsing, and coordinate video Picture-in-Picture behavior.
-- Storage: used to save theme, language, favorite sites, custom shortcuts, bookmark folder choice, pinned history, search settings, feed settings, sync metadata, icon cache, and short-lived AI prompt handoff data.
+- Storage: used to save theme, language, favorite sites, custom shortcuts, bookmark folder choice, pinned history, search settings, sync metadata, icon cache, and short-lived AI prompt handoff data.
 - Host access for `http://*/*` and `https://*/*`: used to discover site icons and manifests for user-visible URLs, support AI page handoff on supported providers, and support video Picture-in-Picture on pages with standard HTML5 video.
 - Scripting: used to inject helper scripts for AI prompt handoff and video Picture-in-Picture behavior.
 - Alarms: used to schedule once-daily automatic settings sync while enabled.
@@ -24,7 +24,6 @@ Some features contact third-party sites as part of user-visible behavior:
 
 - Search queries go to the search engine selected by the user.
 - AI prompts go to the AI provider selected by the user. The provider's account, privacy, and data rules apply after navigation.
-- Feed requests go to built-in or user-added RSS/JSON sources.
 - Icon discovery may request a target site's root page, manifest, icon file, Chrome favicon endpoint, or remote brand icon provider.
 
 ## Sync
@@ -33,7 +32,7 @@ When Chrome extension sync is available and enabled in Wayleaf, selected setting
 
 ## Data Sharing
 
-Wayleaf does not sell, rent, or transfer user data to a Wayleaf-operated backend. Third-party sites receive only the requests needed for the features the user uses, such as searches, AI prompts, feeds, or icon discovery.
+Wayleaf does not sell, rent, or transfer user data to a Wayleaf-operated backend. Third-party sites receive only the requests needed for the features the user uses, such as searches, AI prompts, or icon discovery.
 
 ## Contact
 

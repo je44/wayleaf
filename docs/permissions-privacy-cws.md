@@ -9,7 +9,7 @@ This document explains the current Manifest V3 permission surface. It does not r
 | `bookmarks` | Reads the user-selected bookmark folder, renders bookmark cards, watches bookmark changes, and removes a bookmark only when the user triggers deletion. |
 | `history` | Reads recent browser history, groups repeated site visits, reads visit counts, and deletes history URLs only when the user triggers deletion. |
 | `favicon` | Uses Chrome favicon URLs as one step in the site icon fallback chain. |
-| `storage` | Stores theme, language, favorite sites, custom portals, bookmark folder choice, pinned history, search settings, feed settings, sync metadata, icon cache, and short-lived AI prompt handoff data. |
+| `storage` | Stores theme, language, favorite sites, custom portals, bookmark folder choice, pinned history, search settings, sync metadata, icon cache, and short-lived AI prompt handoff data. |
 | `tabs` | Opens multi-target searches, reads open tabs to include long-open pages in recent browsing, and coordinates video Picture-in-Picture state. |
 | `scripting` | Injects helper scripts for AI direct-submit handoff after navigation and video Picture-in-Picture support on video pages. |
 | `alarms` | Schedules daily automatic settings sync while the extension is enabled. |
@@ -38,7 +38,6 @@ Network behavior is user-driven or display-driven:
 
 - Search queries go to the selected search engine.
 - AI prompts go to the selected AI provider.
-- Feed requests go to built-in or user-added RSS/JSON sources.
 - Icon discovery may request a target site's root page, manifest, icon file, Chrome favicon endpoint, or remote brand icon provider.
 
 Short-lived AI prompt handoff uses `aiDirectPrompts` plus `_wayleaf_prompt`. Some providers also use `_wayleaf_text` in the URL fragment as a fallback, then `ai-submit.js` cleans the token/fragment from the URL.
@@ -47,7 +46,7 @@ Short-lived AI prompt handoff uses `aiDirectPrompts` plus `_wayleaf_prompt`. Som
 
 Use the current implementation as the source of truth when filling the CWS privacy form:
 
-- Single purpose: new-tab productivity workspace with search, shortcuts, selected bookmarks, recent browsing, feeds, theming, sync, and AI page handoff.
+- Single purpose: new-tab productivity workspace with search, shortcuts, selected bookmarks, recent browsing, theming, sync, and AI page handoff.
 - Data collection: no off-browser backend collection by Wayleaf.
 - Browsing history: used locally to render recent browsing and local search suggestions.
 - Bookmarks: used locally to render the selected folder and support deletion from the extension UI.

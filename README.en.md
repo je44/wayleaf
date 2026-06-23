@@ -6,7 +6,7 @@
 
 <p align="center">
   <strong>Turn Chrome's new tab page into a local-first workspace.</strong><br>
-  Search, shortcuts, selected bookmarks, recent browsing, tech feeds, and AI commands live on one screen.
+  Search, shortcuts, selected bookmarks, recent browsing, and AI commands live on one screen.
 </p>
 
 <p align="center">
@@ -27,7 +27,7 @@ Most new-tab sessions start with the same small set of actions: open a frequent 
 
 `Wayleaf` makes a few deliberate tradeoffs:
 
-- **One screen for the next action**: shortcuts, bookmarks, history, search, feeds, and AI commands share one workspace.
+- **One screen for the next action**: shortcuts, bookmarks, history, search, and AI commands share one workspace.
 - **Local-first by default**: no backend account. Preferences, custom shortcuts, pinned pages, and bookmark choices stay in Chrome extension storage.
 - **Dense but controlled**: built-in categories are ready to use, while selected bookmarks and up to 48 custom shortcuts keep the page personal.
 - **Directly loadable**: Manifest V3, no build step, and release packages that can be unzipped and loaded as a Chrome extension.
@@ -42,7 +42,6 @@ Most new-tab sessions start with the same small set of actions: open a frequent 
 | Show a bookmark folder | Pick one Chrome bookmark folder; Wayleaf highlights sites added in the last 3 days and groups the rest by title initial. |
 | Collect high-frequency sites | Favorite sites are deduplicated, and sites from the active bookmark folder can be added directly to favorites. |
 | Send a prompt to AI | Use `/gpt`, `/claude`, `/gemini`, `/grok`, `/deepseek`, `/doubao`, `/kimi`, or `/glm` to open the matching AI site and try to fill the prompt. |
-| Read tech feeds | Built-in Chinese and English tech sources are included, and custom RSS/JSON sources can be added. |
 | Tune appearance and sync | System/light/dark themes, preset color pairs, custom light/dark primary and secondary colors, manual sync, and once-daily auto sync while enabled are supported. |
 
 The interface follows the browser language for Chinese, English, Japanese, Korean, Spanish, French, or German.
@@ -122,7 +121,6 @@ Expected network behavior:
 
 - Search sends the query to the search engine you choose.
 - AI commands send the prompt to the AI website you choose. Account, privacy, and data rules are controlled by that provider.
-- The feeds panel requests built-in or custom RSS/JSON sources.
 - Site icon discovery may request icon or manifest resources from the target site.
 
 See [PRIVACY.md](PRIVACY.md) for the full privacy policy.
