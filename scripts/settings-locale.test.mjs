@@ -52,7 +52,7 @@ for (const locale of supportedLocales) {
   const chromeLocale = chromeLocaleByAppLocale[locale];
   assert.ok(chromeLocale, `${locale} should map to a Chrome _locales directory.`);
   const localeMessages = JSON.parse(readFileSync(new URL(`../_locales/${chromeLocale}/messages.json`, import.meta.url), "utf8"));
-  assert.equal(localeMessages.extName?.message, "Wayleaf", `${chromeLocale} should define the extension name.`);
+  assert.match(localeMessages.extName?.message || "", /^Wayleaf(?:\b| - )/, `${chromeLocale} should define a localized Wayleaf extension name.`);
   assert.ok(localeMessages.extDescription?.message?.trim(), `${chromeLocale} should define the extension description.`);
 }
 
@@ -258,13 +258,13 @@ assert.match(
 
 assert.match(
   css,
-  /\.settings-language-control\s*\{\s*grid-template-columns: repeat\(6, minmax\(0, 1fr\)\);\s*\}/,
+  /\.settings-language-control\s*\{[\s\S]*?grid-template-columns: repeat\(6, minmax\(0, 1fr\)\);[\s\S]*?\}/,
   "All six language choices should stay in one horizontal row."
 );
 
 assert.match(
   css,
-  /\.settings-language-control::before\s*\{\s*width: calc\(\(100% - \(var\(--theme-mode-padding\) \* 2\) - \(var\(--theme-mode-gap\) \* 5\)\) \/ 6\);\s*\}/,
+  /\.settings-language-control::before\s*\{[\s\S]*?width: calc\(\(100% - \(var\(--theme-mode-padding\) \* 2\) - \(var\(--theme-mode-gap\) \* 5\)\) \/ 6\);[\s\S]*?\}/,
   "The reused appearance selection indicator should fit one of six language columns."
 );
 

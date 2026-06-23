@@ -1,8 +1,9 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 
 const source = readFileSync(new URL("../newtab.js", import.meta.url), "utf8");
 const siteIconIndex = JSON.parse(readFileSync(new URL("../icons/sites/index.json", import.meta.url), "utf8"));
+const siteIconFiles = new Set(readdirSync(new URL("../icons/sites/", import.meta.url)).filter((fileName) => fileName !== "index.json"));
 const zhihuSvgSource = readFileSync(new URL("../icons/sites/zhihu.svg", import.meta.url), "utf8");
 const linkedInSvgSource = readFileSync(new URL("../icons/sites/linkedin.svg", import.meta.url), "utf8");
 const grokSvgSource = readFileSync(new URL("../icons/sites/grok.svg", import.meta.url), "utf8");
@@ -58,6 +59,12 @@ const ORIGINAL_ARTWORK_BRAND_TILE_SITE_KEYS_FOR_TEST = new Set([
   "jd.com"
 ]);
 const REMOTE_BRAND_ICON_DIRECT_FETCH_SCORE_MIN = 90;
+
+assert.deepEqual(
+  siteIconIndex.filter((fileName) => !siteIconFiles.has(fileName)),
+  [],
+  "Every site icon index entry must point to a packaged icon file."
+);
 
 assert.match(source, /viewbox=auto/, "Simple Icons CDN requests should normalize the SVG viewBox.");
 assert.match(source, /@lobehub\/icons-static-svg/, "LobeHub static SVG package must be available as a supplemental remote provider.");

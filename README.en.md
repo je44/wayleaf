@@ -114,9 +114,9 @@ Search Settings shows the built-in AI engines, triggers, search links, and the p
 | `favicon` | Show site icons through Chrome's favicon support. |
 | `storage` | Save theme, shortcuts, bookmark choice, pinned pages, sync state, and layout preferences. |
 | `alarms` | Trigger once-daily auto sync while the extension is enabled. |
-| `tabs` | Open search results, AI pages, and multiple search targets. |
-| `scripting` | Support AI page handoff and prompt fill. |
-| `http://*/*`, `https://*/*` | Recognize web shortcuts, fetch site icons, and assist supported AI pages. |
+| `tabs` | Open search results, AI pages, and multiple search targets, and coordinate video Picture-in-Picture state. |
+| `scripting` | Support AI page handoff, prompt fill, and video Picture-in-Picture helpers on video pages. |
+| `http://*/*`, `https://*/*` | Recognize web shortcuts, fetch site icons, assist supported AI pages, and support Picture-in-Picture on standard HTML5 video pages. |
 
 Expected network behavior:
 
@@ -124,6 +124,8 @@ Expected network behavior:
 - AI commands send the prompt to the AI website you choose. Account, privacy, and data rules are controlled by that provider.
 - The feeds panel requests built-in or custom RSS/JSON sources.
 - Site icon discovery may request icon or manifest resources from the target site.
+
+See [PRIVACY.md](PRIVACY.md) for the full privacy policy.
 
 ## Local Development
 
