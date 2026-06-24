@@ -142,6 +142,7 @@ function createControllerHarness() {
       }
     },
     runtime: {
+      id: "wayleaf-test",
       sendMessage(message) {
         coordinatorRequests.push(message);
         return Promise.resolve({ ok: true });
@@ -358,6 +359,43 @@ disabledHarness.dispatch("playing", disabledHarness.video);
 await settle();
 assert.equal((await disabledHarness.command("enter"))?.entered, true, "Generic PiP should retry videos that expose disablePictureInPicture.");
 assert.equal(disabledHarness.video.disablePictureInPicture, false, "Wayleaf should clear the per-video PiP disabled flag before requesting PiP.");
+
+const invalidatedVideoHarness = createControllerHarness();
+invalidatedVideoHarness.documentMock.querySelectorAll = querySelectorAllForLightAndShadow([invalidatedVideoHarness.video]);
+invalidatedVideoHarness.storageListeners[0]({ videoPipGlobalEnabled: { newValue: true } }, "local");
+invalidatedVideoHarness.video.paused = false;
+Object.defineProperty(invalidatedVideoHarness.video, "disablePictureInPicture", {
+  configurable: true,
+  get() {
+    throw new Error("Extension context invalidated.");
+  },
+  set() {}
+});
+invalidatedVideoHarness.documentMock.visibilityState = "hidden";
+invalidatedVideoHarness.dispatch("playing", invalidatedVideoHarness.video);
+await settle();
+assert.equal((await invalidatedVideoHarness.command("enter"))?.entered, false, "A stale content-script video should fail closed instead of reporting an extension error.");
+
+const invalidatedDomHarness = createControllerHarness();
+invalidatedDomHarness.storageListeners[0]({ videoPipGlobalEnabled: { newValue: true } }, "local");
+invalidatedDomHarness.video.paused = false;
+invalidatedDomHarness.documentMock.querySelectorAll = () => {
+  throw new Error("Extension context invalidated.");
+};
+invalidatedDomHarness.documentMock.visibilityState = "hidden";
+const staleDomRequestCount = invalidatedDomHarness.coordinatorRequests.length;
+assert.doesNotThrow(() => invalidatedDomHarness.dispatch("playing", invalidatedDomHarness.video), "Stale content-script DOM scans must be swallowed at the query boundary.");
+await settle();
+assert.equal(invalidatedDomHarness.coordinatorRequests.length, staleDomRequestCount, "A stale content-script DOM scan should not send a new PiP request.");
+
+const invalidatedCommandHarness = createControllerHarness();
+Object.defineProperty(invalidatedCommandHarness.documentMock, "visibilityState", {
+  configurable: true,
+  get() {
+    throw new Error("Extension context invalidated.");
+  }
+});
+assert.equal((await invalidatedCommandHarness.command("enter"))?.entered, false, "A stale coordinator command should fail closed instead of throwing.");
 
 const shadowHarness = createControllerHarness();
 shadowHarness.video.paused = false;

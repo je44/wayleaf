@@ -43,6 +43,7 @@ assert.match(source, /const animationHandle = \{[\s\S]*activeRecentFolderPageSwi
 assert.match(source, /outgoingCards\.forEach\(\(card, index\) => \{[\s\S]*card\.animate\(\[[\s\S]*translate3d\(\$\{-vector \* outgoingOffset\}px/, "Recent card body switches must keep a directional WAAPI fallback for outgoing snapshots.");
 assert.match(source, /enterCards\.forEach\(\(card, index\) => \{[\s\S]*card\.animate\(\[[\s\S]*translate3d\(\$\{vector \* incomingOffset\}px/, "Recent card body switches must keep a directional WAAPI fallback for incoming cards.");
 assert.match(source, /pageIndicator\.className = "recent-card-page-indicator";/, "Recent card drawer needs a page indicator container.");
+assert.doesNotMatch(source, /bottomBar\.setAttribute\("aria-hidden",\s*"true"\)/, "Recent card drawer controls must not live inside an aria-hidden container.");
 assert.match(source, /pages\.forEach\(\(_, pageIndex\) => \{[\s\S]*dot\.className = "recent-card-page-dot";[\s\S]*pageIndicator\.append\(dot\);[\s\S]*\}\);/, "Recent card drawer must render one indicator dot per same-site page.");
 assert.match(source, /pageIndicator\.querySelectorAll\("\.recent-card-page-dot"\)\.forEach\(\(dot, dotIndex\) => \{[\s\S]*dot\.classList\.toggle\("active", dotIndex === index\);[\s\S]*\}\);/, "Recent card switching must update the active page indicator.");
 assert.match(source, /bottomBar\.append\(pageIndicator,\s*controls\);/, "Recent card drawer should place indicators before the existing right-side controls.");

@@ -3562,7 +3562,7 @@ function setActiveSurfacePanel(panelId) {
   const isOpeningSurfacePanel = hasActiveSurfacePanel && !previousPanelId;
   if (surfaceBackdrop && isOpeningSurfacePanel) {
     surfaceBackdrop.hidden = false;
-    surfaceBackdrop.setAttribute("aria-hidden", "false");
+    surfaceBackdrop.removeAttribute("tabindex");
     // Flush hidden -> visible so the backdrop opacity transition starts from the closed state.
     surfaceBackdrop.getBoundingClientRect();
   }
@@ -3575,7 +3575,9 @@ function setActiveSurfacePanel(panelId) {
       surfaceBackdrop.blur();
     }
     surfaceBackdrop.hidden = !activeSurfacePanelId && !previousPanelId;
-    surfaceBackdrop.setAttribute("aria-hidden", String(!activeSurfacePanelId));
+    if (!activeSurfacePanelId) {
+      surfaceBackdrop.tabIndex = -1;
+    }
   }
   syncSurfaceChromeState();
   document.querySelectorAll(".panel").forEach((panel) => {
@@ -11722,7 +11724,6 @@ function createRecentFolderItem(group, options = {}) {
   pageIndicator.className = "recent-card-page-indicator";
   pageIndicator.setAttribute("aria-hidden", "true");
   bottomBar.className = "recent-card-bottom-bar";
-  bottomBar.setAttribute("aria-hidden", "true");
 
   let activePageAnimation = null;
   let hoverCloseTimer = 0;

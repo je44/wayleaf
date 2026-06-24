@@ -44,6 +44,12 @@ assert.doesNotMatch(
   "Closing settings should not leave the same launcher focus ring on the top-right control."
 );
 
+assert.doesNotMatch(
+  source,
+  /surfaceBackdrop\.setAttribute\("aria-hidden"/,
+  "The focusable navigation backdrop must not be hidden from accessibility while it can retain focus."
+);
+
 assert.match(
   styles,
   /\.panel-header :is\(h1, h2\):focus\s*\{\s*outline:\s*0;\s*\}/,
