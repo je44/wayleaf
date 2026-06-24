@@ -4,14 +4,22 @@
   const CONTROLLER_KEY = "__wayleafVideoPipController";
   const GLOBAL_ENABLED_STORAGE_KEY = "videoPipGlobalEnabled";
   const TOGGLE_PIN_ACTION = "wayleaf:toggle-video-pip-pin";
+  const EXTRACT_START_ACTION = "wayleaf:social-video-extract-start";
+  const EXTRACT_STATUS_ACTION = "wayleaf:social-video-extract-status";
   const REQUEST_ACTION = "wayleaf:video-pip-request";
   const COMMAND_ACTION = "wayleaf:video-pip-command";
+  const EXTRACT_HIGHLIGHT_COLOR = "#00b8d9";
+  const MIN_EXTRACT_VIDEO_AREA = 12000;
   let globalEnabled = false;
   let pinned = false;
   let entering = false;
+  let extractEntering = false;
+  let extractorActive = false;
   let exiting = false;
   let managedPipNeedsCleanup = false;
   let managedPipVideo = null;
+  let extractTargetVideo = null;
+  let extractOverlay = null;
   let extensionContextInvalid = false;
   let pendingVideoScan = false;
   let disposed = false;
@@ -24,6 +32,9 @@
     dispose() {
       disposed = true;
       pendingVideoScan = false;
+      extractorActive = false;
+      extractOverlay?.remove();
+      extractOverlay = null;
       for (const [type, listener, options] of documentListeners.splice(0)) {
         try {
           document.removeEventListener(type, listener, options);
@@ -145,6 +156,31 @@
     }
   }
 
+  function visibleVideoRect(video) {
+    try {
+      const rect = video.getBoundingClientRect?.();
+      const width = Math.max(0, Number(rect?.width || 0));
+      const height = Math.max(0, Number(rect?.height || 0));
+      const left = Number(rect?.left || 0);
+      const top = Number(rect?.top || 0);
+      const right = Number.isFinite(Number(rect?.right)) ? Number(rect.right) : left + width;
+      const bottom = Number.isFinite(Number(rect?.bottom)) ? Number(rect.bottom) : top + height;
+      if (
+        width * height < MIN_EXTRACT_VIDEO_AREA ||
+        right <= 0 ||
+        bottom <= 0 ||
+        left >= Number(window.innerWidth || right) ||
+        top >= Number(window.innerHeight || bottom)
+      ) {
+        return null;
+      }
+      return { left, top, width, height };
+    } catch (error) {
+      noteExtensionContextError(error);
+      return null;
+    }
+  }
+
   function queryVideos(root = document, seen = new Set()) {
     if (disposed || extensionContextInvalid || seen.has(root)) {
       return [];
@@ -252,6 +288,142 @@
         supportsPictureInPicture(video)
       ))
       .sort((left, right) => videoArea(right) - videoArea(left))[0] || null;
+  }
+
+  function pickLargestExtractableVideo() {
+    return queryVideos()
+      .filter((video) => supportsPictureInPicture(video) && visibleVideoRect(video))
+      .sort((left, right) => videoArea(right) - videoArea(left))[0] || null;
+  }
+
+  function pointInsideRect(rect, x, y) {
+    return x >= rect.left && x <= rect.left + rect.width && y >= rect.top && y <= rect.top + rect.height;
+  }
+
+  function pickExtractableVideoAtPoint(x, y) {
+    return queryVideos()
+      .filter((video) => {
+        const rect = visibleVideoRect(video);
+        return rect && pointInsideRect(rect, x, y) && supportsPictureInPicture(video);
+      })
+      .sort((left, right) => videoArea(right) - videoArea(left))[0] || null;
+  }
+
+  function ensureExtractOverlay() {
+    if (extractOverlay?.isConnected) {
+      return extractOverlay;
+    }
+    const overlay = document.createElement("div");
+    overlay.setAttribute("aria-hidden", "true");
+    overlay.style.setProperty("all", "initial");
+    overlay.style.position = "fixed";
+    overlay.style.zIndex = "2147483647";
+    overlay.style.boxSizing = "border-box";
+    overlay.style.display = "none";
+    overlay.style.border = `3px dashed ${EXTRACT_HIGHLIGHT_COLOR}`;
+    overlay.style.borderRadius = "8px";
+    overlay.style.background = "rgb(0 184 217 / 10%)";
+    overlay.style.pointerEvents = "none";
+    overlay.style.userSelect = "none";
+    (document.body || document.documentElement)?.append(overlay);
+    extractOverlay = overlay;
+    return overlay;
+  }
+
+  function updateExtractOverlay(video) {
+    const overlay = ensureExtractOverlay();
+    const rect = video ? visibleVideoRect(video) : null;
+    extractTargetVideo = rect ? video : null;
+    if (!rect) {
+      overlay.style.display = "none";
+      return;
+    }
+    overlay.style.left = `${Math.round(rect.left)}px`;
+    overlay.style.top = `${Math.round(rect.top)}px`;
+    overlay.style.width = `${Math.round(rect.width)}px`;
+    overlay.style.height = `${Math.round(rect.height)}px`;
+    overlay.style.display = "grid";
+  }
+
+  function stopVideoExtractor(type = "cancelled") {
+    extractorActive = false;
+    extractTargetVideo = null;
+    extractOverlay?.remove();
+    extractOverlay = null;
+    safeSendMessage({ action: EXTRACT_STATUS_ACTION, type });
+  }
+
+  function startVideoExtractor() {
+    if (extractorActive) {
+      stopVideoExtractor("cancelled");
+      return false;
+    }
+    const video = pickLargestExtractableVideo();
+    if (!video) {
+      return false;
+    }
+    extractorActive = true;
+    updateExtractOverlay(video);
+    safeSendMessage({ action: EXTRACT_STATUS_ACTION, type: "started" });
+    return true;
+  }
+
+  async function enterExtractedPictureInPicture(video) {
+    if (extractEntering || !video || !supportsPictureInPicture(video) || document.pictureInPictureEnabled !== true) {
+      return false;
+    }
+    if (!allowPictureInPicture(video)) {
+      return false;
+    }
+    extractEntering = true;
+    try {
+      await video.requestPictureInPicture();
+      return true;
+    } catch {
+      return false;
+    } finally {
+      extractEntering = false;
+    }
+  }
+
+  function handleExtractorPointerMove(event) {
+    if (!extractorActive) {
+      return;
+    }
+    updateExtractOverlay(pickExtractableVideoAtPoint(event.clientX, event.clientY));
+  }
+
+  function handleExtractorClick(event) {
+    if (!extractorActive) {
+      return;
+    }
+    const video = pickExtractableVideoAtPoint(event.clientX, event.clientY) || extractTargetVideo;
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    if (!video) {
+      stopVideoExtractor("cancelled");
+      return;
+    }
+    extractorActive = false;
+    extractOverlay?.remove();
+    extractOverlay = null;
+    enterExtractedPictureInPicture(video).then((entered) => {
+      stopVideoExtractor(entered ? "entered" : "failed");
+    });
+  }
+
+  function handleExtractorKeydown(event) {
+    if (extractorActive && event.key === "Escape") {
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      stopVideoExtractor("cancelled");
+    }
+  }
+
+  function handleExtractorViewportChange() {
+    if (extractorActive) {
+      updateExtractOverlay(extractTargetVideo);
+    }
   }
 
   function notifyCoordinator(type) {
@@ -384,6 +556,10 @@
     };
     chrome.storage.onChanged.addListener(storageChangeListener);
     runtimeMessageListener = (message, _sender, sendResponse) => {
+      if (message?.action === EXTRACT_START_ACTION) {
+        sendResponse({ ok: true, extractorActive: startVideoExtractor() });
+        return;
+      }
       if (message?.action === TOGGLE_PIN_ACTION) {
         pinned = !pinned;
         if (enabled()) {
@@ -434,6 +610,10 @@
   }
 
   addDocumentListener("visibilitychange", handleVisibilityChange, true);
+  addDocumentListener("pointermove", handleExtractorPointerMove, true);
+  addDocumentListener("click", handleExtractorClick, true);
+  addDocumentListener("keydown", handleExtractorKeydown, true);
+  addDocumentListener("scroll", handleExtractorViewportChange, true);
   addDocumentListener("play", handleVideoPlayback, true);
   addDocumentListener("playing", handleVideoPlayback, true);
   addDocumentListener("loadedmetadata", handleVideoPlayback, true);

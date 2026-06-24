@@ -40,6 +40,7 @@ const LANGUAGE_STORAGE_KEY = "languagePreference";
 const THEME_BOOT_STORAGE_KEY = "__wayleaf_theme_boot__";
 const SEARCH_SETTINGS_STORAGE_KEY = "searchSettings";
 const VIDEO_PIP_GLOBAL_ENABLED_STORAGE_KEY = "videoPipGlobalEnabled";
+const SOCIAL_VIDEO_EXTRACTOR_ENABLED_STORAGE_KEY = "socialVideoExtractorEnabled";
 const FIRST_PAINT_CACHE_STORAGE_KEY = "__wayleaf_first_paint_cache__";
 const FIRST_PAINT_CACHE_VERSION = 5;
 const AI_DIRECT_PROMPT_STORAGE_KEY = "aiDirectPrompts";
@@ -1072,6 +1073,10 @@ const MESSAGES = {
     videoPipLabDescription: "播放中的视频标签页切到后台时，自动打开系统小窗播放器。",
     videoPipGlobalLabel: "全局允许视频自动画中画",
     videoPipGlobalHint: "支持使用标准 HTML5 视频的网页；特殊播放器可通过平台适配扩展。也可在视频标签页点击 Wayleaf 工具栏图标，仅钉选当前标签页。",
+    socialVideoExtractorTitle: "社交视频小窗提取",
+    socialVideoExtractorDescription: "用于小红书这类社交笔记页里的可播放视频，和纯视频网站的画中画分开运行。",
+    socialVideoExtractorLabel: "启用小红书视频提取",
+    socialVideoExtractorHint: "在小红书笔记页点击 Wayleaf 工具栏图标，移动到视频区域会显示墨绿虚线识别框；再点击视频即可打开系统小窗。",
     languageSettingsTitle: "语言",
     appearanceModeTitle: "外观",
     themeModeSystem: "跟随系统",
@@ -1268,6 +1273,10 @@ const MESSAGES = {
     videoPipLabDescription: "",
     videoPipGlobalLabel: "全域影片自動畫中畫",
     videoPipGlobalHint: "支援標準 HTML5 影片；特殊播放器可用平台適配擴充。點 Wayleaf 工具列圖標可只釘目前分頁。",
+    socialVideoExtractorTitle: "社交影片小窗提取",
+    socialVideoExtractorDescription: "用於小紅書這類社交筆記頁裡的可播放影片，和純影片網站的畫中畫分開運作。",
+    socialVideoExtractorLabel: "啟用小紅書影片提取",
+    socialVideoExtractorHint: "在小紅書筆記頁點 Wayleaf 工具列圖標，移到影片區域會顯示墨綠虛線識別框；再點影片即可開啟系統小窗。",
     languageSettingsTitle: "語言",
     appearanceModeTitle: "外觀",
     themeModeSystem: "跟隨系統",
@@ -1449,6 +1458,10 @@ const MESSAGES = {
     videoPipLabDescription: "Open the system floating player when a playing video tab moves to the background.",
     videoPipGlobalLabel: "Allow automatic video Picture-in-Picture globally",
     videoPipGlobalHint: "Pages using standard HTML5 video are supported; platform adapters can extend special players. Click the Wayleaf toolbar icon on a video tab to pin only that tab.",
+    socialVideoExtractorTitle: "Social video mini-player extraction",
+    socialVideoExtractorDescription: "For playable videos inside social note pages such as Xiaohongshu, separate from Picture-in-Picture on dedicated video sites.",
+    socialVideoExtractorLabel: "Enable Xiaohongshu video extraction",
+    socialVideoExtractorHint: "On a Xiaohongshu note page, click the Wayleaf toolbar icon, move over the video to see the dark-green dashed detection frame, then click the video to open the system mini-player.",
     languageSettingsTitle: "Language",
     appearanceModeTitle: "Appearance",
     themeModeSystem: "System",
@@ -1589,6 +1602,10 @@ const MESSAGES = {
     videoPipLabDescription: "再生中の動画タブをバックグラウンドに移すと、システムの小窓プレーヤーを自動で開きます。",
     videoPipGlobalLabel: "動画の自動ピクチャーインピクチャーを全体で許可",
     videoPipGlobalHint: "標準 HTML5 動画を使うページに対応し、特殊なプレーヤーはプラットフォームアダプターで拡張できます。動画タブで Wayleaf のツールバーアイコンを押すと、そのタブだけを固定できます。",
+    socialVideoExtractorTitle: "ソーシャル動画ミニプレーヤー抽出",
+    socialVideoExtractorDescription: "小紅書のようなソーシャル投稿ページ内の再生動画向けで、専用動画サイトのピクチャーインピクチャーとは分けて動作します。",
+    socialVideoExtractorLabel: "小紅書動画抽出を有効化",
+    socialVideoExtractorHint: "小紅書の投稿ページで Wayleaf のツールバーアイコンをクリックし、動画に移動すると濃い緑の破線検出枠が表示されます。動画をクリックするとシステムのミニプレーヤーで開きます。",
     languageSettingsTitle: "言語",
     appearanceModeTitle: "外観",
     themeModeSystem: "システム",
@@ -1681,6 +1698,10 @@ const MESSAGES = {
     videoPipLabDescription: "재생 중인 동영상 탭을 백그라운드로 전환하면 시스템 플로팅 플레이어를 자동으로 엽니다.",
     videoPipGlobalLabel: "동영상 자동 화면 속 화면 전역 허용",
     videoPipGlobalHint: "표준 HTML5 동영상을 사용하는 페이지를 지원하며 특수 플레이어는 플랫폼 어댑터로 확장할 수 있습니다. 동영상 탭에서 Wayleaf 도구 모음 아이콘을 누르면 해당 탭만 고정할 수 있습니다.",
+    socialVideoExtractorTitle: "소셜 동영상 미니 플레이어 추출",
+    socialVideoExtractorDescription: "샤오홍슈 같은 소셜 노트 페이지 안의 재생 동영상용이며, 전용 동영상 사이트의 화면 속 화면과 분리되어 동작합니다.",
+    socialVideoExtractorLabel: "샤오홍슈 동영상 추출 사용",
+    socialVideoExtractorHint: "샤오홍슈 노트 페이지에서 Wayleaf 도구 모음 아이콘을 누르고 동영상 위로 이동하면 짙은 초록색 점선 감지 프레임이 표시됩니다. 동영상을 클릭하면 시스템 미니 플레이어로 열립니다.",
     languageSettingsTitle: "언어",
     appearanceModeTitle: "모양",
     themeModeSystem: "시스템",
@@ -1773,6 +1794,10 @@ const MESSAGES = {
     videoPipLabDescription: "Abre el reproductor flotante del sistema al mover al fondo una pestaña con vídeo en reproducción.",
     videoPipGlobalLabel: "Permitir vídeo automático en imagen dentro de imagen globalmente",
     videoPipGlobalHint: "Se admiten las páginas con vídeo HTML5 estándar; los adaptadores de plataforma pueden ampliar reproductores especiales. Pulsa el icono de Wayleaf en una pestaña de vídeo para fijar solo esa pestaña.",
+    socialVideoExtractorTitle: "Extracción de mini reproductor social",
+    socialVideoExtractorDescription: "Para vídeos reproducibles dentro de notas sociales como Xiaohongshu, separado del modo imagen dentro de imagen de sitios dedicados a vídeo.",
+    socialVideoExtractorLabel: "Activar extracción de vídeo de Xiaohongshu",
+    socialVideoExtractorHint: "En una nota de Xiaohongshu, pulsa el icono de Wayleaf, mueve el cursor sobre el vídeo para ver el marco de detección verde oscuro discontinuo y haz clic en el vídeo para abrir el mini reproductor del sistema.",
     languageSettingsTitle: "Idioma",
     appearanceModeTitle: "Apariencia",
     themeModeSystem: "Sistema",
@@ -1865,6 +1890,10 @@ const MESSAGES = {
     videoPipLabDescription: "Ouvre le lecteur flottant du système lorsqu’un onglet vidéo en lecture passe en arrière-plan.",
     videoPipGlobalLabel: "Autoriser globalement la vidéo automatique en mode image dans l’image",
     videoPipGlobalHint: "Les pages utilisant la vidéo HTML5 standard sont prises en charge ; des adaptateurs de plateforme peuvent étendre les lecteurs spéciaux. Cliquez sur l’icône Wayleaf dans un onglet vidéo pour n’épingler que cet onglet.",
+    socialVideoExtractorTitle: "Extraction mini-lecteur social",
+    socialVideoExtractorDescription: "Pour les vidéos lisibles dans des pages de notes sociales comme Xiaohongshu, séparée du mode image dans l’image des sites vidéo dédiés.",
+    socialVideoExtractorLabel: "Activer l’extraction vidéo Xiaohongshu",
+    socialVideoExtractorHint: "Sur une note Xiaohongshu, cliquez sur l’icône Wayleaf, survolez la vidéo pour afficher le cadre de détection vert foncé en pointillés, puis cliquez sur la vidéo pour ouvrir le mini-lecteur système.",
     languageSettingsTitle: "Langue",
     appearanceModeTitle: "Apparence",
     themeModeSystem: "Système",
@@ -1957,6 +1986,10 @@ const MESSAGES = {
     videoPipLabDescription: "Öffnet den schwebenden Systemplayer, wenn ein laufender Video-Tab in den Hintergrund wechselt.",
     videoPipGlobalLabel: "Automatisches Video-Bild-in-Bild global erlauben",
     videoPipGlobalHint: "Seiten mit standardmäßigem HTML5-Video werden unterstützt; Plattformadapter können spezielle Player ergänzen. Klicke im Video-Tab auf das Wayleaf-Symbol, um nur diesen Tab anzupinnen.",
+    socialVideoExtractorTitle: "Social-Video als Miniplayer herauslösen",
+    socialVideoExtractorDescription: "Für abspielbare Videos in Social-Notizseiten wie Xiaohongshu, getrennt vom Bild-in-Bild-Modus reiner Videoseiten.",
+    socialVideoExtractorLabel: "Xiaohongshu-Videoextraktion aktivieren",
+    socialVideoExtractorHint: "Klicke auf einer Xiaohongshu-Notizseite auf das Wayleaf-Symbol, fahre über das Video für den dunkelgrünen gestrichelten Erkennungsrahmen und klicke auf das Video, um den System-Miniplayer zu öffnen.",
     languageSettingsTitle: "Sprache",
     appearanceModeTitle: "Darstellung",
     themeModeSystem: "System",
@@ -2566,6 +2599,7 @@ const platformSearchSettingsList = document.querySelector("#platformSearchSettin
 const resetSearchSettingsButton = document.querySelector("#resetSearchSettingsButton");
 const searchSettingsStatus = document.querySelector("#searchSettingsStatus");
 const videoPipGlobalToggle = document.querySelector("#videoPipGlobalToggle");
+const socialVideoExtractorToggle = document.querySelector("#socialVideoExtractorToggle");
 const quickSearchForm = document.querySelector("#quickSearchForm");
 const quickSearchInput = document.querySelector("#quickSearchInput");
 const quickSearchLeadingIcon = document.querySelector(".search-engine-search-icon");
@@ -2636,6 +2670,7 @@ let favoriteSitesHydrated = false;
 let onboardingStepIndex = 0;
 let onboardingPreviewActive = false;
 let videoPipGlobalEnabled = false;
+let socialVideoExtractorEnabled = true;
 let availableSiteIconFiles = new Set();
 let siteIconIndexLoaded = false;
 const whiteSvgIconDataUrlCache = new Map();
@@ -3260,7 +3295,12 @@ function applySettingsLocale() {
   videoPipLabDescription.hidden = !videoPipLabDescriptionText.trim();
   document.querySelector("#videoPipGlobalLabel").textContent = t("videoPipGlobalLabel");
   document.querySelector("#videoPipGlobalHint").textContent = t("videoPipGlobalHint");
+  document.querySelector("#socialVideoExtractorTitle").textContent = t("socialVideoExtractorTitle");
+  document.querySelector("#socialVideoExtractorDescription").textContent = t("socialVideoExtractorDescription");
+  document.querySelector("#socialVideoExtractorLabel").textContent = t("socialVideoExtractorLabel");
+  document.querySelector("#socialVideoExtractorHint").textContent = t("socialVideoExtractorHint");
   updateVideoPipGlobalToggle();
+  updateSocialVideoExtractorToggle();
   if (closeSettingsButton) {
     closeSettingsButton.title = t("settingsBackHome");
   }
@@ -3301,10 +3341,23 @@ function updateVideoPipGlobalToggle() {
   setButtonLabel(videoPipGlobalToggle, t("videoPipGlobalLabel"));
 }
 
+function updateSocialVideoExtractorToggle() {
+  if (!socialVideoExtractorToggle) {
+    return;
+  }
+  socialVideoExtractorToggle.setAttribute("aria-checked", String(socialVideoExtractorEnabled));
+  setButtonLabel(socialVideoExtractorToggle, t("socialVideoExtractorLabel"));
+}
+
 async function initVideoPipGlobalSetting() {
-  const stored = await getStoredValues({ [VIDEO_PIP_GLOBAL_ENABLED_STORAGE_KEY]: false });
+  const stored = await getStoredValues({
+    [VIDEO_PIP_GLOBAL_ENABLED_STORAGE_KEY]: false,
+    [SOCIAL_VIDEO_EXTRACTOR_ENABLED_STORAGE_KEY]: true
+  });
   videoPipGlobalEnabled = stored[VIDEO_PIP_GLOBAL_ENABLED_STORAGE_KEY] === true;
+  socialVideoExtractorEnabled = stored[SOCIAL_VIDEO_EXTRACTOR_ENABLED_STORAGE_KEY] !== false;
   updateVideoPipGlobalToggle();
+  updateSocialVideoExtractorToggle();
 }
 
 async function toggleVideoPipGlobalSetting() {
@@ -3316,6 +3369,18 @@ async function toggleVideoPipGlobalSetting() {
     videoPipGlobalEnabled = !videoPipGlobalEnabled;
     updateVideoPipGlobalToggle();
     console.warn("Failed to save video Picture-in-Picture setting", error);
+  }
+}
+
+async function toggleSocialVideoExtractorSetting() {
+  socialVideoExtractorEnabled = !socialVideoExtractorEnabled;
+  updateSocialVideoExtractorToggle();
+  try {
+    await setStoredValues({ [SOCIAL_VIDEO_EXTRACTOR_ENABLED_STORAGE_KEY]: socialVideoExtractorEnabled });
+  } catch (error) {
+    socialVideoExtractorEnabled = !socialVideoExtractorEnabled;
+    updateSocialVideoExtractorToggle();
+    console.warn("Failed to save social video extraction setting", error);
   }
 }
 
@@ -3497,6 +3562,7 @@ async function init() {
   importSettingsButton?.addEventListener("click", () => importSettingsInput?.click());
   importSettingsInput?.addEventListener("change", handleImportSettingsChange);
   videoPipGlobalToggle?.addEventListener("click", toggleVideoPipGlobalSetting);
+  socialVideoExtractorToggle?.addEventListener("click", toggleSocialVideoExtractorSetting);
   languageOptions?.addEventListener("click", handleLanguageOptionClick);
   languageOptions?.addEventListener("keydown", handleLanguageOptionsKeydown);
   settingsTabButtons.forEach((button) => {

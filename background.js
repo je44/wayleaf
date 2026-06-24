@@ -22,7 +22,14 @@ const AI_DIRECT_MAX_PROMPT_LENGTH = 12000;
 const VIDEO_PIP_TOGGLE_ACTION = "wayleaf:toggle-video-pip-pin";
 const VIDEO_PIP_REQUEST_ACTION = "wayleaf:video-pip-request";
 const VIDEO_PIP_COMMAND_ACTION = "wayleaf:video-pip-command";
+const SOCIAL_VIDEO_EXTRACT_START_ACTION = "wayleaf:social-video-extract-start";
+const SOCIAL_VIDEO_EXTRACT_STATUS_ACTION = "wayleaf:social-video-extract-status";
 const VIDEO_PIP_OWNER_STORAGE_KEY = "videoPipOwner";
+const SOCIAL_VIDEO_EXTRACTOR_ENABLED_STORAGE_KEY = "socialVideoExtractorEnabled";
+const SOCIAL_VIDEO_EXTRACT_HOSTS = new Set([
+  "xiaohongshu.com",
+  "www.xiaohongshu.com"
+]);
 const AI_DIRECT_PROVIDER_HOSTS = new Set([
   "chatgpt.com",
   "claude.ai",
@@ -114,6 +121,15 @@ function supportsVideoPip(url) {
   }
 }
 
+function supportsSocialVideoExtraction(url) {
+  try {
+    const host = new URL(url).hostname.replace(/^www\./, "");
+    return SOCIAL_VIDEO_EXTRACT_HOSTS.has(host) || SOCIAL_VIDEO_EXTRACT_HOSTS.has(`www.${host}`);
+  } catch {
+    return false;
+  }
+}
+
 let fallbackVideoPipOwner = null;
 
 async function loadVideoPipOwner() {
@@ -176,6 +192,33 @@ async function toggleVideoPipPin(tabId) {
   }
 }
 
+async function socialVideoExtractorEnabled() {
+  const storage = chrome.storage?.local || chrome.storage?.sync;
+  if (!storage?.get) {
+    return true;
+  }
+  const stored = await storage.get({ [SOCIAL_VIDEO_EXTRACTOR_ENABLED_STORAGE_KEY]: true });
+  return stored[SOCIAL_VIDEO_EXTRACTOR_ENABLED_STORAGE_KEY] !== false;
+}
+
+async function startSocialVideoExtraction(tabId) {
+  try {
+    return await chrome.tabs.sendMessage(tabId, { action: SOCIAL_VIDEO_EXTRACT_START_ACTION });
+  } catch {
+    await chrome.scripting.executeScript({
+      target: { tabId, allFrames: true },
+      files: ["video-pip.js"]
+    });
+    return chrome.tabs.sendMessage(tabId, { action: SOCIAL_VIDEO_EXTRACT_START_ACTION });
+  }
+}
+
+async function setSocialVideoExtractActionState(tabId, state, title = "Wayleaf") {
+  await chrome.action.setBadgeBackgroundColor({ tabId, color: "#00b8d9" });
+  await chrome.action.setBadgeText({ tabId, text: state === "active" ? "VID" : "" });
+  await chrome.action.setTitle({ tabId, title });
+}
+
 async function handleVideoPipAction(tab) {
   if (!Number.isInteger(tab?.id)) {
     return;
@@ -186,6 +229,17 @@ async function handleVideoPipAction(tab) {
     return;
   }
   try {
+    if (supportsSocialVideoExtraction(tab.url || "") && await socialVideoExtractorEnabled()) {
+      const result = await startSocialVideoExtraction(tab.id);
+      await setSocialVideoExtractActionState(
+        tab.id,
+        result?.extractorActive ? "active" : "idle",
+        result?.extractorActive
+          ? "Wayleaf · Move over the social video, then click to extract"
+          : "Wayleaf · No compatible social video found"
+      );
+      return;
+    }
     const result = await toggleVideoPipPin(tab.id);
     const pinned = Boolean(result?.pinned);
     await chrome.action.setBadgeBackgroundColor({ tabId: tab.id, color: "#3f7f68" });
@@ -199,6 +253,18 @@ async function handleVideoPipAction(tab) {
   } catch (error) {
     console.warn("Wayleaf video PiP pin failed", error);
   }
+}
+
+async function handleSocialVideoExtractStatus(message, sender) {
+  const tabId = sender?.tab?.id;
+  if (!Number.isInteger(tabId)) {
+    return;
+  }
+  if (message.type === "started") {
+    await setSocialVideoExtractActionState(tabId, "active", "Wayleaf · Move over the social video, then click to extract");
+    return;
+  }
+  await setSocialVideoExtractActionState(tabId, "idle", message.type === "entered" ? "Wayleaf · Social video extracted" : "Wayleaf");
 }
 
 function aiDirectPromptRequest(url) {
@@ -366,6 +432,11 @@ chrome.action?.onClicked?.addListener((tab) => {
 });
 
 chrome.runtime?.onMessage?.addListener((message, sender, sendResponse) => {
+  if (message?.action === SOCIAL_VIDEO_EXTRACT_STATUS_ACTION) {
+    handleSocialVideoExtractStatus(message, sender).catch(reportBackgroundError);
+    sendResponse({ ok: true });
+    return;
+  }
   if (message?.action !== VIDEO_PIP_REQUEST_ACTION) {
     return;
   }

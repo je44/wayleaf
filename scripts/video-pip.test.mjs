@@ -20,7 +20,11 @@ for (const locale of ["zh-CN", "zh-TW", "en", "ja", "ko", "es", "fr", "de"]) {
     "videoPipLabTitle",
     "videoPipLabDescription",
     "videoPipGlobalLabel",
-    "videoPipGlobalHint"
+    "videoPipGlobalHint",
+    "socialVideoExtractorTitle",
+    "socialVideoExtractorDescription",
+    "socialVideoExtractorLabel",
+    "socialVideoExtractorHint"
   ]) {
     if (locale === "zh-TW" && key === "videoPipLabDescription") {
       assert.equal(messages[locale]?.[key], "", `${locale}.${key} should be removed.`);
@@ -54,9 +58,19 @@ assert.match(
   "Toolbar fallback injection should refresh the PiP controller in embedded frames."
 );
 assert.match(
+  backgroundSource,
+  /supportsSocialVideoExtraction\(tab\.url \|\| ""\)[\s\S]*startSocialVideoExtraction[\s\S]*return;[\s\S]*const result = await toggleVideoPipPin/,
+  "Toolbar action should reserve social-video extraction for Xiaohongshu-style hosts and leave dedicated video sites on pinned PiP."
+);
+assert.match(
   html,
   /id="settingsLaboratoryTab"[\s\S]*data-settings-tab="laboratory"[\s\S]*id="videoPipGlobalToggle"[\s\S]*role="switch"[\s\S]*aria-checked="false"/,
   "Settings should expose the Laboratory destination and accessible global PiP switch."
+);
+assert.match(
+  html,
+  /aria-labelledby="socialVideoExtractorTitle"[\s\S]*id="socialVideoExtractorDescription"[\s\S]*id="socialVideoExtractorToggle"[\s\S]*role="switch"[\s\S]*aria-checked="true"/,
+  "Settings should expose social video extraction as a separate default-on Laboratory feature."
 );
 assert.match(
   html,
@@ -83,10 +97,31 @@ function createControllerHarness(initialController = undefined) {
   const animationFrames = new Map();
   const coordinatorRequests = [];
   let queryVideos = [];
+  const appendedElements = [];
+  const appendElement = (node) => {
+    node.isConnected = true;
+    appendedElements.push(node);
+  };
+  const makeElement = () => ({
+    isConnected: false,
+    textContent: "",
+    style: {
+      setProperty(name, value) {
+        this[name] = value;
+      }
+    },
+    setAttribute() {},
+    remove() {
+      this.isConnected = false;
+    }
+  });
   const documentMock = {
     visibilityState: "visible",
     pictureInPictureEnabled: true,
     pictureInPictureElement: null,
+    body: { append: appendElement },
+    documentElement: { append: appendElement },
+    createElement: makeElement,
     querySelectorAll(selector) {
       return selector === "video" ? queryVideos : [];
     },
@@ -139,6 +174,8 @@ function createControllerHarness(initialController = undefined) {
   const windowMock = {};
   windowMock.top = windowMock;
   windowMock.self = windowMock;
+  windowMock.innerWidth = 1280;
+  windowMock.innerHeight = 720;
   if (initialController !== undefined) {
     windowMock.__wayleafVideoPipController = initialController;
   }
@@ -234,6 +271,7 @@ function createControllerHarness(initialController = undefined) {
     video,
     replacementVideo,
     coordinatorRequests,
+    appendedElements,
     setQueryVideos(videos) {
       queryVideos = videos;
     },
@@ -269,8 +307,16 @@ function createControllerHarness(initialController = undefined) {
       }
     },
     dispatch(type, target = documentMock) {
+      const event = target && typeof target === "object" && (
+        "clientX" in target ||
+        "clientY" in target ||
+        "key" in target ||
+        "preventDefault" in target
+      )
+        ? { type, target: target.target || documentMock, ...target }
+        : { type, target };
       for (const listener of documentListeners.get(type) || []) {
-        listener({ type, target });
+        listener(event);
       }
     }
   };
@@ -302,6 +348,8 @@ documentMock.querySelectorAll = querySelectorAllForLightAndShadow([video]);
 async function settle() {
   await Promise.resolve();
   await Promise.resolve();
+  await Promise.resolve();
+  await Promise.resolve();
 }
 
 let pinResponse = null;
@@ -310,6 +358,28 @@ runtimeListeners[0]({ action: "wayleaf:toggle-video-pip-pin" }, {}, (response) =
 });
 assert.equal(pinResponse?.pinned, true, "Toolbar action should pin the current video tab.");
 assert.equal(typeof harness.mediaSessionHandler, "function", "Pinning should register the automatic PiP media-session handler.");
+
+const extractHarness = createControllerHarness();
+extractHarness.documentMock.querySelectorAll = querySelectorAllForLightAndShadow([extractHarness.video]);
+let extractStartResponse = null;
+extractHarness.runtimeListeners[0]({ action: "wayleaf:social-video-extract-start" }, {}, (response) => {
+  extractStartResponse = response;
+});
+assert.equal(extractStartResponse?.extractorActive, true, "Toolbar extraction should start a page-level video picker.");
+assert.equal(extractHarness.appendedElements.at(-1)?.style.display, "grid", "Extraction should draw the detected video overlay.");
+assert.equal(extractHarness.appendedElements.at(-1)?.textContent, "", "Extraction overlay should not cover the video with center text.");
+assert.equal(extractHarness.appendedElements.at(-1)?.style.border, "3px dashed #00b8d9", "Extraction overlay should use a lake-blue border.");
+assert.equal(extractHarness.appendedElements.at(-1)?.style.background, "rgb(0 184 217 / 10%)", "Extraction overlay fill should use 10% lake-blue transparency.");
+extractHarness.dispatch("click", {
+  clientX: 12,
+  clientY: 12,
+  preventDefault() {},
+  stopImmediatePropagation() {}
+});
+await settle();
+assert.equal(extractHarness.requestCount, 1, "Clicking a detected video should request native PiP from the page gesture.");
+assert.equal(extractHarness.appendedElements.at(-1)?.isConnected, false, "Extraction should remove the overlay after a PiP attempt.");
+assert.equal(extractHarness.coordinatorRequests.at(-1)?.type, "entered", "A successful extraction should clear the toolbar waiting state.");
 
 documentMock.visibilityState = "hidden";
 dispatch("visibilitychange");
