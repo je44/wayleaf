@@ -25,7 +25,7 @@ The runtime groups related URLs before icon lookup:
 
 ## Remote And Site Icon Fetching
 
-Remote discovery uses `credentials: "omit"` and bounded timeouts. The current providers are Simple Icons CDN, Iconify Simple Icons, and LobeHub static SVG. Provider SVGs must pass the runtime quality gate before being cached: no embedded external image/object content, no event handlers, valid geometry, and reasonable shape count.
+Remote discovery uses `credentials: "omit"` and bounded timeouts. The current provider priority is theSVG default SVGs, LobeHub static SVG, Iconify Simple Icons, then Simple Icons CDN. Provider SVGs must pass the runtime quality gate before being cached: no embedded external image/object content, no event handlers, valid geometry, and reasonable shape count.
 
 Site icon discovery fetches the site root HTML, extracts icon and manifest candidates, caps HTML bytes, caps candidates, and falls back when a candidate fails. Failed remote-brand lookups are cached briefly as misses so a missing provider icon does not refetch forever.
 

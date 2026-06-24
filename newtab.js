@@ -808,10 +808,15 @@ const SITE_ICON_FILE_BY_SITE_KEY = Object.freeze({
 });
 const REMOTE_BRAND_ICON_PROVIDERS = Object.freeze([
   {
-    id: "simple-icons-cdn",
-    index: "simple-icons",
-    packageName: "simple-icons",
-    urlForSlug: (slug) => `https://cdn.simpleicons.org/${encodeURIComponent(slug)}?viewbox=auto`
+    id: "thesvg",
+    index: "thesvg",
+    urlForSlug: (slug) => `https://thesvg.org/icons/${encodeURIComponent(slug)}/default.svg`
+  },
+  {
+    id: "lobehub",
+    index: "lobehub-static-svg",
+    packageName: "@lobehub/icons-static-svg",
+    urlForSlug: (slug) => `https://unpkg.com/@lobehub/icons-static-svg@latest/icons/${encodeURIComponent(slug)}.svg`
   },
   {
     id: "iconify",
@@ -819,10 +824,10 @@ const REMOTE_BRAND_ICON_PROVIDERS = Object.freeze([
     urlForSlug: (slug) => `https://api.iconify.design/simple-icons/${encodeURIComponent(slug)}.svg`
   },
   {
-    id: "lobehub",
-    index: "lobehub-static-svg",
-    packageName: "@lobehub/icons-static-svg",
-    urlForSlug: (slug) => `https://unpkg.com/@lobehub/icons-static-svg@latest/icons/${encodeURIComponent(slug)}.svg`
+    id: "simple-icons-cdn",
+    index: "simple-icons",
+    packageName: "simple-icons",
+    urlForSlug: (slug) => `https://cdn.simpleicons.org/${encodeURIComponent(slug)}?viewbox=auto`
   }
 ]);
 const REMOTE_BRAND_ICON_SLUGS_BY_SITE_KEY = Object.freeze({
@@ -7400,10 +7405,6 @@ function remoteBrandSvgCacheStrategy(icon) {
     brandColor: descriptor.brandColor,
     renderMode: descriptor.renderMode,
     isMonochrome: descriptor.isMonochrome,
-    tileLight: descriptor.tileLight,
-    tileDark: descriptor.tileDark,
-    glyphLight: descriptor.glyphLight,
-    glyphDark: descriptor.glyphDark,
     qualityScore: descriptor.qualityScore
   };
 }
@@ -7414,13 +7415,14 @@ async function fetchRemoteBrandIconDataUrl(parsedUrl) {
   for (const candidate of candidates) {
     for (const provider of REMOTE_BRAND_ICON_PROVIDERS) {
       try {
+        const providerSlug = await remoteBrandProviderSlugForCandidate(provider, candidate.slug);
         if (
-          !(await remoteBrandProviderHasSlug(provider, candidate.slug))
+          !providerSlug
           && candidate.score < REMOTE_BRAND_ICON_DIRECT_FETCH_SCORE_MIN
         ) {
           continue;
         }
-        const iconDataUrl = await fetchRemoteBrandSvgDataUrl(provider.urlForSlug(candidate.slug), {
+        const iconDataUrl = await fetchRemoteBrandSvgDataUrl(provider.urlForSlug(providerSlug || candidate.slug), {
           candidate,
           providerId: provider.id,
           siteKey
@@ -7437,15 +7439,21 @@ async function fetchRemoteBrandIconDataUrl(parsedUrl) {
 }
 
 async function remoteBrandProviderHasSlug(provider, slug) {
+  return Boolean(await remoteBrandProviderSlugForCandidate(provider, slug));
+}
+
+async function remoteBrandProviderSlugForCandidate(provider, slug) {
   const normalizedSlug = remoteBrandIconSlug(slug);
   if (!normalizedSlug) {
-    return false;
+    return "";
   }
   if (!provider.index) {
-    return true;
+    return normalizedSlug;
   }
   const slugs = await remoteBrandProviderSlugs(provider);
-  return slugs.has(normalizedSlug);
+  return slugs instanceof Map
+    ? slugs.get(normalizedSlug) || ""
+    : slugs.has(normalizedSlug) ? normalizedSlug : "";
 }
 
 async function remoteBrandProviderSlugs(provider) {
@@ -7481,6 +7489,9 @@ async function remoteBrandProviderSlugRequest(provider) {
   }
   if (provider.index === "iconify-simple-icons") {
     return fetchIconifyCollectionSlugs("simple-icons");
+  }
+  if (provider.index === "thesvg") {
+    return fetchTheSvgSlugs();
   }
   return new Set();
 }
@@ -7518,6 +7529,11 @@ async function fetchIconifyCollectionSlugs(prefix) {
     : []);
 }
 
+async function fetchTheSvgSlugs() {
+  const response = await fetchJsonWithTimeout("https://data.jsdelivr.com/v1/package/gh/glincker/thesvg@main/flat");
+  return remoteBrandSlugMapFromFileList(response?.files, /^\/public\/icons\/(.+)\/default\.svg$/i);
+}
+
 function remoteBrandSlugsFromFileList(files, pattern) {
   const slugs = new Set();
   if (!Array.isArray(files)) {
@@ -7528,6 +7544,24 @@ function remoteBrandSlugsFromFileList(files, pattern) {
     const match = name.match(pattern);
     if (match?.[1]) {
       slugs.add(remoteBrandIconSlug(match[1]));
+    }
+  }
+  return slugs;
+}
+
+function remoteBrandSlugMapFromFileList(files, pattern) {
+  const slugs = new Map();
+  if (!Array.isArray(files)) {
+    return slugs;
+  }
+  for (const file of files) {
+    const name = String(file?.name || "");
+    const match = name.match(pattern);
+    if (match?.[1]) {
+      const slug = remoteBrandIconSlug(match[1]);
+      if (slug && !slugs.has(slug)) {
+        slugs.set(slug, match[1]);
+      }
     }
   }
   return slugs;
@@ -7691,10 +7725,6 @@ function prepareRemoteBrandSvg(svg, options = {}) {
       `data-wayleaf-remote-brand="true"`,
       `data-wayleaf-monochrome="${isMonochrome ? "true" : "false"}"`,
       `data-wayleaf-render-mode="${descriptor.renderMode}"`,
-      `data-wayleaf-tile-light="${descriptor.tileLight}"`,
-      `data-wayleaf-tile-dark="${descriptor.tileDark}"`,
-      `data-wayleaf-glyph-light="${descriptor.glyphLight || "original"}"`,
-      `data-wayleaf-glyph-dark="${descriptor.glyphDark || "original"}"`,
       `data-wayleaf-quality="${descriptor.qualityScore}"`
     ];
     return `<svg${cleanedAttrs} ${metadataAttrs.join(" ")}${brandAttr}>`;
@@ -7706,42 +7736,11 @@ function remoteBrandSvgDescriptor(svg, options = {}) {
   const brandColor = normalizeHexColor(options.brandColor || "") || "";
   const isMonochrome = remoteBrandSvgIsMonochrome(svg);
   const renderMode = isMonochrome ? "mask" : "original";
-  const tileColors = remoteBrandDescriptorTileColors(brandColor, renderMode);
   return {
     brandColor,
     isMonochrome,
     renderMode,
-    tileLight: tileColors.light,
-    tileDark: tileColors.dark,
-    glyphLight: renderMode === "mask" ? remoteBrandGlyphColorForTile(tileColors.light, brandColor) : "",
-    glyphDark: renderMode === "mask" ? remoteBrandGlyphColorForTile(tileColors.dark, brandColor) : "",
     qualityScore: Math.max(0, Math.min(100, Math.round(Number(options.qualityScore || 0))))
-  };
-}
-
-function remoteBrandDescriptorTileColors(brandColor, renderMode = "mask") {
-  const color = normalizeHexColor(brandColor);
-  if (renderMode === "original") {
-    return {
-      light: "#ffffff",
-      dark: "#f8fafc"
-    };
-  }
-  if (!color) {
-    return {
-      light: "#ffffff",
-      dark: "#f8fafc"
-    };
-  }
-  if (nearWhiteBrandColor(color)) {
-    return {
-      light: "#000000",
-      dark: "#f8fafc"
-    };
-  }
-  return {
-    light: color,
-    dark: "#f8fafc"
   };
 }
 
@@ -7762,10 +7761,6 @@ function remoteBrandSvgDescriptorFromSource(source) {
     brandColor: normalizeHexColor(attr("brand-color")),
     isMonochrome: attr("monochrome") === "true",
     renderMode: attr("render-mode") || "mask",
-    tileLight: normalizeHexColor(attr("tile-light")),
-    tileDark: normalizeHexColor(attr("tile-dark")),
-    glyphLight: remoteBrandSvgGlyphAttribute(attr("glyph-light")),
-    glyphDark: remoteBrandSvgGlyphAttribute(attr("glyph-dark")),
     qualityScore: Number(attr("quality") || 0)
   };
 }
@@ -7773,10 +7768,6 @@ function remoteBrandSvgDescriptorFromSource(source) {
 function remoteBrandSvgDataAttribute(svg, name) {
   const match = String(svg || "").match(new RegExp(`\\sdata-wayleaf-${name}=(["'])([^"']*)\\1`, "i"));
   return match?.[2] || "";
-}
-
-function remoteBrandSvgGlyphAttribute(value) {
-  return value === "original" ? "" : normalizeHexColor(value);
 }
 
 function embeddedSvgBrandColor(value) {
@@ -8711,12 +8702,9 @@ function applySiteIconTile(icon, site, iconPath = "") {
   icon.dataset.siteKey = siteKey || "";
   const tileColor = siteIconBrandColor(siteKey, iconPath);
   const tileMode = iconPath ? "brand" : "plain";
-  const remoteDescriptor = remoteBrandSvgDescriptorFromSource(iconPath);
   const isLocalIconSource = String(iconPath || "").startsWith("icons/");
   let tileColors = genericIconTileColors(parsedUrl?.hostname || site.url || site.title);
-  if (remoteDescriptor) {
-    tileColors = remoteBrandDescriptorDisplayTileColors(remoteDescriptor);
-  } else if (iconPath && tileColor) {
+  if (iconPath && tileColor) {
     tileColors = brandIconTileColors(tileColor, siteKey, iconPath);
   }
   applyIconTile(icon, tileMode, tileColors, isLocalIconSource);
@@ -8729,15 +8717,6 @@ function siteIconBrandColor(siteKey = "", iconPath = "") {
   }
   return normalizeHexColor(siteKey ? SITE_ICON_TILE_COLOR_BY_SITE_KEY[siteKey] || "" : "")
     || embeddedSvgBrandColor(iconPath);
-}
-
-function remoteBrandDescriptorDisplayTileColors(descriptor) {
-  const light = normalizeHexColor(descriptor?.tileLight || "");
-  const dark = normalizeHexColor(descriptor?.tileDark || "");
-  if (!light || !dark) {
-    return remoteBrandDescriptorTileColors(descriptor?.brandColor || "", descriptor?.renderMode || "mask");
-  }
-  return { light, dark };
 }
 
 function brandIconTileColors(tileColor, siteKey = "", iconPath = "") {
@@ -8773,12 +8752,12 @@ function keepsBrandIconOriginal(siteKey, iconPath = "") {
   if (keepsBrandIconOriginalOnBrandTile(siteKey, iconPath)) {
     return true;
   }
-  if (MULTICOLOR_BRAND_ICON_SITE_KEYS.has(siteKey)) {
-    return true;
-  }
   const remoteDescriptor = remoteBrandSvgDescriptorFromSource(iconPath);
   if (remoteDescriptor) {
     return remoteDescriptor.renderMode === "original";
+  }
+  if (MULTICOLOR_BRAND_ICON_SITE_KEYS.has(siteKey)) {
+    return true;
   }
   if (!siteIconSourceLooksLikeSvg(iconPath)) {
     return true;
@@ -8918,11 +8897,7 @@ function iconGlyphColorForCurrentTile(icon, source = "") {
   const siteKey = icon.dataset.siteKey || siteGroupKey(safeUrl(icon.dataset.siteUrl));
   const brandColor = siteIconBrandColor(siteKey, source);
   if (isSvgDataUrl(source)) {
-    const descriptorGlyph = remoteBrandDescriptorGlyphColorForCurrentTheme(icon, source);
-    if (descriptorGlyph !== null) {
-      return descriptorGlyph;
-    }
-    return remoteBrandGlyphColorForTile(tileColor, brandColor);
+    return localBrandGlyphColorForTile(tileColor, brandColor);
   }
   if (brandColor) {
     return localBrandGlyphColorForTile(tileColor, brandColor);
@@ -8931,16 +8906,6 @@ function iconGlyphColorForCurrentTile(icon, source = "") {
     return "";
   }
   return readableIconGlyphColor(tileColor);
-}
-
-function remoteBrandDescriptorGlyphColorForCurrentTheme(icon, source) {
-  const descriptor = remoteBrandSvgDescriptorFromSource(source);
-  if (!descriptor || descriptor.renderMode !== "mask") {
-    return null;
-  }
-  return document.documentElement.dataset.theme === "dark"
-    ? descriptor.glyphDark
-    : descriptor.glyphLight;
 }
 
 function localBrandGlyphColor(tileColor) {
@@ -8964,40 +8929,6 @@ function localBrandGlyphColorForTile(tileColor, brandColor = "") {
     return brand;
   }
   return readableIconGlyphColor(tile);
-}
-
-function remoteBrandGlyphColorForTile(tileColor, brandColor = "") {
-  const tile = normalizeHexColor(tileColor);
-  const brand = normalizeHexColor(brandColor);
-  if (!tile) {
-    return "";
-  }
-  if (brand && tile !== brand && contrastRatio(tile, brand) >= 3) {
-    return "";
-  }
-  return remoteBrandGlyphColor(tile);
-}
-
-function remoteBrandGlyphColor(tileColor) {
-  const color = normalizeHexColor(tileColor);
-  if (!color) {
-    return "";
-  }
-  return remoteBrandTilePrefersDarkGlyph(color) ? "#102019" : "#ffffff";
-}
-
-function remoteBrandTilePrefersDarkGlyph(tileColor) {
-  const stats = hexColorStats(tileColor);
-  if (!stats) {
-    return false;
-  }
-  if (nearWhiteBrandColor(tileColor)) {
-    return true;
-  }
-  const whiteIsTooWeak = stats.lightContrast < 2.85 && stats.darkContrast >= 3;
-  const warmBright = stats.hue >= 30 && stats.hue <= 95 && stats.luminance >= 0.38;
-  const vividBright = stats.luminance >= 0.46 && stats.darkContrast >= stats.lightContrast + 2;
-  return whiteIsTooWeak || warmBright || vividBright;
 }
 
 function hexColorStats(tileColor) {

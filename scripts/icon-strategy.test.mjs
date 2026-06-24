@@ -75,9 +75,19 @@ assert.match(source, /function remoteBrandProviderHasSlug[\s\S]*remoteBrandProvi
 assert.match(source, /function fetchLobeHubStaticSvgSlugs/, "LobeHub provider must discover SVG slugs from the static SVG package index.");
 assert.match(source, /function fetchSimpleIconSlugs/, "Simple Icons provider must discover SVG slugs from its package index.");
 assert.match(source, /function fetchIconifyCollectionSlugs/, "Iconify provider must discover SVG slugs from the Simple Icons collection index.");
+assert.match(source, /id: "thesvg"[\s\S]*urlForSlug: \(slug\) => `https:\/\/thesvg\.org\/icons\/\$\{encodeURIComponent\(slug\)\}\/default\.svg`/, "theSVG provider must fetch the default SVG variant.");
+assert.match(source, /function fetchTheSvgSlugs[\s\S]*\/\^\\\/public\\\/icons\\\/\(\.\+\)\\\/default\\\.svg\$\/i/, "theSVG provider must discover default SVG slugs from the jsDelivr GitHub package index.");
+assert.match(
+  source,
+  /const REMOTE_BRAND_ICON_PROVIDERS = Object\.freeze\(\[\s*\{\s*id: "thesvg"[\s\S]*?\},\s*\{\s*id: "lobehub"[\s\S]*?\},\s*\{\s*id: "iconify"[\s\S]*?\},\s*\{\s*id: "simple-icons-cdn"/,
+  "Remote cloud providers must use the priority order theSVG, LobeHub, Iconify, then Simple Icons."
+);
 assert.match(source, /if \(cachedEntry\?\.request\) \{[\s\S]*return cachedEntry\.request;/, "Concurrent icon cards should share one provider index request.");
-assert.match(source, /return remoteBrandGlyphColorForTile\(tileColor, brandColor\);/, "Remote SVG data URLs must use the cloud glyph strategy.");
-assert.match(source, /return localBrandGlyphColorForTile\(tileColor, brandColor\);/, "Local brand icons must keep the local glyph strategy with known VI color recovery.");
+assert.doesNotMatch(source, /function remoteBrandGlyphColorForTile/, "Remote SVG data URLs must not fork a separate glyph strategy from local SVGs.");
+assert.match(source, /isSvgDataUrl\(source\)[\s\S]*return localBrandGlyphColorForTile\(tileColor, brandColor\);/, "Remote SVG data URLs must use the same glyph strategy as local SVGs.");
+assert.equal(source.includes("`data-wayleaf-" + "tile-light="), false, "Remote SVG descriptors must not cache display tile decisions separately from local SVG rendering.");
+assert.equal(source.includes("`data-wayleaf-" + "glyph-light="), false, "Remote SVG descriptors must not cache display glyph decisions separately from local SVG rendering.");
+assert.match(source, /if \(iconPath && tileColor\) \{[\s\S]*tileColors = brandIconTileColors\(tileColor, siteKey, iconPath\);/, "Remote SVG data URLs must use the same tile strategy entrypoint as local SVGs.");
 assert.match(source, /function remoteBrandSvgHasComplexPaint/, "Remote SVG classification must reject complex paint sources.");
 assert.match(source, /function remoteBrandSvgQuality/, "Remote SVGs must pass a quality gate before being cached.");
 assert.match(source, /function remoteBrandIconRankedCandidates/, "Remote slug candidates must be ranked before fetching.");
@@ -183,70 +193,6 @@ function localBrandGlyphColorForTile(tileColor, brandColor = "") {
   return readableIconGlyphColor(tile);
 }
 
-function hexColorStats(tileColor) {
-  const color = normalizeHexColor(tileColor);
-  if (!color) {
-    return null;
-  }
-  const [red, green, blue] = hexToRgb(color).map((channel) => channel / 255);
-  const max = Math.max(red, green, blue);
-  const min = Math.min(red, green, blue);
-  const delta = max - min;
-  let hue = 0;
-  if (delta) {
-    if (max === red) {
-      hue = 60 * (((green - blue) / delta) % 6);
-    } else if (max === green) {
-      hue = 60 * ((blue - red) / delta + 2);
-    } else {
-      hue = 60 * ((red - green) / delta + 4);
-    }
-    if (hue < 0) {
-      hue += 360;
-    }
-  }
-  return {
-    hue,
-    luminance: relativeLuminance(color),
-    lightContrast: contrastRatio(color, "#ffffff"),
-    darkContrast: contrastRatio(color, "#102019")
-  };
-}
-
-function remoteBrandTilePrefersDarkGlyph(tileColor) {
-  const stats = hexColorStats(tileColor);
-  if (!stats) {
-    return false;
-  }
-  if (nearWhiteBrandColor(tileColor)) {
-    return true;
-  }
-  const whiteIsTooWeak = stats.lightContrast < 2.85 && stats.darkContrast >= 3;
-  const warmBright = stats.hue >= 30 && stats.hue <= 95 && stats.luminance >= 0.38;
-  const vividBright = stats.luminance >= 0.46 && stats.darkContrast >= stats.lightContrast + 2;
-  return whiteIsTooWeak || warmBright || vividBright;
-}
-
-function remoteBrandGlyphColor(tileColor) {
-  const color = normalizeHexColor(tileColor);
-  if (!color) {
-    return "";
-  }
-  return remoteBrandTilePrefersDarkGlyph(color) ? "#102019" : "#ffffff";
-}
-
-function remoteBrandGlyphColorForTile(tileColor, brandColor = "") {
-  const tile = normalizeHexColor(tileColor);
-  const brand = normalizeHexColor(brandColor);
-  if (!tile) {
-    return "";
-  }
-  if (brand && tile !== brand && contrastRatio(tile, brand) >= 3) {
-    return "";
-  }
-  return remoteBrandGlyphColor(tile);
-}
-
 function remoteBrandIconSlug(value) {
   return String(value || "")
     .trim()
@@ -304,9 +250,36 @@ function remoteBrandSlugsFromFileListForTest(files, pattern) {
   return slugs;
 }
 
-function remoteBrandProviderHasSlugForTest(slugs, slug) {
+function remoteBrandSlugMapFromFileListForTest(files, pattern) {
+  const slugs = new Map();
+  if (!Array.isArray(files)) {
+    return slugs;
+  }
+  for (const file of files) {
+    const name = String(file?.name || "");
+    const match = name.match(pattern);
+    if (match?.[1]) {
+      const slug = remoteBrandIconSlug(match[1]);
+      if (slug && !slugs.has(slug)) {
+        slugs.set(slug, match[1]);
+      }
+    }
+  }
+  return slugs;
+}
+
+function remoteBrandProviderSlugForCandidateForTest(slugs, slug) {
   const normalizedSlug = remoteBrandIconSlug(slug);
-  return Boolean(normalizedSlug && slugs.has(normalizedSlug));
+  if (!normalizedSlug) {
+    return "";
+  }
+  return slugs instanceof Map
+    ? slugs.get(normalizedSlug) || ""
+    : slugs.has(normalizedSlug) ? normalizedSlug : "";
+}
+
+function remoteBrandProviderHasSlugForTest(slugs, slug) {
+  return Boolean(remoteBrandProviderSlugForCandidateForTest(slugs, slug));
 }
 
 function remoteBrandShouldFetchCandidateForTest(slugs, candidate) {
@@ -469,45 +442,14 @@ function remoteBrandIconMissCacheIsFresh(entry, ttl, now) {
   return Boolean(entry?.missing && entry?.source === "remote-brand" && siteIconCacheEntryIsFresh(entry, ttl, now));
 }
 
-function remoteBrandDescriptorTileColors(brandColor, renderMode = "mask") {
-  const color = normalizeHexColor(brandColor);
-  if (renderMode === "original") {
-    return {
-      light: "#ffffff",
-      dark: "#f8fafc"
-    };
-  }
-  if (!color) {
-    return {
-      light: "#ffffff",
-      dark: "#f8fafc"
-    };
-  }
-  if (nearWhiteBrandColor(color)) {
-    return {
-      light: "#000000",
-      dark: "#f8fafc"
-    };
-  }
-  return {
-    light: color,
-    dark: "#f8fafc"
-  };
-}
-
 function remoteBrandSvgDescriptor(svg, options = {}) {
   const brandColor = normalizeHexColor(options.brandColor || "") || "";
   const isMonochrome = remoteBrandSvgIsMonochrome(svg);
   const renderMode = isMonochrome ? "mask" : "original";
-  const tileColors = remoteBrandDescriptorTileColors(brandColor, renderMode);
   return {
     brandColor,
     isMonochrome,
     renderMode,
-    tileLight: tileColors.light,
-    tileDark: tileColors.dark,
-    glyphLight: renderMode === "mask" ? remoteBrandGlyphColorForTile(tileColors.light, brandColor) : "",
-    glyphDark: renderMode === "mask" ? remoteBrandGlyphColorForTile(tileColors.dark, brandColor) : "",
     qualityScore: Math.max(0, Math.min(100, Math.round(Number(options.qualityScore || 0))))
   };
 }
@@ -522,10 +464,6 @@ function remoteBrandSvgCacheStrategy(icon) {
     brandColor: descriptor.brandColor,
     renderMode: descriptor.renderMode,
     isMonochrome: descriptor.isMonochrome,
-    tileLight: descriptor.tileLight,
-    tileDark: descriptor.tileDark,
-    glyphLight: descriptor.glyphLight,
-    glyphDark: descriptor.glyphDark,
     qualityScore: descriptor.qualityScore
   };
 }
@@ -539,10 +477,6 @@ function remoteBrandSvgDataAttribute(svg, name) {
   return match?.[2] || "";
 }
 
-function remoteBrandSvgGlyphAttribute(value) {
-  return value === "original" ? "" : normalizeHexColor(value);
-}
-
 function remoteBrandSvgDescriptorFromSource(source) {
   const svg = decodeURIComponent(String(source || "").slice(String(source || "").indexOf(",") + 1));
   if (!/\sdata-wayleaf-remote-brand=(["'])true\1/i.test(svg)) {
@@ -553,10 +487,6 @@ function remoteBrandSvgDescriptorFromSource(source) {
     brandColor: normalizeHexColor(attr("brand-color")),
     isMonochrome: attr("monochrome") === "true",
     renderMode: attr("render-mode") || "mask",
-    tileLight: normalizeHexColor(attr("tile-light")),
-    tileDark: normalizeHexColor(attr("tile-dark")),
-    glyphLight: remoteBrandSvgGlyphAttribute(attr("glyph-light")),
-    glyphDark: remoteBrandSvgGlyphAttribute(attr("glyph-dark")),
     qualityScore: Number(attr("quality") || 0)
   };
 }
@@ -570,10 +500,6 @@ function prepareRemoteBrandSvgForTest(svg, options = {}) {
       `data-wayleaf-remote-brand="true"`,
       `data-wayleaf-monochrome="${descriptor.isMonochrome ? "true" : "false"}"`,
       `data-wayleaf-render-mode="${descriptor.renderMode}"`,
-      `data-wayleaf-tile-light="${descriptor.tileLight}"`,
-      `data-wayleaf-tile-dark="${descriptor.tileDark}"`,
-      `data-wayleaf-glyph-light="${descriptor.glyphLight || "original"}"`,
-      `data-wayleaf-glyph-dark="${descriptor.glyphDark || "original"}"`,
       `data-wayleaf-quality="${descriptor.qualityScore}"`
     ];
     return `<svg${attrs} ${metadataAttrs.join(" ")}${brandAttr}>`;
@@ -1386,24 +1312,16 @@ function siteIconBrandColorForTest(siteKey = "", iconPath = "") {
     || embeddedSvgBrandColorForTest(iconPath);
 }
 
-function remoteBrandDescriptorDisplayTileColorsForTest(descriptor) {
-  const light = normalizeHexColor(descriptor?.tileLight || "");
-  const dark = normalizeHexColor(descriptor?.tileDark || "");
-  return light && dark
-    ? { light, dark }
-    : remoteBrandDescriptorTileColors(descriptor?.brandColor || "", descriptor?.renderMode || "mask");
-}
-
 function keepsBrandIconOriginalForTest(siteKey, iconPath = "") {
   if (keepsBrandIconOriginalOnBrandTileForTest(siteKey, iconPath)) {
-    return true;
-  }
-  if (MULTICOLOR_BRAND_ICON_SITE_KEYS_FOR_TEST.has(siteKey)) {
     return true;
   }
   const remoteDescriptor = remoteBrandSvgDescriptorFromSource(iconPath);
   if (remoteDescriptor) {
     return remoteDescriptor.renderMode === "original";
+  }
+  if (MULTICOLOR_BRAND_ICON_SITE_KEYS_FOR_TEST.has(siteKey)) {
+    return true;
   }
   if (!siteIconSourceLooksLikeSvgForTest(iconPath)) {
     return true;
@@ -1504,12 +1422,9 @@ function applySiteIconTileForTest(icon, site, iconPath = "") {
   icon.dataset.siteKey = siteKey || "";
   const tileColor = siteIconBrandColorForTest(siteKey, iconPath);
   const tileMode = iconPath ? "brand" : "plain";
-  const remoteDescriptor = remoteBrandSvgDescriptorFromSource(iconPath);
   const isLocalIconSource = String(iconPath || "").startsWith("icons/");
   let tileColors = { light: "#ffffff", dark: "#202922" };
-  if (remoteDescriptor) {
-    tileColors = remoteBrandDescriptorDisplayTileColorsForTest(remoteDescriptor);
-  } else if (iconPath && tileColor) {
+  if (iconPath && tileColor) {
     tileColors = brandIconTileColorsForTest(tileColor, siteKey, iconPath);
   }
   applyIconTileForTest(icon, tileMode, tileColors, isLocalIconSource);
@@ -1523,14 +1438,6 @@ function shouldInvertBrandSvgForTest(icon, source) {
   return Boolean(siteIconBrandColorForTest(siteKey, source));
 }
 
-function remoteBrandDescriptorGlyphColorForCurrentThemeForTest(source) {
-  const descriptor = remoteBrandSvgDescriptorFromSource(source);
-  if (!descriptor || descriptor.renderMode !== "mask") {
-    return null;
-  }
-  return testTheme === "dark" ? descriptor.glyphDark : descriptor.glyphLight;
-}
-
 function iconGlyphColorForCurrentTileForTest(icon, source = "") {
   const tileColor = normalizeHexColor(currentIconTileColorForTest(icon));
   if (!tileColor) {
@@ -1539,11 +1446,7 @@ function iconGlyphColorForCurrentTileForTest(icon, source = "") {
   const siteKey = icon.dataset.siteKey || siteKeyForUrlForTest(icon.dataset.siteUrl);
   const brandColor = siteIconBrandColorForTest(siteKey, source);
   if (/^data:image\/svg\+xml[,;]/i.test(source)) {
-    const descriptorGlyph = remoteBrandDescriptorGlyphColorForCurrentThemeForTest(source);
-    if (descriptorGlyph !== null) {
-      return descriptorGlyph;
-    }
-    return remoteBrandGlyphColorForTile(tileColor, brandColor);
+    return localBrandGlyphColorForTile(tileColor, brandColor);
   }
   if (brandColor) {
     return localBrandGlyphColorForTile(tileColor, brandColor);
@@ -1680,15 +1583,9 @@ assert.equal(localBrandGlyphColorForTile("#f8fafc", "#00a1d6"), "#00a1d6", "Loca
 assert.equal(localBrandGlyphColorForTile("#f8fafc", "#1ed760"), "#102019", "Low-contrast local green glyphs fall back to a readable glyph on light carrier tiles.");
 assert.equal(localBrandGlyphColorForTile("#f8fafc", "#ffcc00"), "#102019", "Low-contrast local yellow glyphs fall back to a readable glyph on light carrier tiles.");
 
-assert.equal(remoteBrandGlyphColor("#00a1d6"), "#ffffff", "Remote brand blue near the contrast threshold should keep a white glyph.");
-assert.equal(remoteBrandGlyphColor("#1db954"), "#102019", "Remote bright green should switch to a dark glyph for contrast.");
-assert.equal(remoteBrandGlyphColor("#ffcc00"), "#102019", "Remote yellow should use a dark glyph.");
-assert.equal(remoteBrandGlyphColorForTile("#f8fafc", "#362d59"), "", "Remote dark brand glyphs are preserved on light night tiles when contrast is sufficient.");
-assert.equal(remoteBrandGlyphColorForTile("#f8fafc", "#ffcc00"), "#102019", "Remote light brand glyphs are replaced on light night tiles.");
-assert.equal(remoteBrandGlyphColorForTile("#1ed760", "#1ed760"), "#102019", "Spotify green cloud tiles use a dark glyph in day mode.");
-assert.equal(remoteBrandGlyphColorForTile("#181717", "#181717"), "#ffffff", "GitHub dark cloud tiles use a white glyph in day mode.");
-assert.equal(remoteBrandGlyphColorForTile("#ffcc00", "#ffcc00"), "#102019", "Yandex yellow cloud tiles use a dark glyph in day mode.");
-assert.equal(remoteBrandGlyphColorForTile("#000000", "#000000"), "#ffffff", "Notion black cloud tiles use a white glyph in day mode.");
+assert.equal(localBrandGlyphColorForTile("#1ed760", "#1ed760"), "#ffffff", "Remote cached Spotify-like SVGs use the same white day glyph as local SVGs.");
+assert.equal(localBrandGlyphColorForTile("#ffcc00", "#ffcc00"), "#ffffff", "Remote cached yellow mask SVGs use the same white day glyph as local SVGs.");
+assert.equal(localBrandGlyphColorForTile("#f8fafc", "#362d59"), "#362d59", "Remote cached dark glyphs recover the brand color on night light tiles when local SVGs would.");
 
 const adaptiveFixtureSvg = '<svg viewBox="0 0 24 24"><path fill="currentColor" d="M0 0h24v24H0z"/></svg>';
 
@@ -1856,14 +1753,14 @@ const adaptiveFixtureSvg = '<svg viewBox="0 0 24 24"><path fill="currentColor" d
   applySiteIconForTest(icon, { url: "https://raycast.com/", icon: remoteSvg });
   assert.equal(icon.dataset.iconSource, remoteSvg, "Sites without local resources may use a cached remote SVG data URL.");
   assert.equal(icon.classList.contains("site-icon-local"), false, "Remote SVG data URLs must not receive the local icon marker.");
-  assert.equal(icon.style.getPropertyValue("--site-icon-tile-light"), "#1db954", "Remote SVG data URLs use descriptor day tiles.");
-  assert.equal(icon.style.getPropertyValue("--site-icon-tile-dark"), "#f8fafc", "Remote SVG data URLs use descriptor night tiles.");
-  assert.equal(iconSourceCanUseBitmapTileFusionForTest(icon.dataset.iconCandidate), false, "Remote cloud SVG descriptors stay on the cloud SVG tile algorithm.");
+  assert.equal(icon.style.getPropertyValue("--site-icon-tile-light"), "#1db954", "Remote mask SVG data URLs use the shared local SVG day tile rule.");
+  assert.equal(icon.style.getPropertyValue("--site-icon-tile-dark"), "#f8fafc", "Remote mask SVG data URLs use the shared local SVG night tile rule.");
+  assert.equal(iconSourceCanUseBitmapTileFusionForTest(icon.dataset.iconCandidate), false, "Remote cloud SVG descriptors stay on the shared SVG tile path.");
   assert.equal(iconSourceCanUseBitmapTileFusionForTest("data:image/png;base64,fixture"), true, "Remote cached bitmap data URLs use the shared bitmap tile sampler.");
-  assert.match(decodeSvgDataUrl(icon.src), /fill="#102019"/, "Remote SVG data URLs use cloud glyph rules on bright brand tiles.");
+  assert.match(decodeSvgDataUrl(icon.src), /fill="#ffffff"/, "Remote SVG data URLs use the same day glyph rule as local SVGs.");
   testTheme = "dark";
   refreshAdaptiveSiteIconsForTest([icon]);
-  assert.match(decodeSvgDataUrl(icon.src), /fill="#102019"/, "Remote SVG data URLs continue to use descriptor glyphs after dark refresh.");
+  assert.match(decodeSvgDataUrl(icon.src), /fill="#102019"/, "Remote mask SVG data URLs use the shared local SVG dark glyph rule after refresh.");
 }
 
 {
@@ -2089,6 +1986,19 @@ assert.equal(
 );
 assert.equal(remoteBrandProviderHasSlugForTest(lobeHubProviderSlugs, "raycast"), false, "LobeHub supplemental provider should not probe unavailable slugs.");
 
+const theSvgProviderSlugs = remoteBrandSlugMapFromFileListForTest([
+  { name: "/public/icons/github-copilot/default.svg" },
+  { name: "/public/icons/github-copilot/light.svg" },
+  { name: "/public/icons/visual-studio-code/default.svg" },
+  { name: "/public/icons/visual-studio-code/wordmark.svg" },
+  { name: "/public/icons/github/default.svg" }
+], /^\/public\/icons\/(.+)\/default\.svg$/i);
+assert.equal(remoteBrandProviderHasSlugForTest(theSvgProviderSlugs, "github-copilot"), true, "theSVG provider index should allow dashed default SVG slugs.");
+assert.equal(remoteBrandProviderHasSlugForTest(theSvgProviderSlugs, "visual-studio-code"), true, "theSVG provider index should use the default.svg variant as the availability gate.");
+assert.equal(remoteBrandProviderSlugForCandidateForTest(theSvgProviderSlugs, "githubcopilot"), "github-copilot", "theSVG provider should fetch with the original dashed slug after normalized matching.");
+assert.equal(remoteBrandProviderSlugForCandidateForTest(theSvgProviderSlugs, "visualstudiocode"), "visual-studio-code", "theSVG provider should preserve original provider slugs in request URLs.");
+assert.equal(remoteBrandProviderHasSlugForTest(theSvgProviderSlugs, "wordmark"), false, "theSVG provider index should not treat non-default variants as brand slugs.");
+
 assert.deepEqual(
   ["bilibili.com", "github.com", "google.com", "figma.com", "slack.com", "spotify.com", "suno.com", "notion.so"]
     .map((siteKey) => [siteKey, localIconForSiteKeyForTest(siteKey), remoteProviderCanRunForSiteKeyForTest(siteKey)]),
@@ -2211,12 +2121,11 @@ const cloudProviderSamples = [
       brandColor: "#ff6363",
       isMonochrome: true,
       renderMode: "mask",
-      tileLight: "#ff6363",
-      tileDark: "#f8fafc",
-      glyphLight: "#ffffff",
-      glyphDark: "#102019",
       qualityScore: 100
-    }
+    },
+    tileColors: { light: "#ff6363", dark: "#f8fafc" },
+    lightGlyph: "#ffffff",
+    darkGlyph: "#ff6363"
   },
   {
     siteKey: "calendly.com",
@@ -2227,12 +2136,11 @@ const cloudProviderSamples = [
       brandColor: "#006bff",
       isMonochrome: true,
       renderMode: "mask",
-      tileLight: "#006bff",
-      tileDark: "#f8fafc",
-      glyphLight: "#ffffff",
-      glyphDark: "",
       qualityScore: 100
-    }
+    },
+    tileColors: { light: "#006bff", dark: "#f8fafc" },
+    lightGlyph: "#ffffff",
+    darkGlyph: "#006bff"
   },
   {
     siteKey: "arc.net",
@@ -2243,12 +2151,11 @@ const cloudProviderSamples = [
       brandColor: "#fcbfbd",
       isMonochrome: true,
       renderMode: "mask",
-      tileLight: "#fcbfbd",
-      tileDark: "#f8fafc",
-      glyphLight: "#102019",
-      glyphDark: "#102019",
       qualityScore: 100
-    }
+    },
+    tileColors: { light: "#fcbfbd", dark: "#f8fafc" },
+    lightGlyph: "#ffffff",
+    darkGlyph: "#102019"
   }
 ];
 
@@ -2258,7 +2165,23 @@ for (const sample of cloudProviderSamples) {
   assert.equal(remoteBrandIconSlugCandidatesForTest(sample.siteKey, sample.siteName)[0].slug, sample.siteKey.split(".")[0], `${sample.siteName} should produce a stable provider slug.`);
   assert.deepEqual(remoteBrandSvgQuality(sample.svg, { candidate: { score: 92 } }), { accepted: true, score: 100 }, `${sample.siteName} provider SVG should pass the quality gate.`);
   assert.equal(remoteBrandSvgBrandColor(sample.svg, { providerId: "simple-icons-cdn" }), sample.color, `${sample.siteName} provider color should be trusted when no local VI color exists.`);
-  assert.deepEqual(remoteBrandSvgDescriptor(sample.svg, { brandColor: sample.color, qualityScore: 100 }), sample.descriptor, `${sample.siteName} should produce the expected cloud day/night tile descriptor.`);
+  assert.deepEqual(remoteBrandSvgDescriptor(sample.svg, { brandColor: sample.color, qualityScore: 100 }), sample.descriptor, `${sample.siteName} should cache only source metadata, not a separate display tile descriptor.`);
+  const remoteDataUrl = svgTextDataUrl(prepareRemoteBrandSvgForTest(sample.svg, { brandColor: sample.color, qualityScore: 100 }));
+  const icon = new TestIcon();
+  testTheme = "light";
+  applySiteIconForTest(icon, { url: `https://${sample.siteKey}/`, icon: remoteDataUrl });
+  assert.deepEqual(
+    {
+      light: icon.style.getPropertyValue("--site-icon-tile-light"),
+      dark: icon.style.getPropertyValue("--site-icon-tile-dark")
+    },
+    sample.tileColors,
+    `${sample.siteName} cached cloud SVG should use the same tile colors as local SVG rendering.`
+  );
+  assert.match(decodeSvgDataUrl(icon.src), new RegExp(`fill="${sample.lightGlyph}"`), `${sample.siteName} cached cloud SVG should use the shared light glyph rule.`);
+  testTheme = "dark";
+  refreshAdaptiveSiteIconsForTest([icon]);
+  assert.match(decodeSvgDataUrl(icon.src), new RegExp(`fill="${sample.darkGlyph}"`), `${sample.siteName} cached cloud SVG should use the shared dark glyph rule.`);
 }
 
 assert.equal(localIconForSiteKeyForTest("shadcn.com"), "", "shadcn has no deployed local fixture and should not be mistaken for a local icon.");
@@ -2348,13 +2271,9 @@ assert.deepEqual(
     brandColor: "#1db954",
     isMonochrome: true,
     renderMode: "mask",
-    tileLight: "#1db954",
-    tileDark: "#f8fafc",
-    glyphLight: "#102019",
-    glyphDark: "#102019",
     qualityScore: 92
   },
-  "Cloud maskable icons should produce a complete day/night descriptor."
+  "Cloud maskable descriptors should cache source metadata only."
 );
 assert.deepEqual(
   remoteBrandSvgDescriptor(currentColorSvg, { brandColor: "#00a1d6", qualityScore: 95 }),
@@ -2362,55 +2281,9 @@ assert.deepEqual(
     brandColor: "#00a1d6",
     isMonochrome: true,
     renderMode: "mask",
-    tileLight: "#00a1d6",
-    tileDark: "#f8fafc",
-    glyphLight: "#ffffff",
-    glyphDark: "#102019",
     qualityScore: 95
   },
-  "A cloud bilibili-like fixture keeps a remote descriptor separate from the local bilibili white-on-blue rule while preserving night readability."
-);
-assert.deepEqual(
-  remoteBrandSvgDescriptor(currentColorSvg, { brandColor: "#ffcc00", qualityScore: 93 }),
-  {
-    brandColor: "#ffcc00",
-    isMonochrome: true,
-    renderMode: "mask",
-    tileLight: "#ffcc00",
-    tileDark: "#f8fafc",
-    glyphLight: "#102019",
-    glyphDark: "#102019",
-    qualityScore: 93
-  },
-  "Yandex-like yellow cloud icons should use dark glyphs in both day and night tile strategies."
-);
-assert.deepEqual(
-  remoteBrandSvgDescriptor(currentColorSvg, { brandColor: "#000000", qualityScore: 90 }),
-  {
-    brandColor: "#000000",
-    isMonochrome: true,
-    renderMode: "mask",
-    tileLight: "#000000",
-    tileDark: "#f8fafc",
-    glyphLight: "#ffffff",
-    glyphDark: "",
-    qualityScore: 90
-  },
-  "GitHub/Notion-like black cloud icons should use a white day glyph and preserve the dark glyph on the light night tile."
-);
-assert.deepEqual(
-  remoteBrandSvgDescriptor(currentColorSvg, { brandColor: "#ffffff", qualityScore: 88 }),
-  {
-    brandColor: "#ffffff",
-    isMonochrome: true,
-    renderMode: "mask",
-    tileLight: "#000000",
-    tileDark: "#f8fafc",
-    glyphLight: "",
-    glyphDark: "#102019",
-    qualityScore: 88
-  },
-  "Notion/near-white-like cloud brands should flip to a dark day tile instead of rendering low-contrast white-on-white."
+  "Cloud maskable descriptors should not duplicate display tile/glyph decisions."
 );
 const multicolorSvg = '<svg viewBox="0 0 24 24"><path fill="#4285f4"/><path fill="#ea4335"/></svg>';
 assert.deepEqual(
@@ -2419,27 +2292,28 @@ assert.deepEqual(
     brandColor: "#4285f4",
     isMonochrome: false,
     renderMode: "original",
-    tileLight: "#ffffff",
-    tileDark: "#f8fafc",
-    glyphLight: "",
-    glyphDark: "",
     qualityScore: 84
   },
-  "Google-like cloud multicolor icons should produce an original-render descriptor with neutral tiles."
+  "Google-like cloud multicolor descriptors should remain source metadata only."
 );
+{
+  const remoteDataUrl = svgTextDataUrl(prepareRemoteBrandSvgForTest(multicolorSvg, { brandColor: "#4285f4", qualityScore: 84 }));
+  const icon = new TestIcon();
+  testTheme = "light";
+  applySiteIconForTest(icon, { url: "https://example-cloud-multicolor.test/", icon: remoteDataUrl });
+  assert.equal(icon.style.getPropertyValue("--site-icon-tile-light"), "#ffffff", "Remote multicolor descriptors use the same neutral day tile as local multicolor SVGs.");
+  assert.equal(icon.style.getPropertyValue("--site-icon-tile-dark"), "#f8fafc", "Remote multicolor descriptors use the same neutral night tile as local multicolor SVGs.");
+  assert.equal(icon.src, remoteDataUrl, "Remote multicolor descriptors preserve original artwork like local multicolor SVGs.");
+}
 assert.deepEqual(
   remoteBrandSvgDescriptor('<svg viewBox="0 0 24 24"><linearGradient id="g"/><path fill="url(#g)" d="M0 0h24v24H0z"/></svg>', { brandColor: "#4a154b", qualityScore: 82 }),
   {
     brandColor: "#4a154b",
     isMonochrome: false,
     renderMode: "original",
-    tileLight: "#ffffff",
-    tileDark: "#f8fafc",
-    glyphLight: "",
-    glyphDark: "",
     qualityScore: 82
   },
-  "Slack/Figma-like multicolor or gradient cloud SVGs must stay original and avoid mask recoloring."
+  "Slack/Figma-like multicolor or gradient descriptors should remain original-render metadata."
 );
 const preparedRemoteSvg = prepareRemoteBrandSvgForTest(simpleSvg, { brandColor: "#1db954", qualityScore: 92 });
 const preparedRemoteDataUrl = svgTextDataUrl(preparedRemoteSvg);
@@ -2449,13 +2323,9 @@ assert.deepEqual(
     brandColor: "#1db954",
     isMonochrome: true,
     renderMode: "mask",
-    tileLight: "#1db954",
-    tileDark: "#f8fafc",
-    glyphLight: "#102019",
-    glyphDark: "#102019",
     qualityScore: 92
   },
-  "Cached cloud SVG data URLs should round-trip their descriptor."
+  "Cached cloud SVG data URLs should round-trip source metadata only."
 );
 assert.deepEqual(
   remoteBrandSvgCacheStrategy(preparedRemoteDataUrl),
@@ -2464,13 +2334,9 @@ assert.deepEqual(
     brandColor: "#1db954",
     renderMode: "mask",
     isMonochrome: true,
-    tileLight: "#1db954",
-    tileDark: "#f8fafc",
-    glyphLight: "#102019",
-    glyphDark: "#102019",
     qualityScore: 92
   },
-  "Cached Spotify-like cloud SVGs retain their post-cache tile and glyph strategy."
+  "Cached cloud SVG strategy must not store a separate display tile/glyph algorithm."
 );
 
 console.log("icon strategy fixtures passed");
