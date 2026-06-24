@@ -44,6 +44,7 @@ assert.deepEqual(
 assert.equal(videoContentScript.all_frames, true, "Embedded players should use the same frame-aware PiP protocol.");
 assert.equal(videoContentScript.match_about_blank, true, "Related about:blank video frames should receive the PiP controller.");
 assert.equal(videoContentScript.match_origin_as_fallback, true, "Related blob/data video frames should receive the PiP controller.");
+assert.equal(videoContentScript.run_at, "document_start", "Automatic PiP should register the Chrome media-session handler as early as the page allows.");
 for (const runtimeFile of ["video-pip.js", "video-pip-coordinator.js"]) {
   assert.ok(packageSource.split(/\s+/).includes(runtimeFile), `Release packages should include ${runtimeFile}.`);
 }
@@ -59,8 +60,78 @@ assert.match(
 );
 assert.match(
   backgroundSource,
+  /function injectVideoPipController\(tabId\)[\s\S]*target:\s*\{\s*tabId,\s*allFrames:\s*true\s*\}[\s\S]*files:\s*\["video-pip\.js"\]/,
+  "Video PiP should have one all-frame controller injection path."
+);
+assert.match(
+  backgroundSource,
+  /function toggleVideoPipPinInFrame\(\)[\s\S]*__wayleafVideoPipController[\s\S]*togglePin/,
+  "Toolbar pinning should call the in-frame video PiP controller directly."
+);
+assert.match(
+  backgroundSource,
+  /function pickVideoPipToggleResult\(results\)[\s\S]*hasVideo[\s\S]*return result \|\| \{ ok: false \};/,
+  "All-frame toolbar pinning should prefer the frame that actually owns a video."
+);
+assert.match(
+  backgroundSource,
+  /function toggleVideoPipPin\(tabId\)[\s\S]*target:\s*\{\s*tabId,\s*allFrames:\s*true\s*\}[\s\S]*func:\s*toggleVideoPipPinInFrame/,
+  "Toolbar pinning should fan out across all frames instead of trusting one tabs.sendMessage response."
+);
+assert.match(
+  backgroundSource,
+  /function refreshVideoPipControllersInOpenTabs\(\)[\s\S]*chrome\.tabs\.query\(\{\}\)[\s\S]*supportsVideoPip\(tab\.url \|\| ""\)[\s\S]*injectVideoPipController\(tab\.id\)/,
+  "Open-tab PiP controller refresh should only target supported video tabs."
+);
+assert.match(
+  backgroundSource,
+  /function refreshVideoPipControllersWhenGlobalEnabled\(\)[\s\S]*chrome\.storage\.local\.get\(\{ \[VIDEO_PIP_GLOBAL_ENABLED_STORAGE_KEY\]: false \}\)[\s\S]*stored\[VIDEO_PIP_GLOBAL_ENABLED_STORAGE_KEY\] === true[\s\S]*refreshVideoPipControllersInOpenTabs\(\)/,
+  "Service-worker reload/startup should reattach old video tabs only when global PiP is enabled."
+);
+assert.match(
+  backgroundSource,
+  /onInstalled\?\.addListener[\s\S]*refreshVideoPipControllersWhenGlobalEnabled\(\)/,
+  "Reloaded unpacked extensions should check whether old video tabs need reattaching."
+);
+assert.match(
+  backgroundSource,
+  /refreshVideoPipControllersWhenGlobalEnabled\(\)\.catch\(reportBackgroundError\);[\s\S]*chrome\.action\?\.onClicked/,
+  "A restarted service worker should check already-open video tabs before waiting for the next action."
+);
+assert.match(
+  backgroundSource,
+  /chrome\.storage\?\.onChanged\?\.addListener[\s\S]*VIDEO_PIP_GLOBAL_ENABLED_STORAGE_KEY[\s\S]*refreshVideoPipControllersInOpenTabs\(\)/,
+  "Turning global PiP on should attach controllers to already-open tabs."
+);
+assert.match(
+  backgroundSource,
   /supportsSocialVideoExtraction\(tab\.url \|\| ""\)[\s\S]*startSocialVideoExtraction[\s\S]*return;[\s\S]*const result = await toggleVideoPipPin/,
   "Toolbar action should reserve social-video extraction for Xiaohongshu-style hosts and leave dedicated video sites on pinned PiP."
+);
+assert.doesNotMatch(
+  controllerSource,
+  /window\[CONTROLLER_KEY\]\s*=\s*null/,
+  "Invalidated content scripts must not write the controller marker while disposing."
+);
+assert.match(
+  controllerSource,
+  /togglePin\(\)\s*\{[\s\S]*togglePinned\(\)/,
+  "The injected controller should expose the same pin toggle used by runtime messages."
+);
+assert.match(
+  controllerSource,
+  /async function enterPinnedPictureInPicture\(\)[\s\S]*pickPictureInPictureCandidateVideo\(\) \|\| pickLargestExtractableVideo\(\)[\s\S]*type: "entered"/,
+  "Manual toolbar pinning should use the click gesture to request native PiP immediately."
+);
+assert.match(
+  controllerSource,
+  /async function handleAutomaticPictureInPicture\(\)[\s\S]*pickPlayingVideo\(\) \|\| pickPictureInPictureCandidateVideo\(\)[\s\S]*requestPictureInPictureForVideo\(video\)/,
+  "Automatic PiP should follow Chrome's media-session handler path and prefer the playing video inside that handler."
+);
+assert.match(
+  controllerSource,
+  /setActionHandler\("enterpictureinpicture", enabled\(\) \? handleAutomaticPictureInPicture : null\)/,
+  "Automatic PiP should unregister the Chrome media-session handler when Wayleaf disables PiP."
 );
 assert.match(
   html,
@@ -74,8 +145,13 @@ assert.match(
 );
 assert.match(
   html,
-  /id="videoPipGlobalHint"[\s\S]*standard HTML5 video/,
+  /id="videoPipLabDescription"[\s\S]*HTML5 video/,
   "The static Laboratory fallback copy should describe generic HTML5 video support."
+);
+assert.doesNotMatch(
+  html,
+  /Currently supported platforms: YouTube and Bilibili/,
+  "Video PiP should not be documented as a two-platform feature."
 );
 assert.match(
   css,
@@ -176,7 +252,21 @@ function createControllerHarness(initialController = undefined) {
   windowMock.self = windowMock;
   windowMock.innerWidth = 1280;
   windowMock.innerHeight = 720;
-  if (initialController !== undefined) {
+  if (initialController?.throwOnControllerRead) {
+    Object.defineProperty(windowMock, "__wayleafVideoPipController", {
+      configurable: true,
+      get() {
+        throw new Error("Extension context invalidated.");
+      },
+      set(value) {
+        Object.defineProperty(windowMock, "__wayleafVideoPipController", {
+          configurable: true,
+          writable: true,
+          value
+        });
+      }
+    });
+  } else if (initialController !== undefined) {
     windowMock.__wayleafVideoPipController = initialController;
   }
   const chromeMock = {
@@ -352,12 +442,22 @@ async function settle() {
   await Promise.resolve();
 }
 
-let pinResponse = null;
-runtimeListeners[0]({ action: "wayleaf:toggle-video-pip-pin" }, {}, (response) => {
-  pinResponse = response;
+video.paused = false;
+const pinResponse = await new Promise((resolve) => {
+  runtimeListeners[0]({ action: "wayleaf:toggle-video-pip-pin" }, {}, resolve);
 });
 assert.equal(pinResponse?.pinned, true, "Toolbar action should pin the current video tab.");
+assert.equal(pinResponse?.entered, true, "Toolbar pinning should request native PiP from the user gesture.");
+assert.equal(harness.requestCount, 1, "Toolbar pinning should enter PiP immediately for the selected playing video.");
 assert.equal(typeof harness.mediaSessionHandler, "function", "Pinning should register the automatic PiP media-session handler.");
+assert.ok(harness.coordinatorRequests.some((request) => request.type === "entered"), "Successful toolbar PiP should tell the coordinator which tab owns the window.");
+
+const directToggleHarness = createControllerHarness();
+directToggleHarness.documentMock.querySelectorAll = querySelectorAllForLightAndShadow([directToggleHarness.video]);
+directToggleHarness.video.paused = false;
+const directToggleResponse = await directToggleHarness.context.window.__wayleafVideoPipController.togglePin();
+assert.equal(directToggleResponse?.pinned, true, "Background frame fan-out should reuse the same pin toggle path.");
+assert.equal(directToggleResponse?.entered, true, "Background frame fan-out should request PiP inside the selected frame.");
 
 const extractHarness = createControllerHarness();
 extractHarness.documentMock.querySelectorAll = querySelectorAllForLightAndShadow([extractHarness.video]);
@@ -384,15 +484,16 @@ assert.equal(extractHarness.coordinatorRequests.at(-1)?.type, "entered", "A succ
 documentMock.visibilityState = "hidden";
 dispatch("visibilitychange");
 await settle();
-assert.equal(harness.requestCount, 0, "A pinned supported-site tab should wait until its video is playing.");
+assert.equal(harness.requestCount, 1, "A pinned tab that already entered PiP should not request PiP again on hide.");
+assert.equal(harness.coordinatorRequests.at(-1)?.type, "enter", "A pinned tab should notify the coordinator when it later becomes hidden.");
 
 video.paused = false;
 dispatch("playing", video);
 await settle();
-assert.equal(harness.requestCount, 0, "Content scripts must not enter PiP before the browser-level coordinator grants ownership.");
+assert.equal(harness.requestCount, 1, "Content scripts must not enter a second PiP before the browser-level coordinator grants ownership.");
 assert.equal(harness.coordinatorRequests.at(-1)?.type, "enter", "Hidden playback should request coordinated PiP ownership.");
-assert.equal((await harness.command("enter"))?.entered, true, "The granted owner should enter PiP.");
-assert.equal(harness.requestCount, 1, "The coordinator command should enter PiP exactly once.");
+assert.equal((await harness.command("enter"))?.entered, false, "The granted owner should not duplicate a PiP window opened from the toolbar gesture.");
+assert.equal(harness.requestCount, 1, "The coordinator command should not duplicate an already-open pinned PiP window.");
 
 documentMock.visibilityState = "visible";
 dispatch("visibilitychange");
@@ -405,31 +506,61 @@ assert.equal(harness.exitCount, 1, "The coordinator should close only the Waylea
 runtimeListeners[0]({ action: "wayleaf:toggle-video-pip-pin" }, {}, () => {});
 storageListeners[0]({ videoPipGlobalEnabled: { newValue: true } }, "local");
 video.paused = true;
+documentMock.visibilityState = "visible";
+dispatch("playing", video);
+await settle();
+assert.equal(harness.requestCount, 1, "Global mode must still ignore a supported page until video playback starts.");
+assert.equal(harness.coordinatorRequests.at(-1)?.type, "exit", "Paused visible video should not request coordinated PiP.");
+
+video.paused = false;
+dispatch("playing", video);
+await settle();
+assert.equal(harness.coordinatorRequests.at(-1)?.type, "exit", "Resuming playback on the source tab should wait for a tab switch.");
 documentMock.visibilityState = "hidden";
 dispatch("visibilitychange");
 await settle();
-assert.equal(harness.requestCount, 1, "Global mode must still ignore a supported page until video playback starts.");
-
-video.paused = false;
-dispatch("play", video);
-await settle();
-assert.equal(harness.requestCount, 1, "Global mode should still wait for a coordinator grant.");
-assert.equal((await harness.command("enter"))?.entered, true, "Global mode should enter after ownership is granted.");
-assert.equal(harness.requestCount, 2, "Global mode should enter PiP for a playing supported-site video after tab switch.");
-
-documentMock.pictureInPictureElement = replacementVideo;
+assert.equal(harness.coordinatorRequests.at(-1)?.type, "enter", "A resumed video should request coordinated PiP when the tab later becomes hidden.");
+assert.equal((await harness.command("enter"))?.entered, true, "Global fallback should enter PiP for a resumed playing video after tab switch.");
+assert.equal(harness.requestCount, 2, "Global fallback should cover Chrome auto-PiP eligibility misses.");
 documentMock.visibilityState = "visible";
 dispatch("visibilitychange");
 await settle();
+assert.equal(harness.coordinatorRequests.at(-1)?.type, "exit", "Returning to the source tab should release the global fallback owner.");
+assert.equal((await harness.command("exit"))?.exited, true, "Returning to the source tab should close a Wayleaf-managed fallback PiP window.");
+assert.equal(harness.exitCount, 2, "Global fallback PiP should auto-restore when the source tab is visible again.");
+
+documentMock.visibilityState = "hidden";
+documentMock.pictureInPictureElement = null;
+video.paused = false;
+const enabledMediaSessionHandler = harness.mediaSessionHandler;
+await enabledMediaSessionHandler();
+await settle();
+assert.equal(harness.requestCount, 3, "Chrome's media-session automatic PiP handler should request native PiP directly.");
+assert.equal(harness.coordinatorRequests.at(-1)?.type, "entered", "A media-session auto PiP entry should record the active owner.");
+
+storageListeners[0]({ videoPipGlobalEnabled: { newValue: false } }, "local");
+assert.equal(harness.mediaSessionHandler, null, "Disabling global PiP with no pin should unregister the automatic PiP handler.");
+documentMock.pictureInPictureElement = null;
+await enabledMediaSessionHandler();
+await settle();
+assert.equal(harness.requestCount, 3, "A stale Chrome automatic PiP handler should fail closed after Wayleaf disables PiP.");
+storageListeners[0]({ videoPipGlobalEnabled: { newValue: true } }, "local");
+assert.equal(typeof harness.mediaSessionHandler, "function", "Re-enabling global PiP should restore the automatic PiP handler.");
+
+documentMock.pictureInPictureElement = replacementVideo;
+documentMock.visibilityState = "visible";
+const staleOtherVideoExitBaseline = harness.exitCount;
+dispatch("visibilitychange");
+await settle();
 assert.equal((await harness.command("exit"))?.exited, false, "A stale owner must not close a PiP window opened for another video.");
-assert.equal(harness.exitCount, 1, "Returning to the source tab must not close a PiP window opened for another video.");
+assert.equal(harness.exitCount, staleOtherVideoExitBaseline, "Returning to the source tab must not close a PiP window opened for another video.");
 
 documentMock.pictureInPictureElement = null;
 documentMock.visibilityState = "hidden";
 dispatch("play", video);
 await settle();
 assert.equal((await harness.command("enter"))?.entered, true, "A stale source-tab cleanup should not block the next grant.");
-assert.equal(harness.requestCount, 3, "Global mode should still enter PiP again after a stale source-tab cleanup.");
+assert.equal(harness.requestCount, 4, "Global mode should still enter PiP again after a stale source-tab cleanup.");
 documentMock.pictureInPictureElement = null;
 dispatch("leavepictureinpicture", video);
 await settle();
@@ -437,12 +568,12 @@ assert.equal(harness.coordinatorRequests.at(-1)?.type, "left", "A closed PiP win
 documentMock.visibilityState = "visible";
 dispatch("visibilitychange");
 await settle();
-assert.equal(harness.exitCount, 1, "Returning after an already-closed PiP window should clear Wayleaf state without calling exit twice.");
+assert.equal(harness.exitCount, staleOtherVideoExitBaseline, "Returning after an already-closed PiP window should clear Wayleaf state without calling exit twice.");
 documentMock.visibilityState = "hidden";
 dispatch("play", video);
 await settle();
 assert.equal((await harness.command("enter"))?.entered, true, "A cleaned-up tab should accept a later grant.");
-assert.equal(harness.requestCount, 4, "A tab should be able to re-enter PiP after the source page cleanup path.");
+assert.equal(harness.requestCount, 5, "A tab should be able to re-enter PiP after the source page cleanup path.");
 
 const externalHarness = createControllerHarness();
 externalHarness.documentMock.querySelectorAll = querySelectorAllForLightAndShadow([externalHarness.replacementVideo]);
@@ -516,6 +647,27 @@ const legacyMarkerHarness = createControllerHarness(true);
 assert.equal(legacyMarkerHarness.runtimeListeners.length, 1, "A legacy boolean controller marker should not block fresh injection.");
 assert.equal(legacyMarkerHarness.storageListeners.length, 1, "A legacy boolean controller marker should still initialize the fresh controller.");
 
+const invalidatedPreviousControllerHarness = createControllerHarness({
+  dispose() {
+    throw new Error("Extension context invalidated.");
+  }
+});
+assert.equal(invalidatedPreviousControllerHarness.runtimeListeners.length, 1, "An invalidated previous controller should not block fresh injection.");
+assert.equal(invalidatedPreviousControllerHarness.storageListeners.length, 1, "An invalidated previous controller should not block storage listener setup.");
+
+const invalidatedControllerReadHarness = createControllerHarness({ throwOnControllerRead: true });
+assert.equal(invalidatedControllerReadHarness.runtimeListeners.length, 1, "An invalidated controller marker read should not block fresh injection.");
+assert.equal(invalidatedControllerReadHarness.storageListeners.length, 1, "An invalidated controller marker read should not block storage listener setup.");
+
+const invalidatedPreviousDisposeReadHarness = createControllerHarness(Object.defineProperty({}, "dispose", {
+  configurable: true,
+  get() {
+    throw new Error("Extension context invalidated.");
+  }
+}));
+assert.equal(invalidatedPreviousDisposeReadHarness.runtimeListeners.length, 1, "An invalidated previous dispose getter should not block fresh injection.");
+assert.equal(invalidatedPreviousDisposeReadHarness.storageListeners.length, 1, "An invalidated previous dispose getter should not block storage listener setup.");
+
 const reinjectedHarness = createControllerHarness();
 const firstRuntimeListener = reinjectedHarness.runtimeListeners[0];
 const firstStorageListener = reinjectedHarness.storageListeners[0];
@@ -530,8 +682,8 @@ reinjectedHarness.video.paused = false;
 reinjectedHarness.documentMock.visibilityState = "hidden";
 reinjectedHarness.dispatch("playing", reinjectedHarness.video);
 await settle();
-assert.equal(reinjectedHarness.coordinatorRequests.at(-1)?.type, "enter", "The replacement controller should handle long-lived video pages after reinjection.");
-assert.equal((await reinjectedHarness.command("enter"))?.entered, true, "The replacement controller should enter PiP after ownership is granted.");
+await reinjectedHarness.mediaSessionHandler();
+assert.equal(reinjectedHarness.requestCount, 1, "The replacement controller should handle browser-triggered auto PiP after reinjection.");
 
 const invalidatedCommandHarness = createControllerHarness();
 Object.defineProperty(invalidatedCommandHarness.documentMock, "visibilityState", {
@@ -545,21 +697,17 @@ assert.equal((await invalidatedCommandHarness.command("enter"))?.entered, false,
 const shadowHarness = createControllerHarness();
 shadowHarness.video.paused = false;
 shadowHarness.documentMock.querySelectorAll = querySelectorAllForLightAndShadow([], [shadowHarness.video]);
-shadowHarness.storageListeners[0]({ videoPipGlobalEnabled: { newValue: true } }, "local");
-shadowHarness.documentMock.visibilityState = "hidden";
-shadowHarness.dispatch("playing", shadowHarness.video);
+await shadowHarness.context.window.__wayleafVideoPipController.togglePin();
 await settle();
-assert.equal((await shadowHarness.command("enter"))?.entered, true, "Generic PiP should find playable videos inside open shadow DOM.");
+assert.equal(shadowHarness.requestCount, 1, "Manual pinning should directly enter PiP for videos inside open shadow DOM.");
 
 const delayedVideoHarness = createControllerHarness();
-delayedVideoHarness.storageListeners[0]({ videoPipGlobalEnabled: { newValue: true } }, "local");
 delayedVideoHarness.video.paused = false;
 delayedVideoHarness.documentMock.visibilityState = "hidden";
 delayedVideoHarness.documentMock.querySelectorAll = querySelectorAllForLightAndShadow([delayedVideoHarness.video]);
-delayedVideoHarness.mutate([{ addedNodes: [delayedVideoHarness.video] }]);
+await delayedVideoHarness.context.window.__wayleafVideoPipController.togglePin();
 await settle();
-assert.equal(delayedVideoHarness.coordinatorRequests.at(-1)?.type, "enter", "Delayed inserted video elements should retry coordinated PiP.");
-assert.equal((await delayedVideoHarness.command("enter"))?.entered, true, "A delayed inserted video should enter PiP after ownership is granted.");
+assert.equal(delayedVideoHarness.requestCount, 1, "Manual pinning should directly enter PiP for a delayed inserted video.");
 
 const coordinatorContext = {};
 coordinatorContext.globalThis = coordinatorContext;
@@ -606,6 +754,8 @@ const coordinator = createCoordinator({
 
 await coordinator.handle({ type: "enter" }, targets.youtube);
 assert.equal(storedOwner?.documentId, "youtube", "The first playing page should own PiP.");
+await coordinator.handle({ type: "enter" }, targets.youtube);
+assert.deepEqual(commands.slice(-1), ["enter:youtube"], "A remembered owner must retry enter instead of assuming stale browser PiP state is still active.");
 
 targetStates.get("youtube").hidden = false;
 await Promise.all([

@@ -53,6 +53,10 @@
         }
         return { ok: true };
       }
+      if (request?.type === "entered") {
+        await setOwner({ ...target });
+        return { ok: true, owner: true };
+      }
       if (request?.type === "exit") {
         if (sameTarget(activeOwner, target)) {
           await exitOwner(activeOwner);
@@ -63,10 +67,14 @@
         return { ok: false };
       }
       if (sameTarget(activeOwner, target)) {
+        try {
+          await command(target, "enter");
+        } catch {}
         return { ok: true, owner: true };
       }
       if (
         activeOwner?.tabId === target.tabId &&
+        !sameTarget(activeOwner, target) &&
         Number(activeOwner.score || 0) >= Number(target.score || 0)
       ) {
         return { ok: true, owner: false };

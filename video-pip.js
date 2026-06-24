@@ -27,13 +27,29 @@
   let storageChangeListener = null;
   let runtimeMessageListener = null;
   const documentListeners = [];
-  const previousController = window[CONTROLLER_KEY];
+  function isExtensionContextError(error) {
+    return String(error?.message || error).includes("Extension context invalidated");
+  }
+  let previousController = null;
+  try {
+    previousController = window[CONTROLLER_KEY];
+  } catch (error) {
+    if (!isExtensionContextError(error)) {
+      throw error;
+    }
+  }
   const controller = {
-    dispose() {
+    togglePin() {
+      return togglePinned();
+    },
+    dispose({ clearControllerKey = true } = {}) {
       disposed = true;
       pendingVideoScan = false;
       extractorActive = false;
-      extractOverlay?.remove();
+      updateAutomaticPictureInPictureBinding();
+      try {
+        extractOverlay?.remove();
+      } catch {}
       extractOverlay = null;
       for (const [type, listener, options] of documentListeners.splice(0)) {
         try {
@@ -54,25 +70,46 @@
           chrome.runtime?.onMessage?.removeListener?.(runtimeMessageListener);
         }
       } catch {}
-      if (window[CONTROLLER_KEY] === controller) {
-        try {
+      try {
+        if (clearControllerKey && window[CONTROLLER_KEY] === controller) {
           delete window[CONTROLLER_KEY];
-        } catch {
-          window[CONTROLLER_KEY] = null;
         }
-      }
+      } catch {}
     }
   };
 
-  if (typeof previousController?.dispose === "function") {
-    previousController.dispose();
+  let previousDispose = null;
+  try {
+    previousDispose = previousController?.dispose;
+  } catch (error) {
+    if (!isExtensionContextError(error)) {
+      throw error;
+    }
   }
-  window[CONTROLLER_KEY] = controller;
+  if (typeof previousDispose === "function") {
+    try {
+      previousDispose.call(previousController);
+    } catch (error) {
+      if (!isExtensionContextError(error)) {
+        throw error;
+      }
+    }
+  }
+  try {
+    window[CONTROLLER_KEY] = controller;
+  } catch (error) {
+    if (!isExtensionContextError(error)) {
+      throw error;
+    }
+    extensionContextInvalid = true;
+    controller.dispose({ clearControllerKey: false });
+    return;
+  }
 
   function noteExtensionContextError(error) {
-    if (String(error?.message || error).includes("Extension context invalidated")) {
+    if (isExtensionContextError(error)) {
       extensionContextInvalid = true;
-      controller.dispose();
+      controller.dispose({ clearControllerKey: false });
       return true;
     }
     return false;
@@ -133,12 +170,28 @@
     return !disposed && (globalEnabled || pinned);
   }
 
+  function coordinatorEnabled() {
+    return enabled();
+  }
+
   function isPlaying(video) {
     try {
       return video instanceof HTMLVideoElement &&
         !video.paused &&
         !video.ended &&
         Number(video.readyState || 0) >= 2;
+    } catch (error) {
+      noteExtensionContextError(error);
+      return false;
+    }
+  }
+
+  function isPictureInPictureCandidate(video) {
+    try {
+      return video instanceof HTMLVideoElement &&
+        supportsPictureInPicture(video) &&
+        video.disablePictureInPicture === false &&
+        Number(video.readyState || 0) !== 0;
     } catch (error) {
       noteExtensionContextError(error);
       return false;
@@ -290,6 +343,12 @@
       .sort((left, right) => videoArea(right) - videoArea(left))[0] || null;
   }
 
+  function pickPictureInPictureCandidateVideo() {
+    return queryVideos()
+      .filter(isPictureInPictureCandidate)
+      .sort((left, right) => videoArea(right) - videoArea(left))[0] || null;
+  }
+
   function pickLargestExtractableVideo() {
     return queryVideos()
       .filter((video) => supportsPictureInPicture(video) && visibleVideoRect(video))
@@ -386,6 +445,29 @@
     }
   }
 
+  async function requestPictureInPictureForVideo(video) {
+    if (!video || !supportsPictureInPicture(video) || document.pictureInPictureEnabled !== true) {
+      return false;
+    }
+    if (document.pictureInPictureElement) {
+      return document.pictureInPictureElement === video;
+    }
+    if (!allowPictureInPicture(video)) {
+      return false;
+    }
+    entering = true;
+    try {
+      await video.requestPictureInPicture();
+      managedPipNeedsCleanup = true;
+      managedPipVideo = video;
+      return true;
+    } catch {
+      return false;
+    } finally {
+      entering = false;
+    }
+  }
+
   function handleExtractorPointerMove(event) {
     if (!extractorActive) {
       return;
@@ -429,7 +511,7 @@
   function notifyCoordinator(type) {
     guardExtensionContext(() => {
       if (type === "enter") {
-        if (!enabled() || document.visibilityState !== "hidden") {
+        if (!coordinatorEnabled() || document.visibilityState !== "hidden") {
           return;
         }
         const video = pickPlayingVideo();
@@ -449,23 +531,7 @@
         return false;
       }
       const video = pickPlayingVideo();
-      if (!video || document.pictureInPictureEnabled !== true) {
-        return false;
-      }
-      if (!allowPictureInPicture(video)) {
-        return false;
-      }
-      entering = true;
-      try {
-        await video.requestPictureInPicture();
-        managedPipNeedsCleanup = true;
-        managedPipVideo = video;
-        return true;
-      } catch {
-        return false;
-      } finally {
-        entering = false;
-      }
+      return requestPictureInPictureForVideo(video);
     }, false);
   }
 
@@ -498,12 +564,24 @@
     }, false);
   }
 
-  function bindAutomaticPictureInPicture() {
-    if (!enabled() || !navigator.mediaSession?.setActionHandler) {
+  async function handleAutomaticPictureInPicture() {
+    if (!enabled()) {
+      return false;
+    }
+    const video = pickPlayingVideo() || pickPictureInPictureCandidateVideo();
+    const entered = await requestPictureInPictureForVideo(video);
+    if (entered) {
+      safeSendMessage({ action: REQUEST_ACTION, type: "entered", score: videoArea(video) });
+    }
+    return entered;
+  }
+
+  function updateAutomaticPictureInPictureBinding() {
+    if (!navigator.mediaSession?.setActionHandler) {
       return;
     }
     try {
-      navigator.mediaSession.setActionHandler("enterpictureinpicture", () => notifyCoordinator("enter"));
+      navigator.mediaSession.setActionHandler("enterpictureinpicture", enabled() ? handleAutomaticPictureInPicture : null);
     } catch {
       // Older Chromium builds may not expose this media session action.
     }
@@ -511,12 +589,50 @@
 
   function updateGlobalEnabled(value) {
     globalEnabled = value === true;
-    if (enabled()) {
-      bindAutomaticPictureInPicture();
-      notifyCoordinator("enter");
-      return;
+    updateAutomaticPictureInPictureBinding();
+    if (!enabled()) {
+      notifyCoordinator("exit");
     }
-    notifyCoordinator("exit");
+  }
+
+  async function enterPinnedPictureInPicture() {
+    return guardExtensionContextAsync(async () => {
+      if (!enabled() || entering || exiting) {
+        return false;
+      }
+      if (document.pictureInPictureElement) {
+        return document.pictureInPictureElement === managedPipVideo;
+      }
+      const video = pickPictureInPictureCandidateVideo() || pickLargestExtractableVideo();
+      const entered = await requestPictureInPictureForVideo(video);
+      if (entered) {
+        safeSendMessage({ action: REQUEST_ACTION, type: "entered", score: videoArea(video) });
+      }
+      return entered;
+    }, false);
+  }
+
+  async function togglePinned() {
+    pinned = !pinned;
+    let entered = false;
+    if (enabled()) {
+      updateAutomaticPictureInPictureBinding();
+      if (pinned) {
+        entered = await enterPinnedPictureInPicture();
+        notifyCoordinator("enter");
+      }
+    } else {
+      updateAutomaticPictureInPictureBinding();
+      notifyCoordinator("exit");
+    }
+    return {
+      ok: true,
+      pinned,
+      globalEnabled,
+      enabled: enabled(),
+      entered,
+      hasVideo: Boolean(pickPlayingVideo() || pickLargestExtractableVideo())
+    };
   }
 
   function handleVisibilityChange() {
@@ -530,17 +646,20 @@
       if (!(event.target instanceof HTMLVideoElement) || !isPlaying(event.target)) {
         return;
       }
-      bindAutomaticPictureInPicture();
+      updateAutomaticPictureInPictureBinding();
       notifyCoordinator("enter");
     });
   }
 
-  if (
-    !hasExtensionContext() ||
-    !chrome.storage?.local?.get ||
-    !chrome.storage?.onChanged?.addListener ||
-    !chrome.runtime?.onMessage?.addListener
-  ) {
+  function hasRequiredChromeApis() {
+    return guardExtensionContext(() => Boolean(
+      chrome.storage?.local?.get &&
+      chrome.storage?.onChanged?.addListener &&
+      chrome.runtime?.onMessage?.addListener
+    ), false);
+  }
+
+  if (!hasExtensionContext() || !hasRequiredChromeApis()) {
     controller.dispose();
     return;
   }
@@ -561,15 +680,8 @@
         return;
       }
       if (message?.action === TOGGLE_PIN_ACTION) {
-        pinned = !pinned;
-        if (enabled()) {
-          bindAutomaticPictureInPicture();
-          notifyCoordinator("enter");
-        } else {
-          notifyCoordinator("exit");
-        }
-        sendResponse({ ok: true, pinned, globalEnabled, enabled: enabled() });
-        return;
+        togglePinned().then(sendResponse);
+        return true;
       }
       if (message?.action !== COMMAND_ACTION) {
         return;

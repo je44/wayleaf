@@ -25,6 +25,7 @@ const VIDEO_PIP_COMMAND_ACTION = "wayleaf:video-pip-command";
 const SOCIAL_VIDEO_EXTRACT_START_ACTION = "wayleaf:social-video-extract-start";
 const SOCIAL_VIDEO_EXTRACT_STATUS_ACTION = "wayleaf:social-video-extract-status";
 const VIDEO_PIP_OWNER_STORAGE_KEY = "videoPipOwner";
+const VIDEO_PIP_GLOBAL_ENABLED_STORAGE_KEY = "videoPipGlobalEnabled";
 const SOCIAL_VIDEO_EXTRACTOR_ENABLED_STORAGE_KEY = "socialVideoExtractorEnabled";
 const SOCIAL_VIDEO_EXTRACT_HOSTS = new Set([
   "xiaohongshu.com",
@@ -162,6 +163,53 @@ async function sendVideoPipCommand(target, command) {
   );
 }
 
+function toggleVideoPipPinInFrame() {
+  const controller = window.__wayleafVideoPipController;
+  return typeof controller?.togglePin === "function" ? controller.togglePin() : null;
+}
+
+function pickVideoPipToggleResult(results) {
+  return (Array.isArray(results) ? results : [])
+    .map((item) => item?.result)
+    .filter(Boolean)
+    .sort((left, right) => Number(Boolean(right.hasVideo)) - Number(Boolean(left.hasVideo)))[0] || null;
+}
+
+async function injectVideoPipController(tabId) {
+  if (!Number.isInteger(tabId) || !chrome.scripting?.executeScript) {
+    return false;
+  }
+  try {
+    await chrome.scripting.executeScript({
+      target: { tabId, allFrames: true },
+      files: ["video-pip.js"]
+    });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+async function refreshVideoPipControllersInOpenTabs() {
+  if (!chrome.tabs?.query || !chrome.scripting?.executeScript) {
+    return;
+  }
+  const tabs = await chrome.tabs.query({});
+  await Promise.all(tabs
+    .filter((tab) => Number.isInteger(tab.id) && supportsVideoPip(tab.url || ""))
+    .map((tab) => injectVideoPipController(tab.id)));
+}
+
+async function refreshVideoPipControllersWhenGlobalEnabled() {
+  if (!chrome.storage?.local?.get) {
+    return;
+  }
+  const stored = await chrome.storage.local.get({ [VIDEO_PIP_GLOBAL_ENABLED_STORAGE_KEY]: false });
+  if (stored[VIDEO_PIP_GLOBAL_ENABLED_STORAGE_KEY] === true) {
+    await refreshVideoPipControllersInOpenTabs();
+  }
+}
+
 const videoPipCoordinator = globalThis.WayleafVideoPipCoordinator.create({
   command: sendVideoPipCommand,
   loadOwner: loadVideoPipOwner,
@@ -181,15 +229,22 @@ function videoPipTargetFromSender(sender, score = 0) {
 }
 
 async function toggleVideoPipPin(tabId) {
-  try {
-    return await chrome.tabs.sendMessage(tabId, { action: VIDEO_PIP_TOGGLE_ACTION });
-  } catch {
-    await chrome.scripting.executeScript({
-      target: { tabId, allFrames: true },
-      files: ["video-pip.js"]
-    });
+  if (!chrome.scripting?.executeScript) {
     return chrome.tabs.sendMessage(tabId, { action: VIDEO_PIP_TOGGLE_ACTION });
   }
+  let result = pickVideoPipToggleResult(await chrome.scripting.executeScript({
+    target: { tabId, allFrames: true },
+    func: toggleVideoPipPinInFrame
+  }));
+  if (result) {
+    return result;
+  }
+  await injectVideoPipController(tabId);
+  result = pickVideoPipToggleResult(await chrome.scripting.executeScript({
+    target: { tabId, allFrames: true },
+    func: toggleVideoPipPinInFrame
+  }));
+  return result || { ok: false };
 }
 
 async function socialVideoExtractorEnabled() {
@@ -205,10 +260,7 @@ async function startSocialVideoExtraction(tabId) {
   try {
     return await chrome.tabs.sendMessage(tabId, { action: SOCIAL_VIDEO_EXTRACT_START_ACTION });
   } catch {
-    await chrome.scripting.executeScript({
-      target: { tabId, allFrames: true },
-      files: ["video-pip.js"]
-    });
+    await injectVideoPipController(tabId);
     return chrome.tabs.sendMessage(tabId, { action: SOCIAL_VIDEO_EXTRACT_START_ACTION });
   }
 }
@@ -415,10 +467,12 @@ chrome.runtime?.onInstalled?.addListener((details) => {
       .catch(reportBackgroundError);
   }
   ensureDailyAutoSyncAlarm().catch(reportBackgroundError);
+  refreshVideoPipControllersWhenGlobalEnabled().catch(reportBackgroundError);
 });
 
 chrome.runtime?.onStartup?.addListener(() => {
   ensureDailyAutoSyncAlarm().catch(reportBackgroundError);
+  refreshVideoPipControllersWhenGlobalEnabled().catch(reportBackgroundError);
 });
 
 chrome.alarms?.onAlarm?.addListener((alarm) => {
@@ -426,6 +480,14 @@ chrome.alarms?.onAlarm?.addListener((alarm) => {
     runAutoSyncSettings().catch(reportBackgroundError);
   }
 });
+
+chrome.storage?.onChanged?.addListener((changes, areaName) => {
+  if (areaName === "local" && changes[VIDEO_PIP_GLOBAL_ENABLED_STORAGE_KEY]?.newValue === true) {
+    refreshVideoPipControllersInOpenTabs().catch(reportBackgroundError);
+  }
+});
+
+refreshVideoPipControllersWhenGlobalEnabled().catch(reportBackgroundError);
 
 chrome.action?.onClicked?.addListener((tab) => {
   handleVideoPipAction(tab).catch(reportBackgroundError);

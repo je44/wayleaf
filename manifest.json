@@ -54,7 +54,7 @@
       "all_frames": true,
       "match_about_blank": true,
       "match_origin_as_fallback": true,
-      "run_at": "document_idle"
+      "run_at": "document_start"
     }
   ],
   "action": {
