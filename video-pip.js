@@ -17,6 +17,7 @@
   let managedPipNeedsCleanup = false;
   let managedPipVideo = null;
   let extensionContextInvalid = false;
+  let pendingVideoScan = false;
 
   function noteExtensionContextError(error) {
     if (String(error?.message || error).includes("Extension context invalidated")) {
@@ -127,6 +128,48 @@
       }
     }
     return videos;
+  }
+
+  function nodeContainsVideo(node, seen = new Set()) {
+    if (!node || seen.has(node)) {
+      return false;
+    }
+    seen.add(node);
+    try {
+      if (node instanceof HTMLVideoElement) {
+        return true;
+      }
+      if (typeof node.querySelector === "function" && node.querySelector("video")) {
+        return true;
+      }
+      const shadowRoot = node.shadowRoot;
+      return Boolean(shadowRoot && nodeContainsVideo(shadowRoot, seen));
+    } catch (error) {
+      noteExtensionContextError(error);
+      return false;
+    }
+  }
+
+  function scheduleVideoScan() {
+    if (pendingVideoScan) {
+      return;
+    }
+    pendingVideoScan = true;
+    Promise.resolve().then(() => {
+      pendingVideoScan = false;
+      notifyCoordinator("enter");
+    });
+  }
+
+  function handleDomMutation(mutations) {
+    guardExtensionContext(() => {
+      if (!enabled() || document.visibilityState !== "hidden") {
+        return;
+      }
+      if (mutations.some((mutation) => [...mutation.addedNodes || []].some((node) => nodeContainsVideo(node)))) {
+        scheduleVideoScan();
+      }
+    });
   }
 
   function supportsPictureInPicture(video) {
@@ -326,6 +369,16 @@
   document.addEventListener("play", handleVideoPlayback, true);
   document.addEventListener("playing", handleVideoPlayback, true);
   document.addEventListener("loadedmetadata", handleVideoPlayback, true);
+  if (typeof MutationObserver === "function") {
+    try {
+      new MutationObserver(handleDomMutation).observe(document.documentElement || document, {
+        childList: true,
+        subtree: true
+      });
+    } catch {
+      // DOM observation is only a retry path; media events still drive normal PiP.
+    }
+  }
   document.addEventListener("leavepictureinpicture", (event) => {
     guardExtensionContext(() => {
       if (event.target === managedPipVideo) {

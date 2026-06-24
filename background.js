@@ -169,7 +169,7 @@ async function toggleVideoPipPin(tabId) {
     return await chrome.tabs.sendMessage(tabId, { action: VIDEO_PIP_TOGGLE_ACTION });
   } catch {
     await chrome.scripting.executeScript({
-      target: { tabId },
+      target: { tabId, allFrames: true },
       files: ["video-pip.js"]
     });
     return chrome.tabs.sendMessage(tabId, { action: VIDEO_PIP_TOGGLE_ACTION });

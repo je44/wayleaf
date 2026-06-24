@@ -540,7 +540,7 @@ const BOOKMARK_CATEGORY_RULES = {
     text: ["购物", "商城", "电商", "订单", "优惠", "shopping", "shop", "store", "deal"]
   },
   media: {
-    hosts: ["youtube", "bilibili", "netflix", "spotify", "music", "twitch", "douyin", "vimeo", "podcasts"],
+    hosts: ["youtube", "bilibili", "netflix", "spotify", "music", "twitch", "douyin", "iqiyi", "mgtv", "v.qq", "vimeo", "podcasts"],
     text: ["影音", "视频", "音乐", "播客", "直播", "media", "video", "music", "podcast", "stream"]
   }
 };
@@ -580,6 +580,7 @@ const SITE_NAME_BY_KEY = {
   "teams.microsoft.com": "Microsoft Teams",
   "threads.com": "Threads",
   "trip.com": "Trip.com",
+  "v.qq.com": "腾讯视频",
   "vercel.com": "Vercel",
   "x.com": "X",
   "xiaohongshu.com": "小红书",
@@ -615,6 +616,8 @@ const SITE_GROUP_OVERRIDES = {
   "microsoft365.com": "office.com",
   "teams.microsoft.com": "teams.microsoft.com",
   "teams.live.com": "teams.microsoft.com",
+  "v.qq.com": "v.qq.com",
+  "video.qq.com": "v.qq.com",
   "jira.atlassian.com": "atlassian.net",
   "bitbucket.atlassian.com": "bitbucket.org",
   "www.office.com": "office.com",
@@ -778,12 +781,14 @@ const SITE_ICON_FILE_BY_SITE_KEY = Object.freeze({
   "itch.io": "itchdotio.svg",
   "jd.com": "jd.svg",
   "jimeng.jianying.com": "jimeng.svg",
+  "iqiyi.com": "iqiyi.svg",
   "kimi.com": "kimi.svg",
   "larksuite.com": "larksuite.ico",
   "maps.google.com": "googlemaps.svg",
   "meet.google.com": "googlemeet.svg",
   "mimo.mi.com": "xiaomimimo.svg",
   "mimo.xiaomi.com": "xiaomimimo.svg",
+  "mgtv.com": "mgtv.svg",
   "music.163.com": "neteasecloudmusic.svg",
   "nextjs.org": "nextdotjs.svg",
   "nodejs.org": "nodedotjs.svg",
@@ -797,6 +802,7 @@ const SITE_ICON_FILE_BY_SITE_KEY = Object.freeze({
   "tmall.com": "tmall.png",
   "trip.com": "tripdotcom.svg",
   "uizard.io": "uizard.ico",
+  "v.qq.com": "vqq.svg",
   "vuejs.org": "vuedotjs.svg",
   "yandex.com": "yandex.ico"
 });
@@ -894,6 +900,7 @@ const SITE_ICON_TILE_COLOR_BY_SITE_KEY = Object.freeze({
   "huggingface.co": "#ffd21e",
   "iconfont.cn": "#0c6066",
   "instagram.com": "#e4405f",
+  "iqiyi.com": "#689f38",
   "jd.com": "#ff0000",
   "jimeng.jianying.com": "#1c6fff",
   "kagi.com": "#ffb319",
@@ -903,6 +910,7 @@ const SITE_ICON_TILE_COLOR_BY_SITE_KEY = Object.freeze({
   "microsoft.com": "#5e5e5e",
   "mimo.mi.com": "#000000",
   "mimo.xiaomi.com": "#000000",
+  "mgtv.com": "#f86f11",
   "midjourney.com": "#0050c9",
   "notion.so": "#000000",
   "openai.com": "#412991",
@@ -923,6 +931,7 @@ const SITE_ICON_TILE_COLOR_BY_SITE_KEY = Object.freeze({
   "tiktok.com": "#000000",
   "tmall.com": "#ff0036",
   "uizard.io": "#00f9e5",
+  "v.qq.com": "#30a3f9",
   "vercel.com": "#000000",
   "wechat.com": "#07c160",
   "weibo.com": "#e6162d",

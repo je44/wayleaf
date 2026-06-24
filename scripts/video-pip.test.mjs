@@ -38,6 +38,8 @@ assert.deepEqual(
   "The generic HTML5 video controller should be available to future platforms without host-specific code."
 );
 assert.equal(videoContentScript.all_frames, true, "Embedded players should use the same frame-aware PiP protocol.");
+assert.equal(videoContentScript.match_about_blank, true, "Related about:blank video frames should receive the PiP controller.");
+assert.equal(videoContentScript.match_origin_as_fallback, true, "Related blob/data video frames should receive the PiP controller.");
 for (const runtimeFile of ["video-pip.js", "video-pip-coordinator.js"]) {
   assert.ok(packageSource.split(/\s+/).includes(runtimeFile), `Release packages should include ${runtimeFile}.`);
 }
@@ -45,6 +47,11 @@ assert.match(
   backgroundSource,
   /chrome\.action\?\.onClicked\?\.addListener[\s\S]*handleVideoPipAction/,
   "The pinned Wayleaf toolbar action should toggle per-tab video PiP."
+);
+assert.match(
+  backgroundSource,
+  /target:\s*\{\s*tabId,\s*allFrames:\s*true\s*\}/,
+  "Toolbar fallback injection should refresh the PiP controller in embedded frames."
 );
 assert.match(
   html,
@@ -68,6 +75,7 @@ function createControllerHarness() {
   const documentListeners = new Map();
   const storageListeners = [];
   const runtimeListeners = [];
+  const mutationObservers = [];
   let mediaSessionHandler = null;
   let requestCount = 0;
   let exitCount = 0;
@@ -177,7 +185,18 @@ function createControllerHarness() {
       animationFrames.delete(frameId);
     },
     console,
-    Promise
+    Promise,
+    MutationObserver: class {
+      constructor(callback) {
+        this.callback = callback;
+        mutationObservers.push(this);
+      }
+
+      observe(target, options) {
+        this.target = target;
+        this.options = options;
+      }
+    }
   });
   queryVideos = [video];
   return {
@@ -214,6 +233,11 @@ function createControllerHarness() {
       animationFrames.clear();
       for (const callback of callbacks) {
         callback();
+      }
+    },
+    mutate(mutations) {
+      for (const observer of mutationObservers) {
+        observer.callback(mutations);
       }
     },
     dispatch(type, target = documentMock) {
@@ -310,6 +334,8 @@ assert.equal((await harness.command("enter"))?.entered, true, "A stale source-ta
 assert.equal(harness.requestCount, 3, "Global mode should still enter PiP again after a stale source-tab cleanup.");
 documentMock.pictureInPictureElement = null;
 dispatch("leavepictureinpicture", video);
+await settle();
+assert.equal(harness.coordinatorRequests.at(-1)?.type, "left", "A closed PiP window should release browser-level ownership.");
 documentMock.visibilityState = "visible";
 dispatch("visibilitychange");
 await settle();
@@ -406,6 +432,16 @@ shadowHarness.dispatch("playing", shadowHarness.video);
 await settle();
 assert.equal((await shadowHarness.command("enter"))?.entered, true, "Generic PiP should find playable videos inside open shadow DOM.");
 
+const delayedVideoHarness = createControllerHarness();
+delayedVideoHarness.storageListeners[0]({ videoPipGlobalEnabled: { newValue: true } }, "local");
+delayedVideoHarness.video.paused = false;
+delayedVideoHarness.documentMock.visibilityState = "hidden";
+delayedVideoHarness.documentMock.querySelectorAll = querySelectorAllForLightAndShadow([delayedVideoHarness.video]);
+delayedVideoHarness.mutate([{ addedNodes: [delayedVideoHarness.video] }]);
+await settle();
+assert.equal(delayedVideoHarness.coordinatorRequests.at(-1)?.type, "enter", "Delayed inserted video elements should retry coordinated PiP.");
+assert.equal((await delayedVideoHarness.command("enter"))?.entered, true, "A delayed inserted video should enter PiP after ownership is granted.");
+
 const coordinatorContext = {};
 coordinatorContext.globalThis = coordinatorContext;
 vm.runInNewContext(coordinatorSource, coordinatorContext);
@@ -495,4 +531,12 @@ assert.deepEqual(
   commands.slice(-2),
   ["exit:future-platform", "enter:youtube"],
   "A restarted service worker should recover the persisted owner before handoff."
+);
+await restartedCoordinator.handle({ type: "left" }, targets.youtube);
+assert.equal(storedOwner, null, "A native PiP close should clear stale ownership so the source page cannot remain stuck in PiP state.");
+await restartedCoordinator.handle({ type: "enter" }, targets.bilibili);
+assert.deepEqual(
+  commands.slice(-1),
+  ["enter:bilibili"],
+  "A new platform should not need to exit a stale owner after the old PiP window has already left."
 );

@@ -31,16 +31,19 @@ const SITE_ICON_TILE_COLOR_BY_SITE_KEY_FOR_TEST = Object.freeze({
   "grok.com": "#000000",
   "huggingface.co": "#ffd21e",
   "instagram.com": "#e4405f",
+  "iqiyi.com": "#689f38",
   "jd.com": "#ff0000",
   "jimeng.jianying.com": "#1c6fff",
   "kimi.com": "#111827",
   "linkedin.com": "#0a66c2",
   "mimo.mi.com": "#000000",
   "mimo.xiaomi.com": "#000000",
+  "mgtv.com": "#f86f11",
   "raycast.com": "#ff6363",
   "spotify.com": "#1ed760",
   "suno.com": "#000000",
   "tiktok.com": "#000000",
+  "v.qq.com": "#30a3f9",
   "xiaomimimo.com": "#000000",
   "zhihu.com": "#0084ff"
 });
@@ -333,17 +336,20 @@ const SITE_ICON_FILE_BY_SITE_KEY_FOR_TEST = Object.freeze({
   "firefly.adobe.com": "adobefirefly.svg",
   "firebase.google.com": "firebase.svg",
   "gemini.google.com": "googlegemini.svg",
+  "iqiyi.com": "iqiyi.svg",
   "jimeng.jianying.com": "jimeng.svg",
   "maps.google.com": "googlemaps.svg",
   "meet.google.com": "googlemeet.svg",
   "mimo.mi.com": "xiaomimimo.svg",
   "mimo.xiaomi.com": "xiaomimimo.svg",
+  "mgtv.com": "mgtv.svg",
   "music.163.com": "neteasecloudmusic.svg",
   "kimi.com": "kimi.svg",
   "npmjs.com": "npm.svg",
   "office.com": "microsoftoffice.svg",
   "stackoverflow.com": "stackoverflow.svg",
-  "teams.microsoft.com": "microsoftteams.svg"
+  "teams.microsoft.com": "microsoftteams.svg",
+  "v.qq.com": "vqq.svg"
 });
 
 function localIconForSiteKeyForTest(siteKey) {
@@ -1337,7 +1343,10 @@ function embeddedSvgBrandColorForTest(value) {
 
 function siteKeyForUrlForTest(url) {
   const parsedUrl = new URL(url);
-  return parsedUrl.hostname.replace(/^www\./, "").toLowerCase();
+  const host = parsedUrl.hostname.replace(/^(www|m|mobile)\./, "").toLowerCase();
+  return {
+    "video.qq.com": "v.qq.com"
+  }[host] || host;
 }
 
 function localIconForUrlForTest(url) {
@@ -2263,9 +2272,13 @@ assert.equal(localIconForUrlForTest("https://chatglm.cn/"), "icons/sites/glm.svg
 assert.equal(localIconForUrlForTest("https://www.douyin.com/search/"), "icons/sites/douyin.svg", "Douyin should use the deployed multicolor local SVG instead of the legacy ico.");
 assert.equal(localIconForUrlForTest("https://www.alipay.com/"), "icons/sites/alipay.svg", "Alipay should use the deployed multicolor local SVG.");
 assert.equal(localIconForUrlForTest("https://www.instagram.com/"), "icons/sites/instagram.svg", "Instagram should use the deployed multicolor local SVG.");
+assert.equal(localIconForUrlForTest("https://www.iqiyi.com/"), "icons/sites/iqiyi.svg", "iQIYI should use the deployed local SVG.");
 assert.equal(localIconForUrlForTest("https://huggingface.co/"), "icons/sites/huggingface.svg", "Hugging Face should use the deployed multicolor local SVG.");
 assert.equal(localIconForUrlForTest("https://jimeng.jianying.com/"), "icons/sites/jimeng.svg", "Jimeng should use the deployed multicolor local SVG.");
 assert.equal(localIconForUrlForTest("https://mimo.mi.com/"), "icons/sites/xiaomimimo.svg", "MiMo should use the deployed local SVG.");
+assert.equal(localIconForUrlForTest("https://www.mgtv.com/"), "icons/sites/mgtv.svg", "MGTV should use the deployed local SVG.");
+assert.equal(localIconForUrlForTest("https://video.qq.com/"), "icons/sites/vqq.svg", "Tencent Video should use the deployed local SVG without taking over all qq.com pages.");
+assert.equal(localIconForUrlForTest("https://v.qq.com/x/cover/sample.html"), "icons/sites/vqq.svg", "v.qq.com should use the deployed Tencent Video SVG.");
 assert.equal(localIconForUrlForTest("https://www.tiktok.com/"), "icons/sites/tiktok.svg", "TikTok should use the deployed multicolor local SVG.");
 {
   const icon = new TestIcon();
