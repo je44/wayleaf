@@ -71,7 +71,7 @@ assert.match(
 
 class FakeVideo {}
 
-function createControllerHarness() {
+function createControllerHarness(initialController = undefined) {
   const documentListeners = new Map();
   const storageListeners = [];
   const runtimeListeners = [];
@@ -94,6 +94,9 @@ function createControllerHarness() {
       const listeners = documentListeners.get(type) || [];
       listeners.push(listener);
       documentListeners.set(type, listeners);
+    },
+    removeEventListener(type, listener) {
+      documentListeners.set(type, (documentListeners.get(type) || []).filter((item) => item !== listener));
     },
     async exitPictureInPicture() {
       exitCount += 1;
@@ -136,6 +139,9 @@ function createControllerHarness() {
   const windowMock = {};
   windowMock.top = windowMock;
   windowMock.self = windowMock;
+  if (initialController !== undefined) {
+    windowMock.__wayleafVideoPipController = initialController;
+  }
   const chromeMock = {
     storage: {
       local: {
@@ -146,6 +152,12 @@ function createControllerHarness() {
       onChanged: {
         addListener(listener) {
           storageListeners.push(listener);
+        },
+        removeListener(listener) {
+          const index = storageListeners.indexOf(listener);
+          if (index >= 0) {
+            storageListeners.splice(index, 1);
+          }
         }
       }
     },
@@ -158,11 +170,17 @@ function createControllerHarness() {
       onMessage: {
         addListener(listener) {
           runtimeListeners.push(listener);
+        },
+        removeListener(listener) {
+          const index = runtimeListeners.indexOf(listener);
+          if (index >= 0) {
+            runtimeListeners.splice(index, 1);
+          }
         }
       }
     }
   };
-  vm.runInNewContext(controllerSource, {
+  const context = {
     window: windowMock,
     document: documentMock,
     navigator: {
@@ -196,11 +214,21 @@ function createControllerHarness() {
         this.target = target;
         this.options = options;
       }
+
+      disconnect() {
+        const index = mutationObservers.indexOf(this);
+        if (index >= 0) {
+          mutationObservers.splice(index, 1);
+        }
+      }
     }
-  });
+  };
+  vm.createContext(context);
+  vm.runInContext(controllerSource, context);
   queryVideos = [video];
   return {
     documentMock,
+    context,
     runtimeListeners,
     storageListeners,
     video,
@@ -413,6 +441,27 @@ const staleDomRequestCount = invalidatedDomHarness.coordinatorRequests.length;
 assert.doesNotThrow(() => invalidatedDomHarness.dispatch("playing", invalidatedDomHarness.video), "Stale content-script DOM scans must be swallowed at the query boundary.");
 await settle();
 assert.equal(invalidatedDomHarness.coordinatorRequests.length, staleDomRequestCount, "A stale content-script DOM scan should not send a new PiP request.");
+
+const legacyMarkerHarness = createControllerHarness(true);
+assert.equal(legacyMarkerHarness.runtimeListeners.length, 1, "A legacy boolean controller marker should not block fresh injection.");
+assert.equal(legacyMarkerHarness.storageListeners.length, 1, "A legacy boolean controller marker should still initialize the fresh controller.");
+
+const reinjectedHarness = createControllerHarness();
+const firstRuntimeListener = reinjectedHarness.runtimeListeners[0];
+const firstStorageListener = reinjectedHarness.storageListeners[0];
+reinjectedHarness.documentMock.querySelectorAll = querySelectorAllForLightAndShadow([reinjectedHarness.video]);
+vm.runInContext(controllerSource, reinjectedHarness.context);
+assert.notEqual(reinjectedHarness.runtimeListeners[0], firstRuntimeListener, "A reinjected content script should replace the stale runtime listener.");
+assert.notEqual(reinjectedHarness.storageListeners[0], firstStorageListener, "A reinjected content script should replace the stale storage listener.");
+assert.equal(reinjectedHarness.runtimeListeners.length, 1, "Reinjection should not leave duplicate runtime listeners behind.");
+assert.equal(reinjectedHarness.storageListeners.length, 1, "Reinjection should not leave duplicate storage listeners behind.");
+reinjectedHarness.storageListeners[0]({ videoPipGlobalEnabled: { newValue: true } }, "local");
+reinjectedHarness.video.paused = false;
+reinjectedHarness.documentMock.visibilityState = "hidden";
+reinjectedHarness.dispatch("playing", reinjectedHarness.video);
+await settle();
+assert.equal(reinjectedHarness.coordinatorRequests.at(-1)?.type, "enter", "The replacement controller should handle long-lived video pages after reinjection.");
+assert.equal((await reinjectedHarness.command("enter"))?.entered, true, "The replacement controller should enter PiP after ownership is granted.");
 
 const invalidatedCommandHarness = createControllerHarness();
 Object.defineProperty(invalidatedCommandHarness.documentMock, "visibilityState", {

@@ -1,11 +1,7 @@
 "use strict";
 
 (() => {
-  if (window.__wayleafVideoPipController) {
-    return;
-  }
-  window.__wayleafVideoPipController = true;
-
+  const CONTROLLER_KEY = "__wayleafVideoPipController";
   const GLOBAL_ENABLED_STORAGE_KEY = "videoPipGlobalEnabled";
   const TOGGLE_PIN_ACTION = "wayleaf:toggle-video-pip-pin";
   const REQUEST_ACTION = "wayleaf:video-pip-request";
@@ -18,16 +14,63 @@
   let managedPipVideo = null;
   let extensionContextInvalid = false;
   let pendingVideoScan = false;
+  let disposed = false;
+  let mutationObserver = null;
+  let storageChangeListener = null;
+  let runtimeMessageListener = null;
+  const documentListeners = [];
+  const previousController = window[CONTROLLER_KEY];
+  const controller = {
+    dispose() {
+      disposed = true;
+      pendingVideoScan = false;
+      for (const [type, listener, options] of documentListeners.splice(0)) {
+        try {
+          document.removeEventListener(type, listener, options);
+        } catch {}
+      }
+      try {
+        mutationObserver?.disconnect();
+      } catch {}
+      mutationObserver = null;
+      try {
+        if (typeof chrome !== "undefined" && storageChangeListener) {
+          chrome.storage?.onChanged?.removeListener?.(storageChangeListener);
+        }
+      } catch {}
+      try {
+        if (typeof chrome !== "undefined" && runtimeMessageListener) {
+          chrome.runtime?.onMessage?.removeListener?.(runtimeMessageListener);
+        }
+      } catch {}
+      if (window[CONTROLLER_KEY] === controller) {
+        try {
+          delete window[CONTROLLER_KEY];
+        } catch {
+          window[CONTROLLER_KEY] = null;
+        }
+      }
+    }
+  };
+
+  if (typeof previousController?.dispose === "function") {
+    previousController.dispose();
+  }
+  window[CONTROLLER_KEY] = controller;
 
   function noteExtensionContextError(error) {
     if (String(error?.message || error).includes("Extension context invalidated")) {
       extensionContextInvalid = true;
+      controller.dispose();
       return true;
     }
     return false;
   }
 
   function guardExtensionContext(callback, fallback) {
+    if (disposed) {
+      return fallback;
+    }
     try {
       return callback();
     } catch (error) {
@@ -39,6 +82,9 @@
   }
 
   async function guardExtensionContextAsync(callback, fallback) {
+    if (disposed) {
+      return fallback;
+    }
     try {
       return await callback();
     } catch (error) {
@@ -50,7 +96,7 @@
   }
 
   function hasExtensionContext() {
-    if (extensionContextInvalid || typeof chrome === "undefined") {
+    if (disposed || extensionContextInvalid || typeof chrome === "undefined") {
       return false;
     }
     try {
@@ -62,7 +108,7 @@
   }
 
   function safeSendMessage(message) {
-    if (!hasExtensionContext()) {
+    if (disposed || !hasExtensionContext()) {
       return;
     }
     try {
@@ -73,7 +119,7 @@
   }
 
   function enabled() {
-    return globalEnabled || pinned;
+    return !disposed && (globalEnabled || pinned);
   }
 
   function isPlaying(video) {
@@ -100,7 +146,7 @@
   }
 
   function queryVideos(root = document, seen = new Set()) {
-    if (extensionContextInvalid || seen.has(root)) {
+    if (disposed || extensionContextInvalid || seen.has(root)) {
       return [];
     }
     let videos = [];
@@ -151,12 +197,15 @@
   }
 
   function scheduleVideoScan() {
-    if (pendingVideoScan) {
+    if (disposed || pendingVideoScan) {
       return;
     }
     pendingVideoScan = true;
     Promise.resolve().then(() => {
       pendingVideoScan = false;
+      if (disposed) {
+        return;
+      }
       notifyCoordinator("enter");
     });
   }
@@ -320,6 +369,7 @@
     !chrome.storage?.onChanged?.addListener ||
     !chrome.runtime?.onMessage?.addListener
   ) {
+    controller.dispose();
     return;
   }
 
@@ -327,12 +377,13 @@
     chrome.storage.local.get({ [GLOBAL_ENABLED_STORAGE_KEY]: false }, (result) => {
       updateGlobalEnabled(result?.[GLOBAL_ENABLED_STORAGE_KEY]);
     });
-    chrome.storage.onChanged.addListener((changes, areaName) => {
+    storageChangeListener = (changes, areaName) => {
       if (areaName === "local" && changes[GLOBAL_ENABLED_STORAGE_KEY]) {
         updateGlobalEnabled(changes[GLOBAL_ENABLED_STORAGE_KEY].newValue);
       }
-    });
-    chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
+    };
+    chrome.storage.onChanged.addListener(storageChangeListener);
+    runtimeMessageListener = (message, _sender, sendResponse) => {
       if (message?.action === TOGGLE_PIN_ACTION) {
         pinned = !pinned;
         if (enabled()) {
@@ -359,27 +410,20 @@
         sendResponse({ ok: false });
       })();
       return true;
-    });
+    };
+    chrome.runtime.onMessage.addListener(runtimeMessageListener);
   } catch {
     extensionContextInvalid = true;
+    controller.dispose();
     return;
   }
 
-  document.addEventListener("visibilitychange", handleVisibilityChange, true);
-  document.addEventListener("play", handleVideoPlayback, true);
-  document.addEventListener("playing", handleVideoPlayback, true);
-  document.addEventListener("loadedmetadata", handleVideoPlayback, true);
-  if (typeof MutationObserver === "function") {
-    try {
-      new MutationObserver(handleDomMutation).observe(document.documentElement || document, {
-        childList: true,
-        subtree: true
-      });
-    } catch {
-      // DOM observation is only a retry path; media events still drive normal PiP.
-    }
+  function addDocumentListener(type, listener, options) {
+    document.addEventListener(type, listener, options);
+    documentListeners.push([type, listener, options]);
   }
-  document.addEventListener("leavepictureinpicture", (event) => {
+
+  function handleLeavePictureInPicture(event) {
     guardExtensionContext(() => {
       if (event.target === managedPipVideo) {
         managedPipNeedsCleanup = false;
@@ -387,5 +431,22 @@
         notifyCoordinator("left");
       }
     });
-  }, true);
+  }
+
+  addDocumentListener("visibilitychange", handleVisibilityChange, true);
+  addDocumentListener("play", handleVideoPlayback, true);
+  addDocumentListener("playing", handleVideoPlayback, true);
+  addDocumentListener("loadedmetadata", handleVideoPlayback, true);
+  if (typeof MutationObserver === "function") {
+    try {
+      mutationObserver = new MutationObserver(handleDomMutation);
+      mutationObserver.observe(document.documentElement || document, {
+        childList: true,
+        subtree: true
+      });
+    } catch {
+      // DOM observation is only a retry path; media events still drive normal PiP.
+    }
+  }
+  addDocumentListener("leavepictureinpicture", handleLeavePictureInPicture, true);
 })();
