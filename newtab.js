@@ -3510,6 +3510,7 @@ async function init() {
   document.addEventListener("pointerdown", handlePortalCategoryPickerDismiss, true);
   document.addEventListener("pointerdown", handleSearchSuggestionDismiss, true);
   document.addEventListener("pointerdown", handleSettingsPanelDismiss, true);
+  document.addEventListener("dragstart", preventNativeSiteIconDrag, true);
   document.addEventListener("keydown", handleBookmarkDeleteEscape);
   document.addEventListener("keydown", handleGlobalEscape);
   bindBookmarkChangeEvents();
@@ -8684,8 +8685,15 @@ function hashText(value) {
 }
 
 function storeIconSiteContext(icon, site) {
+  icon.draggable = false;
   icon.dataset.siteUrl = site.url || "";
   icon.dataset.siteTitle = site.title || icon.alt || "";
+}
+
+function preventNativeSiteIconDrag(event) {
+  if (event.target?.closest?.(".favorite-link, .recent-folder-face, .site-link")) {
+    event.preventDefault();
+  }
 }
 
 function applySiteIconTile(icon, site, iconPath = "") {

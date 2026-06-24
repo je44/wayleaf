@@ -1848,7 +1848,7 @@ html.theme-transitioning[data-theme-transition="to-light"] .recent-card-inner {
   transform: scale(1);
   transform-origin: center;
   transition:
-    transform 260ms cubic-bezier(0.18, 1.36, 0.32, 1),
+    transform 320ms cubic-bezier(0.2, 0, 0.16, 1.18),
     background-color var(--theme-transition-duration) var(--theme-transition-ease),
     background var(--theme-transition-duration) var(--theme-transition-ease);
   will-change: transform, opacity;
@@ -1856,7 +1856,11 @@ html.theme-transitioning[data-theme-transition="to-light"] .recent-card-inner {
 
 @media (hover: hover) and (pointer: fine) {
   .favorite-site:not(.pressing):not(.delete-ready):not(.clearing):not(.removing) .favorite-link:is(:hover, :focus-visible) .favorite-icon-shell {
-    transform: scale(1.05);
+    transform: translateY(-2px) scale(1.07);
+    transition:
+      transform 360ms cubic-bezier(0.18, 1.18, 0.22, 1),
+      background-color var(--theme-transition-duration) var(--theme-transition-ease),
+      background var(--theme-transition-duration) var(--theme-transition-ease);
   }
 }
 
@@ -1886,13 +1890,16 @@ html.theme-transitioning .search-workbench[data-ai-exiting] .favorite-icon {
   object-fit: cover;
 }
 
-.favorite-site.pressing .favorite-icon-shell,
+.favorite-site.pressing .favorite-icon-shell {
+  animation: favoritePressHold 650ms cubic-bezier(0.2, 0.82, 0.24, 1) both;
+}
+
 .favorite-site.delete-ready .favorite-icon-shell {
-  animation: favoritePressHold 650ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation: favoriteDeleteReadyActivate 520ms cubic-bezier(0.18, 0.82, 0.18, 1) both;
 }
 
 .favorite-site.clearing .favorite-icon-shell {
-  animation: favoriteCancelDelete 260ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation: favoriteCancelDelete 360ms cubic-bezier(0.22, 0, 0.2, 1) both;
 }
 
 .favorite-site.removing {
@@ -1902,22 +1909,27 @@ html.theme-transitioning .search-workbench[data-ai-exiting] .favorite-icon {
 
 .favorite-remove {
   position: absolute;
-  top: -6px;
-  right: -6px;
+  top: -2px;
+  right: -2px;
   z-index: 5;
   display: none;
-  width: 26px;
-  height: 26px;
+  width: 20px;
+  height: 20px;
   padding: 0;
   place-items: center;
   border: 0;
-  border-radius: 0;
-  background: transparent;
-  color: var(--faint);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--paper) 94%, transparent);
+  color: var(--danger);
   cursor: pointer;
-  box-shadow: none;
-  opacity: 0.98;
-  transition: color 160ms ease;
+  box-shadow:
+    0 3px 8px rgb(20 27 24 / 0.14),
+    inset 0 0 0 1px color-mix(in srgb, var(--line-strong) 64%, transparent);
+  opacity: 0.96;
+  transition:
+    color 160ms ease,
+    background-color 160ms ease,
+    transform 180ms cubic-bezier(0.2, 0, 0.16, 1.18);
 }
 
 .favorite-site.delete-ready .favorite-remove {
@@ -1925,14 +1937,16 @@ html.theme-transitioning .search-workbench[data-ai-exiting] .favorite-icon {
 }
 
 .favorite-remove svg {
-  width: 15px;
-  height: 15px;
+  width: 12px;
+  height: 12px;
 }
 
 .favorite-remove:hover,
 .favorite-remove:focus-visible,
 .favorite-remove:active {
+  background: color-mix(in srgb, var(--paper) 88%, var(--danger) 12%);
   color: var(--danger);
+  transform: scale(1.08);
 }
 
 .favorite-tear-layer {
@@ -1965,33 +1979,63 @@ html.theme-transitioning .search-workbench[data-ai-exiting] .favorite-icon {
 
 @keyframes favoritePressHold {
   0% {
-    transform: scale(1);
+    transform: translateY(0) scale(1);
   }
 
-  42% {
-    transform: scale(0.88);
-  }
-
-  72% {
-    transform: scale(0.8);
+  38% {
+    transform: translateY(1px) scale(0.96);
   }
 
   100% {
-    transform: scale(0.82);
+    transform: translateY(1px) scale(0.96);
+  }
+}
+
+@keyframes favoriteDeleteReadyActivate {
+  0% {
+    transform: translateY(1px) scale(0.96);
+  }
+
+  36% {
+    transform: translateY(-3px) scale(1.105);
+  }
+
+  54% {
+    transform: translateY(-1px) scale(1.045);
+  }
+
+  72% {
+    transform: translateY(-2.4px) scale(1.082);
+  }
+
+  86% {
+    transform: translateY(-1.8px) scale(1.063);
+  }
+
+  100% {
+    transform: translateY(-2px) scale(1.07);
   }
 }
 
 @keyframes favoriteCancelDelete {
   0% {
-    transform: scale(0.82);
+    transform: translateY(-2px) scale(1.07);
   }
 
-  58% {
-    transform: scale(1.08);
+  42% {
+    transform: translateY(1.2px) scale(0.94);
+  }
+
+  68% {
+    transform: translateY(-0.4px) scale(1.015);
+  }
+
+  84% {
+    transform: translateY(0.1px) scale(0.992);
   }
 
   100% {
-    transform: scale(1);
+    transform: translateY(0) scale(1);
   }
 }
 
