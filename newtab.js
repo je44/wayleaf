@@ -220,7 +220,6 @@ function animatePageRefreshEntry() {
   });
 }
 
-const DEFAULT_PORTAL_CATEGORY = "developer";
 const DEFAULT_SEARCH_ENGINE = "local";
 const DEFAULT_THEME_MODE = "system";
 const DEFAULT_THEME_PALETTE = "sage";
@@ -234,13 +233,6 @@ const SETTINGS_TAB_ICONS = Object.freeze({
   basic: { inactive: "system-setting", active: "system-setting-filled" },
   search: { inactive: "ai-search", active: "ai-search-filled" },
   laboratory: { inactive: "filter-2", active: "filter-2-filled" }
-});
-const CUSTOM_THEME_PALETTE_ID = "custom";
-const DEFAULT_CUSTOM_THEME_COLORS = Object.freeze({
-  light: "#0d6d59",
-  lightStrong: "#074b3e",
-  dark: "#82c8ae",
-  darkStrong: "#a8dcc8"
 });
 const THEME_PALETTE_DISPLAY_ORDER = ["sage", "amber", "peach", "sky"];
 const VISIBLE_THEME_PALETTE_IDS = new Set(THEME_PALETTE_DISPLAY_ORDER);
@@ -1142,11 +1134,6 @@ const MESSAGES = {
     onboardingNext: "下一步",
     onboardingDone: "完成",
     closeOnboarding: "关闭指引",
-    customPaletteTitle: "自定义主题",
-    customPaletteDescription: "自定义 Wayleaf 的主题双色",
-    customPaletteHint: "自定义颜色会在浅色与深色模式下自动适配。",
-    lightAccent: "主色（按钮 / 链接 / 选中）",
-    darkAccent: "辅助色（强调 / 提示）",
     portalNameRequired: "请填写入口名称。",
     portalUrlRequired: "请输入 http 或 https 开头的网址。",
     customPortalLimit: "自定义入口最多 {count} 个。",
@@ -1343,11 +1330,6 @@ const MESSAGES = {
     onboardingNext: "下一步",
     onboardingDone: "完成",
     closeOnboarding: "關閉指引",
-    customPaletteTitle: "自訂主題",
-    customPaletteDescription: "自訂 Wayleaf 的主題雙色",
-    customPaletteHint: "自訂顏色會在淺色與深色模式下自動適配。",
-    lightAccent: "主色（按鈕 / 連結 / 選取）",
-    darkAccent: "輔助色（強調 / 提示）",
     portalNameRequired: "請填寫入口名稱。",
     portalUrlRequired: "請輸入 http 或 https 開頭的網址。",
     customPortalLimit: "自訂入口最多 {count} 個。",
@@ -1529,11 +1511,6 @@ const MESSAGES = {
     onboardingNext: "Next",
     onboardingDone: "Finish",
     closeOnboarding: "Close guide",
-    customPaletteTitle: "Custom theme",
-    customPaletteDescription: "Customize Wayleaf's theme color pair",
-    customPaletteHint: "Custom colors adapt automatically in light and dark modes.",
-    lightAccent: "Primary (buttons / links / selected)",
-    darkAccent: "Secondary (emphasis / hints)",
     portalNameRequired: "Enter a portal name.",
     portalUrlRequired: "Enter an http or https URL.",
     customPortalLimit: "You can add up to {count} custom portals.",
@@ -1654,12 +1631,7 @@ const MESSAGES = {
     searchSettingsSave: "検索設定を保存",
     searchSettingsReset: "既定に戻す",
     searchSettingsSaved: "検索設定を保存しました。",
-    searchSettingsResetDone: "既定の検索設定に戻しました。",
-    customPaletteTitle: "カスタムテーマ",
-    customPaletteDescription: "Wayleaf のテーマ色ペアをカスタマイズ",
-    customPaletteHint: "カスタム色はライト/ダークモードに自動で適応します。",
-    lightAccent: "メイン（ボタン / リンク / 選択）",
-    darkAccent: "サブ（強調 / ヒント）"
+    searchSettingsResetDone: "既定の検索設定に戻しました。"
   },
   ko: {
     portalTitle: "탐색 허브",
@@ -1751,12 +1723,7 @@ const MESSAGES = {
     searchSettingsSave: "검색 설정 저장",
     searchSettingsReset: "기본값 복원",
     searchSettingsSaved: "검색 설정을 저장했습니다.",
-    searchSettingsResetDone: "기본 검색 설정을 복원했습니다.",
-    customPaletteTitle: "사용자 지정 테마",
-    customPaletteDescription: "Wayleaf의 테마 색상 조합 사용자 지정",
-    customPaletteHint: "사용자 지정 색상은 라이트/다크 모드에 자동으로 맞춰집니다.",
-    lightAccent: "기본색(버튼 / 링크 / 선택)",
-    darkAccent: "보조색(강조 / 힌트)"
+    searchSettingsResetDone: "기본 검색 설정을 복원했습니다."
   },
   es: {
     portalTitle: "Centro de navegación",
@@ -1848,12 +1815,7 @@ const MESSAGES = {
     searchSettingsSave: "Guardar ajustes de búsqueda",
     searchSettingsReset: "Restaurar valores",
     searchSettingsSaved: "Ajustes de búsqueda guardados.",
-    searchSettingsResetDone: "Ajustes de búsqueda predeterminados restaurados.",
-    customPaletteTitle: "Tema personalizado",
-    customPaletteDescription: "Personaliza el par de colores del tema de Wayleaf",
-    customPaletteHint: "Los colores personalizados se adaptan automáticamente a los modos claro y oscuro.",
-    lightAccent: "Principal (botones / enlaces / selección)",
-    darkAccent: "Secundario (énfasis / ayudas)"
+    searchSettingsResetDone: "Ajustes de búsqueda predeterminados restaurados."
   },
   fr: {
     portalTitle: "Centre de navigation",
@@ -1945,12 +1907,7 @@ const MESSAGES = {
     searchSettingsSave: "Enregistrer les paramètres",
     searchSettingsReset: "Restaurer les valeurs par défaut",
     searchSettingsSaved: "Paramètres de recherche enregistrés.",
-    searchSettingsResetDone: "Paramètres de recherche par défaut restaurés.",
-    customPaletteTitle: "Thème personnalisé",
-    customPaletteDescription: "Personnaliser la paire de couleurs du thème de Wayleaf",
-    customPaletteHint: "Les couleurs personnalisées s'adaptent automatiquement aux modes clair et sombre.",
-    lightAccent: "Principal (boutons / liens / sélection)",
-    darkAccent: "Secondaire (accent / indications)"
+    searchSettingsResetDone: "Paramètres de recherche par défaut restaurés."
   },
   de: {
     portalTitle: "Navigationszentrale",
@@ -2042,12 +1999,7 @@ const MESSAGES = {
     searchSettingsSave: "Sucheinstellungen speichern",
     searchSettingsReset: "Standard wiederherstellen",
     searchSettingsSaved: "Sucheinstellungen gespeichert.",
-    searchSettingsResetDone: "Standard-Sucheinstellungen wiederhergestellt.",
-    customPaletteTitle: "Benutzerdefiniertes Design",
-    customPaletteDescription: "Farbpaar des Wayleaf-Designs anpassen",
-    customPaletteHint: "Benutzerdefinierte Farben passen sich automatisch an hellen und dunklen Modus an.",
-    lightAccent: "Primär (Buttons / Links / Auswahl)",
-    darkAccent: "Sekundär (Akzent / Hinweise)"
+    searchSettingsResetDone: "Standard-Sucheinstellungen wiederhergestellt."
   }
 };
 const LOCALE_COMPLETIONS = {
@@ -2600,12 +2552,6 @@ const platformSearchSettingsList = document.querySelector("#platformSearchSettin
 const resetSearchSettingsButton = document.querySelector("#resetSearchSettingsButton");
 const searchSettingsStatus = document.querySelector("#searchSettingsStatus");
 const videoPipGlobalToggle = document.querySelector("#videoPipGlobalToggle");
-const lightAccentInput = document.querySelector("#lightAccentInput");
-const lightAccentStrongInput = document.querySelector("#lightAccentStrongInput");
-const darkAccentInput = document.querySelector("#darkAccentInput");
-const darkAccentStrongInput = document.querySelector("#darkAccentStrongInput");
-const lightAccentValue = document.querySelector("#lightAccentValue");
-const darkAccentValue = document.querySelector("#darkAccentValue");
 const quickSearchForm = document.querySelector("#quickSearchForm");
 const quickSearchInput = document.querySelector("#quickSearchInput");
 const quickSearchLeadingIcon = document.querySelector(".search-engine-search-icon");
@@ -2664,7 +2610,6 @@ let activeThemeMode = DEFAULT_THEME_MODE;
 let activeLanguagePreference = "system";
 let activeResolvedTheme = "";
 let activeThemePalette = DEFAULT_THEME_PALETTE;
-let activeCustomThemeColors = { ...DEFAULT_CUSTOM_THEME_COLORS };
 let themeBackgroundTransitionTimer = 0;
 let themeBackgroundTransitionSequence = 0;
 let systemThemeQuery = null;
@@ -3302,12 +3247,6 @@ function applySettingsLocale() {
   document.querySelector("#videoPipGlobalLabel").textContent = t("videoPipGlobalLabel");
   document.querySelector("#videoPipGlobalHint").textContent = t("videoPipGlobalHint");
   updateVideoPipGlobalToggle();
-  const customPaletteTitle = document.querySelector("#customPaletteTitle");
-  if (customPaletteTitle) {
-    customPaletteTitle.textContent = t("customPaletteTitle");
-    document.querySelector('[aria-labelledby="customPaletteTitle"] .settings-group-heading p').textContent = t("customPaletteDescription");
-    document.querySelector('[aria-labelledby="customPaletteTitle"] .settings-group-note').textContent = t("customPaletteHint");
-  }
   if (closeSettingsButton) {
     closeSettingsButton.title = t("settingsBackHome");
   }
@@ -3337,8 +3276,6 @@ function applySettingsLocale() {
   document.querySelector(".sync-settings-actions")?.setAttribute("aria-label", t("syncSettingsActionsLabel"));
   updateSyncSettingsUi();
   renderSearchSettingsForm();
-  lightAccentInput?.closest("label")?.querySelector("span")?.replaceChildren(document.createTextNode(t("lightAccent")));
-  darkAccentInput?.closest("label")?.querySelector("span")?.replaceChildren(document.createTextNode(t("darkAccent")));
   updateSettingsActiveSummary(settingsTabButtons.find((button) => button.classList.contains("active"))?.dataset.settingsTab);
 }
 
@@ -3564,10 +3501,6 @@ async function init() {
       sourceEvent: event
     }));
   });
-  lightAccentInput?.addEventListener("input", handleCustomThemeColorInput);
-  lightAccentStrongInput?.addEventListener("input", handleCustomThemeColorInput);
-  darkAccentInput?.addEventListener("input", handleCustomThemeColorInput);
-  darkAccentStrongInput?.addEventListener("input", handleCustomThemeColorInput);
   mobileSectionTabs.forEach((tab) => {
     tab.addEventListener("click", () => activateMobilePanel(tab.dataset.panelTarget));
   });
@@ -3735,8 +3668,6 @@ async function initThemeMode() {
     const savedTheme = result[THEME_STORAGE_KEY];
     const savedPalette = normalizeThemePaletteSettings(result[THEME_PALETTE_STORAGE_KEY]);
     activeThemePalette = savedPalette.palette;
-    activeCustomThemeColors = savedPalette.custom;
-    updateCustomThemeInputs();
     applyThemePalette();
     applyThemeMode(savedTheme === "dark" || savedTheme === "light" || savedTheme === "system" ? savedTheme : DEFAULT_THEME_MODE);
   } catch (error) {
@@ -4184,20 +4115,6 @@ function setSearchSettingsStatus(message) {
   }
 }
 
-function renderSearchEngineIcon(target, engine) {
-  target.replaceChildren();
-  if (engine.local) {
-    target.innerHTML = searchEngineSearchIcon();
-    return;
-  }
-  const icon = document.createElement("img");
-  icon.alt = "";
-  icon.decoding = "async";
-  icon.dataset.engineIcon = engine.id;
-  applySiteIcon(icon, { url: engine.searchUrl || engine.directUrl || "", title: searchEngineLabel(engine) });
-  target.appendChild(icon);
-}
-
 function handleGlobalEscape(event) {
   if (event.key !== "Escape") {
     return;
@@ -4390,15 +4307,13 @@ function readThemeBootCache() {
 function hydrateThemeFromBootCache() {
   const cached = readThemeBootCache();
   const savedPalette = normalizeThemePaletteSettings({
-    palette: cached.palette,
-    custom: cached.custom
+    palette: cached.palette
   });
   activeThemeMode = cached.mode === "dark" || cached.mode === "light" || cached.mode === "system"
     ? cached.mode
     : DEFAULT_THEME_MODE;
   activeResolvedTheme = document.documentElement.dataset.theme === "dark" ? "dark" : "light";
   activeThemePalette = savedPalette.palette;
-  activeCustomThemeColors = savedPalette.custom;
 }
 
 function writeThemeBootCache(mode, resolvedTheme) {
@@ -4415,7 +4330,6 @@ function writeThemeBootCache(mode, resolvedTheme) {
       mode,
       resolved: resolvedTheme === "dark" ? "dark" : "light",
       palette: activeThemePalette,
-      custom: activeCustomThemeColors,
       variables,
       updatedAt: Date.now()
     }));
@@ -4656,8 +4570,7 @@ function handleSystemThemeChange() {
 
 function defaultThemePaletteSettings() {
   return {
-    palette: DEFAULT_THEME_PALETTE,
-    custom: { ...DEFAULT_CUSTOM_THEME_COLORS }
+    palette: DEFAULT_THEME_PALETTE
   };
 }
 
@@ -4669,24 +4582,8 @@ function normalizeThemePaletteSettings(value) {
   const palette = VISIBLE_THEME_PALETTE_IDS.has(value.palette)
     ? value.palette
     : DEFAULT_THEME_PALETTE;
-  const light = normalizeColor(value.custom?.light, fallback.custom.light);
-  const dark = normalizeColor(value.custom?.dark, fallback.custom.dark);
   return {
-    palette,
-    custom: {
-      light,
-      lightStrong: normalizeColor(
-        value.custom?.lightStrong,
-        value.custom?.lightAccentStrong,
-        mixHexColors(light, "#000000", 0.32)
-      ),
-      dark,
-      darkStrong: normalizeColor(
-        value.custom?.darkStrong,
-        value.custom?.darkAccentStrong,
-        mixHexColors(dark, "#ffffff", 0.28)
-      )
-    }
+    palette
   };
 }
 
@@ -4744,28 +4641,6 @@ async function setThemePalette(paletteId, options = {}) {
 
 function applyThemePalette() {
   document.documentElement.dataset.themePalette = activeThemePalette;
-  if (activeThemePalette === CUSTOM_THEME_PALETTE_ID) {
-    const basePalette = themePaletteById(DEFAULT_THEME_PALETTE);
-    setThemeVariables({
-      modes: {
-        light: {
-          ...basePalette.modes.light,
-          accent: activeCustomThemeColors.light,
-          accentStrong: activeCustomThemeColors.lightStrong,
-          focus: mixHexColors(activeCustomThemeColors.light, "#2f82c4", 0.48)
-        },
-        dark: {
-          ...basePalette.modes.dark,
-          accent: activeCustomThemeColors.dark,
-          accentStrong: activeCustomThemeColors.darkStrong,
-          focus: mixHexColors(activeCustomThemeColors.dark, "#68b7f2", 0.4),
-          onAccent: readableTextColor(activeCustomThemeColors.dark)
-        }
-      }
-    });
-    writeThemeBootCache(activeThemeMode, activeResolvedTheme || document.documentElement.dataset.theme);
-    return;
-  }
   setThemeVariables(themePaletteById(activeThemePalette));
   writeThemeBootCache(activeThemeMode, activeResolvedTheme || document.documentElement.dataset.theme);
 }
@@ -4847,47 +4722,11 @@ function rgbToHex(channels) {
   return `#${channels.map((channel) => channel.toString(16).padStart(2, "0")).join("")}`;
 }
 
-async function handleCustomThemeColorInput() {
-  if (!lightAccentInput || !lightAccentStrongInput || !darkAccentInput || !darkAccentStrongInput) {
-    return;
-  }
-  activeThemePalette = CUSTOM_THEME_PALETTE_ID;
-  activeCustomThemeColors = {
-    light: normalizeColor(lightAccentInput.value, DEFAULT_CUSTOM_THEME_COLORS.light),
-    lightStrong: normalizeColor(lightAccentStrongInput.value, DEFAULT_CUSTOM_THEME_COLORS.lightStrong),
-    dark: normalizeColor(darkAccentInput.value, DEFAULT_CUSTOM_THEME_COLORS.dark),
-    darkStrong: normalizeColor(darkAccentStrongInput.value, DEFAULT_CUSTOM_THEME_COLORS.darkStrong)
-  };
-  updateCustomThemeInputs();
-  applyThemePalette();
-  updateThemeSettingsUi();
-  await saveThemePaletteSettings();
-}
-
-function updateCustomThemeInputs() {
-  if (!lightAccentInput || !lightAccentStrongInput || !darkAccentInput || !darkAccentStrongInput || !lightAccentValue || !darkAccentValue) {
-    return;
-  }
-  lightAccentInput.value = activeCustomThemeColors.light;
-  lightAccentStrongInput.value = activeCustomThemeColors.lightStrong;
-  darkAccentInput.value = activeCustomThemeColors.dark;
-  darkAccentStrongInput.value = activeCustomThemeColors.darkStrong;
-  lightAccentValue.value = `${activeCustomThemeColors.light} / ${activeCustomThemeColors.lightStrong}`;
-  lightAccentValue.textContent = lightAccentValue.value;
-  darkAccentValue.value = `${activeCustomThemeColors.dark} / ${activeCustomThemeColors.darkStrong}`;
-  darkAccentValue.textContent = darkAccentValue.value;
-  lightAccentInput.closest(".color-picker-row")?.style.setProperty("--color-picker-primary", activeCustomThemeColors.light);
-  lightAccentInput.closest(".color-picker-row")?.style.setProperty("--color-picker-secondary", activeCustomThemeColors.lightStrong);
-  darkAccentInput.closest(".color-picker-row")?.style.setProperty("--color-picker-primary", activeCustomThemeColors.dark);
-  darkAccentInput.closest(".color-picker-row")?.style.setProperty("--color-picker-secondary", activeCustomThemeColors.darkStrong);
-}
-
 async function saveThemePaletteSettings() {
   try {
     await setStoredValues({
       [THEME_PALETTE_STORAGE_KEY]: {
-        palette: activeThemePalette,
-        custom: activeCustomThemeColors
+        palette: activeThemePalette
       }
     });
   } catch (error) {
@@ -7934,10 +7773,6 @@ function embeddedSvgBrandColor(value) {
   return normalizeHexColor(match?.[2] || "");
 }
 
-function extractSvgBrandColor(svg) {
-  return extractSvgColorPalette(svg)[0] || "";
-}
-
 function remoteBrandSvgBrandColor(svg, options = {}) {
   const embeddedColor = embeddedSvgBrandColor(svg);
   if (embeddedColor) {
@@ -8107,11 +7942,6 @@ function remoteBrandIconSlug(value) {
     .replace(/\+/g, "plus")
     .replace(/\./g, "dot")
     .replace(/[^a-z0-9]+/g, "");
-}
-
-async function discoverSiteIconCandidateUrls(url) {
-  const candidates = await discoverSiteIconCandidateEntries(url);
-  return candidates.map((candidate) => candidate.url);
 }
 
 async function discoverSiteIconCandidateEntries(url) {
@@ -8811,10 +8641,6 @@ function siteIconPathForSiteKey(siteKey) {
   return `${SITE_ICON_DIRECTORY}/${fileName}`;
 }
 
-function normalizedSiteIconPath(site) {
-  return localIconForUrl(site.url) || normalizeStoredSiteIcon(site.icon || "");
-}
-
 function applyHistoryIcon(icon, site) {
   applySiteIcon(icon, site);
 }
@@ -8847,30 +8673,12 @@ function genericSiteFallbackTileColors() {
   };
 }
 
-function generatedSiteIconDataUrl(label, seed) {
-  const hue = Math.abs(hashText(seed || label)) % 360;
-  const background = `hsl(${hue} 42% 92%)`;
-  const foreground = `hsl(${hue} 44% 32%)`;
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128"><rect width="128" height="128" rx="24" fill="${background}"/><text x="64" y="75" text-anchor="middle" font-family="Arial, sans-serif" font-size="42" font-weight="700" fill="${foreground}">${escapeSvgText(label)}</text></svg>`;
-  return `data:image/svg+xml,${encodeURIComponent(svg)}`;
-}
-
 function hashText(value) {
   let hash = 0;
   for (const character of String(value || "")) {
     hash = ((hash << 5) - hash + character.charCodeAt(0)) | 0;
   }
   return hash;
-}
-
-function escapeSvgText(value) {
-  return String(value || "").replace(/[&<>"']/g, (character) => ({
-    "&": "&amp;",
-    "<": "&lt;",
-    ">": "&gt;",
-    '"': "&quot;",
-    "'": "&apos;"
-  }[character]));
 }
 
 function storeIconSiteContext(icon, site) {
@@ -9233,14 +9041,6 @@ function nearWhiteBrandColor(tileColor) {
   return luminance > 235 && spread < 28;
 }
 
-function iconTileNeedsWhiteGlyph(tileColor) {
-  const hex = normalizeHexColor(tileColor);
-  if (!hex) {
-    return false;
-  }
-  return readableIconGlyphColor(hex) === "#ffffff";
-}
-
 function refreshAdaptiveSiteIcons() {
   const requestTheme = document.documentElement.dataset.theme;
   document.querySelectorAll('img[data-icon-tile="brand"][data-icon-source]').forEach((icon) => {
@@ -9308,10 +9108,6 @@ function coloredSvgIconSource(source, glyphColor) {
       .catch(() => source);
   whiteSvgIconDataUrlCache.set(cacheKey, request);
   return request;
-}
-
-function normalizeSvgGlyphColor(svg) {
-  return applySvgGlyphColor(svg, "#ffffff");
 }
 
 function applySvgGlyphColor(svg, glyphColor, options = {}) {
@@ -9608,15 +9404,6 @@ function rescueDefaultFaviconWithDeclaredIcon(icon) {
   });
 }
 
-function applyDiscoveredSiteFaviconCandidateUrls(icon, candidateUrls = [], seed = "", rescueCandidateToken = "") {
-  applyDiscoveredSiteFaviconCandidates(
-    icon,
-    candidateUrls.filter(Boolean).map((candidateUrl) => ({ url: candidateUrl, source: "url" })),
-    seed,
-    rescueCandidateToken
-  );
-}
-
 function applyDiscoveredSiteFaviconCandidates(icon, candidates = [], seed = "", rescueCandidateToken = "") {
   const [candidate, ...remainingCandidates] = candidates.filter((entry) => entry?.url);
   const candidateUrl = candidate?.url || "";
@@ -9714,11 +9501,6 @@ function cacheRenderedDiscoveredSiteIcon(icon, iconDataUrl) {
   if (siteKey && normalizeStoredSiteIcon(iconDataUrl)) {
     cacheSiteIcon(siteKey, iconDataUrl).catch(() => {});
   }
-}
-
-function dominantImageBackgroundColor(image) {
-  const sample = sampleFaviconImageData(image);
-  return sample ? dominantFaviconSampleBackgroundColor(sample) : null;
 }
 
 function dominantFaviconSampleBackgroundColor(sample) {
@@ -12328,19 +12110,16 @@ const TDESIGN_ICON_MARKUP = Object.freeze({
   "filter-2-filled": '<g transform="translate(-.5 0)"><path fill="currentColor" d="m19.318 3.05l1.568-.78l.781-1.569l.781 1.569l1.569.78l-1.569.782l-.78 1.569l-.782-1.57zm-10.263.669L7.958 1.515L6.86 3.719L4.657 4.816L6.86 5.913l1.097 2.204l1.097-2.204l2.204-1.097zm8.499 9.664l-5.148-5.15L2.148 18.492l5.149 5.149zm4.832-4.833l-5.149-5.148L13.82 6.819l5.149 5.149z"/></g>',
   "folder-add": '<path fill="none" stroke="currentColor" stroke-linecap="square" stroke-width="2" d="M22 11V6H11L9 3.5H2V20h11m7-5v3m0 0v3m0-3h-3m3 0h3"/>',
   "format-vertical-align-left": '<path fill="none" stroke="currentColor" stroke-linecap="square" stroke-width="2" d="M3 5h18M3 12h12M3 19h18"/>',
-  "help-circle": '<g fill="none"><path d="M21.5 12a9.5 9.5 0 1 1-19 0a9.5 9.5 0 0 1 19 0"/><path stroke="currentColor" stroke-linecap="square" stroke-width="2" d="M9.6 9.25a2.6 2.6 0 1 1 3.8 2.3c-.86.47-1.4 1.04-1.4 2.2m0 3.25h.01M21.5 12a9.5 9.5 0 1 1-19 0a9.5 9.5 0 0 1 19 0Z"/></g>',
   desktop: '<g fill="none"><path d="M2 4h20v13H2z"/><path stroke="currentColor" stroke-linecap="square" stroke-width="2" d="M12 17v4m-4 0h8M2 4h20v13H2z"/></g>',
   "sunny-filled": '<path fill="currentColor" d="M13 1v3h-2V1zm7.485 3.928L18.364 7.05L16.95 5.636l2.121-2.122zM4.93 3.514l2.12 2.122L5.636 7.05L3.515 4.929zM6 12a6 6 0 1 1 12 0a6 6 0 0 1-12 0m-5-1h3v2H1zm19 0h3v2h-3zM7.05 18.363l-2.12 2.123l-1.415-1.416l2.121-2.122zm11.314-1.414l2.121 2.122l-1.414 1.414l-2.121-2.121zM13 20v3h-2v-3z"/>',
   "moon-filled": '<path fill="currentColor" d="M2 12C2 6.477 6.477 2 12 2h1.734l-.868 1.5C12.287 4.5 12 5.689 12 7a7 7 0 0 0 8.348 6.87l1.682-.327l-.543 1.626C20.162 19.137 16.417 22 12 22C6.477 22 2 17.523 2 12"/>',
-  more: '<path fill="none" stroke="currentColor" stroke-linecap="square" stroke-width="2" d="M11.5 4h1v1h-1zm0 7.5h1v1h-1zm0 7.5h1v1h-1z"/>',
   "page-tab-filled": '<path fill="currentColor" d="m9.48 2.5l.301.375l2.9 3.625H23V21H1V2.5z"/><path fill="currentColor" d="M23 2.5v2H13v-2z"/>',
   refresh: '<path fill="none" stroke="currentColor" stroke-linecap="square" stroke-width="2" d="M21.448 13c-.5 4.777-4.539 8.5-9.448 8.5A9.5 9.5 0 0 1 3.38 16m-.88 4.5v-5h3M2.552 11C3.052 6.223 7.09 2.5 12 2.5A9.5 9.5 0 0 1 20.62 8m.88-4.5v5h-3"/>',
   search: '<g fill="none"><path d="M15.803 15.803A7.5 7.5 0 1 1 5.197 5.197a7.5 7.5 0 0 1 10.606 10.606"/><path stroke="currentColor" stroke-linecap="square" stroke-width="2" d="m15.803 15.804l5.303 5.303m-5.303-5.304A7.5 7.5 0 1 1 5.197 5.197a7.5 7.5 0 0 1 10.606 10.606Z"/></g>',
   setting: '<g fill="none"><path d="M20.66 7L12 2L3.34 7v10L12 22l8.66-5zM12 16a4 4 0 1 0 0-8a4 4 0 0 0 0 8" clip-rule="evenodd"/><path d="M16 12a4 4 0 1 1-8 0a4 4 0 0 1 8 0"/><path stroke="currentColor" stroke-linecap="square" stroke-width="2" d="m12 2l8.66 5v10L12 22l-8.66-5V7z"/><path stroke="currentColor" stroke-linecap="square" stroke-width="2" d="M16 12a4 4 0 1 1-8 0a4 4 0 0 1 8 0Z"/></g>',
   "setting-filled": '<path fill="currentColor" d="M21.66 6.423L12 .845L2.34 6.423v11.154L12 23.155l9.66-5.578zM12 16a4 4 0 1 1 0-8a4 4 0 0 1 0 8"/>',
   "system-setting": '<g fill="none"><path d="M21.5 17.5a3 3 0 1 1-6 0a3 3 0 0 1 6 0"/><path stroke="currentColor" stroke-linecap="square" stroke-width="2" d="M22 9.5V3H2v14h8.5M4 21h6.5m8-6.5v-1.25m0 1.25a3 3 0 0 0 0 6m0-6a3 3 0 1 1 0 6m0 0v1.25M15.902 16l-1.083-.625M21.098 19l1.083.625M21.098 16l1.083-.625M15.9 19l-1.082.625"/></g>',
-  "system-setting-filled": '<path fill="currentColor" d="M23 2H1v16h10.768a6.7 6.7 0 0 1 .96-4.002H3v-10h18v7.23a6.8 6.8 0 0 1 2 1.24zM3 20h9.228a6.8 6.8 0 0 0 1.24 2H3z"/><path fill="currentColor" d="M19.5 13.376V12h-2v1.376a4 4 0 0 0-1.854 1.072l-1.193-.689l-1 1.732l1.192.688a4 4 0 0 0 0 2.142l-1.192.688l1 1.732l1.193-.689a4 4 0 0 0 1.854 1.072V22.5h2v-1.376a4 4 0 0 0 1.854-1.072l1.192.689l1-1.732l-1.191-.688a4 4 0 0 0 0-2.142l1.191-.688l-1-1.732l-1.192.688a4 4 0 0 0-1.854-1.071m-2.715 2.844a2 2 0 0 1 3.43 0l.036.063c.159.287.249.616.249.967c0 .35-.09.68-.249.967l-.037.063a2 2 0 0 1-3.429 0l-.037-.063a2 2 0 0 1-.248-.967a2 2 0 0 1 .248-.967z"/>',
-  "view-list": '<path fill="none" stroke="currentColor" stroke-linecap="square" stroke-width="2" d="M3 5h18M3 12h18M3 19h18"/>'
+  "system-setting-filled": '<path fill="currentColor" d="M23 2H1v16h10.768a6.7 6.7 0 0 1 .96-4.002H3v-10h18v7.23a6.8 6.8 0 0 1 2 1.24zM3 20h9.228a6.8 6.8 0 0 0 1.24 2H3z"/><path fill="currentColor" d="M19.5 13.376V12h-2v1.376a4 4 0 0 0-1.854 1.072l-1.193-.689l-1 1.732l1.192.688a4 4 0 0 0 0 2.142l-1.192.688l1 1.732l1.193-.689a4 4 0 0 0 1.854 1.072V22.5h2v-1.376a4 4 0 0 0 1.854-1.072l1.192.689l1-1.732l-1.191-.688a4 4 0 0 0 0-2.142l1.191-.688l-1-1.732l-1.192.688a4 4 0 0 0-1.854-1.071m-2.715 2.844a2 2 0 0 1 3.43 0l.036.063c.159.287.249.616.249.967c0 .35-.09.68-.249.967l-.037.063a2 2 0 0 1-3.429 0l-.037-.063a2 2 0 0 1-.248-.967a2 2 0 0 1 .248-.967z"/>'
 });
 
 function tdesignIcon(name) {
@@ -12375,16 +12154,8 @@ function fileImportIcon() {
   return tdesignIcon("file-import");
 }
 
-function helpCircleIcon() {
-  return tdesignIcon("help-circle");
-}
-
 function githubIcon() {
   return '<svg class="brand-icon github-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path fill="currentColor" d="M12 .297c-6.63 0-12 5.373-12 12c0 5.303 3.438 9.8 8.205 11.385c.6.113.82-.258.82-.577c0-.285-.01-1.04-.015-2.04c-3.338.724-4.042-1.61-4.042-1.61c-.546-1.385-1.335-1.755-1.335-1.755c-1.087-.744.084-.729.084-.729c1.205.084 1.838 1.236 1.838 1.236c1.07 1.835 2.809 1.305 3.495.998c.108-.776.417-1.305.76-1.605c-2.665-.3-5.466-1.332-5.466-5.93c0-1.31.465-2.38 1.235-3.22c-.135-.303-.54-1.523.105-3.176c0 0 1.005-.322 3.3 1.23c.96-.267 1.98-.399 3-.405c1.02.006 2.04.138 3 .405c2.28-1.552 3.285-1.23 3.285-1.23c.645 1.653.24 2.873.12 3.176c.765.84 1.23 1.91 1.23 3.22c0 4.61-2.805 5.625-5.475 5.92c.42.36.81 1.096.81 2.22c0 1.606-.015 2.896-.015 3.286c0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12Z"/></svg>';
-}
-
-function folderPlusIcon() {
-  return tdesignIcon("folder-add");
 }
 
 function pageTabFilledIcon() {
@@ -12401,10 +12172,6 @@ function chevronLeftIcon() {
 
 function chevronRightIcon() {
   return tdesignIcon("chevron-right");
-}
-
-function newspaperIcon() {
-  return tdesignIcon("view-list");
 }
 
 function settingsIcon() {
@@ -12442,10 +12209,6 @@ function chevronDownIcon() {
 
 function chevronUpIcon() {
   return tdesignIcon("chevron-up");
-}
-
-function moreHorizontalIcon() {
-  return tdesignIcon("more");
 }
 
 function faviconUrl(url, size) {

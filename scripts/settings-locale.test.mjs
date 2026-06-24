@@ -152,12 +152,7 @@ const settingsLocaleKeys = [
   "searchSettingsSave",
   "searchSettingsReset",
   "searchSettingsSaved",
-  "searchSettingsResetDone",
-  "customPaletteTitle",
-  "customPaletteDescription",
-  "customPaletteHint",
-  "lightAccent",
-  "darkAccent"
+  "searchSettingsResetDone"
 ];
 
 for (const locale of supportedLocales) {

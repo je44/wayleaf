@@ -139,14 +139,14 @@ assert.deepEqual(
   cloudSyncPayloadFixture({
     favoriteSites: [{ id: "1", title: "Example", url: "https://example.com", icon: `data:image/png;base64,${"a".repeat(12000)}` }],
     themeMode: "dark",
-    themePalette: { palette: "custom" },
+    themePalette: { palette: "sage" },
     languagePreference: "zh-TW",
     searchSettings: { defaultSearchEngine: "google" }
   }),
   {
     favoriteSites: [{ id: "1", title: "Example", url: "https://example.com" }],
     themeMode: "dark",
-    themePalette: { palette: "custom" },
+    themePalette: { palette: "sage" },
     languagePreference: "zh-TW",
     searchSettings: { defaultSearchEngine: "google" }
   },

@@ -71,6 +71,12 @@ assert.match(
   "Palette preset labels and aria labels should come from localized palette copy."
 );
 
+assert.doesNotMatch(
+  `${source}\n${styles}\n${html}`,
+  /CUSTOM_THEME_PALETTE_ID|activeCustomThemeColors|handleCustomThemeColorInput|color-picker-/,
+  "Disconnected custom-theme color picker code should stay removed."
+);
+
 assert.match(
   source,
   /id:\s*"amber"[\s\S]*light:\s*\{[\s\S]*onAccent:\s*"#ffffff"[\s\S]*dark:/,
