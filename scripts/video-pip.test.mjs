@@ -106,7 +106,22 @@ assert.match(
 assert.match(
   backgroundSource,
   /supportsSocialVideoExtraction\(tab\.url \|\| ""\)[\s\S]*startSocialVideoExtraction[\s\S]*return;[\s\S]*const result = await toggleVideoPipPin/,
-  "Toolbar action should reserve social-video extraction for Xiaohongshu-style hosts and leave dedicated video sites on pinned PiP."
+  "Toolbar action should reserve social-video extraction for social hosts like Xiaohongshu and X, then leave dedicated video sites on pinned PiP."
+);
+assert.match(
+  backgroundSource,
+  /const SOCIAL_VIDEO_EXTRACT_HOSTS = new Set\(\[[\s\S]*"x\.com"[\s\S]*"twitter\.com"[\s\S]*"xiaohongshu\.com"/,
+  "Social video extraction should reuse the same hover-to-extract path on X and Xiaohongshu hosts."
+);
+assert.match(
+  html,
+  /Extract playable video from Xiaohongshu notes and X posts\./,
+  "The static Laboratory copy should describe the shared Xiaohongshu and X extraction flow."
+);
+assert.match(
+  messagesSource,
+  /Enable Xiaohongshu and X video extraction/,
+  "Localized Laboratory copy should reflect the shared Xiaohongshu and X extraction toggle."
 );
 assert.doesNotMatch(
   controllerSource,

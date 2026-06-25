@@ -28,6 +28,10 @@ const VIDEO_PIP_OWNER_STORAGE_KEY = "videoPipOwner";
 const VIDEO_PIP_GLOBAL_ENABLED_STORAGE_KEY = "videoPipGlobalEnabled";
 const SOCIAL_VIDEO_EXTRACTOR_ENABLED_STORAGE_KEY = "socialVideoExtractorEnabled";
 const SOCIAL_VIDEO_EXTRACT_HOSTS = new Set([
+  "x.com",
+  "www.x.com",
+  "twitter.com",
+  "www.twitter.com",
   "xiaohongshu.com",
   "www.xiaohongshu.com"
 ]);
