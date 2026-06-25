@@ -13,6 +13,8 @@ const WAYLEAF_MAX_PROMPT_LENGTH = 12000;
 const WAYLEAF_PROMPT_TTL_MS = 2 * 60 * 1000;
 const WAYLEAF_SUBMIT_TIMEOUT_MS = 12000;
 const WAYLEAF_EDITOR_SYNC_DELAY_MS = 260;
+const WAYLEAF_ATTACHMENT_READY_TIMEOUT_MS = 15000;
+const WAYLEAF_ATTACHMENT_READY_STABLE_MS = 800;
 const WAYLEAF_BOOT_DELAY_MS = 500;
 const WAYLEAF_BOOT_MAX_ATTEMPTS = 18;
 const WAYLEAF_TOKEN_CLEANUP_DURATION_MS = 15000;
@@ -201,8 +203,8 @@ function providerForLocation(currentLocation) {
 }
 
 async function submitStoredPrompt(token) {
-  const promptText = await readPromptFromStorage(token);
-  const result = await submitPrompt(promptText);
+  const promptItem = await readPromptFromStorage(token);
+  const result = await submitPrompt(promptItem);
   if (shouldRemoveStoredPrompt(result.status)) {
     await removePromptFromStorage(token);
   }
@@ -214,10 +216,12 @@ async function submitPrompt(promptText) {
   if (!provider) {
     return { status: "unsupported-host" };
   }
-  if (!promptText) {
+  const promptItem = normalizePromptItem(promptText);
+  const prompt = promptItem.prompt;
+  if (!prompt) {
     return { status: "missing-prompt" };
   }
-  const status = await submitPromptWhenReady(provider, promptText);
+  const status = await submitPromptWhenReady(provider, prompt, promptItem.attachments);
   return { status };
 }
 
@@ -228,7 +232,30 @@ async function readPromptFromStorage(token) {
   const result = await chrome.storage.local.get({ [WAYLEAF_STORAGE_KEY]: {} });
   const prompts = result[WAYLEAF_STORAGE_KEY] || {};
   const item = prompts[token];
-  return String(item?.prompt || "").trim().slice(0, WAYLEAF_MAX_PROMPT_LENGTH);
+  return normalizePromptItem(item);
+}
+
+function normalizePromptItem(value) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return { prompt: String(value || "").trim().slice(0, WAYLEAF_MAX_PROMPT_LENGTH), attachments: [] };
+  }
+  return {
+    attachments: normalizeAttachments(value.attachments),
+    prompt: String(value.prompt || "").trim().slice(0, WAYLEAF_MAX_PROMPT_LENGTH)
+  };
+}
+
+function normalizeAttachments(value) {
+  return Array.isArray(value)
+    ? value
+      .filter((item) => item && typeof item === "object" && item.dataUrl && item.name)
+      .slice(0, 2)
+      .map((item) => ({
+        dataUrl: String(item.dataUrl || ""),
+        name: String(item.name || "attachment"),
+        type: String(item.type || "application/octet-stream")
+      }))
+    : [];
 }
 
 async function removePromptFromStorage(token) {
@@ -366,15 +393,18 @@ function shouldRemoveStoredPrompt(status) {
     || status === "unsupported-host";
 }
 
-async function submitPromptWhenReady(config, prompt) {
-  const input = await waitForElement(config.inputSelectors, isWritableInput, WAYLEAF_SUBMIT_TIMEOUT_MS);
+async function submitPromptWhenReady(config, prompt, attachments = []) {
+  const startedUrl = location.href;
+  if (attachments.length) {
+    await attachPromptFiles(config, attachments);
+  }
+  const input = await fillPromptIntoLiveInput(config, prompt, attachments.length > 0 ? 4 : 1);
   if (!input) {
     return "input-not-found";
   }
-  const startedUrl = location.href;
-  focusAndSetInputValue(input, prompt);
-  await delay(WAYLEAF_EDITOR_SYNC_DELAY_MS);
-  const submitButton = await waitForSubmitButton(config, input, 6000);
+  const submitButton = attachments.length
+    ? await waitForChatgptAttachmentReady(config, input, attachments.length)
+    : await waitForSubmitButton(config, input, 6000);
   if (submitButton) {
     await clickSubmitButton(submitButton);
     await delay(900);
@@ -388,6 +418,70 @@ async function submitPromptWhenReady(config, prompt) {
     return "submitted";
   }
   return normalizePromptComparisonText(inputText(input)) === normalizePromptComparisonText(prompt) ? "filled" : "submitted";
+}
+
+async function fillPromptIntoLiveInput(config, prompt, attempts = 1) {
+  const normalizedPrompt = normalizePromptComparisonText(prompt);
+  for (let attempt = 0; attempt < attempts; attempt += 1) {
+    const input = await waitForElement(
+      config.inputSelectors,
+      isWritableInput,
+      attempt === 0 ? WAYLEAF_SUBMIT_TIMEOUT_MS : 2000
+    );
+    if (!input) {
+      return null;
+    }
+    focusAndSetInputValue(input, prompt);
+    await delay(WAYLEAF_EDITOR_SYNC_DELAY_MS);
+    if (normalizePromptComparisonText(inputText(input)) === normalizedPrompt) {
+      return input;
+    }
+    await delay(250);
+  }
+  return waitForElement(config.inputSelectors, isWritableInput, 1200);
+}
+
+async function waitForChatgptAttachmentReady(config, input, attachmentCount) {
+  if (config.engineId !== "chatgpt" || attachmentCount <= 0) {
+    return waitForSubmitButton(config, input, 6000);
+  }
+  const startedAt = Date.now();
+  let readySince = 0;
+  while (Date.now() - startedAt <= WAYLEAF_ATTACHMENT_READY_TIMEOUT_MS) {
+    const submitButton = findSubmitButton(config, input);
+    const ready = submitButton
+      && countChatgptReadyAttachments() >= attachmentCount
+      && !hasChatgptAttachmentBusyState();
+    if (ready) {
+      readySince ||= Date.now();
+      if (Date.now() - readySince >= WAYLEAF_ATTACHMENT_READY_STABLE_MS) {
+        return submitButton;
+      }
+    } else {
+      readySince = 0;
+    }
+    await delay(200);
+  }
+  return waitForSubmitButton(config, input, 1200);
+}
+
+function countChatgptReadyAttachments() {
+  return document.querySelectorAll('[aria-label*="移除文件"], [aria-label*="Remove file"]').length;
+}
+
+function hasChatgptAttachmentBusyState() {
+  if (document.querySelector('[aria-busy="true"], [role="progressbar"], [data-state="uploading"], [data-state="loading"]')) {
+    return true;
+  }
+  return [...document.querySelectorAll('[aria-label], [class], [data-state]')].some((node) => {
+    const descriptor = [
+      node.getAttribute("aria-label"),
+      node.getAttribute("class"),
+      node.getAttribute("data-state"),
+      node.textContent
+    ].filter(Boolean).join(" ").toLowerCase();
+    return /upload|loading|processing|attaching|上传中|上传|处理中|附件处理中/.test(descriptor);
+  });
 }
 
 function waitForElement(selectors, predicate, timeoutMs) {
@@ -541,6 +635,49 @@ function isVisible(node) {
     && rect.height > 0
     && style.visibility !== "hidden"
     && style.display !== "none";
+}
+
+async function attachPromptFiles(config, attachments) {
+  if (config.engineId !== "chatgpt" || !attachments.length) {
+    return false;
+  }
+  const input = document.querySelector("#upload-files")
+    || document.querySelector("#upload-photos")
+    || document.querySelector('input[type="file"][multiple]');
+  if (!(input instanceof HTMLInputElement)) {
+    return false;
+  }
+  const files = attachments.map(attachmentToFile).filter(Boolean);
+  if (!files.length) {
+    return false;
+  }
+  const transfer = new DataTransfer();
+  files.forEach((file) => transfer.items.add(file));
+  input.files = transfer.files;
+  dispatchBasicEvent(input, "input");
+  dispatchBasicEvent(input, "change");
+  await delay(1200);
+  return true;
+}
+
+function attachmentToFile(attachment) {
+  try {
+    const match = String(attachment.dataUrl || "").match(/^data:([^;,]+)?(;base64)?,(.*)$/);
+    if (!match) {
+      return null;
+    }
+    const mime = attachment.type || match[1] || "application/octet-stream";
+    const body = match[2]
+      ? atob(match[3])
+      : decodeURIComponent(match[3]);
+    const bytes = new Uint8Array(body.length);
+    for (let index = 0; index < body.length; index += 1) {
+      bytes[index] = body.charCodeAt(index);
+    }
+    return new File([bytes], attachment.name || "attachment", { type: mime });
+  } catch {
+    return null;
+  }
 }
 
 function focusAndSetInputValue(input, value) {

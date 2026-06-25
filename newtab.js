@@ -62,6 +62,8 @@ const ONBOARDING_PREVIEW_FAVORITES = [
 const AI_DIRECT_PROMPT_TOKEN_PARAM = "_wayleaf_prompt";
 const AI_DIRECT_PROMPT_TEXT_PARAM = "_wayleaf_text";
 const AI_DIRECT_PROMPT_TTL_MS = 2 * 60 * 1000;
+const AI_DIRECT_ATTACHMENT_MAX_COUNT = 2;
+const AI_DIRECT_ATTACHMENT_MAX_BYTES = 10 * 1024 * 1024;
 const MAX_HISTORY_SITE_GROUPS = 9;
 const MAX_HISTORY_PAGES_PER_SITE = 4;
 const MAX_RECENT_FOLDER_ITEMS = 4;
@@ -1036,6 +1038,9 @@ const MESSAGES = {
     historyNextPage: "下一条最近浏览",
     quickSearchPlaceholder: "搜索或输入网址",
     googleImageSearch: "使用 Google 以图搜索",
+    aiAttachmentAdd: "添加附件到 ChatGPT",
+    aiAttachmentClear: "移除附件",
+    aiAttachmentCount: "{count} 个附件",
     quickSearch: "搜索",
     quickSearchLocal: "打开",
     quickSearchAggregate: "聚合搜索",
@@ -1204,6 +1209,9 @@ const MESSAGES = {
     portalCategoryOther: "其他",
     quickSearchPlaceholder: "搜尋或輸入網址",
     googleImageSearch: "使用 Google 以圖搜尋",
+    aiAttachmentAdd: "新增附件到 ChatGPT",
+    aiAttachmentClear: "移除附件",
+    aiAttachmentCount: "{count} 個附件",
     quickSearch: "搜尋",
     quickSearchLocal: "打開",
     quickSearchAggregate: "聚合搜尋",
@@ -1421,6 +1429,9 @@ const MESSAGES = {
     historyNextPage: "Next recent page",
     quickSearchPlaceholder: "Search or enter URL",
     googleImageSearch: "Search by image with Google",
+    aiAttachmentAdd: "Add files to ChatGPT",
+    aiAttachmentClear: "Remove attachments",
+    aiAttachmentCount: "{count} files",
     quickSearch: "Search",
     quickSearchLocal: "Open",
     quickSearchAggregate: "Aggregate search",
@@ -2607,6 +2618,10 @@ const googleImageSearchButton = document.querySelector("#googleImageSearchButton
 const googleImageSearchForm = document.querySelector("#googleImageSearchForm");
 const googleImageSearchInput = document.querySelector("#googleImageSearchInput");
 const googleImageSearchFilename = document.querySelector("#googleImageSearchFilename");
+const aiAttachmentButton = document.querySelector("#aiAttachmentButton");
+const aiAttachmentInput = document.querySelector("#aiAttachmentInput");
+const aiAttachmentPill = document.querySelector("#aiAttachmentPill");
+const aiAttachmentPillText = document.querySelector("#aiAttachmentPillText");
 const platformActivationHint = document.querySelector("#platformActivationHint");
 const aiEnginePill = document.querySelector("#aiEnginePill");
 const searchSuggestions = document.querySelector("#searchSuggestions");
@@ -2671,6 +2686,7 @@ let onboardingStepIndex = 0;
 let onboardingPreviewActive = false;
 let videoPipGlobalEnabled = false;
 let socialVideoExtractorEnabled = true;
+let aiDirectAttachments = [];
 let availableSiteIconFiles = new Set();
 let siteIconIndexLoaded = false;
 const whiteSvgIconDataUrlCache = new Map();
@@ -3157,6 +3173,10 @@ function applyLocale() {
   if (googleImageSearchButton) {
     googleImageSearchButton.title = t("googleImageSearch");
   }
+  aiAttachmentButton?.setAttribute("aria-label", t("aiAttachmentAdd"));
+  if (aiAttachmentButton) {
+    aiAttachmentButton.title = t("aiAttachmentAdd");
+  }
   quickSearchInput.labels?.forEach((label) => {
     label.textContent = t("quickSearchPlaceholder");
   });
@@ -3541,6 +3561,9 @@ async function init() {
   quickSearchInput.addEventListener("blur", handleQuickSearchBlur);
   googleImageSearchButton?.addEventListener("click", handleGoogleImageSearchButtonClick);
   googleImageSearchInput?.addEventListener("change", handleGoogleImageSearchInputChange);
+  aiAttachmentButton?.addEventListener("click", handleAiAttachmentButtonClick);
+  aiAttachmentInput?.addEventListener("change", handleAiAttachmentInputChange);
+  aiAttachmentPill?.addEventListener("click", handleAiAttachmentPillClick);
   portalModeTabs.forEach((tab) => {
     tab.addEventListener("click", () => activatePortalView(tab.dataset.portalView));
   });
@@ -4233,6 +4256,9 @@ async function setQuickSearchEngine(engineId, options = {}) {
   const nextEngine = searchEngineById(engineId);
   const wasGoogleAiSearchModeActive = googleAiSearchModeActive;
   googleAiSearchModeActive = false;
+  if (nextEngine.id !== "chatgpt") {
+    clearAiDirectAttachments();
+  }
   if (wasGoogleAiSearchModeActive) {
     startGoogleAiModeExit();
   }
@@ -4261,6 +4287,7 @@ function updateQuickSearchModeUi() {
   quickSearchInput.setAttribute("aria-label", placeholder);
   updateQuickSearchLeadingIcon();
   updateGoogleImageSearchButton();
+  updateAiAttachmentUi();
   renderAiEnginePill(engine, { previousThemeColor });
   renderPlatformActivationHint(quickSearchInput.value);
 }
@@ -5470,6 +5497,89 @@ function handleGoogleImageSearchInputChange() {
   googleImageSearchForm.requestSubmit();
 }
 
+function handleAiAttachmentButtonClick() {
+  if (!aiAttachmentInput || !supportsAiAttachmentsForActiveEngine()) {
+    return;
+  }
+  quickSearchInput.focus({ preventScroll: true });
+  aiAttachmentInput.value = "";
+  aiAttachmentInput.click();
+}
+
+async function handleAiAttachmentInputChange(event) {
+  const files = [...(event.currentTarget?.files || [])];
+  if (event.currentTarget) {
+    event.currentTarget.value = "";
+  }
+  if (!supportsAiAttachmentsForActiveEngine()) {
+    clearAiDirectAttachments();
+    return;
+  }
+  const accepted = [];
+  for (const file of files.slice(0, AI_DIRECT_ATTACHMENT_MAX_COUNT)) {
+    if (file.size > AI_DIRECT_ATTACHMENT_MAX_BYTES) {
+      continue;
+    }
+    accepted.push({
+      dataUrl: await fileToDataUrl(file),
+      name: file.name || "attachment",
+      size: file.size,
+      type: file.type || "application/octet-stream"
+    });
+  }
+  aiDirectAttachments = accepted;
+  updateAiAttachmentUi();
+}
+
+function handleAiAttachmentPillClick() {
+  clearAiDirectAttachments();
+  quickSearchInput.focus({ preventScroll: true });
+}
+
+function clearAiDirectAttachments() {
+  aiDirectAttachments = [];
+  updateAiAttachmentUi();
+}
+
+function supportsAiAttachmentsForActiveEngine() {
+  return activeSearchEngine === "chatgpt"
+    && !googleAiSearchModeActive
+    && !activePlatformSearchTarget;
+}
+
+function updateAiAttachmentUi() {
+  const available = supportsAiAttachmentsForActiveEngine();
+  const active = available && Boolean(searchWorkbench?.classList.contains("search-active"));
+  if (aiAttachmentButton) {
+    aiAttachmentButton.hidden = !available;
+    aiAttachmentButton.disabled = !active;
+    aiAttachmentButton.tabIndex = active ? 0 : -1;
+    aiAttachmentButton.dataset.hasAttachments = String(aiDirectAttachments.length > 0);
+    aiAttachmentButton.innerHTML = aiAttachmentIcon();
+  }
+  if (aiAttachmentPill && aiAttachmentPillText) {
+    aiAttachmentPill.hidden = !available || aiDirectAttachments.length === 0;
+    aiAttachmentPillText.textContent = aiAttachmentLabel(aiDirectAttachments);
+    aiAttachmentPill.title = t("aiAttachmentClear");
+  }
+}
+
+function aiAttachmentLabel(attachments) {
+  if (!attachments.length) {
+    return "";
+  }
+  return t("aiAttachmentCount", { count: attachments.length });
+}
+
+function fileToDataUrl(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.addEventListener("load", () => resolve(String(reader.result || "")));
+    reader.addEventListener("error", () => reject(reader.error || new Error("Failed to read attachment.")));
+    reader.readAsDataURL(file);
+  });
+}
+
 function updateGoogleImageSearchButton() {
   if (!googleImageSearchButton) {
     return;
@@ -5617,6 +5727,7 @@ function handleQuickSearchBlur() {
 function setQuickSearchActive(isActive) {
   searchWorkbench?.classList.toggle("search-active", isActive);
   updateGoogleImageSearchButton();
+  updateAiAttachmentUi();
   favoriteStrip?.setAttribute("aria-disabled", String(isActive));
   favoriteStrip?.querySelectorAll(".favorite-link, .favorite-remove").forEach((control) => {
     if (isActive) {
@@ -5756,10 +5867,12 @@ async function submitAiDirectSearch(engine, query) {
   let destination = engineSearchDestination(engine, query);
   try {
     await saveAiDirectPrompt(token, {
+      attachments: engine.id === "chatgpt" ? aiDirectAttachments : [],
       prompt: query,
       engineId: engine.id,
       createdAt: Date.now()
     });
+    aiDirectAttachments = [];
     destination = aiDirectTargetUrl(targetUrl, token, engine.urlPromptFallback ? query : "");
   } catch (error) {
     console.warn("Failed to save AI direct prompt before navigation", error);
@@ -12122,6 +12235,8 @@ const TDESIGN_ICON_MARKUP = Object.freeze({
   close: '<path fill="none" stroke="currentColor" stroke-linecap="square" stroke-width="2" d="M16.95 7.05L12 12m0 0l-4.95 4.95M12 12l4.95 4.95M12 12L7.05 7.05"/>',
   delete: '<g fill="none"><path d="M5 5h14l-.5 17h-13z"/><path stroke="currentColor" stroke-linecap="square" stroke-width="2" d="M21 5H3m2 0h14l-.5 17h-13zm3.5-3h7v3h-7zM12 9v9"/></g>',
   "delete-filled": '<path fill="currentColor" d="M7.5 3h9V1h-9zM22 6V4H2v2h2.029l.5 17h14.942l.5-17zM11 19V8h2v11z"/>',
+  "file-attachment": '<g fill="none" stroke="currentColor" stroke-linecap="square" stroke-width="2"><path d="M20 11V7l-5-5H4v20h8m2-20v6h6"/><path d="M19 19v-3.5a1.5 1.5 0 0 0-3 0V20a3 3 0 1 0 6 0v-3.5"/></g>',
+  "file-attachment-filled": '<path fill="currentColor" d="M3 1h12.414L21 6.586v6.085a4.5 4.5 0 0 0-8 2.829v6c0 .526.09 1.03.256 1.5H3zm11.5 2v4.5H19z"/><path fill="currentColor" d="M17.5 13a2.5 2.5 0 0 0-2.5 2.5V20a4 4 0 0 0 8 0v-4.5h-2V20a2 2 0 1 1-4 0v-4.5a.5.5 0 0 1 1 0V20h2v-4.5a2.5 2.5 0 0 0-2.5-2.5"/>',
   "file-export": '<g fill="none" stroke="currentColor" stroke-linecap="square" stroke-width="2"><path d="M14 2H6.5A1.5 1.5 0 0 0 5 3.5v17A1.5 1.5 0 0 0 6.5 22h11a1.5 1.5 0 0 0 1.5-1.5V7z"/><path d="M14 2v5h5M9 14h8m0 0l-3-3m3 3l-3 3"/></g>',
   "file-import": '<g fill="none" stroke="currentColor" stroke-linecap="square" stroke-width="2"><path d="M14 2H6.5A1.5 1.5 0 0 0 5 3.5v17A1.5 1.5 0 0 0 6.5 22h11a1.5 1.5 0 0 0 1.5-1.5V7z"/><path d="M14 2v5h5M16 14H8m0 0l3-3m-3 3l3 3"/></g>',
   "filter-2": '<g fill="none"><path d="m3.563 18.491l3.735 3.735L17.554 11.97L13.82 8.235z"/><path d="m20.973 8.55l-3.735-3.734l-3.418 3.42l3.734 3.734z"/><path stroke="currentColor" stroke-linecap="square" stroke-width="2" d="m17.238 4.816l3.735 3.735m-3.735-3.735L3.563 18.491l3.735 3.735L20.973 8.55m-3.735-3.735l-3.418 3.42l3.734 3.734l3.419-3.42"/><path stroke="currentColor" stroke-width="2" d="m7.75 3.5l.415.835L9 4.75l-.835.415L7.75 6l-.415-.835L6.5 4.75l.835-.415zM21.625 3l.041.083l.084.042l-.084.042l-.041.083l-.041-.083l-.084-.042l.084-.042z"/></g>',
@@ -12170,6 +12285,10 @@ function fileExportIcon() {
 
 function fileImportIcon() {
   return tdesignIcon("file-import");
+}
+
+function aiAttachmentIcon() {
+  return `<span class="ai-attachment-icon-outline">${tdesignIcon("file-attachment")}</span><span class="ai-attachment-icon-filled">${tdesignIcon("file-attachment-filled")}</span>`;
 }
 
 function githubIcon() {

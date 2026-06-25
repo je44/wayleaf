@@ -42,6 +42,10 @@
             <div class="quick-search-entry">
               <input id="quickSearchInput" name="q" type="search" autocomplete="off" spellcheck="false" placeholder="Search or enter URL">
               <span class="platform-activation-hint" id="platformActivationHint" role="status" aria-live="polite" aria-atomic="true" hidden></span>
+              <button class="ai-attachment-pill" id="aiAttachmentPill" type="button" hidden aria-live="polite" aria-atomic="true">
+                <span class="ai-attachment-pill-text" id="aiAttachmentPillText"></span>
+              </button>
+              <button class="ai-attachment-button" id="aiAttachmentButton" type="button" aria-label="Add files to ChatGPT" title="Add files to ChatGPT" tabindex="-1" disabled hidden></button>
               <button class="google-image-search-button" id="googleImageSearchButton" type="button" aria-label="Search by image with Google" title="Search by image with Google" tabindex="-1" disabled hidden>
                 <svg class="tdesign-icon google-image-search-icon-outline" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
                   <g fill="none">
@@ -67,6 +71,7 @@
             <input id="googleImageSearchFilename" name="filename" type="hidden">
             <input name="image_content" type="hidden" value="">
           </form>
+          <input id="aiAttachmentInput" type="file" multiple hidden>
           <div class="search-suggestions" id="searchSuggestions" role="listbox" aria-label="Search suggestions" hidden></div>
         </div>
         <button class="favorite-add-button" id="favoriteAddButton" type="button" aria-haspopup="dialog" aria-controls="favoriteForm" aria-expanded="false" aria-hidden="true" data-state="hidden" data-hydrating="true" tabindex="-1" disabled hidden>

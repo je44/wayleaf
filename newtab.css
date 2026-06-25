@@ -821,7 +821,29 @@ body.surface-open .surface-backdrop {
     visibility 0s linear 160ms;
 }
 
-.google-image-search-button[hidden] {
+.ai-attachment-button {
+  display: grid;
+  flex: 0 0 var(--search-icon-size);
+  place-items: center;
+  width: var(--search-icon-size);
+  height: var(--search-icon-size);
+  margin: 0 18px 0 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--faint);
+  line-height: 0;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition:
+    color var(--theme-transition-duration) var(--theme-transition-ease),
+    opacity 160ms ease,
+    visibility 0s linear 160ms;
+}
+
+.google-image-search-button[hidden],
+.ai-attachment-button[hidden] {
   display: none;
 }
 
@@ -832,11 +854,21 @@ body.surface-open .surface-backdrop {
   transition-delay: 0s;
 }
 
-.google-image-search-button:not(:disabled):is(:hover, :focus-visible) {
+.search-workbench.search-active .ai-attachment-button:not([hidden]) {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+  transition-delay: 0s;
+}
+
+.google-image-search-button:not(:disabled):is(:hover, :focus-visible),
+.ai-attachment-button:not(:disabled):is(:hover, :focus-visible),
+.ai-attachment-button[data-has-attachments="true"] {
   color: var(--ink);
 }
 
-.google-image-search-button svg {
+.google-image-search-button svg,
+.ai-attachment-button svg {
   display: block;
   width: var(--search-icon-size);
   height: var(--search-icon-size);
@@ -852,6 +884,42 @@ body.surface-open .surface-backdrop {
 
 .google-image-search-button:not(:disabled):is(:hover, :focus-visible, :active) .google-image-search-icon-filled {
   display: block;
+}
+
+.ai-attachment-button .ai-attachment-icon-filled {
+  display: none;
+}
+
+.ai-attachment-button:not(:disabled):is(:hover, :focus-visible, :active) .ai-attachment-icon-outline,
+.ai-attachment-button[data-has-attachments="true"] .ai-attachment-icon-outline {
+  display: none;
+}
+
+.ai-attachment-button:not(:disabled):is(:hover, :focus-visible, :active) .ai-attachment-icon-filled,
+.ai-attachment-button[data-has-attachments="true"] .ai-attachment-icon-filled {
+  display: block;
+}
+
+.ai-attachment-pill {
+  flex: none;
+  max-width: min(210px, 38%);
+  margin-right: 4px;
+  padding: 5px 9px;
+  overflow: hidden;
+  border: 1px solid var(--accent-border);
+  border-radius: 999px;
+  background: var(--accent-wash-soft);
+  color: var(--accent-strong);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 650;
+  line-height: 1;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ai-attachment-pill[hidden] {
+  display: none;
 }
 
 .search-workbench[data-ai-active] .quick-search-entry,
