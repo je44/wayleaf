@@ -70,19 +70,17 @@ assert.deepEqual(
   "Every site icon index entry must point to a packaged icon file."
 );
 
-assert.match(source, /viewbox=auto/, "Simple Icons CDN requests should normalize the SVG viewBox.");
 assert.match(source, /@lobehub\/icons-static-svg/, "LobeHub static SVG package must be available as a supplemental remote provider.");
 assert.match(source, /function remoteBrandProviderHasSlug[\s\S]*remoteBrandProviderSlugs/, "Remote providers must check an index before fetching a slug.");
 assert.match(source, /function fetchLobeHubStaticSvgSlugs/, "LobeHub provider must discover SVG slugs from the static SVG package index.");
-assert.match(source, /function fetchSimpleIconSlugs/, "Simple Icons provider must discover SVG slugs from its package index.");
-assert.match(source, /function fetchIconifyCollectionSlugs/, "Iconify provider must discover SVG slugs from the Simple Icons collection index.");
 assert.match(source, /id: "thesvg"[\s\S]*urlForSlug: \(slug\) => `https:\/\/thesvg\.org\/icons\/\$\{encodeURIComponent\(slug\)\}\/default\.svg`/, "theSVG provider must fetch the default SVG variant.");
 assert.match(source, /function fetchTheSvgSlugs[\s\S]*\/\^\\\/public\\\/icons\\\/\(\.\+\)\\\/default\\\.svg\$\/i/, "theSVG provider must discover default SVG slugs from the jsDelivr GitHub package index.");
 assert.match(
   source,
-  /const REMOTE_BRAND_ICON_PROVIDERS = Object\.freeze\(\[\s*\{\s*id: "thesvg"[\s\S]*?\},\s*\{\s*id: "lobehub"[\s\S]*?\},\s*\{\s*id: "iconify"[\s\S]*?\},\s*\{\s*id: "simple-icons-cdn"/,
-  "Remote cloud providers must use the priority order theSVG, LobeHub, Iconify, then Simple Icons."
+  /const REMOTE_BRAND_ICON_PROVIDERS = Object\.freeze\(\[\s*\{\s*id: "thesvg"[\s\S]*?\},\s*\{\s*id: "lobehub"[\s\S]*?\}\s*\]\);/,
+  "Remote cloud providers must be limited to theSVG and LobeHub."
 );
+assert.doesNotMatch(source, /id: "iconify"|id: "simple-icons-cdn"|api\.iconify\.design|cdn\.simpleicons\.org|function fetchIconifyCollectionSlugs|function fetchSimpleIconSlugs/, "Iconify and Simple Icons CDN must not remain as cloud SVG providers.");
 assert.match(source, /if \(cachedEntry\?\.request\) \{[\s\S]*return cachedEntry\.request;/, "Concurrent icon cards should share one provider index request.");
 assert.doesNotMatch(source, /function remoteBrandGlyphColorForTile/, "Remote SVG data URLs must not fork a separate glyph strategy from local SVGs.");
 assert.match(source, /isSvgDataUrl\(source\)[\s\S]*return localBrandGlyphColorForTile\(tileColor, brandColor\);/, "Remote SVG data URLs must use the same glyph strategy as local SVGs.");
@@ -98,9 +96,8 @@ assert.match(source, /function remoteBrandSvgCacheStrategy/, "Remote SVG cache e
 assert.match(source, /const isLocalIconSource = String\(iconPath \|\| ""\)\.startsWith\("icons\/"\);/, "Only deployed local icon files should receive the local icon marker.");
 assert.match(source, /function remoteBrandSvgResponseMayContainSvg/, "Provider responses must reject explicit non-SVG content types.");
 assert.match(source, /function remoteBrandIconMissCacheIsFresh/, "Provider misses must have an explicit freshness gate.");
-assert.match(source, /function remoteBrandProviderColorLooksDrifted/, "Provider color drift must be detected against known local VI colors.");
 assert.match(source, /remoteBrandSvgBrandColor\(svg, options\)/, "Fetched provider SVGs must derive brand color through the provider trust gate.");
-assert.match(source, /SITE_ICON_TILE_COLOR_BY_SITE_KEY\[options\.siteKey\]/, "Provider color drift checks must compare against known local VI colors.");
+assert.match(source, /SITE_ICON_TILE_COLOR_BY_SITE_KEY\[options\.siteKey\]/, "Provider color fallback must compare against known local VI colors.");
 assert.match(source, /function keepsBrandIconOriginalOnBrandTile/, "Local SVGs with an embedded VI carrier can preserve original artwork on a brand tile.");
 assert.match(source, /"suno\.com": "#000000"/, "Suno's monochrome local SVG must share the black/white mask carrier used by X and GitHub.");
 assert.doesNotMatch(source, /nativeRoundedBrandIcon|NATIVE_ROUNDED_BRAND_ICON_SITE_KEYS/, "Grok must not keep a dedicated native-rounded SVG rendering branch.");
@@ -574,23 +571,8 @@ function remoteBrandColorLooksNeutral(color) {
 function remoteBrandSvgBrandColor(svg, options = {}) {
   const palette = extractSvgColorPalette(svg);
   const localColor = normalizeHexColor(options.localColor || "");
-  if (options.providerId === "simple-icons-cdn" && palette[0]) {
-    return remoteBrandProviderColorLooksDrifted(palette[0], localColor) ? localColor : palette[0];
-  }
   const expressiveColor = palette.find((color) => !remoteBrandColorLooksNeutral(color));
   return expressiveColor || localColor || "";
-}
-
-function remoteBrandProviderColorLooksDrifted(providerColor, localColor) {
-  const provider = normalizeHexColor(providerColor);
-  const local = normalizeHexColor(localColor);
-  if (!provider || !local || remoteBrandColorLooksNeutral(provider)) {
-    return false;
-  }
-  const [providerRed, providerGreen, providerBlue] = hexToRgb(provider);
-  const [localRed, localGreen, localBlue] = hexToRgb(local);
-  const distance = Math.hypot(providerRed - localRed, providerGreen - localGreen, providerBlue - localBlue);
-  return distance > 96 && contrastRatio(provider, local) > 1.35;
 }
 
 const FAVICON_BACKGROUND_ALPHA_MIN = 0.35;
@@ -1966,14 +1948,6 @@ assert.deepEqual(
   "Duplicate slug candidates should keep the highest score."
 );
 
-const simpleIconProviderSlugs = remoteBrandSlugsFromFileListForTest([
-  { name: "/icons/raycast.svg" },
-  { name: "/icons/raycast.svg" },
-  { name: "/icons/raycast-wordmark.svg" },
-  { name: "/data/simple-icons.json" }
-], /^\/icons\/(.+)\.svg$/i);
-assert.equal(remoteBrandProviderHasSlugForTest(simpleIconProviderSlugs, "raycast"), true, "Simple Icons package index should allow existing slugs before provider fetch.");
-assert.equal(remoteBrandProviderHasSlugForTest(simpleIconProviderSlugs, "missing-brand"), false, "Simple Icons package index should suppress missing slug fetches instead of probing 404s.");
 {
   const [teslaCandidate, teslaComCandidate] = remoteBrandIconSlugCandidatesForTest("tesla.com", "Tesla");
   assert.deepEqual(
@@ -2114,11 +2088,9 @@ assert.equal(remoteBrandSvgQuality('<svg viewBox="0 0 24 24"><foreignObject/></s
 assert.equal(remoteBrandSvgQuality('<svg viewBox="0 0 24 24"><path onclick="alert(1)" d="M0 0h1v1H0z"/></svg>', { candidate: { score: 92 } }).accepted, false, "SVGs with event handlers should fail.");
 assert.equal(remoteBrandSvgQuality(simpleSvg, { candidate: { score: 44 } }).accepted, false, "Low-confidence slug matches should fail.");
 
-assert.equal(remoteBrandSvgBrandColor(simpleSvg, { providerId: "simple-icons-cdn" }), "#1db954", "Simple Icons provider color should be trusted.");
-assert.equal(remoteBrandSvgBrandColor('<svg viewBox="0 0 24 24"><path fill="#ff0000"/></svg>', { providerId: "simple-icons-cdn", localColor: "#1ed760" }), "#1ed760", "Strong provider color drift should fall back to known local VI color.");
-assert.equal(remoteBrandSvgBrandColor('<svg viewBox="0 0 24 24"><path fill="#1db954"/></svg>', { providerId: "simple-icons-cdn", localColor: "#1ed760" }), "#1db954", "Small provider color variance should remain trusted.");
-assert.equal(remoteBrandSvgBrandColor('<svg viewBox="0 0 24 24"><path fill="#000000"/></svg>', { providerId: "iconify" }), "", "Neutral Iconify SVG color should not become the brand color by itself.");
-assert.equal(remoteBrandSvgBrandColor('<svg viewBox="0 0 24 24"><path fill="#000000"/></svg>', { providerId: "iconify", localColor: "#ffcc00" }), "#ffcc00", "Local VI color should be used when remote color is neutral.");
+assert.equal(remoteBrandSvgBrandColor(simpleSvg, { providerId: "lobehub" }), "#1db954", "Expressive remote provider colors should be trusted.");
+assert.equal(remoteBrandSvgBrandColor('<svg viewBox="0 0 24 24"><path fill="#000000"/></svg>', { providerId: "lobehub" }), "", "Neutral remote SVG color should not become the brand color by itself.");
+assert.equal(remoteBrandSvgBrandColor('<svg viewBox="0 0 24 24"><path fill="#000000"/></svg>', { providerId: "lobehub", localColor: "#ffcc00" }), "#ffcc00", "Local VI color should be used when remote color is neutral.");
 
 assert.equal(remoteBrandSvgResponseMayContainSvg("image/svg+xml; charset=utf-8", "https://cdn.example/icon"), true, "Explicit SVG content types should be accepted.");
 assert.equal(remoteBrandSvgResponseMayContainSvg("text/html", "https://cdn.example/icon.svg"), false, "Explicit HTML provider responses should be rejected even when the URL ends in .svg.");
@@ -2180,7 +2152,7 @@ for (const sample of cloudProviderSamples) {
   assert.equal(remoteProviderCanRunForSiteKeyForTest(sample.siteKey), true, `${sample.siteName} remains eligible for remote provider discovery.`);
   assert.equal(remoteBrandIconSlugCandidatesForTest(sample.siteKey, sample.siteName)[0].slug, sample.siteKey.split(".")[0], `${sample.siteName} should produce a stable provider slug.`);
   assert.deepEqual(remoteBrandSvgQuality(sample.svg, { candidate: { score: 92 } }), { accepted: true, score: 100 }, `${sample.siteName} provider SVG should pass the quality gate.`);
-  assert.equal(remoteBrandSvgBrandColor(sample.svg, { providerId: "simple-icons-cdn" }), sample.color, `${sample.siteName} provider color should be trusted when no local VI color exists.`);
+  assert.equal(remoteBrandSvgBrandColor(sample.svg, { providerId: "lobehub" }), sample.color, `${sample.siteName} provider color should be trusted when no local VI color exists.`);
   assert.deepEqual(remoteBrandSvgDescriptor(sample.svg, { brandColor: sample.color, qualityScore: 100 }), sample.descriptor, `${sample.siteName} should cache only source metadata, not a separate display tile descriptor.`);
   const remoteDataUrl = svgTextDataUrl(prepareRemoteBrandSvgForTest(sample.svg, { brandColor: sample.color, qualityScore: 100 }));
   const icon = new TestIcon();

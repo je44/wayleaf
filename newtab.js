@@ -820,17 +820,6 @@ const REMOTE_BRAND_ICON_PROVIDERS = Object.freeze([
     index: "lobehub-static-svg",
     packageName: "@lobehub/icons-static-svg",
     urlForSlug: (slug) => `https://unpkg.com/@lobehub/icons-static-svg@latest/icons/${encodeURIComponent(slug)}.svg`
-  },
-  {
-    id: "iconify",
-    index: "iconify-simple-icons",
-    urlForSlug: (slug) => `https://api.iconify.design/simple-icons/${encodeURIComponent(slug)}.svg`
-  },
-  {
-    id: "simple-icons-cdn",
-    index: "simple-icons",
-    packageName: "simple-icons",
-    urlForSlug: (slug) => `https://cdn.simpleicons.org/${encodeURIComponent(slug)}?viewbox=auto`
   }
 ]);
 const REMOTE_BRAND_ICON_SLUGS_BY_SITE_KEY = Object.freeze({
@@ -7725,12 +7714,6 @@ async function remoteBrandProviderSlugRequest(provider) {
   if (provider.index === "lobehub-static-svg") {
     return fetchLobeHubStaticSvgSlugs(provider.packageName);
   }
-  if (provider.index === "simple-icons") {
-    return fetchSimpleIconSlugs(provider.packageName);
-  }
-  if (provider.index === "iconify-simple-icons") {
-    return fetchIconifyCollectionSlugs("simple-icons");
-  }
   if (provider.index === "thesvg") {
     return fetchTheSvgSlugs();
   }
@@ -7751,23 +7734,6 @@ async function fetchNpmPackageLatestVersion(packageName) {
   const encodedPackageName = encodeURIComponent(packageName).replace(/^%40/i, "@");
   const response = await fetchJsonWithTimeout(`https://registry.npmjs.org/${encodedPackageName}/latest`);
   return typeof response?.version === "string" ? response.version : "";
-}
-
-async function fetchSimpleIconSlugs(packageName) {
-  const version = await fetchNpmPackageLatestVersion(packageName);
-  if (!version) {
-    return new Set();
-  }
-  const encodedPackageName = encodeURIComponent(packageName);
-  const response = await fetchJsonWithTimeout(`https://data.jsdelivr.com/v1/package/npm/${encodedPackageName}@${encodeURIComponent(version)}/flat`);
-  return remoteBrandSlugsFromFileList(response?.files, /^\/icons\/(.+)\.svg$/i);
-}
-
-async function fetchIconifyCollectionSlugs(prefix) {
-  const response = await fetchJsonWithTimeout(`https://api.iconify.design/collection?prefix=${encodeURIComponent(prefix)}`);
-  return new Set(Array.isArray(response?.uncategorized)
-    ? response.uncategorized.map(remoteBrandIconSlug).filter(Boolean)
-    : []);
 }
 
 async function fetchTheSvgSlugs() {
@@ -8024,23 +7990,8 @@ function remoteBrandSvgBrandColor(svg, options = {}) {
   }
   const palette = extractSvgColorPalette(svg);
   const localColor = normalizeHexColor(SITE_ICON_TILE_COLOR_BY_SITE_KEY[options.siteKey] || "");
-  if (options.providerId === "simple-icons-cdn" && palette[0]) {
-    return remoteBrandProviderColorLooksDrifted(palette[0], localColor) ? localColor : palette[0];
-  }
   const expressiveColor = palette.find((color) => !remoteBrandColorLooksNeutral(color));
   return expressiveColor || localColor || "";
-}
-
-function remoteBrandProviderColorLooksDrifted(providerColor, localColor) {
-  const provider = normalizeHexColor(providerColor);
-  const local = normalizeHexColor(localColor);
-  if (!provider || !local || remoteBrandColorLooksNeutral(provider)) {
-    return false;
-  }
-  const [providerRed, providerGreen, providerBlue] = hexToRgb(provider);
-  const [localRed, localGreen, localBlue] = hexToRgb(local);
-  const distance = Math.hypot(providerRed - localRed, providerGreen - localGreen, providerBlue - localBlue);
-  return distance > 96 && contrastRatio(provider, local) > 1.35;
 }
 
 function remoteBrandColorLooksNeutral(color) {
