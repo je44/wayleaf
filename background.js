@@ -19,6 +19,8 @@ const AI_DIRECT_PROMPT_STORAGE_KEY = "aiDirectPrompts";
 const AI_DIRECT_PROMPT_TOKEN_PARAM = "_wayleaf_prompt";
 const AI_DIRECT_PROMPT_TEXT_PARAM = "_wayleaf_text";
 const AI_DIRECT_MAX_PROMPT_LENGTH = 12000;
+const AI_DIRECT_ATTACHMENT_MAX_COUNT = 2;
+const GEMINI_ATTACHMENT_UPLOAD_ACTION = "wayleaf:gemini-attachment-upload";
 const VIDEO_PIP_TOGGLE_ACTION = "wayleaf:toggle-video-pip-pin";
 const VIDEO_PIP_REQUEST_ACTION = "wayleaf:video-pip-request";
 const VIDEO_PIP_COMMAND_ACTION = "wayleaf:video-pip-command";
@@ -363,6 +365,24 @@ async function injectAiSubmit(tabId, request) {
   }
 }
 
+async function handleGeminiAttachmentUpload(message, sender) {
+  const tabId = sender?.tab?.id;
+  if (!Number.isInteger(tabId) || !chrome.scripting?.executeScript) {
+    return { ok: false };
+  }
+  const attachments = normalizeAiDirectAttachments(message.attachments);
+  if (!attachments.length) {
+    return { ok: false };
+  }
+  const results = await chrome.scripting.executeScript({
+    target: { tabId },
+    world: "MAIN",
+    func: uploadGeminiAttachments,
+    args: [attachments]
+  });
+  return { ok: results?.[0]?.result === true };
+}
+
 async function readStoredAiPrompt(token, engineId) {
   if (!token || !chrome.storage?.local) {
     return "";
@@ -372,6 +392,19 @@ async function readStoredAiPrompt(token, engineId) {
   return item?.engineId === engineId
     ? String(item.prompt || "").trim().slice(0, AI_DIRECT_MAX_PROMPT_LENGTH)
     : "";
+}
+
+function normalizeAiDirectAttachments(value) {
+  return Array.isArray(value)
+    ? value
+      .filter((item) => item && typeof item === "object" && item.dataUrl && item.name)
+      .slice(0, AI_DIRECT_ATTACHMENT_MAX_COUNT)
+      .map((item) => ({
+        dataUrl: String(item.dataUrl || ""),
+        name: String(item.name || "attachment"),
+        type: String(item.type || "application/octet-stream")
+      }))
+    : [];
 }
 
 function submitJimengPrompt(prompt) {
@@ -465,6 +498,171 @@ function submitJimengPrompt(prompt) {
   }, 250);
 }
 
+async function uploadGeminiAttachments(attachments) {
+  const marker = "data-wayleaf-gemini-attachment-handoff";
+  const root = document.documentElement;
+  const files = attachments.map(attachmentToFile).filter(Boolean);
+  if (!files.length) {
+    root.setAttribute(marker, "missing");
+    return false;
+  }
+  root.setAttribute(marker, "pending");
+
+  const deadline = Date.now() + 15000;
+  const delay = (ms) => new Promise((resolve) => window.setTimeout(resolve, ms));
+  const visible = (node) => {
+    const rect = node.getBoundingClientRect();
+    const style = window.getComputedStyle(node);
+    return rect.width > 0 && rect.height > 0 && style.visibility !== "hidden" && style.display !== "none";
+  };
+  const clickable = (node) => node instanceof HTMLElement
+    && !(node instanceof HTMLButtonElement && node.disabled)
+    && node.getAttribute("aria-disabled") !== "true"
+    && visible(node);
+  const query = (selectors) => selectors.flatMap((selector) => [...document.querySelectorAll(selector)]);
+  const waitFor = async (find, timeoutMs) => {
+    const startedAt = Date.now();
+    while (Date.now() - startedAt <= timeoutMs) {
+      const match = find();
+      if (match) {
+        return match;
+      }
+      await delay(100);
+    }
+    return null;
+  };
+  const findInput = () => query(["input[type=\"file\"][multiple]", "input[type=\"file\"]"])
+    .find((node) => node instanceof HTMLInputElement && node.type === "file" && !node.disabled) || null;
+  const findToolsButton = () => query([
+    "button[aria-label*=\"Add files\"]",
+    "button[aria-label*=\"Upload\"]",
+    "button[aria-label*=\"Attach\"]",
+    "button[aria-label*=\"Upload and tools\"]",
+    "button[aria-label*=\"上載同工具\"]",
+    "button[aria-label*=\"添加文件\"]",
+    "button[aria-label*=\"上传\"]"
+  ]).find(clickable) || null;
+  const findUploadMenuItem = () => query([
+    "[data-test-id=\"local-images-files-uploader-button\"]",
+    "[data-testid=\"local-images-files-uploader-button\"]",
+    "button[aria-label*=\"Upload files\"]",
+    "button[aria-label*=\"上載檔案\"]",
+    "button[aria-label*=\"上传文件\"]",
+    "button[aria-label*=\"上傳檔案\"]"
+  ]).find(clickable) || null;
+  const countFilePreviews = () => query([
+    "uploader-file-preview",
+    "uploader-file-preview-container",
+    ".file-preview-chip",
+    ".uploader-file-preview-container"
+  ]).filter(visible).length;
+  const initialPreviewCount = countFilePreviews();
+  const hasFileChip = () => {
+    const text = `${document.body?.innerText || ""} ${document.body?.textContent || ""}`;
+    return files.some((file) => text.includes(file.name))
+      || countFilePreviews() >= initialPreviewCount + files.length;
+  };
+  const findDropTarget = () => query([
+    ".xap-uploader-dropzone",
+    "input-area-v2",
+    ".input-area",
+    ".chat-container",
+    "main"
+  ]).find(visible) || document.body;
+  const fileToWebkitEntry = (file) => ({
+    file: (callback) => callback(file),
+    fullPath: `/${file.name}`,
+    isDirectory: false,
+    isFile: true,
+    name: file.name
+  });
+  const filesToUploadTransfer = () => {
+    const uploadFiles = [...files];
+    const items = uploadFiles.map((file) => ({
+      getAsFile: () => file,
+      kind: "file",
+      type: file.type,
+      webkitGetAsEntry: () => fileToWebkitEntry(file)
+    }));
+    uploadFiles.item = (index) => uploadFiles[index] || null;
+    items.item = (index) => items[index] || null;
+    return {
+      clearData: () => undefined,
+      dropEffect: "copy",
+      effectAllowed: "all",
+      files: uploadFiles,
+      getData: () => "",
+      items,
+      setData: () => undefined,
+      types: ["Files"]
+    };
+  };
+  const dispatchUploadDrop = () => {
+    const target = findDropTarget();
+    const transfer = filesToUploadTransfer();
+    for (const type of ["dragenter", "dragover", "drop"]) {
+      const event = new Event(type, { bubbles: true, cancelable: true, composed: true });
+      Object.defineProperty(event, "dataTransfer", { value: transfer });
+      target.dispatchEvent(event);
+    }
+  };
+  const attachToInput = (input) => {
+    const transfer = new DataTransfer();
+    files.forEach((file) => transfer.items.add(file));
+    input.files = transfer.files;
+    input.dispatchEvent(new Event("input", { bubbles: true, cancelable: true, composed: true }));
+    input.dispatchEvent(new Event("change", { bubbles: true, cancelable: true, composed: true }));
+  };
+
+  let input = findInput();
+  if (!hasFileChip() && !input) {
+    const button = await waitFor(findToolsButton, 3000);
+    button?.click();
+    input = await waitFor(findInput, 600);
+    if (!input) {
+      const item = await waitFor(findUploadMenuItem, 1500);
+      item?.click();
+      input = await waitFor(findInput, 1500);
+    }
+  }
+  if (!hasFileChip() && input) {
+    attachToInput(input);
+  } else if (!hasFileChip()) {
+    dispatchUploadDrop();
+    await delay(1200);
+  }
+
+  while (Date.now() <= deadline) {
+    if (hasFileChip()) {
+      root.setAttribute(marker, "uploaded");
+      return true;
+    }
+    await delay(200);
+  }
+  root.setAttribute(marker, "failed");
+  return false;
+
+  function attachmentToFile(attachment) {
+    try {
+      const match = String(attachment.dataUrl || "").match(/^data:([^;,]+)?(;base64)?,(.*)$/);
+      if (!match) {
+        return null;
+      }
+      const mime = attachment.type || match[1] || "application/octet-stream";
+      const body = match[2]
+        ? atob(match[3])
+        : decodeURIComponent(match[3]);
+      const bytes = new Uint8Array(body.length);
+      for (let index = 0; index < body.length; index += 1) {
+        bytes[index] = body.charCodeAt(index);
+      }
+      return new File([bytes], attachment.name || "attachment", { type: mime });
+    } catch {
+      return null;
+    }
+  }
+}
+
 chrome.runtime?.onInstalled?.addListener((details) => {
   if (details.reason === "install") {
     chrome.storage?.local?.set({ [RECENT_HISTORY_STARTED_AT_STORAGE_KEY]: Date.now() })
@@ -498,6 +696,15 @@ chrome.action?.onClicked?.addListener((tab) => {
 });
 
 chrome.runtime?.onMessage?.addListener((message, sender, sendResponse) => {
+  if (message?.action === GEMINI_ATTACHMENT_UPLOAD_ACTION) {
+    handleGeminiAttachmentUpload(message, sender)
+      .then(sendResponse)
+      .catch((error) => {
+        console.warn("Wayleaf Gemini attachment upload failed", error);
+        sendResponse({ ok: false });
+      });
+    return true;
+  }
   if (message?.action === SOCIAL_VIDEO_EXTRACT_STATUS_ACTION) {
     handleSocialVideoExtractStatus(message, sender).catch(reportBackgroundError);
     sendResponse({ ok: true });

@@ -15,9 +15,12 @@ const WAYLEAF_SUBMIT_TIMEOUT_MS = 12000;
 const WAYLEAF_EDITOR_SYNC_DELAY_MS = 260;
 const WAYLEAF_ATTACHMENT_READY_TIMEOUT_MS = 15000;
 const WAYLEAF_ATTACHMENT_READY_STABLE_MS = 800;
+const WAYLEAF_GEMINI_ATTACHMENT_READY_STABLE_MS = 3000;
 const WAYLEAF_BOOT_DELAY_MS = 500;
 const WAYLEAF_BOOT_MAX_ATTEMPTS = 18;
 const WAYLEAF_TOKEN_CLEANUP_DURATION_MS = 15000;
+const WAYLEAF_GEMINI_ATTACHMENT_ATTR = "data-wayleaf-gemini-attachment-handoff";
+const WAYLEAF_GEMINI_ATTACHMENT_UPLOAD_ACTION = "wayleaf:gemini-attachment-upload";
 
 const PROVIDERS = {
   "chatgpt.com": {
@@ -61,6 +64,7 @@ const PROVIDERS = {
   },
   "gemini.google.com": {
     engineId: "gemini",
+    mainWorldAttachment: true,
     inputSelectors: [
       "rich-textarea div[contenteditable=\"true\"]",
       "div[contenteditable=\"true\"]",
@@ -411,8 +415,11 @@ async function submitPromptWhenReady(config, prompt, attachments = []) {
     return "filled";
   }
   const submitButton = attachments.length
-    ? await waitForChatgptAttachmentReady(config, input, attachments.length)
+    ? await waitForAttachmentReady(config, input, attachments.length)
     : await waitForSubmitButton(config, input, 6000);
+  if (attachments.length && config.engineId === "gemini" && !submitButton) {
+    return "filled";
+  }
   if (submitButton) {
     await clickSubmitButton(submitButton);
     await delay(900);
@@ -449,13 +456,23 @@ async function fillPromptIntoLiveInput(config, prompt, attempts = 1) {
   return waitForElement(config.inputSelectors, isWritableInput, 1200);
 }
 
-async function waitForChatgptAttachmentReady(config, input, attachmentCount) {
-  if (config.engineId === "claude" && attachmentCount > 0) {
-    return waitForClaudeAttachmentReady(config, input);
-  }
-  if (config.engineId !== "chatgpt" || attachmentCount <= 0) {
+async function waitForAttachmentReady(config, input, attachmentCount) {
+  if (attachmentCount <= 0) {
     return waitForSubmitButton(config, input, 6000);
   }
+  if (config.engineId === "chatgpt") {
+    return waitForChatgptAttachmentReady(config, input, attachmentCount);
+  }
+  if (config.engineId === "claude") {
+    return waitForClaudeAttachmentReady(config, input);
+  }
+  if (config.engineId === "gemini") {
+    return waitForGeminiAttachmentReady(config, input, attachmentCount);
+  }
+  return waitForSubmitButton(config, input, 6000);
+}
+
+async function waitForChatgptAttachmentReady(config, input, attachmentCount) {
   const startedAt = Date.now();
   let readySince = 0;
   while (Date.now() - startedAt <= WAYLEAF_ATTACHMENT_READY_TIMEOUT_MS) {
@@ -511,6 +528,35 @@ async function waitForClaudeAttachmentReady(config, input) {
     await delay(200);
   }
   return null;
+}
+
+async function waitForGeminiAttachmentReady(config, input, attachmentCount) {
+  const startedAt = Date.now();
+  let readySince = 0;
+  let lastReadyCount = 0;
+  while (Date.now() - startedAt <= WAYLEAF_ATTACHMENT_READY_TIMEOUT_MS) {
+    const submitButton = findSubmitButton(config, input);
+    const readyCount = countGeminiReadyAttachments();
+    const ready = submitButton && readyCount >= attachmentCount;
+    if (ready) {
+      readySince = readyCount === lastReadyCount && readySince ? readySince : Date.now();
+      if (Date.now() - readySince >= WAYLEAF_GEMINI_ATTACHMENT_READY_STABLE_MS) {
+        return submitButton;
+      }
+    } else {
+      readySince = 0;
+    }
+    lastReadyCount = readyCount;
+    await delay(200);
+  }
+  return null;
+}
+
+function countGeminiReadyAttachments() {
+  return [...document.querySelectorAll([
+    "uploader-file-preview",
+    ".file-preview-chip"
+  ].join(","))].filter(isVisible).length;
 }
 
 function waitForElement(selectors, predicate, timeoutMs) {
@@ -670,12 +716,49 @@ async function attachPromptFiles(config, attachments) {
   if (!attachments.length) {
     return false;
   }
-  const files = attachments.map(attachmentToFile).filter(Boolean);
-  if (!files.length) {
+  if (config.engineId === "chatgpt") {
+    return attachChatgptPromptFiles(attachments);
+  }
+  if (config.engineId === "claude") {
+    return attachClaudePromptFiles(config, attachments);
+  }
+  if (config.engineId === "gemini") {
+    return attachGeminiPromptFiles(config, attachments);
+  }
+  return false;
+}
+
+async function attachChatgptPromptFiles(attachments) {
+  const input = document.querySelector("#upload-files")
+    || document.querySelector("#upload-photos")
+    || document.querySelector('input[type="file"][multiple]');
+  if (!(input instanceof HTMLInputElement)) {
     return false;
   }
-  const input = attachmentInputForProvider(config);
+  return attachFilesToInput(input, attachments);
+}
+
+async function attachClaudePromptFiles(config, attachments) {
+  const input = (config.attachmentSelectors || [])
+    .flatMap((selector) => [...document.querySelectorAll(selector)])
+    .find((node) => node instanceof HTMLInputElement && node.type === "file" && !node.disabled) || null;
   if (!(input instanceof HTMLInputElement)) {
+    return false;
+  }
+  return attachFilesToInput(input, attachments);
+}
+
+async function attachGeminiPromptFiles(config, attachments) {
+  if (!config.mainWorldAttachment) {
+    return false;
+  }
+  const requested = await requestGeminiMainWorldAttachmentUpload(attachments);
+  return requested ? waitForGeminiMainWorldAttachment() : false;
+}
+
+async function attachFilesToInput(input, attachments) {
+  const files = attachments.map(attachmentToFile).filter(Boolean);
+  if (!files.length) {
     return false;
   }
   const transfer = new DataTransfer();
@@ -687,18 +770,34 @@ async function attachPromptFiles(config, attachments) {
   return true;
 }
 
-function attachmentInputForProvider(config) {
-  if (config.engineId === "chatgpt") {
-    return document.querySelector("#upload-files")
-      || document.querySelector("#upload-photos")
-      || document.querySelector('input[type="file"][multiple]');
+async function waitForGeminiMainWorldAttachment() {
+  const startedAt = Date.now();
+  while (Date.now() - startedAt <= WAYLEAF_ATTACHMENT_READY_TIMEOUT_MS) {
+    const state = document.documentElement.getAttribute(WAYLEAF_GEMINI_ATTACHMENT_ATTR) || "";
+    if (state === "uploaded") {
+      return true;
+    }
+    if (state === "failed" || state === "missing") {
+      return false;
+    }
+    await delay(200);
   }
-  if (config.engineId === "claude") {
-    return (config.attachmentSelectors || [])
-      .flatMap((selector) => [...document.querySelectorAll(selector)])
-      .find((node) => node instanceof HTMLInputElement && node.type === "file" && !node.disabled) || null;
+  return false;
+}
+
+async function requestGeminiMainWorldAttachmentUpload(attachments) {
+  if (typeof chrome === "undefined" || !chrome.runtime?.sendMessage) {
+    return false;
   }
-  return null;
+  try {
+    const response = await chrome.runtime.sendMessage({
+      action: WAYLEAF_GEMINI_ATTACHMENT_UPLOAD_ACTION,
+      attachments
+    });
+    return response?.ok !== false;
+  } catch {
+    return false;
+  }
 }
 
 function attachmentToFile(attachment) {
