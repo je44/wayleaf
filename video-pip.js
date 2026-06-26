@@ -3,7 +3,6 @@
 (() => {
   const CONTROLLER_KEY = "__wayleafVideoPipController";
   const GLOBAL_ENABLED_STORAGE_KEY = "videoPipGlobalEnabled";
-  const TOGGLE_PIN_ACTION = "wayleaf:toggle-video-pip-pin";
   const EXTRACT_START_ACTION = "wayleaf:social-video-extract-start";
   const EXTRACT_STATUS_ACTION = "wayleaf:social-video-extract-status";
   const REQUEST_ACTION = "wayleaf:video-pip-request";
@@ -12,7 +11,6 @@
   const MIN_EXTRACT_VIDEO_AREA = 12000;
   const SOCIAL_VIDEO_EXTRACT_HOSTS = new Set(["x.com", "twitter.com", "xiaohongshu.com"]);
   let globalEnabled = false;
-  let pinned = false;
   let entering = false;
   let extractEntering = false;
   let extractorActive = false;
@@ -41,9 +39,6 @@
     }
   }
   const controller = {
-    togglePin() {
-      return togglePinned();
-    },
     dispose({ clearControllerKey = true } = {}) {
       disposed = true;
       pendingVideoScan = false;
@@ -173,7 +168,7 @@
   }
 
   function enabled() {
-    return !disposed && ((globalEnabled && !requiresManualSocialExtraction()) || pinned);
+    return !disposed && globalEnabled && !requiresManualSocialExtraction();
   }
 
   function coordinatorEnabled() {
@@ -661,46 +656,6 @@
     }
   }
 
-  async function enterPinnedPictureInPicture() {
-    return guardExtensionContextAsync(async () => {
-      if (!enabled() || entering || exiting) {
-        return false;
-      }
-      if (document.pictureInPictureElement) {
-        return document.pictureInPictureElement === managedPipVideo;
-      }
-      const video = pickPictureInPictureCandidateVideo() || pickLargestExtractableVideo();
-      const entered = await requestPictureInPictureForVideo(video);
-      if (entered) {
-        safeSendMessage({ action: REQUEST_ACTION, type: "entered", score: videoArea(video), ...videoPipSessionState(video) });
-      }
-      return entered;
-    }, false);
-  }
-
-  async function togglePinned() {
-    pinned = !pinned;
-    let entered = false;
-    if (enabled()) {
-      updateAutomaticPictureInPictureBinding();
-      if (pinned) {
-        entered = await enterPinnedPictureInPicture();
-        notifyCoordinator("enter");
-      }
-    } else {
-      updateAutomaticPictureInPictureBinding();
-      notifyCoordinator("exit");
-    }
-    return {
-      ok: true,
-      pinned,
-      globalEnabled,
-      enabled: enabled(),
-      entered,
-      hasVideo: Boolean(pickPlayingVideo() || pickLargestExtractableVideo())
-    };
-  }
-
   function handleVisibilityChange() {
     guardExtensionContext(() => {
       if (document.visibilityState === "hidden") {
@@ -746,10 +701,6 @@
       if (message?.action === EXTRACT_START_ACTION) {
         sendResponse({ ok: true, extractorActive: startVideoExtractor() });
         return;
-      }
-      if (message?.action === TOGGLE_PIN_ACTION) {
-        togglePinned().then(sendResponse);
-        return true;
       }
       if (message?.action !== COMMAND_ACTION) {
         return;

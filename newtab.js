@@ -512,6 +512,7 @@ const PORTAL_CATEGORY_ORDER = [
   "social",
   "shopping",
   "media",
+  "portal",
   "other"
 ];
 const BOOKMARK_CATEGORY_RULES = {
@@ -800,8 +801,6 @@ const SITE_ICON_FILE_BY_SITE_KEY = Object.freeze({
   "office.com": "microsoftoffice.svg",
   "pinduoduo.com": "pinduoduo.svg",
   "proton.me": "protonmail.svg",
-  "steamcommunity.com": "steam.svg",
-  "steampowered.com": "steam.svg",
   "teams.microsoft.com": "microsoftteams.svg",
   "tmall.com": "tmall.png",
   "trip.com": "tripdotcom.svg",
@@ -851,6 +850,8 @@ const REMOTE_BRAND_ICON_SLUGS_BY_SITE_KEY = Object.freeze({
   "office.com": ["microsoftoffice", "microsoft"],
   "proton.me": ["protonmail", "proton"],
   "react.dev": ["react"],
+  "steamcommunity.com": ["steam"],
+  "steampowered.com": ["steam"],
   "stackoverflow.com": ["stackoverflow"],
   "teams.microsoft.com": ["microsoftteams", "microsoft"],
   "trip.com": ["tripdotcom"],
@@ -967,6 +968,7 @@ const MULTICOLOR_BRAND_ICON_SITE_KEYS = new Set([
   "gmail.com",
   "google.com",
   "huggingface.co",
+  "v.qq.com",
   "instagram.com",
   "jimeng.jianying.com",
   "maps.google.com",
@@ -1001,7 +1003,7 @@ const MESSAGES = {
     mobilePortalTab: "快捷",
     mobileMediaTab: "信息",
     mobileHistoryTab: "历史",
-    smartPortalTab: "智能常用",
+    smartPortalTab: "网站推荐",
     bookmarkPortalTab: "自选书签",
     portalCategoryFeatured: "常用入口",
     portalCategoryCustom: "自定义",
@@ -1014,7 +1016,8 @@ const MESSAGES = {
     portalCategoryMedia: "影音",
     portalCategoryDesign: "设计",
     portalCategoryOther: "其他",
-    portalCategories: "智能分类",
+    portalCategoryPortal: "常用门户",
+    portalCategories: "推荐分类",
     portalCategoriesExpand: "展开",
     portalCategoriesCollapse: "收起",
     addPortal: "添加入口",
@@ -1078,11 +1081,12 @@ const MESSAGES = {
     videoPipLabTitle: "视频自动画中画",
     videoPipLabDescription: "兼容 HTML5 视频可用。",
     videoPipGlobalLabel: "全局允许视频自动画中画",
-    videoPipGlobalHint: "全局启用，或用工具栏仅钉选当前视频页。",
-    socialVideoExtractorTitle: "社交视频小窗提取",
-    socialVideoExtractorDescription: "提取小红书笔记与 X 帖子里的可播放视频。",
-    socialVideoExtractorLabel: "启用小红书与 X 视频提取",
-    socialVideoExtractorHint: "点工具栏图标，悬停视频后点击识别框。",
+    videoPipGlobalHint: "全局启用后，兼容视频页可自动画中画。",
+    socialVideoExtractorTitle: "社交视频小窗",
+    socialVideoExtractorDescription: "",
+    socialVideoExtractorLabel: "启用社交视频小窗",
+    socialVideoExtractorHint: "点击工具栏图标，选择页面中的可播放视频。",
+    socialVideoExtractorSupport: "目前支持：小红书、X",
     languageSettingsTitle: "语言",
     appearanceModeTitle: "外观",
     themeModeSystem: "跟随系统",
@@ -1195,7 +1199,7 @@ const MESSAGES = {
     portalTitle: "導航中樞",
     mobilePortalTab: "快捷",
     mobileMediaTab: "資訊",
-    smartPortalTab: "智能常用",
+    smartPortalTab: "網站推薦",
     bookmarkPortalTab: "自選書籤",
     mobileHistoryTab: "歷史",
     portalCategoryCustom: "自訂",
@@ -1208,6 +1212,7 @@ const MESSAGES = {
     portalCategoryMedia: "影音",
     portalCategoryDesign: "設計",
     portalCategoryOther: "其他",
+    portalCategoryPortal: "常用門戶",
     quickSearchPlaceholder: "搜尋或輸入網址",
     googleImageSearch: "使用 Google 以圖搜尋",
     aiAttachmentAdd: "新增附件到 {engine}",
@@ -1227,7 +1232,7 @@ const MESSAGES = {
     quickSearchPlatformPlaceholder: "在 {platform} 搜尋",
     quickSearchPlatformActivationHint: "輸入 {prefix} 啟用 {platform}",
     portalCategoryItems: "{count} 個入口",
-    portalCategories: "智能分類",
+    portalCategories: "推薦分類",
     portalCategoriesExpand: "展開",
     portalCategoriesCollapse: "收起",
     portalCategoryFeatured: "常用入口",
@@ -1281,11 +1286,12 @@ const MESSAGES = {
     videoPipLabTitle: "影片自動畫中畫",
     videoPipLabDescription: "",
     videoPipGlobalLabel: "全域影片自動畫中畫",
-    videoPipGlobalHint: "全域啟用，或用工具列只釘目前影片頁。",
-    socialVideoExtractorTitle: "社交影片小窗提取",
-    socialVideoExtractorDescription: "提取小紅書筆記與 X 貼文裡的可播放影片。",
-    socialVideoExtractorLabel: "啟用小紅書與 X 影片提取",
-    socialVideoExtractorHint: "點工具列圖標，懸停影片後點識別框。",
+    videoPipGlobalHint: "全域啟用後，相容影片頁可自動畫中畫。",
+    socialVideoExtractorTitle: "社交視頻小窗",
+    socialVideoExtractorDescription: "",
+    socialVideoExtractorLabel: "啟用社交視頻小窗",
+    socialVideoExtractorHint: "點擊工具列圖標，選取頁面中的可播放影片。",
+    socialVideoExtractorSupport: "目前支援：小紅書、X",
     languageSettingsTitle: "語言",
     appearanceModeTitle: "外觀",
     themeModeSystem: "跟隨系統",
@@ -1392,7 +1398,7 @@ const MESSAGES = {
     mobilePortalTab: "Shortcuts",
     mobileMediaTab: "Media",
     mobileHistoryTab: "History",
-    smartPortalTab: "Smart",
+    smartPortalTab: "Recommended",
     bookmarkPortalTab: "Bookmarks",
     portalCategoryFeatured: "Frequent shortcuts",
     portalCategoryCustom: "Custom",
@@ -1405,7 +1411,8 @@ const MESSAGES = {
     portalCategoryMedia: "Media",
     portalCategoryDesign: "Design",
     portalCategoryOther: "Other",
-    portalCategories: "Smart categories",
+    portalCategoryPortal: "Portals",
+    portalCategories: "Recommended categories",
     portalCategoriesExpand: "Expand",
     portalCategoriesCollapse: "Collapse",
     addPortal: "Add portal",
@@ -1469,11 +1476,12 @@ const MESSAGES = {
     videoPipLabTitle: "Automatic video Picture-in-Picture",
     videoPipLabDescription: "Picture-in-Picture for compatible HTML5 video.",
     videoPipGlobalLabel: "Allow automatic video Picture-in-Picture globally",
-    videoPipGlobalHint: "Use globally, or pin the current video tab from the toolbar.",
-    socialVideoExtractorTitle: "Social video mini-player extraction",
-    socialVideoExtractorDescription: "Extract playable video from Xiaohongshu notes and X posts.",
-    socialVideoExtractorLabel: "Enable Xiaohongshu and X video extraction",
-    socialVideoExtractorHint: "Toolbar icon, hover video, then click the detected frame.",
+    videoPipGlobalHint: "When enabled globally, compatible video pages can enter Picture-in-Picture automatically.",
+    socialVideoExtractorTitle: "Social video mini-player",
+    socialVideoExtractorDescription: "",
+    socialVideoExtractorLabel: "Enable social video mini-player",
+    socialVideoExtractorHint: "Click the toolbar icon, then select a playable video on the page.",
+    socialVideoExtractorSupport: "Currently supported: Xiaohongshu, X",
     languageSettingsTitle: "Language",
     appearanceModeTitle: "Appearance",
     themeModeSystem: "System",
@@ -1613,11 +1621,12 @@ const MESSAGES = {
     videoPipLabTitle: "動画の自動ピクチャーインピクチャー",
     videoPipLabDescription: "互換 HTML5 動画のピクチャーインピクチャー。",
     videoPipGlobalLabel: "動画の自動ピクチャーインピクチャーを全体で許可",
-    videoPipGlobalHint: "全体で使うか、ツールバーで現在の動画タブだけ固定します。",
-    socialVideoExtractorTitle: "ソーシャル動画ミニプレーヤー抽出",
-    socialVideoExtractorDescription: "小紅書ノートと X 投稿の再生動画を抽出します。",
-    socialVideoExtractorLabel: "小紅書と X の動画抽出を有効化",
-    socialVideoExtractorHint: "ツールバー、動画にホバー、検出枠をクリック。",
+    videoPipGlobalHint: "全体で有効にすると、対応する動画ページは自動でピクチャーインピクチャーに入れます。",
+    socialVideoExtractorTitle: "ソーシャル動画ミニプレーヤー",
+    socialVideoExtractorDescription: "",
+    socialVideoExtractorLabel: "ソーシャル動画ミニプレーヤーを有効化",
+    socialVideoExtractorHint: "ツールバーアイコンをクリックし、ページ内の再生可能な動画を選択します。",
+    socialVideoExtractorSupport: "現在対応：小紅書、X",
     languageSettingsTitle: "言語",
     appearanceModeTitle: "外観",
     themeModeSystem: "システム",
@@ -1709,11 +1718,12 @@ const MESSAGES = {
     videoPipLabTitle: "동영상 자동 화면 속 화면",
     videoPipLabDescription: "호환 HTML5 동영상 화면 속 화면.",
     videoPipGlobalLabel: "동영상 자동 화면 속 화면 전역 허용",
-    videoPipGlobalHint: "전체 사용 또는 도구 모음으로 현재 동영상 탭만 고정.",
-    socialVideoExtractorTitle: "소셜 동영상 미니 플레이어 추출",
-    socialVideoExtractorDescription: "샤오홍슈 노트와 X 게시물의 재생 동영상 추출.",
-    socialVideoExtractorLabel: "샤오홍슈 및 X 동영상 추출 사용",
-    socialVideoExtractorHint: "도구 모음, 동영상 호버, 감지 프레임 클릭.",
+    videoPipGlobalHint: "전체 사용 시 호환 동영상 페이지가 자동으로 화면 속 화면에 들어갈 수 있습니다.",
+    socialVideoExtractorTitle: "소셜 동영상 미니 플레이어",
+    socialVideoExtractorDescription: "",
+    socialVideoExtractorLabel: "소셜 동영상 미니 플레이어 사용",
+    socialVideoExtractorHint: "도구 모음 아이콘을 클릭한 뒤 페이지의 재생 가능한 동영상을 선택하세요.",
+    socialVideoExtractorSupport: "현재 지원: 샤오홍슈, X",
     languageSettingsTitle: "언어",
     appearanceModeTitle: "모양",
     themeModeSystem: "시스템",
@@ -1805,11 +1815,12 @@ const MESSAGES = {
     videoPipLabTitle: "Vídeo automático en imagen dentro de imagen",
     videoPipLabDescription: "Picture-in-Picture para vídeo HTML5 compatible.",
     videoPipGlobalLabel: "Permitir vídeo automático en imagen dentro de imagen globalmente",
-    videoPipGlobalHint: "Úsalo globalmente o fija la pestaña de vídeo actual.",
-    socialVideoExtractorTitle: "Extracción de mini reproductor social",
-    socialVideoExtractorDescription: "Extrae vídeo reproducible de notas de Xiaohongshu y publicaciones de X.",
-    socialVideoExtractorLabel: "Activar extracción de vídeo de Xiaohongshu y X",
-    socialVideoExtractorHint: "Icono, pasa sobre el vídeo y pulsa el marco detectado.",
+    videoPipGlobalHint: "Al activarlo globalmente, las páginas de vídeo compatibles pueden entrar automáticamente en imagen dentro de imagen.",
+    socialVideoExtractorTitle: "Mini reproductor de vídeo social",
+    socialVideoExtractorDescription: "",
+    socialVideoExtractorLabel: "Activar mini reproductor de vídeo social",
+    socialVideoExtractorHint: "Haz clic en el icono de la barra y selecciona un vídeo reproducible en la página.",
+    socialVideoExtractorSupport: "Compatible actualmente: Xiaohongshu, X",
     languageSettingsTitle: "Idioma",
     appearanceModeTitle: "Apariencia",
     themeModeSystem: "Sistema",
@@ -1901,11 +1912,12 @@ const MESSAGES = {
     videoPipLabTitle: "Vidéo automatique en mode image dans l’image",
     videoPipLabDescription: "Image dans l’image pour vidéo HTML5 compatible.",
     videoPipGlobalLabel: "Autoriser globalement la vidéo automatique en mode image dans l’image",
-    videoPipGlobalHint: "Utilisez-le partout ou épinglez l’onglet vidéo actuel.",
-    socialVideoExtractorTitle: "Extraction mini-lecteur social",
-    socialVideoExtractorDescription: "Extrait les vidéos lisibles des notes Xiaohongshu et des publications X.",
-    socialVideoExtractorLabel: "Activer l’extraction vidéo Xiaohongshu et X",
-    socialVideoExtractorHint: "Icône, survolez la vidéo, puis cliquez le cadre détecté.",
+    videoPipGlobalHint: "Une fois activé globalement, les pages vidéo compatibles peuvent passer automatiquement en image dans l’image.",
+    socialVideoExtractorTitle: "Mini-lecteur vidéo social",
+    socialVideoExtractorDescription: "",
+    socialVideoExtractorLabel: "Activer le mini-lecteur vidéo social",
+    socialVideoExtractorHint: "Cliquez sur l’icône de la barre d’outils, puis sélectionnez une vidéo lisible sur la page.",
+    socialVideoExtractorSupport: "Actuellement pris en charge : Xiaohongshu, X",
     languageSettingsTitle: "Langue",
     appearanceModeTitle: "Apparence",
     themeModeSystem: "Système",
@@ -1997,11 +2009,12 @@ const MESSAGES = {
     videoPipLabTitle: "Automatisches Video-Bild-in-Bild",
     videoPipLabDescription: "Bild-in-Bild für kompatibles HTML5-Video.",
     videoPipGlobalLabel: "Automatisches Video-Bild-in-Bild global erlauben",
-    videoPipGlobalHint: "Global nutzen oder den aktuellen Video-Tab anpinnen.",
-    socialVideoExtractorTitle: "Social-Video als Miniplayer herauslösen",
-    socialVideoExtractorDescription: "Extrahiert abspielbare Videos aus Xiaohongshu-Notizen und X-Beiträgen.",
-    socialVideoExtractorLabel: "Xiaohongshu- und X-Videoextraktion aktivieren",
-    socialVideoExtractorHint: "Symbol, Video hovern, dann den Erkennungsrahmen klicken.",
+    videoPipGlobalHint: "Global aktiviert können kompatible Videoseiten automatisch in den Bild-in-Bild-Modus wechseln.",
+    socialVideoExtractorTitle: "Social-Video-Miniplayer",
+    socialVideoExtractorDescription: "",
+    socialVideoExtractorLabel: "Social-Video-Miniplayer aktivieren",
+    socialVideoExtractorHint: "Klicken Sie auf das Symbol in der Symbolleiste und wählen Sie ein abspielbares Video auf der Seite aus.",
+    socialVideoExtractorSupport: "Derzeit unterstützt: Xiaohongshu, X",
     languageSettingsTitle: "Sprache",
     appearanceModeTitle: "Darstellung",
     themeModeSystem: "System",
@@ -2068,7 +2081,7 @@ const LOCALE_COMPLETIONS = {
     mobilePortalTab: "ショートカット",
     mobileMediaTab: "メディア",
     mobileHistoryTab: "履歴",
-    smartPortalTab: "スマート",
+    smartPortalTab: "おすすめ",
     bookmarkPortalTab: "ブックマーク",
     portalCategoryFeatured: "よく使うショートカット",
     portalCategoryCustom: "カスタム",
@@ -2081,7 +2094,8 @@ const LOCALE_COMPLETIONS = {
     portalCategoryMedia: "メディア",
     portalCategoryDesign: "デザイン",
     portalCategoryOther: "その他",
-    portalCategories: "スマート分類",
+    portalCategoryPortal: "ポータル",
+    portalCategories: "おすすめ分類",
     portalCategoriesExpand: "展開",
     portalCategoriesCollapse: "折りたたむ",
     portalCategory: "カテゴリ",
@@ -2107,6 +2121,9 @@ const LOCALE_COMPLETIONS = {
     quickSearchWithGoogleAi: "Google AI で検索",
     quickSearchWithAi: "{engine} に送信",
     quickSearchAiPlaceholder: "{engine} に質問",
+    aiAttachmentAdd: "{engine} にファイルを追加",
+    aiAttachmentClear: "添付を削除",
+    aiAttachmentCount: "{count} 件のファイル",
     quickSearchWithPlatform: "{platform} で検索",
     quickSearchPlatformPlaceholder: "{platform} で検索",
     quickSearchPlatformActivationHint: "{prefix} で {platform} を有効化",
@@ -2167,7 +2184,7 @@ const LOCALE_COMPLETIONS = {
     mobilePortalTab: "바로가기",
     mobileMediaTab: "미디어",
     mobileHistoryTab: "기록",
-    smartPortalTab: "스마트",
+    smartPortalTab: "추천 사이트",
     bookmarkPortalTab: "북마크",
     portalCategoryFeatured: "자주 쓰는 바로가기",
     portalCategoryCustom: "사용자 지정",
@@ -2180,7 +2197,8 @@ const LOCALE_COMPLETIONS = {
     portalCategoryMedia: "미디어",
     portalCategoryDesign: "디자인",
     portalCategoryOther: "기타",
-    portalCategories: "스마트 분류",
+    portalCategoryPortal: "포털",
+    portalCategories: "추천 분류",
     portalCategoriesExpand: "펼치기",
     portalCategoriesCollapse: "접기",
     portalCategory: "분류",
@@ -2206,6 +2224,9 @@ const LOCALE_COMPLETIONS = {
     quickSearchWithGoogleAi: "Google AI로 검색",
     quickSearchWithAi: "{engine}에 보내기",
     quickSearchAiPlaceholder: "{engine}에 질문",
+    aiAttachmentAdd: "{engine}에 파일 추가",
+    aiAttachmentClear: "첨부 파일 제거",
+    aiAttachmentCount: "파일 {count}개",
     quickSearchWithPlatform: "{platform}에서 검색",
     quickSearchPlatformPlaceholder: "{platform}에서 검색",
     quickSearchPlatformActivationHint: "{prefix} 입력 시 {platform} 활성화",
@@ -2266,7 +2287,7 @@ const LOCALE_COMPLETIONS = {
     mobilePortalTab: "Accesos",
     mobileMediaTab: "Medios",
     mobileHistoryTab: "Historial",
-    smartPortalTab: "Inteligente",
+    smartPortalTab: "Recomendados",
     bookmarkPortalTab: "Marcadores",
     portalCategoryFeatured: "Accesos frecuentes",
     portalCategoryCustom: "Personalizado",
@@ -2279,7 +2300,8 @@ const LOCALE_COMPLETIONS = {
     portalCategoryMedia: "Medios",
     portalCategoryDesign: "Diseño",
     portalCategoryOther: "Otros",
-    portalCategories: "Categorías inteligentes",
+    portalCategoryPortal: "Portales",
+    portalCategories: "Categorías recomendadas",
     portalCategoriesExpand: "Expandir",
     portalCategoriesCollapse: "Contraer",
     portalCategory: "Categoría",
@@ -2305,6 +2327,9 @@ const LOCALE_COMPLETIONS = {
     quickSearchWithGoogleAi: "Buscar con Google AI",
     quickSearchWithAi: "Enviar a {engine}",
     quickSearchAiPlaceholder: "Preguntar con {engine}",
+    aiAttachmentAdd: "Añadir archivos a {engine}",
+    aiAttachmentClear: "Quitar adjuntos",
+    aiAttachmentCount: "{count} archivos",
     quickSearchWithPlatform: "Buscar en {platform}",
     quickSearchPlatformPlaceholder: "Buscar en {platform}",
     quickSearchPlatformActivationHint: "Escribe {prefix} para {platform}",
@@ -2365,7 +2390,7 @@ const LOCALE_COMPLETIONS = {
     mobilePortalTab: "Raccourcis",
     mobileMediaTab: "Médias",
     mobileHistoryTab: "Historique",
-    smartPortalTab: "Intelligent",
+    smartPortalTab: "Recommandés",
     bookmarkPortalTab: "Favoris",
     portalCategoryFeatured: "Raccourcis fréquents",
     portalCategoryCustom: "Personnalisé",
@@ -2378,7 +2403,8 @@ const LOCALE_COMPLETIONS = {
     portalCategoryMedia: "Médias",
     portalCategoryDesign: "Design",
     portalCategoryOther: "Autre",
-    portalCategories: "Catégories intelligentes",
+    portalCategoryPortal: "Portails",
+    portalCategories: "Catégories recommandées",
     portalCategoriesExpand: "Développer",
     portalCategoriesCollapse: "Réduire",
     portalCategory: "Catégorie",
@@ -2404,6 +2430,9 @@ const LOCALE_COMPLETIONS = {
     quickSearchWithGoogleAi: "Rechercher avec Google AI",
     quickSearchWithAi: "Envoyer à {engine}",
     quickSearchAiPlaceholder: "Interroger {engine}",
+    aiAttachmentAdd: "Ajouter des fichiers à {engine}",
+    aiAttachmentClear: "Supprimer les pièces jointes",
+    aiAttachmentCount: "{count} fichiers",
     quickSearchWithPlatform: "Rechercher sur {platform}",
     quickSearchPlatformPlaceholder: "Rechercher sur {platform}",
     quickSearchPlatformActivationHint: "Saisissez {prefix} pour {platform}",
@@ -2464,7 +2493,7 @@ const LOCALE_COMPLETIONS = {
     mobilePortalTab: "Kurzbefehle",
     mobileMediaTab: "Medien",
     mobileHistoryTab: "Verlauf",
-    smartPortalTab: "Smart",
+    smartPortalTab: "Empfohlen",
     bookmarkPortalTab: "Lesezeichen",
     portalCategoryFeatured: "Häufige Kurzbefehle",
     portalCategoryCustom: "Benutzerdefiniert",
@@ -2477,7 +2506,8 @@ const LOCALE_COMPLETIONS = {
     portalCategoryMedia: "Medien",
     portalCategoryDesign: "Design",
     portalCategoryOther: "Sonstiges",
-    portalCategories: "Smarte Kategorien",
+    portalCategoryPortal: "Portale",
+    portalCategories: "Empfohlene Kategorien",
     portalCategoriesExpand: "Erweitern",
     portalCategoriesCollapse: "Reduzieren",
     portalCategory: "Kategorie",
@@ -2503,6 +2533,9 @@ const LOCALE_COMPLETIONS = {
     quickSearchWithGoogleAi: "Mit Google AI suchen",
     quickSearchWithAi: "An {engine} senden",
     quickSearchAiPlaceholder: "Mit {engine} fragen",
+    aiAttachmentAdd: "Dateien zu {engine} hinzufügen",
+    aiAttachmentClear: "Anhänge entfernen",
+    aiAttachmentCount: "{count} Dateien",
     quickSearchWithPlatform: "Auf {platform} suchen",
     quickSearchPlatformPlaceholder: "Auf {platform} suchen",
     quickSearchPlatformActivationHint: "{prefix} aktiviert {platform}",
@@ -2979,7 +3012,7 @@ function restoreFirstPaintIconRender(icon, site, render) {
   storeIconSiteContext(icon, site);
   icon.dataset.siteKey = firstPaintIconCacheKey(site);
   const localIcon = localIconForUrl(site.url);
-  if (siteIconIndexLoaded && localIcon && render.src !== localIcon && render.source !== localIcon) {
+  if (siteIconIndexLoaded && localIcon && firstPaintRenderStaleForLocalIcon(icon.dataset.siteKey, localIcon, render)) {
     applySiteIcon(icon, site);
     return;
   }
@@ -2996,6 +3029,18 @@ function restoreFirstPaintIconRender(icon, site, render) {
     }
   }, { once: true });
   icon.src = render.src;
+}
+
+function firstPaintRenderStaleForLocalIcon(siteKey, localIcon, render) {
+  if (!localIcon) {
+    return false;
+  }
+  if (render.src !== localIcon && render.source !== localIcon) {
+    return true;
+  }
+  return render.source === localIcon
+    && render.src !== localIcon
+    && keepsBrandIconOriginal(siteKey, localIcon);
 }
 
 function cacheRenderedSiteIcon(icon, site) {
@@ -3324,6 +3369,7 @@ function applySettingsLocale() {
   socialVideoExtractorDescription.hidden = !socialVideoExtractorDescriptionText.trim();
   document.querySelector("#socialVideoExtractorLabel").textContent = t("socialVideoExtractorLabel");
   document.querySelector("#socialVideoExtractorHint").textContent = t("socialVideoExtractorHint");
+  document.querySelector("#socialVideoExtractorSupport").textContent = t("socialVideoExtractorSupport");
   updateVideoPipGlobalToggle();
   updateSocialVideoExtractorToggle();
   if (closeSettingsButton) {
@@ -6476,27 +6522,15 @@ function localhostUrl(value) {
 
 async function renderPortals() {
   const fragment = document.createDocumentFragment();
-  const customPortals = await loadCustomPortals();
-  const [portalData, favoriteSites] = await Promise.all([
-    loadBookmarkDrivenPortals(customPortals),
+  const [recommendedSites, favoriteSites] = await Promise.all([
+    loadRecommendedSites(),
     loadFavoriteSites()
   ]);
   const favoriteKeys = favoriteSiteKeySet(favoriteSites);
   const favoriteIconMap = favoriteSiteIconMap(favoriteSites);
   const iconRenders = readFirstPaintCache().iconRenders;
-  const featuredPortals = featuredPortalItems(portalData.items);
-  const groups = groupPortalsByCategory(portalData.items);
+  const groups = groupPortalsByCategory(recommendedSites);
   portalCategoryState = await loadPortalCategoryState(groups);
-  if (featuredPortals.length) {
-    fragment.appendChild(createPortalCategorySection({
-      category: "featured",
-      favoriteKeys,
-      favoriteIconMap,
-      featured: true,
-      iconRenders,
-      items: featuredPortals
-    }));
-  }
   if (groups.length) {
     fragment.appendChild(createPortalClassificationModule(groups, {
       favoriteKeys,
@@ -6505,6 +6539,20 @@ async function renderPortals() {
     }));
   }
   portalGrid.replaceChildren(fragment);
+}
+
+async function loadRecommendedSites() {
+  return (Array.isArray(window.WAYLEAF_RECOMMENDED_SITES) ? window.WAYLEAF_RECOMMENDED_SITES : PORTALS)
+    .filter((site) => site?.url && isWebUrl(site.url))
+    .map((site) => ({
+      id: String(site.id || site.url),
+      recommended: true,
+      title: normalizeText(site.name || site.title).slice(0, MAX_PORTAL_TITLE_LENGTH) || favoriteSiteTitleFromUrl(site.url),
+      url: site.url,
+      category: normalizePortalCategory(site.category),
+      description: normalizeText(site.description),
+      keywords: Array.isArray(site.keywords) ? site.keywords.map(normalizeText).filter(Boolean) : []
+    }));
 }
 
 async function loadPortalCategoryState(groups) {
@@ -7054,8 +7102,8 @@ function siteWithFavoriteIcon(site, favoriteIconMap = new Map()) {
 }
 
 function renderSharedSiteIcon(icon, site, options = {}) {
-  const iconSite = siteWithFavoriteIcon(site, options.favoriteIconMap);
-  const cachedIconRender = cachedFirstPaintIconRender(options.iconRenders, iconSite);
+  const iconSite = site?.recommended ? site : siteWithFavoriteIcon(site, options.favoriteIconMap);
+  const cachedIconRender = site?.recommended ? null : cachedFirstPaintIconRender(options.iconRenders, iconSite);
   if (cachedIconRender) {
     restoreFirstPaintIconRender(icon, iconSite, cachedIconRender);
     return;
@@ -8719,6 +8767,7 @@ function applySiteIcon(icon, site, options = {}) {
   const tileIconSource = localIcon || (siteIconIsRemoteBrand ? siteIcon : "");
   const shouldRefreshRemoteBrand = !localIcon && siteIcon && !siteIconIsRemoteBrand;
   storeIconSiteContext(icon, site);
+  delete icon.dataset.iconCacheHydrated;
   applySiteIconTile(icon, site, tileIconSource);
   if (localIcon) {
     delete icon.dataset.remoteBrandIconRequest;
@@ -9218,7 +9267,13 @@ function refreshRenderedSiteIcons() {
         refreshRemoteBrandIcon(icon, site);
         return;
       }
-      if (icon.dataset.iconSource === localIcon || icon.getAttribute("src") === localIcon) {
+      if (!firstPaintRenderStaleForLocalIcon(icon.dataset.siteKey, localIcon, {
+        source: icon.dataset.iconSource || "",
+        src: icon.getAttribute("src") || ""
+      })) {
+        if (icon.getAttribute("src") === localIcon) {
+          delete icon.dataset.iconCacheHydrated;
+        }
         return;
       }
     }
@@ -10981,6 +11036,13 @@ function setBookmarkDeleteButtonFilled(button, isFilled) {
 
 function canAddBookmarkSiteToFavorites(site, favoriteKeys = new Set()) {
   const favoriteKey = favoriteSiteKey(site?.url);
+  if (site?.recommended) {
+    return Boolean(
+      favoriteKey
+        && favoriteKeys.size < MAX_FAVORITE_SITES
+        && !favoriteKeys.has(favoriteKey)
+    );
+  }
   return Boolean(
     site?.bookmarkId
       && favoriteKey
@@ -10997,7 +11059,17 @@ async function addBookmarkSiteToFavorites(site) {
 
   const favorites = await loadFavoriteSites();
   const favoriteKeys = favoriteSiteKeySet(favorites);
-  if (favoriteKeys.has(favoriteKey) || favorites.length >= MAX_FAVORITE_SITES) {
+  if (favoriteKeys.has(favoriteKey)) {
+    if (site?.recommended) {
+      portalFormError.textContent = t("favoriteSiteExists", { title: normalizeText(site?.title) || favoriteSiteTitleFromUrl(favoriteKey) });
+    }
+    await renderFavoriteDependentSurfaces({ preserveBookmarkScroll: true });
+    return;
+  }
+  if (favorites.length >= MAX_FAVORITE_SITES) {
+    if (site?.recommended) {
+      portalFormError.textContent = t("favoriteSiteLimit", { count: MAX_FAVORITE_SITES });
+    }
     await renderFavoriteDependentSurfaces({ preserveBookmarkScroll: true });
     return;
   }
@@ -11009,6 +11081,9 @@ async function addBookmarkSiteToFavorites(site) {
     icon: await discoverFavoriteSiteIcon(favoriteKey)
   });
   await saveFavoriteSites(favorites);
+  if (site?.recommended) {
+    portalFormError.textContent = "";
+  }
   await renderFavoriteDependentSurfaces({ preserveBookmarkScroll: true });
 }
 

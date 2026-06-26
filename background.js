@@ -21,7 +21,6 @@ const AI_DIRECT_PROMPT_TEXT_PARAM = "_wayleaf_text";
 const AI_DIRECT_MAX_PROMPT_LENGTH = 12000;
 const AI_DIRECT_ATTACHMENT_MAX_COUNT = 2;
 const GEMINI_ATTACHMENT_UPLOAD_ACTION = "wayleaf:gemini-attachment-upload";
-const VIDEO_PIP_TOGGLE_ACTION = "wayleaf:toggle-video-pip-pin";
 const VIDEO_PIP_REQUEST_ACTION = "wayleaf:video-pip-request";
 const VIDEO_PIP_COMMAND_ACTION = "wayleaf:video-pip-command";
 const SOCIAL_VIDEO_EXTRACT_START_ACTION = "wayleaf:social-video-extract-start";
@@ -169,18 +168,6 @@ async function sendVideoPipCommand(target, command) {
   );
 }
 
-function toggleVideoPipPinInFrame() {
-  const controller = window.__wayleafVideoPipController;
-  return typeof controller?.togglePin === "function" ? controller.togglePin() : null;
-}
-
-function pickVideoPipToggleResult(results) {
-  return (Array.isArray(results) ? results : [])
-    .map((item) => item?.result)
-    .filter(Boolean)
-    .sort((left, right) => Number(Boolean(right.hasVideo)) - Number(Boolean(left.hasVideo)))[0] || null;
-}
-
 async function injectVideoPipController(tabId) {
   if (!Number.isInteger(tabId) || !chrome.scripting?.executeScript) {
     return false;
@@ -260,25 +247,6 @@ function videoPipTargetFromSender(sender, score = 0) {
   };
 }
 
-async function toggleVideoPipPin(tabId) {
-  if (!chrome.scripting?.executeScript) {
-    return chrome.tabs.sendMessage(tabId, { action: VIDEO_PIP_TOGGLE_ACTION });
-  }
-  let result = pickVideoPipToggleResult(await chrome.scripting.executeScript({
-    target: { tabId, allFrames: true },
-    func: toggleVideoPipPinInFrame
-  }));
-  if (result) {
-    return result;
-  }
-  await injectVideoPipController(tabId);
-  result = pickVideoPipToggleResult(await chrome.scripting.executeScript({
-    target: { tabId, allFrames: true },
-    func: toggleVideoPipPinInFrame
-  }));
-  return result || { ok: false };
-}
-
 async function socialVideoExtractorEnabled() {
   const storage = chrome.storage?.local || chrome.storage?.sync;
   if (!storage?.get) {
@@ -307,35 +275,27 @@ async function handleVideoPipAction(tab) {
   if (!Number.isInteger(tab?.id)) {
     return;
   }
-  if (!supportsVideoPip(tab.url || "")) {
+  if (!supportsVideoPip(tab.url || "") || !supportsSocialVideoExtraction(tab.url || "")) {
     await chrome.action.setBadgeText({ tabId: tab.id, text: "" });
-    await chrome.action.setTitle({ tabId: tab.id, title: "Wayleaf · Video PiP requires an HTTP(S) video page" });
+    await chrome.action.setTitle({ tabId: tab.id, title: "Wayleaf · Social video mini-player supports Xiaohongshu and X" });
     return;
   }
   try {
-    if (supportsSocialVideoExtraction(tab.url || "") && await socialVideoExtractorEnabled()) {
-      const result = await startSocialVideoExtraction(tab.id);
-      await setSocialVideoExtractActionState(
-        tab.id,
-        result?.extractorActive ? "active" : "idle",
-        result?.extractorActive
-          ? "Wayleaf · Move over the social video, then click to extract"
-          : "Wayleaf · No compatible social video found"
-      );
+    if (!await socialVideoExtractorEnabled()) {
+      await chrome.action.setBadgeText({ tabId: tab.id, text: "" });
+      await chrome.action.setTitle({ tabId: tab.id, title: "Wayleaf · Social video mini-player disabled in Laboratory" });
       return;
     }
-    const result = await toggleVideoPipPin(tab.id);
-    const pinned = Boolean(result?.pinned);
-    await chrome.action.setBadgeBackgroundColor({ tabId: tab.id, color: "#3f7f68" });
-    await chrome.action.setBadgeText({ tabId: tab.id, text: pinned ? "PIP" : "" });
-    await chrome.action.setTitle({
-      tabId: tab.id,
-      title: pinned
-        ? "Wayleaf · Video PiP pinned"
-        : (result?.globalEnabled ? "Wayleaf · Global video PiP enabled" : "Wayleaf")
-    });
+    const result = await startSocialVideoExtraction(tab.id);
+    await setSocialVideoExtractActionState(
+      tab.id,
+      result?.extractorActive ? "active" : "idle",
+      result?.extractorActive
+        ? "Wayleaf · Move over the social video, then click to extract"
+        : "Wayleaf · No compatible social video found"
+    );
   } catch (error) {
-    console.warn("Wayleaf video PiP pin failed", error);
+    console.warn("Wayleaf social video mini-player failed", error);
   }
 }
 

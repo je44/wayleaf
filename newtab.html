@@ -401,7 +401,7 @@
                 <div class="laboratory-toggle-row">
                   <span class="laboratory-toggle-copy">
                     <strong id="videoPipGlobalLabel">Allow automatic video Picture-in-Picture globally</strong>
-                    <span id="videoPipGlobalHint">Use globally, or pin the current video tab from the toolbar.</span>
+                    <span id="videoPipGlobalHint">When enabled globally, compatible video pages can enter Picture-in-Picture automatically.</span>
                   </span>
                   <button class="laboratory-switch" id="videoPipGlobalToggle" type="button" role="switch" aria-checked="false" aria-label="Allow automatic video Picture-in-Picture globally">
                     <span class="laboratory-switch-thumb" aria-hidden="true"></span>
@@ -412,17 +412,18 @@
             <section class="settings-group laboratory-feature" aria-labelledby="socialVideoExtractorTitle">
               <div class="settings-group-heading">
                 <div>
-                  <h3 id="socialVideoExtractorTitle">Social video mini-player extraction</h3>
-                  <p id="socialVideoExtractorDescription">Extract playable video from Xiaohongshu notes and X posts.</p>
+                  <h3 id="socialVideoExtractorTitle">Social video mini-player</h3>
+                  <p id="socialVideoExtractorDescription"></p>
                 </div>
               </div>
               <div class="settings-group-control">
                 <div class="laboratory-toggle-row">
                   <span class="laboratory-toggle-copy">
-                    <strong id="socialVideoExtractorLabel">Enable Xiaohongshu and X video extraction</strong>
-                    <span id="socialVideoExtractorHint">Toolbar icon, hover video, then click the detected frame.</span>
+                    <strong id="socialVideoExtractorLabel">Enable social video mini-player</strong>
+                    <span id="socialVideoExtractorHint">Click the toolbar icon, then select a playable video on the page.</span>
+                    <span id="socialVideoExtractorSupport">Currently supported: Xiaohongshu, X</span>
                   </span>
-                  <button class="laboratory-switch" id="socialVideoExtractorToggle" type="button" role="switch" aria-checked="true" aria-label="Enable Xiaohongshu and X video extraction">
+                  <button class="laboratory-switch" id="socialVideoExtractorToggle" type="button" role="switch" aria-checked="true" aria-label="Enable social video mini-player">
                     <span class="laboratory-switch-thumb" aria-hidden="true"></span>
                   </button>
                 </div>
@@ -473,6 +474,7 @@
 
     <script src="vendor/gsap/gsap.min.js"></script>
     <script src="vendor/gsap/Flip.min.js"></script>
+    <script src="data/recommendedSites.js"></script>
     <script src="newtab.js"></script>
   </body>
 </html>

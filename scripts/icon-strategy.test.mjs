@@ -55,7 +55,8 @@ const MULTICOLOR_BRAND_ICON_SITE_KEYS_FOR_TEST = new Set([
   "google.com",
   "huggingface.co",
   "jimeng.jianying.com",
-  "tiktok.com"
+  "tiktok.com",
+  "v.qq.com"
 ]);
 const ORIGINAL_ARTWORK_BRAND_TILE_SITE_KEYS_FOR_TEST = new Set([
   "developer.mozilla.org",
@@ -1567,11 +1568,26 @@ function refreshRenderedSiteIconDecisionForTest(icon, site) {
     if (!localIcon) {
       return "refresh-remote-brand";
     }
-    if (icon.dataset.iconSource === localIcon || icon.getAttribute("src") === localIcon) {
+    if (!firstPaintRenderStaleForLocalIconForTest(icon.dataset.siteKey, localIcon, {
+      source: icon.dataset.iconSource || "",
+      src: icon.getAttribute("src") || ""
+    })) {
       return "keep-local-cache";
     }
   }
   return localIcon ? "rerender-local" : "rerender-site";
+}
+
+function firstPaintRenderStaleForLocalIconForTest(siteKey, localIcon, render) {
+  if (!localIcon) {
+    return false;
+  }
+  if (render.src !== localIcon && render.source !== localIcon) {
+    return true;
+  }
+  return render.source === localIcon
+    && render.src !== localIcon
+    && keepsBrandIconOriginalForTest(siteKey, localIcon);
 }
 
 assert.equal(localBrandGlyphColor("#00a1d6"), "#ffffff", "Local bilibili keeps a white glyph on the blue tile.");
@@ -2226,6 +2242,18 @@ assert.equal(localIconForUrlForTest("https://www.tiktok.com/"), "icons/sites/tik
     "First-paint cached local SVGs should keep the cheap local short-circuit."
   );
 }
+{
+  const icon = new TestIcon();
+  icon.dataset.iconCacheHydrated = "true";
+  icon.dataset.siteKey = "v.qq.com";
+  icon.dataset.iconSource = "icons/sites/vqq.svg";
+  icon.src = "data:image/svg+xml,%3Csvg viewBox='0 0 24 24'%3E%3Cpath fill='%23092018' d='M4 2l16 10L4 22z'/%3E%3C/svg%3E";
+  assert.equal(
+    refreshRenderedSiteIconDecisionForTest(icon, { url: "https://v.qq.com/" }),
+    "rerender-local",
+    "First-paint cached renders must refresh when a local multicolor SVG keeps the same source but has stale rendered data."
+  );
+}
 assert.deepEqual(
   brandIconTileColorsForTest("#1677ff", "alipay.com", "icons/sites/alipay.svg"),
   { light: "#ffffff", dark: "#f8fafc" },
@@ -2260,6 +2288,11 @@ assert.deepEqual(
   brandIconTileColorsForTest("#000000", "tiktok.com", "icons/sites/tiktok.svg"),
   { light: "#ffffff", dark: "#f8fafc" },
   "TikTok should follow the Google-like multicolor white-tile strategy."
+);
+assert.deepEqual(
+  brandIconTileColorsForTest("#30a3f9", "v.qq.com", "icons/sites/vqq.svg"),
+  { light: "#ffffff", dark: "#f8fafc" },
+  "Tencent Video should follow the multicolor white-tile strategy."
 );
 assert.equal(siteIconBrandColorForTest("chatglm.cn", "icons/sites/glm.svg"), "#3859ff", "GLM should use its blue VI color for mask recoloring.");
 assert.equal(siteIconBrandColorForTest("kimi.com", "icons/sites/kimi.svg"), "#111827", "Kimi should use its dark VI color for mask recoloring.");

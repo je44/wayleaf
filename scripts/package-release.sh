@@ -10,6 +10,7 @@ runtime_items=(
   _locales
   ai-submit.js
   background.js
+  data
   icons
   manifest.json
   newtab.css
