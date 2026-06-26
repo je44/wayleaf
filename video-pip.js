@@ -10,6 +10,7 @@
   const COMMAND_ACTION = "wayleaf:video-pip-command";
   const EXTRACT_HIGHLIGHT_COLOR = "#00b8d9";
   const MIN_EXTRACT_VIDEO_AREA = 12000;
+  const SOCIAL_VIDEO_EXTRACT_HOSTS = new Set(["x.com", "twitter.com", "xiaohongshu.com"]);
   let globalEnabled = false;
   let pinned = false;
   let entering = false;
@@ -20,6 +21,7 @@
   let managedPipVideo = null;
   let extractTargetVideo = null;
   let extractOverlay = null;
+  let extractPrompt = null;
   let extensionContextInvalid = false;
   let pendingVideoScan = false;
   let disposed = false;
@@ -51,6 +53,10 @@
         extractOverlay?.remove();
       } catch {}
       extractOverlay = null;
+      try {
+        extractPrompt?.remove();
+      } catch {}
+      extractPrompt = null;
       for (const [type, listener, options] of documentListeners.splice(0)) {
         try {
           document.removeEventListener(type, listener, options);
@@ -167,11 +173,20 @@
   }
 
   function enabled() {
-    return !disposed && (globalEnabled || pinned);
+    return !disposed && ((globalEnabled && !requiresManualSocialExtraction()) || pinned);
   }
 
   function coordinatorEnabled() {
     return enabled();
+  }
+
+  function requiresManualSocialExtraction() {
+    try {
+      const host = String(window.location?.hostname || "").replace(/^www\./, "");
+      return SOCIAL_VIDEO_EXTRACT_HOSTS.has(host);
+    } catch {
+      return false;
+    }
   }
 
   function isPlaying(video) {
@@ -389,6 +404,43 @@
     return overlay;
   }
 
+  function ensureExtractPrompt() {
+    if (extractPrompt?.isConnected) {
+      return extractPrompt;
+    }
+    const prompt = document.createElement("div");
+    prompt.textContent = "選擇需要小窗化的視頻窗口";
+    prompt.style.setProperty("all", "initial");
+    prompt.style.position = "fixed";
+    prompt.style.left = "50%";
+    prompt.style.bottom = "28px";
+    prompt.style.transform = "translateX(-50%)";
+    prompt.style.zIndex = "2147483647";
+    prompt.style.boxSizing = "border-box";
+    prompt.style.maxWidth = "calc(100vw - 32px)";
+    prompt.style.padding = "10px 18px";
+    prompt.style.borderRadius = "999px";
+    prompt.style.background = "rgb(0 0 0 / 80%)";
+    prompt.style.boxShadow = "0 14px 34px rgb(0 0 0 / 26%)";
+    prompt.style.color = "#fff";
+    prompt.style.fontFamily = '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+    prompt.style.fontSize = "14px";
+    prompt.style.fontWeight = "600";
+    prompt.style.lineHeight = "20px";
+    prompt.style.textAlign = "center";
+    prompt.style.whiteSpace = "nowrap";
+    prompt.style.pointerEvents = "none";
+    prompt.style.userSelect = "none";
+    (document.body || document.documentElement)?.append(prompt);
+    extractPrompt = prompt;
+    return prompt;
+  }
+
+  function removeExtractPrompt() {
+    extractPrompt?.remove();
+    extractPrompt = null;
+  }
+
   function updateExtractOverlay(video) {
     const overlay = ensureExtractOverlay();
     const rect = video ? visibleVideoRect(video) : null;
@@ -409,6 +461,7 @@
     extractTargetVideo = null;
     extractOverlay?.remove();
     extractOverlay = null;
+    removeExtractPrompt();
     safeSendMessage({ action: EXTRACT_STATUS_ACTION, type });
   }
 
@@ -422,6 +475,7 @@
       return false;
     }
     extractorActive = true;
+    ensureExtractPrompt();
     updateExtractOverlay(video);
     safeSendMessage({ action: EXTRACT_STATUS_ACTION, type: "started" });
     return true;
@@ -487,6 +541,7 @@
       return;
     }
     extractorActive = false;
+    removeExtractPrompt();
     extractOverlay?.remove();
     extractOverlay = null;
     enterExtractedPictureInPicture(video).then((entered) => {

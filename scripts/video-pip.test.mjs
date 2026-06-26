@@ -176,7 +176,7 @@ assert.match(
 
 class FakeVideo {}
 
-function createControllerHarness(initialController = undefined) {
+function createControllerHarness(initialController = undefined, options = {}) {
   const documentListeners = new Map();
   const storageListeners = [];
   const runtimeListeners = [];
@@ -267,6 +267,7 @@ function createControllerHarness(initialController = undefined) {
   windowMock.self = windowMock;
   windowMock.innerWidth = 1280;
   windowMock.innerHeight = 720;
+  windowMock.location = { hostname: options.hostname || "example.com" };
   if (initialController?.throwOnControllerRead) {
     Object.defineProperty(windowMock, "__wayleafVideoPipController", {
       configurable: true,
@@ -481,10 +482,16 @@ extractHarness.runtimeListeners[0]({ action: "wayleaf:social-video-extract-start
   extractStartResponse = response;
 });
 assert.equal(extractStartResponse?.extractorActive, true, "Toolbar extraction should start a page-level video picker.");
+assert.equal(extractHarness.appendedElements.at(-2)?.textContent, "選擇需要小窗化的視頻窗口", "Extraction should show the pinned bottom prompt.");
+assert.equal(extractHarness.appendedElements.at(-2)?.style.background, "rgb(0 0 0 / 80%)", "Extraction prompt should use an 80% transparent dark capsule.");
+assert.equal(extractHarness.appendedElements.at(-2)?.style.boxShadow, "0 14px 34px rgb(0 0 0 / 26%)", "Extraction prompt should use a soft outer shadow.");
+assert.equal(extractHarness.appendedElements.at(-2)?.style.borderRadius, "999px", "Extraction prompt should render as a capsule.");
+assert.equal(extractHarness.appendedElements.at(-2)?.style.bottom, "28px", "Extraction prompt should be pinned near the bottom of the page.");
 assert.equal(extractHarness.appendedElements.at(-1)?.style.display, "grid", "Extraction should draw the detected video overlay.");
 assert.equal(extractHarness.appendedElements.at(-1)?.textContent, "", "Extraction overlay should not cover the video with center text.");
 assert.equal(extractHarness.appendedElements.at(-1)?.style.border, "3px dashed #00b8d9", "Extraction overlay should use a lake-blue border.");
 assert.equal(extractHarness.appendedElements.at(-1)?.style.background, "rgb(0 184 217 / 10%)", "Extraction overlay fill should use 10% lake-blue transparency.");
+const extractPrompt = extractHarness.appendedElements.at(-2);
 extractHarness.dispatch("click", {
   clientX: 12,
   clientY: 12,
@@ -493,6 +500,7 @@ extractHarness.dispatch("click", {
 });
 await settle();
 assert.equal(extractHarness.requestCount, 1, "Clicking a detected video should request native PiP from the page gesture.");
+assert.equal(extractPrompt?.isConnected, false, "Extraction prompt should disappear after choosing a video.");
 assert.equal(extractHarness.appendedElements.at(-1)?.isConnected, false, "Extraction should remove the overlay after a PiP attempt.");
 assert.equal(extractHarness.coordinatorRequests.at(-1)?.type, "entered", "A successful extraction should clear the toolbar waiting state.");
 
@@ -561,6 +569,23 @@ await settle();
 assert.equal(harness.requestCount, 3, "A stale Chrome automatic PiP handler should fail closed after Wayleaf disables PiP.");
 storageListeners[0]({ videoPipGlobalEnabled: { newValue: true } }, "local");
 assert.equal(typeof harness.mediaSessionHandler, "function", "Re-enabling global PiP should restore the automatic PiP handler.");
+
+for (const hostname of ["x.com", "www.xiaohongshu.com"]) {
+  const socialHarness = createControllerHarness(undefined, { hostname });
+  socialHarness.documentMock.querySelectorAll = querySelectorAllForLightAndShadow([socialHarness.video]);
+  socialHarness.storageListeners[0]({ videoPipGlobalEnabled: { newValue: true } }, "local");
+  assert.equal(socialHarness.mediaSessionHandler, null, `${hostname} should not register global automatic PiP.`);
+  socialHarness.video.paused = false;
+  socialHarness.documentMock.visibilityState = "hidden";
+  socialHarness.dispatch("playing", socialHarness.video);
+  await settle();
+  assert.equal(socialHarness.requestCount, 0, `${hostname} should require toolbar extraction instead of global automatic PiP.`);
+  assert.equal(
+    socialHarness.coordinatorRequests.some((request) => ["enter", "entered"].includes(request.type)),
+    false,
+    `${hostname} should not request coordinated global PiP.`
+  );
+}
 
 documentMock.pictureInPictureElement = replacementVideo;
 documentMock.visibilityState = "visible";
