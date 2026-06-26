@@ -37,6 +37,10 @@ const PROVIDERS = {
   },
   "claude.ai": {
     engineId: "claude",
+    attachmentSelectors: [
+      "input[type=\"file\"][multiple]",
+      "input[type=\"file\"]"
+    ],
     inputSelectors: [
       "div.ProseMirror[contenteditable=\"true\"]",
       "[contenteditable=\"true\"][data-testid]",
@@ -395,12 +399,16 @@ function shouldRemoveStoredPrompt(status) {
 
 async function submitPromptWhenReady(config, prompt, attachments = []) {
   const startedUrl = location.href;
+  let filesAttached = true;
   if (attachments.length) {
-    await attachPromptFiles(config, attachments);
+    filesAttached = await attachPromptFiles(config, attachments);
   }
   const input = await fillPromptIntoLiveInput(config, prompt, attachments.length > 0 ? 4 : 1);
   if (!input) {
     return "input-not-found";
+  }
+  if (attachments.length && !filesAttached) {
+    return "filled";
   }
   const submitButton = attachments.length
     ? await waitForChatgptAttachmentReady(config, input, attachments.length)
@@ -442,6 +450,9 @@ async function fillPromptIntoLiveInput(config, prompt, attempts = 1) {
 }
 
 async function waitForChatgptAttachmentReady(config, input, attachmentCount) {
+  if (config.engineId === "claude" && attachmentCount > 0) {
+    return waitForClaudeAttachmentReady(config, input);
+  }
   if (config.engineId !== "chatgpt" || attachmentCount <= 0) {
     return waitForSubmitButton(config, input, 6000);
   }
@@ -482,6 +493,24 @@ function hasChatgptAttachmentBusyState() {
     ].filter(Boolean).join(" ").toLowerCase();
     return /upload|loading|processing|attaching|上传中|上传|处理中|附件处理中/.test(descriptor);
   });
+}
+
+async function waitForClaudeAttachmentReady(config, input) {
+  const startedAt = Date.now();
+  let readySince = 0;
+  while (Date.now() - startedAt <= WAYLEAF_ATTACHMENT_READY_TIMEOUT_MS) {
+    const submitButton = findSubmitButton(config, input);
+    if (submitButton) {
+      readySince ||= Date.now();
+      if (Date.now() - readySince >= WAYLEAF_ATTACHMENT_READY_STABLE_MS) {
+        return submitButton;
+      }
+    } else {
+      readySince = 0;
+    }
+    await delay(200);
+  }
+  return null;
 }
 
 function waitForElement(selectors, predicate, timeoutMs) {
@@ -638,17 +667,15 @@ function isVisible(node) {
 }
 
 async function attachPromptFiles(config, attachments) {
-  if (config.engineId !== "chatgpt" || !attachments.length) {
-    return false;
-  }
-  const input = document.querySelector("#upload-files")
-    || document.querySelector("#upload-photos")
-    || document.querySelector('input[type="file"][multiple]');
-  if (!(input instanceof HTMLInputElement)) {
+  if (!attachments.length) {
     return false;
   }
   const files = attachments.map(attachmentToFile).filter(Boolean);
   if (!files.length) {
+    return false;
+  }
+  const input = attachmentInputForProvider(config);
+  if (!(input instanceof HTMLInputElement)) {
     return false;
   }
   const transfer = new DataTransfer();
@@ -658,6 +685,20 @@ async function attachPromptFiles(config, attachments) {
   dispatchBasicEvent(input, "change");
   await delay(1200);
   return true;
+}
+
+function attachmentInputForProvider(config) {
+  if (config.engineId === "chatgpt") {
+    return document.querySelector("#upload-files")
+      || document.querySelector("#upload-photos")
+      || document.querySelector('input[type="file"][multiple]');
+  }
+  if (config.engineId === "claude") {
+    return (config.attachmentSelectors || [])
+      .flatMap((selector) => [...document.querySelectorAll(selector)])
+      .find((node) => node instanceof HTMLInputElement && node.type === "file" && !node.disabled) || null;
+  }
+  return null;
 }
 
 function attachmentToFile(attachment) {

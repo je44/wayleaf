@@ -64,6 +64,7 @@ const AI_DIRECT_PROMPT_TEXT_PARAM = "_wayleaf_text";
 const AI_DIRECT_PROMPT_TTL_MS = 2 * 60 * 1000;
 const AI_DIRECT_ATTACHMENT_MAX_COUNT = 2;
 const AI_DIRECT_ATTACHMENT_MAX_BYTES = 10 * 1024 * 1024;
+const AI_DIRECT_ATTACHMENT_ENGINE_IDS = new Set(["chatgpt", "claude"]);
 const MAX_HISTORY_SITE_GROUPS = 9;
 const MAX_HISTORY_PAGES_PER_SITE = 4;
 const MAX_RECENT_FOLDER_ITEMS = 4;
@@ -1038,7 +1039,7 @@ const MESSAGES = {
     historyNextPage: "下一条最近浏览",
     quickSearchPlaceholder: "搜索或输入网址",
     googleImageSearch: "使用 Google 以图搜索",
-    aiAttachmentAdd: "添加附件到 ChatGPT",
+    aiAttachmentAdd: "添加附件到 {engine}",
     aiAttachmentClear: "移除附件",
     aiAttachmentCount: "{count} 个附件",
     quickSearch: "搜索",
@@ -1209,7 +1210,7 @@ const MESSAGES = {
     portalCategoryOther: "其他",
     quickSearchPlaceholder: "搜尋或輸入網址",
     googleImageSearch: "使用 Google 以圖搜尋",
-    aiAttachmentAdd: "新增附件到 ChatGPT",
+    aiAttachmentAdd: "新增附件到 {engine}",
     aiAttachmentClear: "移除附件",
     aiAttachmentCount: "{count} 個附件",
     quickSearch: "搜尋",
@@ -1429,7 +1430,7 @@ const MESSAGES = {
     historyNextPage: "Next recent page",
     quickSearchPlaceholder: "Search or enter URL",
     googleImageSearch: "Search by image with Google",
-    aiAttachmentAdd: "Add files to ChatGPT",
+    aiAttachmentAdd: "Add files to {engine}",
     aiAttachmentClear: "Remove attachments",
     aiAttachmentCount: "{count} files",
     quickSearch: "Search",
@@ -3173,9 +3174,10 @@ function applyLocale() {
   if (googleImageSearchButton) {
     googleImageSearchButton.title = t("googleImageSearch");
   }
-  aiAttachmentButton?.setAttribute("aria-label", t("aiAttachmentAdd"));
+  const attachmentLabel = aiAttachmentButtonLabel();
+  aiAttachmentButton?.setAttribute("aria-label", attachmentLabel);
   if (aiAttachmentButton) {
-    aiAttachmentButton.title = t("aiAttachmentAdd");
+    aiAttachmentButton.title = attachmentLabel;
   }
   quickSearchInput.labels?.forEach((label) => {
     label.textContent = t("quickSearchPlaceholder");
@@ -4256,7 +4258,7 @@ async function setQuickSearchEngine(engineId, options = {}) {
   const nextEngine = searchEngineById(engineId);
   const wasGoogleAiSearchModeActive = googleAiSearchModeActive;
   googleAiSearchModeActive = false;
-  if (nextEngine.id !== "chatgpt") {
+  if (!AI_DIRECT_ATTACHMENT_ENGINE_IDS.has(nextEngine.id)) {
     clearAiDirectAttachments();
   }
   if (wasGoogleAiSearchModeActive) {
@@ -5542,19 +5544,28 @@ function clearAiDirectAttachments() {
 }
 
 function supportsAiAttachmentsForActiveEngine() {
-  return activeSearchEngine === "chatgpt"
+  return AI_DIRECT_ATTACHMENT_ENGINE_IDS.has(activeSearchEngine)
     && !googleAiSearchModeActive
     && !activePlatformSearchTarget;
+}
+
+function aiAttachmentButtonLabel() {
+  return t("aiAttachmentAdd", {
+    engine: searchEngineLabel(searchEngineById(activeSearchEngine))
+  });
 }
 
 function updateAiAttachmentUi() {
   const available = supportsAiAttachmentsForActiveEngine();
   const active = available && Boolean(searchWorkbench?.classList.contains("search-active"));
   if (aiAttachmentButton) {
+    const label = aiAttachmentButtonLabel();
     aiAttachmentButton.hidden = !available;
     aiAttachmentButton.disabled = !active;
     aiAttachmentButton.tabIndex = active ? 0 : -1;
     aiAttachmentButton.dataset.hasAttachments = String(aiDirectAttachments.length > 0);
+    aiAttachmentButton.setAttribute("aria-label", label);
+    aiAttachmentButton.title = label;
     aiAttachmentButton.innerHTML = aiAttachmentIcon();
   }
   if (aiAttachmentPill && aiAttachmentPillText) {
@@ -5867,7 +5878,7 @@ async function submitAiDirectSearch(engine, query) {
   let destination = engineSearchDestination(engine, query);
   try {
     await saveAiDirectPrompt(token, {
-      attachments: engine.id === "chatgpt" ? aiDirectAttachments : [],
+      attachments: AI_DIRECT_ATTACHMENT_ENGINE_IDS.has(engine.id) ? aiDirectAttachments : [],
       prompt: query,
       engineId: engine.id,
       createdAt: Date.now()

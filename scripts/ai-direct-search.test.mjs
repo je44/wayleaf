@@ -5,6 +5,7 @@ const newtabSource = readFileSync(new URL("../newtab.js", import.meta.url), "utf
 const submitSource = readFileSync(new URL("../ai-submit.js", import.meta.url), "utf8");
 const backgroundSource = readFileSync(new URL("../background.js", import.meta.url), "utf8");
 const manifest = JSON.parse(readFileSync(new URL("../manifest.json", import.meta.url), "utf8"));
+const claudeProviderSource = submitSource.match(/"claude\.ai": \{[\s\S]*?\n  \},\n  "gemini\.google\.com":/)?.[0] || "";
 
 function searchAiCommand(value) {
   const match = String(value || "").match(/^\/([a-z][a-z0-9-]*)(?:\s+|$)(.*)$/i);
@@ -20,11 +21,12 @@ assert.match(newtabSource, /const AI_DIRECT_PROMPT_TEXT_PARAM = "_wayleaf_text";
 assert.match(newtabSource, /const AI_DIRECT_PROMPT_TTL_MS = 2 \* 60 \* 1000;/, "New tab prompt handoff must keep a short prompt TTL.");
 assert.match(newtabSource, /const AI_DIRECT_ATTACHMENT_MAX_COUNT = 2;/, "AI attachments should be capped at two files.");
 assert.match(newtabSource, /const AI_DIRECT_ATTACHMENT_MAX_BYTES = 10 \* 1024 \* 1024;/, "AI attachments should be capped at 10MB each.");
-assert.match(newtabSource, /aiAttachmentButton[\s\S]*aiAttachmentInput[\s\S]*aiAttachmentPill/, "New tab should expose a GPT attachment button, file input, and staged attachment chip.");
-assert.match(newtabSource, /supportsAiAttachmentsForActiveEngine\(\)[\s\S]*activeSearchEngine === "chatgpt"/, "AI attachments should only be available in ChatGPT mode.");
+assert.match(newtabSource, /const AI_DIRECT_ATTACHMENT_ENGINE_IDS = new Set\(\["chatgpt", "claude"\]\);/, "AI attachments should be limited to ChatGPT and Claude.");
+assert.match(newtabSource, /aiAttachmentButton[\s\S]*aiAttachmentInput[\s\S]*aiAttachmentPill/, "New tab should expose an AI attachment button, file input, and staged attachment chip.");
+assert.match(newtabSource, /supportsAiAttachmentsForActiveEngine\(\)[\s\S]*AI_DIRECT_ATTACHMENT_ENGINE_IDS\.has\(activeSearchEngine\)/, "AI attachments should only be available for the supported engines.");
 assert.match(newtabSource, /files\.slice\(0, AI_DIRECT_ATTACHMENT_MAX_COUNT\)[\s\S]*file\.size > AI_DIRECT_ATTACHMENT_MAX_BYTES/, "Attachment selection should enforce count and size limits before handoff.");
 assert.match(newtabSource, /await saveAiDirectPrompt\(token,[\s\S]*engineId: engine\.id,[\s\S]*createdAt: Date\.now\(\)[\s\S]*destination = aiDirectTargetUrl\(targetUrl, token, engine\.urlPromptFallback \? query : ""\);/, "AI direct search must save the prompt before navigating with the token.");
-assert.match(newtabSource, /attachments: engine\.id === "chatgpt" \? aiDirectAttachments : \[\]/, "Only ChatGPT should receive staged AI attachments in the handoff payload.");
+assert.match(newtabSource, /attachments: AI_DIRECT_ATTACHMENT_ENGINE_IDS\.has\(engine\.id\) \? aiDirectAttachments : \[\]/, "Only supported AI engines should receive staged attachments in the handoff payload.");
 assert.match(newtabSource, /let destination = engineSearchDestination\(engine, query\);[\s\S]*destination = aiDirectTargetUrl\(targetUrl, token, engine\.urlPromptFallback \? query : ""\);[\s\S]*console\.warn\("Failed to save AI direct prompt before navigation", error\);[\s\S]*window\.location\.assign\(destination\);/, "AI direct search must fall back to the provider query URL if prompt storage fails.");
 assert.match(newtabSource, /function pruneAiDirectPrompts\(prompts\) \{[\s\S]*now - Number\(item\?\.createdAt \|\| 0\) < AI_DIRECT_PROMPT_TTL_MS/, "New tab prompt handoff must prune expired prompts before storage writes.");
 assert.match(newtabSource, /const EDITABLE_AI_ENGINE_IDS = \["chatgpt", "claude", "gemini", "grok", "deepseek", "doubao", "kimi", "glm", "jimeng"\];/, "Search settings should expose all built-in AI direct engines.");
@@ -63,9 +65,14 @@ assert.match(submitSource, /const WAYLEAF_PROMPT_TOKEN_PARAM = "_wayleaf_prompt"
 assert.match(submitSource, /const WAYLEAF_PROMPT_TEXT_PARAM = "_wayleaf_text";/, "Content script must know the URL-fragment prompt fallback parameter.");
 assert.match(submitSource, /window\.__wayleafAiSubmitLoaded/, "Content script must guard against duplicate programmatic injection.");
 assert.match(submitSource, /function normalizePromptItem\(value\)[\s\S]*attachments: normalizeAttachments\(value\.attachments\)/, "Content script must read structured prompt payloads with attachments.");
-assert.match(submitSource, /async function attachPromptFiles\(config, attachments\)[\s\S]*config\.engineId !== "chatgpt"[\s\S]*#upload-files[\s\S]*#upload-photos[\s\S]*new DataTransfer\(\)[\s\S]*input\.files = transfer\.files[\s\S]*dispatchBasicEvent\(input, "change"\)/, "ChatGPT attachments should replay through the provider file input before submitting text.");
+assert.match(submitSource, /"claude\.ai": \{[\s\S]*attachmentSelectors: \[[\s\S]*input\[type=\\"file\\"\]\[multiple\][\s\S]*input\[type=\\"file\\"\]/, "Claude should keep its own provider file-input selectors.");
+assert.ok(claudeProviderSource, "Claude provider block should be present.");
+assert.doesNotMatch(claudeProviderSource, /mainWorldAttachment/, "Claude must not use the Gemini MAIN-world bridge.");
+assert.match(submitSource, /async function waitForChatgptAttachmentReady\(config, input, attachmentCount\)[\s\S]*config\.engineId === "claude"[\s\S]*return waitForClaudeAttachmentReady\(config, input\)/, "Claude attachment submits should wait for the provider send button instead of falling through to an immediate Enter fallback.");
+assert.match(submitSource, /async function waitForClaudeAttachmentReady\(config, input\)[\s\S]*WAYLEAF_ATTACHMENT_READY_TIMEOUT_MS[\s\S]*findSubmitButton\(config, input\)[\s\S]*WAYLEAF_ATTACHMENT_READY_STABLE_MS[\s\S]*return null/, "Claude attachment readiness should allow the send button to appear and stay stable.");
+assert.match(submitSource, /function attachmentInputForProvider\(config\)[\s\S]*config\.engineId === "chatgpt"[\s\S]*#upload-files[\s\S]*#upload-photos[\s\S]*config\.engineId === "claude"[\s\S]*attachmentSelectors/, "ChatGPT and Claude should keep separate provider attachment input paths.");
 assert.match(submitSource, /function attachmentToFile\(attachment\)[\s\S]*atob\(match\[3\]\)[\s\S]*new File\(\[bytes\], attachment\.name/, "Stored attachment data URLs should be rebuilt as File objects.");
-assert.match(submitSource, /async function submitPromptWhenReady\(config, prompt, attachments = \[\]\) \{[\s\S]*if \(attachments\.length\) \{[\s\S]*await attachPromptFiles\(config, attachments\);[\s\S]*const input = await fillPromptIntoLiveInput\(config, prompt, attachments\.length > 0 \? 4 : 1\);/, "Attachment submits should upload first, then reacquire the live composer before typing the prompt.");
+assert.match(submitSource, /async function submitPromptWhenReady\(config, prompt, attachments = \[\]\) \{[\s\S]*let filesAttached = true[\s\S]*filesAttached = await attachPromptFiles\(config, attachments\)[\s\S]*if \(attachments\.length && !filesAttached\) \{[\s\S]*return "filled";/, "Attachment submits should fill but not auto-send when upload is not confirmed.");
 assert.match(submitSource, /async function fillPromptIntoLiveInput\(config, prompt, attempts = 1\) \{[\s\S]*waitForElement\([\s\S]*focusAndSetInputValue\(input, prompt\);[\s\S]*normalizePromptComparisonText\(inputText\(input\)\) === normalizedPrompt/, "Prompt filling should retry against the live composer until the expected text is present.");
 assert.match(submitSource, /const WAYLEAF_ATTACHMENT_READY_TIMEOUT_MS = 15000;/, "Attachment submits should allow extra time for provider-side upload processing.");
 assert.match(submitSource, /async function waitForChatgptAttachmentReady\(config, input, attachmentCount\) \{[\s\S]*countChatgptReadyAttachments\(\) >= attachmentCount[\s\S]*!hasChatgptAttachmentBusyState\(\)[\s\S]*WAYLEAF_ATTACHMENT_READY_STABLE_MS/, "ChatGPT attachment submits should wait for the upload to finish and stay stable before sending.");
