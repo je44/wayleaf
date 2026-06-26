@@ -563,20 +563,31 @@
     }
   }
 
-  function notifyCoordinator(type) {
+  function videoPipSessionState(video) {
+    return {
+      sourceUrl: String(window.location?.href || ""),
+      playing: isPlaying(video),
+      paused: video?.paused === true,
+      currentTime: Math.max(0, Number(video?.currentTime || 0)),
+      volume: Math.min(1, Math.max(0, Number(video?.volume ?? 1))),
+      muted: video?.muted === true
+    };
+  }
+
+  function notifyCoordinator(type, video = null) {
     guardExtensionContext(() => {
       if (type === "enter") {
         if (!coordinatorEnabled() || document.visibilityState !== "hidden") {
           return;
         }
-        const video = pickPlayingVideo();
+        video = video || pickPlayingVideo();
         if (!video || document.pictureInPictureEnabled !== true) {
           return;
         }
-        safeSendMessage({ action: REQUEST_ACTION, type, score: videoArea(video) });
+        safeSendMessage({ action: REQUEST_ACTION, type, score: videoArea(video), ...videoPipSessionState(video) });
         return;
       }
-      safeSendMessage({ action: REQUEST_ACTION, type });
+      safeSendMessage({ action: REQUEST_ACTION, type, ...(video ? videoPipSessionState(video) : { sourceUrl: String(window.location?.href || "") }) });
     });
   }
 
@@ -626,7 +637,7 @@
     const video = pickPlayingVideo() || pickPictureInPictureCandidateVideo();
     const entered = await requestPictureInPictureForVideo(video);
     if (entered) {
-      safeSendMessage({ action: REQUEST_ACTION, type: "entered", score: videoArea(video) });
+      safeSendMessage({ action: REQUEST_ACTION, type: "entered", score: videoArea(video), ...videoPipSessionState(video) });
     }
     return entered;
   }
@@ -661,7 +672,7 @@
       const video = pickPictureInPictureCandidateVideo() || pickLargestExtractableVideo();
       const entered = await requestPictureInPictureForVideo(video);
       if (entered) {
-        safeSendMessage({ action: REQUEST_ACTION, type: "entered", score: videoArea(video) });
+        safeSendMessage({ action: REQUEST_ACTION, type: "entered", score: videoArea(video), ...videoPipSessionState(video) });
       }
       return entered;
     }, false);
@@ -692,7 +703,9 @@
 
   function handleVisibilityChange() {
     guardExtensionContext(() => {
-      notifyCoordinator(document.visibilityState === "hidden" ? "enter" : "exit");
+      if (document.visibilityState === "hidden") {
+        notifyCoordinator("enter");
+      }
     });
   }
 

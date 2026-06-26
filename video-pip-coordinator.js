@@ -2,13 +2,70 @@
 
 (() => {
   function sameTarget(left, right) {
-    if (!left || !right || left.tabId !== right.tabId) {
+    if (!left || !right || sourceTabId(left) !== sourceTabId(right)) {
       return false;
     }
-    if (left.documentId && right.documentId) {
-      return left.documentId === right.documentId;
+    if (sourceDocumentId(left) && sourceDocumentId(right)) {
+      return sourceDocumentId(left) === sourceDocumentId(right);
     }
-    return left.frameId === right.frameId;
+    return sourceFrameId(left) === sourceFrameId(right);
+  }
+
+  function sourceTabId(target) {
+    return Number.isInteger(target?.sourceTabId) ? target.sourceTabId : target?.tabId;
+  }
+
+  function sourceFrameId(target) {
+    return Number.isInteger(target?.sourceFrameId) ? target.sourceFrameId : (Number.isInteger(target?.frameId) ? target.frameId : 0);
+  }
+
+  function sourceDocumentId(target) {
+    return target?.sourceDocumentId || target?.documentId || "";
+  }
+
+  function sameSourceTab(owner, target) {
+    return Number.isInteger(target?.tabId) && sourceTabId(owner) === target.tabId;
+  }
+
+  function finiteNumber(value, fallback) {
+    const number = Number(value);
+    return Number.isFinite(number) ? number : fallback;
+  }
+
+  function sessionId() {
+    return `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+  }
+
+  function sessionFromTarget(target, request, previousOwner = null) {
+    const now = Date.now();
+    const playing = request?.playing === true;
+    return {
+      ...target,
+      sessionId: previousOwner?.sessionId || sessionId(),
+      sourceTabId: target.tabId,
+      sourceFrameId: sourceFrameId(target),
+      sourceDocumentId: sourceDocumentId(target),
+      sourceUrl: typeof request?.sourceUrl === "string" && request.sourceUrl ? request.sourceUrl : (target.sourceUrl || previousOwner?.sourceUrl || ""),
+      status: "active",
+      playing,
+      paused: typeof request?.paused === "boolean" ? request.paused : !playing,
+      currentTime: Math.max(0, finiteNumber(request?.currentTime, finiteNumber(previousOwner?.currentTime, 0))),
+      volume: Math.min(1, Math.max(0, finiteNumber(request?.volume, finiteNumber(previousOwner?.volume, 1)))),
+      muted: request?.muted === true,
+      createdAt: finiteNumber(previousOwner?.createdAt, now),
+      updatedAt: now
+    };
+  }
+
+  function sourceLostSession(owner, request) {
+    return {
+      ...owner,
+      sourceUrl: typeof request?.sourceUrl === "string" && request.sourceUrl ? request.sourceUrl : (owner?.sourceUrl || ""),
+      status: "source-lost",
+      playing: false,
+      paused: true,
+      updatedAt: Date.now()
+    };
   }
 
   function create({ command, loadOwner, saveOwner }) {
@@ -42,8 +99,14 @@
     async function process(request, target) {
       const activeOwner = await currentOwner();
       if (request?.type === "removed") {
-        if (activeOwner?.tabId === target.tabId) {
+        if (sameSourceTab(activeOwner, target)) {
           await setOwner(null);
+        }
+        return { ok: true };
+      }
+      if (request?.type === "source-lost") {
+        if (sameSourceTab(activeOwner, target)) {
+          await setOwner(sourceLostSession(activeOwner, request));
         }
         return { ok: true };
       }
@@ -54,8 +117,11 @@
         return { ok: true };
       }
       if (request?.type === "entered") {
-        await setOwner({ ...target });
-        return { ok: true, owner: true };
+        if (!activeOwner || sameSourceTab(activeOwner, target)) {
+          await setOwner(sessionFromTarget(target, request, sameTarget(activeOwner, target) ? activeOwner : null));
+          return { ok: true, owner: true };
+        }
+        return { ok: true, owner: false };
       }
       if (request?.type === "exit") {
         if (sameTarget(activeOwner, target)) {
@@ -67,19 +133,26 @@
         return { ok: false };
       }
       if (sameTarget(activeOwner, target)) {
+        let response;
         try {
-          await command(target, "enter");
+          response = await command(target, "enter");
         } catch {}
+        if (response?.entered === true) {
+          await setOwner(sessionFromTarget(target, request, activeOwner));
+        }
         return { ok: true, owner: true };
       }
       if (
-        activeOwner?.tabId === target.tabId &&
-        !sameTarget(activeOwner, target) &&
+        sameSourceTab(activeOwner, target) &&
+        activeOwner?.status === "active" &&
         Number(activeOwner.score || 0) >= Number(target.score || 0)
       ) {
         return { ok: true, owner: false };
       }
-      if (activeOwner) {
+      if (activeOwner && !sameSourceTab(activeOwner, target)) {
+        return { ok: true, owner: false };
+      }
+      if (activeOwner?.status === "active") {
         await exitOwner(activeOwner);
       }
       let response;
@@ -91,7 +164,7 @@
       if (response?.entered !== true) {
         return { ok: true, owner: false };
       }
-      await setOwner({ ...target });
+      await setOwner(sessionFromTarget(target, request));
       return { ok: true, owner: true };
     }
 

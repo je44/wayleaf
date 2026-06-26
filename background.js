@@ -222,6 +222,32 @@ const videoPipCoordinator = globalThis.WayleafVideoPipCoordinator.create({
   saveOwner: saveVideoPipOwner
 });
 
+function videoPipSourceTabId(owner) {
+  return Number.isInteger(owner?.sourceTabId) ? owner.sourceTabId : owner?.tabId;
+}
+
+async function handleVideoPipTabUpdated(tabId, changeInfo, tab) {
+  if (!changeInfo?.url && changeInfo?.status !== "loading") {
+    return;
+  }
+  const owner = await loadVideoPipOwner();
+  if (videoPipSourceTabId(owner) !== tabId) {
+    return;
+  }
+  await videoPipCoordinator.handle(
+    { type: "source-lost", sourceUrl: changeInfo.url || tab?.url || owner?.sourceUrl || "" },
+    { tabId }
+  );
+}
+
+async function handleVideoPipTabRemoved(tabId) {
+  const owner = await loadVideoPipOwner();
+  if (videoPipSourceTabId(owner) !== tabId) {
+    return;
+  }
+  await videoPipCoordinator.handle({ type: "removed" }, { tabId });
+}
+
 function videoPipTargetFromSender(sender, score = 0) {
   if (!Number.isInteger(sender?.tab?.id)) {
     return null;
@@ -728,6 +754,7 @@ chrome.runtime?.onMessage?.addListener((message, sender, sendResponse) => {
 });
 
 chrome.tabs?.onUpdated?.addListener((tabId, changeInfo, tab) => {
+  handleVideoPipTabUpdated(tabId, changeInfo, tab).catch(reportBackgroundError);
   if (changeInfo.url) {
     chrome.action?.setBadgeText({ tabId, text: "" }).catch(reportBackgroundError);
     chrome.action?.setTitle({ tabId, title: "Wayleaf" }).catch(reportBackgroundError);
@@ -749,7 +776,7 @@ chrome.tabs?.onUpdated?.addListener((tabId, changeInfo, tab) => {
 
 chrome.tabs?.onRemoved?.addListener((tabId) => {
   pendingAiDirectRequests.delete(tabId);
-  videoPipCoordinator.handle({ type: "removed" }, { tabId }).catch(reportBackgroundError);
+  handleVideoPipTabRemoved(tabId).catch(reportBackgroundError);
 });
 
 ensureDailyAutoSyncAlarm().catch(reportBackgroundError);

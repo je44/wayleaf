@@ -522,23 +522,25 @@ documentMock.visibilityState = "visible";
 dispatch("visibilitychange");
 await settle();
 assert.equal(harness.exitCount, 0, "Visible tabs should request release instead of racing a local delayed exit.");
-assert.equal(harness.coordinatorRequests.at(-1)?.type, "exit", "Returning to the source tab should release coordinated ownership.");
-assert.equal((await harness.command("exit"))?.exited, true, "The current owner should exit on coordinator command.");
-assert.equal(harness.exitCount, 1, "The coordinator should close only the Wayleaf-managed PiP window.");
+assert.equal(harness.coordinatorRequests.at(-1)?.type, "enter", "Returning to the source tab should not release coordinated ownership.");
 
 runtimeListeners[0]({ action: "wayleaf:toggle-video-pip-pin" }, {}, () => {});
+assert.equal((await harness.command("exit"))?.exited, true, "Unpinning should explicitly close the Wayleaf-managed PiP window.");
+assert.equal(harness.exitCount, 1, "The coordinator should close only the Wayleaf-managed PiP window.");
 storageListeners[0]({ videoPipGlobalEnabled: { newValue: true } }, "local");
 video.paused = true;
 documentMock.visibilityState = "visible";
+const pausedVisibleRequestCount = harness.coordinatorRequests.length;
 dispatch("playing", video);
 await settle();
 assert.equal(harness.requestCount, 1, "Global mode must still ignore a supported page until video playback starts.");
-assert.equal(harness.coordinatorRequests.at(-1)?.type, "exit", "Paused visible video should not request coordinated PiP.");
+assert.equal(harness.coordinatorRequests.length, pausedVisibleRequestCount, "Paused visible video should not request coordinated PiP.");
 
 video.paused = false;
+const resumedVisibleRequestCount = harness.coordinatorRequests.length;
 dispatch("playing", video);
 await settle();
-assert.equal(harness.coordinatorRequests.at(-1)?.type, "exit", "Resuming playback on the source tab should wait for a tab switch.");
+assert.equal(harness.coordinatorRequests.length, resumedVisibleRequestCount, "Resuming playback on the source tab should wait for a tab switch.");
 documentMock.visibilityState = "hidden";
 dispatch("visibilitychange");
 await settle();
@@ -548,9 +550,8 @@ assert.equal(harness.requestCount, 2, "Global fallback should cover Chrome auto-
 documentMock.visibilityState = "visible";
 dispatch("visibilitychange");
 await settle();
-assert.equal(harness.coordinatorRequests.at(-1)?.type, "exit", "Returning to the source tab should release the global fallback owner.");
-assert.equal((await harness.command("exit"))?.exited, true, "Returning to the source tab should close a Wayleaf-managed fallback PiP window.");
-assert.equal(harness.exitCount, 2, "Global fallback PiP should auto-restore when the source tab is visible again.");
+assert.equal(harness.coordinatorRequests.at(-1)?.type, "enter", "Returning to the source tab should not release the global fallback owner.");
+assert.equal(harness.exitCount, 1, "Global fallback PiP should stay open when the source tab is visible again.");
 
 documentMock.visibilityState = "hidden";
 documentMock.pictureInPictureElement = null;
@@ -794,34 +795,42 @@ const coordinator = createCoordinator({
 
 await coordinator.handle({ type: "enter" }, targets.youtube);
 assert.equal(storedOwner?.documentId, "youtube", "The first playing page should own PiP.");
+assert.equal(storedOwner?.sourceTabId, targets.youtube.tabId, "A PiP session should be bound to its source tab.");
+assert.equal(storedOwner?.status, "active", "A live PiP session should be stored as active.");
 await coordinator.handle({ type: "enter" }, targets.youtube);
 assert.deepEqual(commands.slice(-1), ["enter:youtube"], "A remembered owner must retry enter instead of assuming stale browser PiP state is still active.");
 
 targetStates.get("youtube").hidden = false;
+const nonSourceCommandCount = commands.length;
 await Promise.all([
   coordinator.handle({ type: "enter" }, targets.bilibili),
-  coordinator.handle({ type: "exit" }, targets.youtube)
+  coordinator.handle({ type: "source-lost", sourceUrl: "https://bilibili.example/refresh" }, targets.bilibili),
+  coordinator.handle({ type: "removed" }, targets.bilibili)
 ]);
-assert.deepEqual(
-  commands.slice(-2),
-  ["exit:youtube", "enter:bilibili"],
-  "A competing platform must exit the previous owner before entering PiP."
-);
-assert.equal(storedOwner?.documentId, "bilibili", "Ownership should move to the newly hidden platform.");
+assert.equal(commands.length, nonSourceCommandCount, "Non-source tab enter/update/remove events must not reset the active PiP owner.");
+assert.equal(storedOwner?.documentId, "youtube", "Ownership should stay with the source tab while PiP is active.");
 assert.equal([...targetStates.values()].filter((state) => state.pip).length, 1, "Only one page may own the browser PiP window.");
 
-targetStates.get("bilibili").hidden = false;
-targetStates.get("future-platform").hidden = true;
-await Promise.all([
-  coordinator.handle({ type: "enter" }, targets.futurePlatform),
-  coordinator.handle({ type: "exit" }, targets.bilibili)
-]);
-assert.deepEqual(
-  commands.slice(-2),
-  ["exit:bilibili", "enter:future-platform"],
-  "The same serialized handoff must work for future platforms and embedded frames."
-);
-assert.equal(storedOwner?.documentId, "future-platform", "The coordinator must remain host-agnostic.");
+await coordinator.handle({ type: "source-lost", sourceUrl: "https://youtube.example/reloaded" }, { tabId: targets.youtube.tabId });
+assert.equal(storedOwner?.status, "source-lost", "Reloading the source tab should mark the session source-lost.");
+assert.equal(storedOwner?.sourceTabId, targets.youtube.tabId, "A source-lost session should still remember its source tab.");
+await coordinator.handle({ type: "enter" }, targets.futurePlatform);
+assert.equal(storedOwner?.documentId, "youtube", "A non-source tab must not overwrite a source-lost session.");
+
+const youtubeReloaded = { tabId: 11, frameId: 0, documentId: "youtube-reloaded", score: 900 };
+targetStates.set("youtube-reloaded", { hidden: true, playing: true, pip: false });
+await coordinator.handle({ type: "enter", playing: true, currentTime: 12, volume: 0.5, muted: true }, youtubeReloaded);
+assert.equal(storedOwner?.documentId, "youtube-reloaded", "The source tab may re-enter PiP after reload.");
+assert.equal(storedOwner?.currentTime, 12, "The PiP session should retain media metadata.");
+assert.equal(storedOwner?.volume, 0.5, "The PiP session should retain volume metadata.");
+assert.equal(storedOwner?.muted, true, "The PiP session should retain muted metadata.");
+
+await coordinator.handle({ type: "removed" }, { tabId: targets.bilibili.tabId });
+assert.equal(storedOwner?.documentId, "youtube-reloaded", "Closing a non-source tab should not clear the PiP session.");
+await coordinator.handle({ type: "removed" }, { tabId: targets.youtube.tabId });
+assert.equal(storedOwner, null, "Closing the source tab should clear the PiP session.");
+await coordinator.handle({ type: "enter" }, targets.bilibili);
+assert.equal(storedOwner?.documentId, "bilibili", "A new source can own PiP after the previous source is closed.");
 
 const restartedCoordinator = createCoordinator({
   async command(target, command) {
@@ -835,13 +844,11 @@ const restartedCoordinator = createCoordinator({
     storedOwner = owner;
   }
 });
+const restartedCommandCount = commands.length;
 await restartedCoordinator.handle({ type: "enter" }, targets.youtube);
-assert.deepEqual(
-  commands.slice(-2),
-  ["exit:future-platform", "enter:youtube"],
-  "A restarted service worker should recover the persisted owner before handoff."
-);
-await restartedCoordinator.handle({ type: "left" }, targets.youtube);
+assert.equal(commands.length, restartedCommandCount, "A restarted service worker should ignore non-source tab entry while an owner is persisted.");
+assert.equal(storedOwner?.documentId, "bilibili", "A restarted service worker should recover the persisted source owner.");
+await restartedCoordinator.handle({ type: "left" }, targets.bilibili);
 assert.equal(storedOwner, null, "A native PiP close should clear stale ownership so the source page cannot remain stuck in PiP state.");
 await restartedCoordinator.handle({ type: "enter" }, targets.bilibili);
 assert.deepEqual(
