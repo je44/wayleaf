@@ -97,6 +97,7 @@ const SEARCH_SUGGESTIONS_EXIT_MS = 260;
 const SEARCH_SUGGESTIONS_OPEN_PADDING_Y = 18;
 const AI_MODE_EXIT_MS = 300;
 const GOOGLE_AI_MODE_EXIT_MS = 480;
+const GOOGLE_AI_MODE_REDUCED_EXIT_MS = 420;
 const MAX_BOOKMARK_FOLDER_OPTIONS = 160;
 const MAX_PORTAL_FEATURED_ITEMS = 6;
 const MAX_BOOKMARK_PORTAL_ITEMS = 120;
@@ -460,7 +461,6 @@ const THEME_PALETTES = [
 const DEFAULT_LOCAL_SEARCH_ENGINE = "google";
 const EDITABLE_LOCAL_SEARCH_ENGINE_IDS = ["google", "baidu", "bing"];
 const EDITABLE_AI_ENGINE_IDS = ["chatgpt", "claude", "gemini", "grok", "deepseek", "doubao", "kimi", "glm", "jimeng"];
-const GOOGLE_AI_MODE_COMMAND = "/ai";
 const GOOGLE_AI_MODE_SEARCH_URL = "https://www.google.com/ai";
 const SETTINGS_ENGINE_ICON_STYLES = Object.freeze({
   baidu: { mode: "mask", tile: "#ffffff", glyph: "#2932e1" },
@@ -2693,6 +2693,7 @@ let selectedLocalSearchEngine = DEFAULT_LOCAL_SEARCH_ENGINE;
 let activePlatformSearchTarget = "";
 let googleAiSearchModeActive = false;
 let googleAiModeExitTimer = 0;
+let googleAiModeActiveStartedAt = 0;
 let aiModeExitTimer = 0;
 let portalCategoryState = {};
 let activePortalView = "smart";
@@ -3600,6 +3601,8 @@ async function init() {
   });
   surfaceBackdrop?.addEventListener("click", () => setActiveSurfacePanel(""));
   quickSearchForm.addEventListener("submit", handleQuickSearchSubmit);
+  quickSearchLeadingIcon?.addEventListener("pointerdown", handleQuickSearchLeadingIconPointerDown);
+  quickSearchLeadingIcon?.addEventListener("click", handleQuickSearchLeadingIconClick);
   quickSearchInput.addEventListener("keydown", handleQuickSearchInputKeydown);
   quickSearchInput.addEventListener("input", handleQuickSearchInput);
   quickSearchInput.addEventListener("focus", handleQuickSearchFocus);
@@ -4341,11 +4344,22 @@ function updateQuickSearchLeadingIcon() {
   if (!quickSearchLeadingIcon) {
     return;
   }
-  quickSearchLeadingIcon.innerHTML = searchEngineSearchIcon();
+  if (!quickSearchLeadingIcon.querySelector(".search-icon-layer")) {
+    quickSearchLeadingIcon.innerHTML = `
+      <span class="search-icon-layer search-icon-regular">${tdesignIcon("search")}</span>
+      <span class="search-icon-layer search-icon-ai">${tdesignIcon("ai-search")}</span>
+    `;
+  }
+  const available = canActivateGoogleAiSearchMode();
+  const active = available && isQuickSearchActive();
+  quickSearchLeadingIcon.tabIndex = active ? 0 : -1;
+  quickSearchLeadingIcon.setAttribute("aria-label", googleAiSearchModeActive ? t("quickSearch") : t("quickSearchWithGoogleAi"));
+  quickSearchLeadingIcon.title = googleAiSearchModeActive ? t("quickSearch") : t("quickSearchWithGoogleAi");
   searchWorkbench?.toggleAttribute("data-google-ai-active", googleAiSearchModeActive);
   if (googleAiSearchModeActive) {
     window.clearTimeout(googleAiModeExitTimer);
     searchWorkbench?.removeAttribute("data-google-ai-exiting");
+    searchWorkbench?.style.removeProperty("--google-ai-exit-border-angle");
   }
 }
 
@@ -5386,10 +5400,6 @@ function handleQuickSearchInputKeydown(event) {
   if (event.key !== "Enter" || event.isComposing) {
     return;
   }
-  if (activateGoogleAiSearchModeFromInput()) {
-    event.preventDefault();
-    return;
-  }
   const platformMatch = searchPlatformPrefix(quickSearchInput.value);
   if (platformMatch && searchEngineById(activeSearchEngine).local && !platformMatch.remainder) {
     event.preventDefault();
@@ -5430,20 +5440,32 @@ function exitPlatformQuickSearchMode() {
   renderLocalSearchSuggestions(normalizeText(quickSearchInput.value));
 }
 
-function activateGoogleAiSearchModeFromInput() {
-  if (googleAiSearchModeActive) {
-    return false;
+function handleQuickSearchLeadingIconClick() {
+  if (!canActivateGoogleAiSearchMode() || !isQuickSearchActive()) {
+    quickSearchInput.focus({ preventScroll: true });
+    return;
   }
-  if (!canActivateGoogleAiSearchMode() || normalizeText(quickSearchInput.value).toLowerCase() !== GOOGLE_AI_MODE_COMMAND) {
-    return false;
+  setQuickSearchActive(true);
+  if (googleAiSearchModeActive) {
+    exitGoogleAiSearchMode();
+    quickSearchInput.focus({ preventScroll: true });
+    return;
   }
   activeSearchEngine = DEFAULT_SEARCH_ENGINE;
   activePlatformSearchTarget = "";
   googleAiSearchModeActive = true;
-  quickSearchInput.value = "";
+  googleAiModeActiveStartedAt = performance.now();
   updateQuickSearchModeUi();
-  hideSearchSuggestions();
-  return true;
+  renderLocalSearchSuggestions(normalizeText(quickSearchInput.value));
+  quickSearchInput.focus({ preventScroll: true });
+}
+
+function handleQuickSearchLeadingIconPointerDown(event) {
+  if (!canActivateGoogleAiSearchMode() || !isQuickSearchActive()) {
+    return;
+  }
+  event.preventDefault();
+  quickSearchInput.focus({ preventScroll: true });
 }
 
 function exitGoogleAiSearchMode() {
@@ -5457,11 +5479,22 @@ function exitGoogleAiSearchMode() {
 }
 
 function startGoogleAiModeExit() {
+  searchWorkbench?.style.setProperty("--google-ai-exit-border-angle", googleAiModeExitBorderAngle());
   searchWorkbench?.setAttribute("data-google-ai-exiting", "");
   window.clearTimeout(googleAiModeExitTimer);
   googleAiModeExitTimer = window.setTimeout(() => {
     searchWorkbench?.removeAttribute("data-google-ai-exiting");
-  }, prefersReducedMotion() ? 0 : GOOGLE_AI_MODE_EXIT_MS);
+    searchWorkbench?.style.removeProperty("--google-ai-exit-border-angle");
+    updateGoogleImageSearchButton();
+  }, prefersReducedMotion() ? GOOGLE_AI_MODE_REDUCED_EXIT_MS : GOOGLE_AI_MODE_EXIT_MS);
+}
+
+function googleAiModeExitBorderAngle() {
+  if (!googleAiModeActiveStartedAt) {
+    return "90deg";
+  }
+  const progress = ((performance.now() - googleAiModeActiveStartedAt) % 1800) / 1800;
+  return `${90 + (progress * 360)}deg`;
 }
 
 function canActivateGoogleAiSearchMode() {
@@ -5470,10 +5503,12 @@ function canActivateGoogleAiSearchMode() {
     && selectedLocalSearchEngine === "google";
 }
 
+function isQuickSearchActive() {
+  return Boolean(searchWorkbench?.classList.contains("search-active"))
+    || document.activeElement === quickSearchInput;
+}
+
 function handleQuickSearchInput() {
-  if (activateGoogleAiSearchModeFromInput()) {
-    return;
-  }
   if (googleAiSearchModeActive) {
     renderLocalSearchSuggestions(normalizeText(quickSearchInput.value));
     return;
@@ -5639,12 +5674,15 @@ function updateGoogleImageSearchButton() {
     return;
   }
   const engine = searchEngineById(activeSearchEngine);
-  const available = engine.local
+  const supported = engine.local
     && !activePlatformSearchTarget
-    && !googleAiSearchModeActive
     && selectedLocalSearchEngine === "google";
-  const active = available && Boolean(searchWorkbench?.classList.contains("search-active"));
-  googleImageSearchButton.hidden = !available;
+  const available = supported
+    && !googleAiSearchModeActive
+    && !searchWorkbench?.hasAttribute("data-google-ai-exiting");
+  const active = available && isQuickSearchActive();
+  googleImageSearchButton.hidden = !supported;
+  googleImageSearchButton.toggleAttribute("data-mode-visible", available);
   googleImageSearchButton.disabled = !active;
   googleImageSearchButton.tabIndex = active ? 0 : -1;
 }
@@ -5780,6 +5818,7 @@ function handleQuickSearchBlur() {
 
 function setQuickSearchActive(isActive) {
   searchWorkbench?.classList.toggle("search-active", isActive);
+  updateQuickSearchLeadingIcon();
   updateGoogleImageSearchButton();
   updateAiAttachmentUi();
   favoriteStrip?.setAttribute("aria-disabled", String(isActive));

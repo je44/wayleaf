@@ -150,14 +150,14 @@
 
 @property --google-ai-border-angle {
   syntax: "<angle>";
-  inherits: false;
+  inherits: true;
   initial-value: 90deg;
 }
 
 @property --google-ai-edge-alpha {
   syntax: "<number>";
   inherits: true;
-  initial-value: 1;
+  initial-value: 0;
 }
 
 * {
@@ -585,6 +585,7 @@ body.surface-open .surface-backdrop {
   --direct-search-icon-size: 36px;
   --direct-search-icon-padding: 6px;
   --direct-search-icon-radius: 6.5px;
+  --google-ai-edge-alpha: 0;
   position: relative;
   display: grid;
   justify-items: center;
@@ -601,13 +602,14 @@ body.surface-open .surface-backdrop {
   z-index: 2;
   width: 100%;
   overflow: hidden;
-  border: 1px solid var(--line);
+  border: 1px solid transparent;
   border-radius: 12px;
-  background: var(--input-bg);
+  background:
+    linear-gradient(var(--input-bg), var(--input-bg)) padding-box,
+    linear-gradient(var(--line), var(--line)) border-box;
   transform: scale(var(--search-panel-scale));
   transform-origin: center top;
   transition:
-    border-color 180ms ease,
     background-color var(--theme-transition-duration) var(--theme-transition-ease);
   will-change: transform;
 }
@@ -618,17 +620,17 @@ body.surface-open .surface-backdrop {
 }
 
 .search-workbench[data-google-ai-exiting] {
+  --google-ai-border-angle: var(--google-ai-exit-border-angle, 90deg);
   animation: googleAiModeEdgeExit 480ms linear forwards;
 }
 
-.search-workbench[data-google-ai-active]::before,
-.search-workbench[data-google-ai-exiting]::before {
+.search-workbench::before {
   content: "";
   position: absolute;
   inset: 0 0 auto;
   z-index: 1;
   width: 100%;
-  height: 64px;
+  height: calc(64px + 2px);
   border-radius: 12px;
   background: conic-gradient(
     from var(--google-ai-border-angle),
@@ -644,45 +646,33 @@ body.surface-open .surface-backdrop {
   transform: scale(var(--search-panel-scale));
   transform-origin: center top;
   pointer-events: none;
-  animation: googleAiBorderFlow 1.8s linear infinite;
 }
 
 .search-workbench.suggestions-open .search-panel {
-  border-color: var(--line-strong);
+  background:
+    linear-gradient(var(--input-bg), var(--input-bg)) padding-box,
+    linear-gradient(var(--line-strong), var(--line-strong)) border-box;
 }
 
 .search-workbench[data-google-ai-active] .search-panel,
 .search-workbench[data-google-ai-exiting] .search-panel {
-  border-color: var(--line);
+  background:
+    linear-gradient(var(--input-bg), var(--input-bg)) padding-box,
+    conic-gradient(
+      from var(--google-ai-border-angle),
+      rgb(66 133 244 / var(--google-ai-edge-alpha)),
+      rgb(52 168 83 / var(--google-ai-edge-alpha)),
+      rgb(251 188 5 / var(--google-ai-edge-alpha)),
+      rgb(234 67 53 / var(--google-ai-edge-alpha)),
+      rgb(161 66 244 / var(--google-ai-edge-alpha)),
+      rgb(66 133 244 / var(--google-ai-edge-alpha))
+    ) border-box,
+    linear-gradient(var(--line-strong), var(--line-strong)) border-box;
 }
 
-.search-workbench[data-google-ai-active] .search-panel::before,
-.search-workbench[data-google-ai-exiting] .search-panel::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  z-index: 3;
-  padding: 1px;
-  border-radius: inherit;
-  background: conic-gradient(
-    from var(--google-ai-border-angle),
-    rgb(66 133 244 / var(--google-ai-edge-alpha)),
-    rgb(52 168 83 / var(--google-ai-edge-alpha)),
-    rgb(251 188 5 / var(--google-ai-edge-alpha)),
-    rgb(234 67 53 / var(--google-ai-edge-alpha)),
-    rgb(161 66 244 / var(--google-ai-edge-alpha)),
-    rgb(66 133 244 / var(--google-ai-edge-alpha))
-  );
-  pointer-events: none;
+.search-workbench[data-google-ai-active]::before,
+.search-workbench[data-google-ai-active] .search-panel {
   animation: googleAiBorderFlow 1.8s linear infinite;
-  -webkit-mask:
-    linear-gradient(#000 0 0) content-box,
-    linear-gradient(#000 0 0);
-  -webkit-mask-composite: xor;
-  mask:
-    linear-gradient(#000 0 0) content-box,
-    linear-gradient(#000 0 0);
-  mask-composite: exclude;
 }
 
 @keyframes googleAiBorderFlow {
@@ -752,13 +742,18 @@ body.surface-open .surface-backdrop {
 }
 
 .search-engine-search-icon {
+  appearance: none;
   grid-area: 1 / 1;
   display: grid;
   place-items: center;
   width: var(--search-icon-size);
   height: var(--search-icon-size);
+  padding: 0;
+  border: 0;
   color: var(--faint);
+  background: transparent;
   line-height: 0;
+  cursor: pointer;
   transform: translateX(var(--search-leading-icon-offset));
   opacity: 1;
   transition:
@@ -766,6 +761,41 @@ body.surface-open .surface-backdrop {
     opacity 180ms ease,
     transform 260ms cubic-bezier(0.16, 1, 0.3, 1),
     filter 260ms ease;
+}
+
+.search-icon-layer {
+  grid-area: 1 / 1;
+  display: grid;
+  place-items: center;
+  transform-origin: center;
+  transition:
+    opacity 360ms ease,
+    transform 420ms cubic-bezier(0.22, 1, 0.36, 1),
+    filter 320ms ease;
+}
+
+.search-icon-ai {
+  opacity: 0;
+  filter: blur(1.5px);
+  transform: scale(0.82) rotate(-10deg);
+}
+
+.search-workbench[data-google-ai-active] .search-icon-regular {
+  opacity: 0;
+  filter: blur(1.5px);
+  transform: scale(0.82) rotate(10deg);
+}
+
+.search-workbench[data-google-ai-active] .search-icon-ai {
+  opacity: 1;
+  filter: blur(0);
+  transform: scale(1) rotate(0);
+}
+
+.search-engine-search-icon:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 4px;
+  border-radius: 8px;
 }
 
 .search-workbench[data-ai-active] .search-engine-search-icon {
@@ -802,23 +832,22 @@ body.surface-open .surface-backdrop {
 
 .google-image-search-button {
   display: grid;
-  flex: 0 0 var(--search-icon-size);
+  flex: 0 0 0;
   place-items: center;
-  width: var(--search-icon-size);
+  width: 0;
   height: var(--search-icon-size);
-  margin: 0 18px 0 0;
+  margin: 0;
   padding: 0;
   border: 0;
   background: transparent;
   color: var(--faint);
   line-height: 0;
-  opacity: 0;
+  overflow: visible;
   visibility: hidden;
   pointer-events: none;
   transition:
     color var(--theme-transition-duration) var(--theme-transition-ease),
-    opacity 160ms ease,
-    visibility 0s linear 160ms;
+    visibility 0s linear 240ms;
 }
 
 .ai-attachment-button {
@@ -848,7 +877,12 @@ body.surface-open .surface-backdrop {
 }
 
 .search-workbench.search-active .google-image-search-button:not([hidden]) {
-  opacity: 1;
+  flex-basis: var(--search-icon-size);
+  width: var(--search-icon-size);
+  margin-right: 18px;
+}
+
+.search-workbench.search-active .google-image-search-button[data-mode-visible]:not([hidden]) {
   visibility: visible;
   pointer-events: auto;
   transition-delay: 0s;
@@ -872,6 +906,24 @@ body.surface-open .surface-backdrop {
   display: block;
   width: var(--search-icon-size);
   height: var(--search-icon-size);
+}
+
+.google-image-search-button svg {
+  opacity: 0;
+  filter: blur(1.5px);
+  transform: scale(0.68);
+  transform-origin: center;
+  transition:
+    opacity 240ms ease,
+    transform 320ms cubic-bezier(0.22, 1, 0.36, 1),
+    filter 220ms ease;
+}
+
+.search-workbench.search-active .google-image-search-button[data-mode-visible]:not([hidden]) svg {
+  opacity: 1;
+  filter: blur(0);
+  transform: scale(1);
+  transition-delay: 90ms;
 }
 
 .google-image-search-button .google-image-search-icon-filled {
@@ -1087,8 +1139,10 @@ body.surface-open .surface-backdrop {
   --search-panel-scale: var(--search-active-panel-scale);
 }
 
-.search-workbench.search-active .search-panel {
-  border-color: var(--line-strong);
+.search-workbench.search-active:not([data-google-ai-active]):not([data-google-ai-exiting]) .search-panel {
+  background:
+    linear-gradient(var(--input-bg), var(--input-bg)) padding-box,
+    linear-gradient(var(--line-strong), var(--line-strong)) border-box;
 }
 
 .search-engine-search-icon svg,
@@ -5903,9 +5957,12 @@ select:focus-visible {
     height: 56px;
   }
 
+  .search-workbench::before {
+    height: calc(56px + 2px);
+  }
+
   .search-engine-search-icon,
   .search-engine-search-icon svg,
-  .google-image-search-button,
   .google-image-search-button svg {
     width: var(--search-icon-size);
     height: var(--search-icon-size);
