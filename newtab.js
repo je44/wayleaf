@@ -44,6 +44,7 @@ const SOCIAL_VIDEO_EXTRACTOR_ENABLED_STORAGE_KEY = "socialVideoExtractorEnabled"
 const FIRST_PAINT_CACHE_STORAGE_KEY = "__wayleaf_first_paint_cache__";
 const FIRST_PAINT_CACHE_VERSION = 5;
 const AI_DIRECT_PROMPT_STORAGE_KEY = "aiDirectPrompts";
+const AI_PROMPT_HISTORY_STORAGE_KEY = "aiPromptHistory";
 const SYNC_META_STORAGE_KEY = "syncMeta";
 const ONBOARDING_GUIDE_STORAGE_KEY = "onboardingGuideDismissed";
 const ONBOARDING_STEPS = [
@@ -76,6 +77,7 @@ const MAX_FAVORITE_SITES = 5;
 const MAX_PORTAL_TITLE_LENGTH = 32;
 const MAX_PORTAL_URL_LENGTH = 512;
 const MAX_LOCAL_SEARCH_RESULTS = 8;
+const MAX_AI_PROMPT_HISTORY_ITEMS = 48;
 const MAX_CACHED_SITE_ICONS = 80;
 const MAX_CACHED_SITE_ICON_BYTES = 96 * 1024;
 const SITE_ICON_DISCOVERY_TIMEOUT_MS = 3500;
@@ -5959,6 +5961,11 @@ async function submitAiDirectSearch(engine, query) {
   const token = crypto.randomUUID?.() || `${Date.now()}-${Math.random().toString(16).slice(2)}`;
   let destination = engineSearchDestination(engine, query);
   try {
+    await recordAiPromptHistory(engine, query);
+  } catch (error) {
+    console.warn("Failed to record AI prompt history", error);
+  }
+  try {
     await saveAiDirectPrompt(token, {
       attachments: AI_DIRECT_ATTACHMENT_ENGINE_IDS.has(engine.id) ? aiDirectAttachments : [],
       prompt: query,
@@ -6121,15 +6128,16 @@ function createSearchEngineSuggestion(query) {
 
 async function localSearchItems(query, options = {}) {
   const scope = options.scope || null;
-  const [historyItems, bookmarkItems] = await Promise.all([
+  const [historyItems, bookmarkItems, aiPromptHistoryItems] = await Promise.all([
     searchHistoryItems(query, scope),
-    searchBookmarkItems(query, scope)
+    searchBookmarkItems(query, scope),
+    searchAiPromptHistoryItems(query, scope)
   ]);
-  const merged = [...historyItems, ...bookmarkItems];
+  const merged = [...aiPromptHistoryItems, ...historyItems, ...bookmarkItems];
   const byKey = new Map();
   const normalizedQuery = normalizeText(query).toLowerCase();
   merged.forEach((item) => {
-    const key = localSearchDedupKey(item.url);
+    const key = item.dedupKey || localSearchDedupKey(item.url);
     if (!key) {
       return;
     }
@@ -6167,7 +6175,9 @@ function searchTargetSuggestionScope(target) {
     .map(searchSuggestionSiteKey)
     .filter(Boolean);
   const uniqueSiteKeys = [...new Set(siteKeys)];
-  return uniqueSiteKeys.length ? { siteKeys: uniqueSiteKeys } : null;
+  return uniqueSiteKeys.length || target.aiDirect
+    ? { siteKeys: uniqueSiteKeys, aiEngineId: target.aiDirect ? target.id : "" }
+    : null;
 }
 
 function googleAiSearchSuggestionScope() {
@@ -6243,6 +6253,29 @@ async function searchBookmarkItems(query, scope = null) {
   }
 }
 
+async function searchAiPromptHistoryItems(query, scope = null) {
+  const aiEngine = searchEngineById(scope?.aiEngineId, { strict: true });
+  if (!aiEngine || aiEngine.local) {
+    return [];
+  }
+  const history = await loadAiPromptHistory();
+  const normalizedQuery = normalizeText(query).toLowerCase();
+  const providerUrl = aiEngine.directUrl || aiEngine.searchUrl;
+  return history
+    .filter((item) => item.engineId === aiEngine.id && fuzzyIncludes(item.prompt, normalizedQuery))
+    .map((item) => ({
+      type: "history",
+      title: item.prompt,
+      url: providerUrl,
+      meta: `${formatHistoryTimestamp(item.updatedAt)} · ${compactSiteDomain(providerUrl)}`,
+      lastVisitTime: Number(item.updatedAt || 0),
+      visitCount: Number(item.count || 1),
+      dedupKey: `ai-prompt:${aiEngine.id}:${normalizeText(item.prompt).toLowerCase()}`,
+      query: item.prompt,
+      selectedAiEngineId: aiEngine.id
+    }));
+}
+
 function compareLocalSearchItems(a, b) {
   const scoreDiff = Number(b.score || 0) - Number(a.score || 0);
   if (scoreDiff !== 0) {
@@ -6260,6 +6293,9 @@ function compareLocalSearchItems(a, b) {
 }
 
 function localSearchSourceRank(item) {
+  if (item?.selectedAiEngineId) {
+    return 4;
+  }
   if (item?.type === "bookmark") {
     return 3;
   }
@@ -6283,6 +6319,51 @@ function localSearchDedupKey(url) {
   } catch {
     return normalizeText(url).toLowerCase();
   }
+}
+
+async function recordAiPromptHistory(engine, query) {
+  const engineId = String(engine?.id || "");
+  const prompt = normalizeText(query).slice(0, WAYLEAF_MAX_PROMPT_LENGTH);
+  if (!engineId || !prompt) {
+    return;
+  }
+  const history = await loadAiPromptHistory();
+  const existingIndex = history.findIndex((item) => item.engineId === engineId && item.prompt === prompt);
+  const existing = existingIndex >= 0 ? history[existingIndex] : null;
+  const nextItem = {
+    engineId,
+    prompt,
+    updatedAt: Date.now(),
+    count: Number(existing?.count || 0) + 1
+  };
+  const nextHistory = [
+    nextItem,
+    ...history.filter((_, index) => index !== existingIndex)
+  ].slice(0, MAX_AI_PROMPT_HISTORY_ITEMS);
+  await setStoredValues({ [AI_PROMPT_HISTORY_STORAGE_KEY]: nextHistory });
+}
+
+async function loadAiPromptHistory() {
+  try {
+    const result = await getStoredValues({ [AI_PROMPT_HISTORY_STORAGE_KEY]: [] });
+    return normalizeAiPromptHistory(result[AI_PROMPT_HISTORY_STORAGE_KEY]);
+  } catch {
+    return [];
+  }
+}
+
+function normalizeAiPromptHistory(value) {
+  return Array.isArray(value)
+    ? value
+      .map((item) => ({
+        engineId: String(item?.engineId || ""),
+        prompt: normalizeText(item?.prompt).slice(0, WAYLEAF_MAX_PROMPT_LENGTH),
+        updatedAt: Number(item?.updatedAt || 0),
+        count: Math.max(1, Number(item?.count || 1))
+      }))
+      .filter((item) => item.engineId && item.prompt)
+      .slice(0, MAX_AI_PROMPT_HISTORY_ITEMS)
+    : [];
 }
 
 function localSearchScore(item, query) {
@@ -6426,15 +6507,15 @@ function fuzzyIncludes(value, query) {
 }
 
 function createSearchSuggestionItem(item) {
-  const link = item.type === "engine-search" ? document.createElement("div") : document.createElement("a");
+  const actionableSuggestion = item.type === "engine-search" || Boolean(item?.selectedAiEngineId);
+  const link = actionableSuggestion ? document.createElement("div") : document.createElement("a");
   const icon = item.type === "engine-search" ? document.createElement("span") : document.createElement("img");
   const copy = document.createElement("span");
   const title = document.createElement("strong");
   const meta = document.createElement("span");
   const trailing = document.createElement("span");
   link.className = "search-suggestion-item";
-  if (item.type === "engine-search") {
-    link.classList.add("search-suggestion-item-primary");
+  if (actionableSuggestion) {
     link.tabIndex = 0;
     link.addEventListener("click", (event) => {
       event.preventDefault();
@@ -6446,6 +6527,9 @@ function createSearchSuggestionItem(item) {
         submitSelectedSuggestionSearch(item);
       }
     });
+    if (item.type === "engine-search") {
+      link.classList.add("search-suggestion-item-primary");
+    }
   } else {
     link.href = item.url;
   }

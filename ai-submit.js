@@ -125,8 +125,9 @@ const PROVIDERS = {
   "kimi.com": {
     engineId: "kimi",
     inputSelectors: [
+      ".chat-input-editor[role=\"textbox\"][contenteditable=\"true\"]",
+      "div[role=\"textbox\"][contenteditable=\"true\"]",
       "textarea",
-      "div[contenteditable=\"true\"]",
       "[contenteditable=\"true\"]"
     ],
     submitSelectors: [
@@ -139,8 +140,9 @@ const PROVIDERS = {
   "kimi.moonshot.cn": {
     engineId: "kimi",
     inputSelectors: [
+      ".chat-input-editor[role=\"textbox\"][contenteditable=\"true\"]",
+      "div[role=\"textbox\"][contenteditable=\"true\"]",
       "textarea",
-      "div[contenteditable=\"true\"]",
       "[contenteditable=\"true\"]"
     ],
     submitSelectors: [
@@ -446,7 +448,11 @@ async function fillPromptIntoLiveInput(config, prompt, attempts = 1) {
     if (!input) {
       return null;
     }
-    focusAndSetInputValue(input, prompt);
+    if (config.engineId === "kimi") {
+      focusAndSetKimiInputValue(input, prompt);
+    } else {
+      focusAndSetInputValue(input, prompt);
+    }
     await delay(WAYLEAF_EDITOR_SYNC_DELAY_MS);
     if (normalizePromptComparisonText(inputText(input)) === normalizedPrompt) {
       return input;
@@ -627,6 +633,24 @@ function findSubmitButton(config, input) {
       return doubaoSubmitButton;
     }
   }
+  if (config.engineId === "deepseek") {
+    const deepseekSubmitButton = findDeepseekSubmitButton(input);
+    if (deepseekSubmitButton) {
+      return deepseekSubmitButton;
+    }
+  }
+  if (config.engineId === "kimi") {
+    const kimiSubmitButton = findKimiSubmitButton(input);
+    if (kimiSubmitButton) {
+      return kimiSubmitButton;
+    }
+  }
+  if (config.engineId === "glm") {
+    const glmSubmitButton = findGlmSubmitButton(input);
+    if (glmSubmitButton) {
+      return glmSubmitButton;
+    }
+  }
   const scopedRoot = input.closest("form")
     || input.closest("[role=\"form\"]")
     || input.closest("main")
@@ -649,6 +673,69 @@ function findDoubaoSubmitButton(input) {
       const rect = node.getBoundingClientRect();
       const centerY = rect.top + rect.height / 2;
       return rect.width >= 24
+        && rect.width <= 72
+        && rect.height >= 24
+        && rect.height <= 72
+        && buttonCenterX(node) > inputRect.left + inputRect.width * 0.7
+        && Math.abs(centerY - (inputRect.top + inputRect.height / 2)) <= maxDistanceY;
+    })
+    .sort((a, b) => buttonCenterX(b) - buttonCenterX(a))[0] || null;
+}
+
+function findDeepseekSubmitButton(input) {
+  const inputRect = input.getBoundingClientRect();
+  const maxDistanceY = Math.max(64, inputRect.height + 44);
+  return [...document.querySelectorAll("button, [role=\"button\"], [class*=\"button\"]")]
+    .filter(isClickableElement)
+    .filter((node) => {
+      const className = String(node.getAttribute("class") || "");
+      const rect = node.getBoundingClientRect();
+      const centerY = rect.top + rect.height / 2;
+      return className.includes("ds-button--primary")
+        && !className.includes("ds-button--disabled")
+        && rect.width >= 24
+        && rect.width <= 72
+        && rect.height >= 24
+        && rect.height <= 72
+        && buttonCenterX(node) > inputRect.left + inputRect.width * 0.7
+        && Math.abs(centerY - (inputRect.top + inputRect.height / 2)) <= maxDistanceY;
+    })
+    .sort((a, b) => buttonCenterX(b) - buttonCenterX(a))[0] || null;
+}
+
+function findKimiSubmitButton(input) {
+  const inputRect = input.getBoundingClientRect();
+  const maxDistanceY = Math.max(64, inputRect.height + 44);
+  return [...document.querySelectorAll("[class*=\"send-button-container\"], [class*=\"send-button\"]")]
+    .filter(isClickableElement)
+    .filter((node) => {
+      const className = String(node.getAttribute("class") || "");
+      const rect = node.getBoundingClientRect();
+      const centerY = rect.top + rect.height / 2;
+      return className.includes("send-button-container")
+        && !className.includes("disabled")
+        && rect.width >= 24
+        && rect.width <= 72
+        && rect.height >= 24
+        && rect.height <= 72
+        && buttonCenterX(node) > inputRect.left + inputRect.width * 0.7
+        && Math.abs(centerY - (inputRect.top + inputRect.height / 2)) <= maxDistanceY;
+    })
+    .sort((a, b) => buttonCenterX(b) - buttonCenterX(a))[0] || null;
+}
+
+function findGlmSubmitButton(input) {
+  const inputRect = input.getBoundingClientRect();
+  const maxDistanceY = Math.max(64, inputRect.height + 44);
+  return [...document.querySelectorAll("[class*=\"enter-icon-container\"]")]
+    .filter(isClickableElement)
+    .filter((node) => {
+      const className = String(node.getAttribute("class") || "");
+      const rect = node.getBoundingClientRect();
+      const centerY = rect.top + rect.height / 2;
+      return className.includes("enter-icon-container")
+        && !className.includes("empty")
+        && rect.width >= 24
         && rect.width <= 72
         && rect.height >= 24
         && rect.height <= 72
@@ -851,6 +938,28 @@ function setContentEditableValue(input, value) {
     input.appendChild(document.createTextNode(value));
   }
   dispatchInputLikeEvent(input, "input", value);
+  dispatchBasicEvent(input, "change");
+}
+
+function focusAndSetKimiInputValue(input, value) {
+  if (input instanceof HTMLTextAreaElement || input instanceof HTMLInputElement) {
+    focusAndSetInputValue(input, value);
+    return;
+  }
+  input.focus();
+  const selection = window.getSelection?.();
+  if (selection) {
+    const range = document.createRange();
+    range.selectNodeContents(input);
+    selection.removeAllRanges();
+    selection.addRange(range);
+  }
+  const inserted = document.execCommand?.("insertText", false, value);
+  if (!inserted || inputText(input).trim() !== value.trim()) {
+    input.textContent = "";
+    input.appendChild(document.createTextNode(value));
+  }
+  dispatchBasicEvent(input, "input");
   dispatchBasicEvent(input, "change");
 }
 
