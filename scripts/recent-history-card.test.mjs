@@ -64,3 +64,9 @@ assert.match(styles, /\.recent-card-page-dot\.active\s*\{[\s\S]*background:\s*#f
 assert.match(styles, /\.recent-card-bottom-bar\s*\{[\s\S]*align-items:\s*center;[\s\S]*justify-content:\s*space-between;/, "Drawer content should align indicators and switch controls on one horizontal row.");
 assert.match(styles, /\.recent-folder-page-title-snapshot\s*\{[\s\S]*z-index:\s*3;[\s\S]*pointer-events:\s*none;/, "Outgoing recent page title snapshots need their own layer above the incoming title.");
 assert.match(styles, /\.recent-folder-logo\.site-icon-generic-fallback,[\s\S]*padding:\s*0;[\s\S]*object-fit:\s*cover;/, "Recent generic fallback icons must render the complete fallback SVG without an extra padded tile.");
+const adaptiveIconRefresh = source.match(/function refreshAdaptiveSiteIcons\(\) \{[\s\S]*?\n\}/)?.[0] || "";
+assert.match(
+  adaptiveIconRefresh,
+  /img\[data-icon-tile="brand"\]\[data-site-url\][\s\S]*if \(!source\)[\s\S]*applySiteIcon\(icon, site\);/,
+  "Theme switching must recover and refresh cached recent icons that predate source metadata."
+);

@@ -75,14 +75,14 @@ assert.match(
 
 assert.match(
   source,
-  /async function discoverRemoteBrandIconDataUrl\(url\) \{[\s\S]*if \(!siteIconIndexLoaded \|\| !siteKey \|\| localIconForUrl\(parsedUrl\.href\)\) \{[\s\S]*return "";/,
-  "Remote brand discovery should wait for the local icon index so deployed local icons do not trigger noisy provider probes."
+  /async function discoverRemoteBrandIconDataUrl\(url\) \{[\s\S]*const localIcon = localIconForUrl\(parsedUrl\.href\);[\s\S]*localIcon && !localIconNeedsRemoteBrandColor\(siteKey, localIcon\)[\s\S]*return "";/,
+  "Remote brand discovery should wait for the local icon index and skip deployed local icons unless they need cloud VI-color hydration."
 );
 
 assert.match(
   source,
-  /const shouldRefreshRemoteBrand = !localIcon && siteIcon && !siteIconIsRemoteBrand;[\s\S]*if \(shouldRefreshRemoteBrand\) \{[\s\S]*refreshRemoteBrandIcon\(icon, site\);/,
-  "Stored site ico renders should still allow the remote SVG branch to replace them after the local icon index is ready."
+  /const shouldRefreshRemoteBrand = localIcon[\s\S]*localIconNeedsRemoteBrandColor\(siteGroupKey\(safeUrl\(site\.url\)\), localIcon\)[\s\S]*siteIcon && !siteIconIsRemoteBrand;[\s\S]*if \(shouldRefreshRemoteBrand\) \{[\s\S]*refreshRemoteBrandIcon\(icon, site\);/,
+  "Stored site ico renders and local SVGs missing VI color should still allow the remote SVG branch after the local icon index is ready."
 );
 
 assert.match(
