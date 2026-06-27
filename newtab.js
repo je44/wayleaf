@@ -475,7 +475,7 @@ const SETTINGS_ENGINE_ICON_STYLES = Object.freeze({
   glm: { mode: "mask", tile: "#ffffff", glyph: "#3859ff" },
   instagram: { mode: "original", tile: "#ffffff" },
   jimeng: { mode: "original", tile: "#000000" },
-  kimi: { mode: "mask", tile: "#ffffff", glyph: "#111827" },
+  kimi: { mode: "original", tile: "#000000" },
   xiaohongshu: { mode: "mask", tile: "#ff2442", glyph: "#ffffff" },
   zhihu: { mode: "mask", tile: "#0084ff", glyph: "#ffffff" }
 });
@@ -4135,7 +4135,7 @@ function createEngineSettingsCard({ engine, meta, actionLabel, current = false }
 
 function createSettingsEngineIcon(engine) {
   const engineUrl = engine.searchUrl || engine.directUrl || "";
-  const explicitIcon = doubaoAiIconUrl(engine);
+  const explicitIcon = engine.id === "kimi" ? `${SITE_ICON_DIRECTORY}/kimi.svg` : doubaoAiIconUrl(engine);
   const iconSource = explicitIcon || localIconForUrl(engineUrl) || GENERIC_SITE_FALLBACK_ICON;
   const style = SETTINGS_ENGINE_ICON_STYLES[engine.id] || {};
   const label = searchEngineLabel(engine);

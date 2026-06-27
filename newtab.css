@@ -3497,6 +3497,13 @@ html.theme-transitioning .search-workbench[data-ai-exiting] .favorite-icon {
   overflow: hidden;
 }
 
+.settings-engine-icon[data-engine-icon="doubao"],
+.settings-engine-icon[data-engine-icon="kimi"] {
+  box-shadow:
+    inset 0 0 0 1px rgb(20 27 24 / 0.1),
+    0 0 0 1px rgb(20 27 24 / 0.1);
+}
+
 .settings-engine-icon-image,
 .settings-engine-icon-mask {
   display: block;

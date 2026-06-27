@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 
 const source = readFileSync(new URL("../newtab.js", import.meta.url), "utf8");
 const html = readFileSync(new URL("../newtab.html", import.meta.url), "utf8");
+const css = readFileSync(new URL("../newtab.css", import.meta.url), "utf8");
 
 assert.match(
   html,
@@ -34,6 +35,18 @@ assert.match(
   "Platform search settings should render all built-in platform targets."
 );
 
+assert.match(
+  source,
+  /const explicitIcon = engine\.id === "kimi" \? `\$\{SITE_ICON_DIRECTORY\}\/kimi\.svg` : doubaoAiIconUrl\(engine\);/,
+  "Kimi's settings icon should use the updated local SVG directly instead of waiting for the async icon index."
+);
+
+assert.match(
+  css,
+  /\.settings-engine-icon\[data-engine-icon="doubao"\],\s*\.settings-engine-icon\[data-engine-icon="kimi"\]\s*\{[\s\S]*box-shadow:\s*inset 0 0 0 1px rgb\(20 27 24 \/ 0\.1\),\s*0 0 0 1px rgb\(20 27 24 \/ 0\.1\);/,
+  "Doubao and Kimi settings icons should keep the same visible shell stroke as other engine icons."
+);
+
 [
   ["doubao", /doubao:\s*\{\s*mode:\s*"original",\s*tile:\s*"#ffffff"\s*\}/],
   ["instagram", /instagram:\s*\{\s*mode:\s*"original",\s*tile:\s*"#ffffff"\s*\}/],
@@ -41,6 +54,7 @@ assert.match(
   ["gemini", /gemini:\s*\{\s*mode:\s*"original",\s*tile:\s*"#ffffff"\s*\}/],
   ["glm", /glm:\s*\{\s*mode:\s*"mask",\s*tile:\s*"#ffffff",\s*glyph:\s*"#3859ff"\s*\}/],
   ["jimeng", /jimeng:\s*\{\s*mode:\s*"original",\s*tile:\s*"#000000"\s*\}/],
+  ["kimi", /kimi:\s*\{\s*mode:\s*"original",\s*tile:\s*"#000000"\s*\}/],
   ["xiaohongshu", /xiaohongshu:\s*\{\s*mode:\s*"mask",\s*tile:\s*"#ff2442",\s*glyph:\s*"#ffffff"\s*\}/],
   ["zhihu", /zhihu:\s*\{\s*mode:\s*"mask",\s*tile:\s*"#0084ff",\s*glyph:\s*"#ffffff"\s*\}/]
 ].forEach(([engineId, pattern]) => {
