@@ -249,6 +249,17 @@
   background: var(--site-icon-tile-dark, var(--site-icon-tile, #202922));
 }
 
+:root[data-theme="dark"] .recent-folder-logo,
+:root[data-theme="dark"] .favorite-icon-shell,
+:root[data-theme="dark"] .search-suggestion-icon,
+:root[data-theme="dark"] .site-icon:not(.favorite-icon) {
+  box-shadow: var(--site-icon-edge-dark, var(--custom-site-icon-shadow));
+}
+
+:root[data-theme="dark"] .ai-engine-pill img.site-icon {
+  box-shadow: none;
+}
+
 .ai-engine-pill img,
 .recent-folder-logo,
 .favorite-icon-shell,
@@ -5176,7 +5187,7 @@ select:focus-visible {
 .favorite-icon-shell,
 .search-suggestion-icon,
 .site-icon:not(.favorite-icon) {
-  box-shadow: var(--custom-site-icon-shadow);
+  box-shadow: var(--site-icon-edge-light, var(--custom-site-icon-shadow));
 }
 
 .ai-engine-pill img.site-icon {
@@ -5621,7 +5632,7 @@ select:focus-visible {
 .favorite-icon-shell,
 .search-suggestion-icon,
 .site-icon:not(.favorite-icon) {
-  box-shadow: var(--custom-site-icon-shadow);
+  box-shadow: var(--site-icon-edge-light, var(--custom-site-icon-shadow));
 }
 
 .ai-engine-pill img.site-icon {

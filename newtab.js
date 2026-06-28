@@ -8154,6 +8154,16 @@ function nearBlackBrandColor(color) {
   return Boolean(normalized && relativeLuminance(normalized) < 0.04);
 }
 
+function blackishCarrierColor(color) {
+  const normalized = normalizeHexColor(color);
+  if (!normalized) {
+    return false;
+  }
+  const [red, green, blue] = hexToRgb(normalized).map((channel) => channel / 255);
+  const chroma = Math.max(red, green, blue) - Math.min(red, green, blue);
+  return relativeLuminance(normalized) < 0.045 && chroma < 0.12;
+}
+
 function remoteBrandSvgMonochromeBrandColor(svg, palette = extractSvgColorPalette(svg)) {
   if (!remoteBrandSvgIsMonochrome(svg)) {
     return "";
@@ -10127,8 +10137,17 @@ function applyIconTile(icon, tileMode, tileColors, hasLocalIcon) {
   icon.style.setProperty("--site-icon-tile", tileColors.light);
   icon.style.setProperty("--site-icon-tile-light", tileColors.light);
   icon.style.setProperty("--site-icon-tile-dark", tileColors.dark);
+  applyIconTileEdge(icon, tileColors);
   icon.classList.toggle("site-icon-local", Boolean(hasLocalIcon));
   applyIconTileToShell(icon, tileMode, tileColors);
+}
+
+function applyIconTileEdge(node, tileColors) {
+  node.style.setProperty("--site-icon-edge-light", "var(--custom-site-icon-shadow)");
+  node.style.setProperty(
+    "--site-icon-edge-dark",
+    blackishCarrierColor(tileColors.dark) ? "none" : "var(--custom-site-icon-shadow)"
+  );
 }
 
 function applyIconTileToShell(icon, tileMode, tileColors) {
@@ -10140,6 +10159,7 @@ function applyIconTileToShell(icon, tileMode, tileColors) {
   shell.style.setProperty("--site-icon-tile", tileColors.light);
   shell.style.setProperty("--site-icon-tile-light", tileColors.light);
   shell.style.setProperty("--site-icon-tile-dark", tileColors.dark);
+  applyIconTileEdge(shell, tileColors);
 }
 
 function iconSourceCanUseBitmapTileFusion(source) {

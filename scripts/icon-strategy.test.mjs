@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { readdirSync, readFileSync } from "node:fs";
 
 const source = readFileSync(new URL("../newtab.js", import.meta.url), "utf8");
+const cssSource = readFileSync(new URL("../newtab.css", import.meta.url), "utf8");
 const siteIconIndex = JSON.parse(readFileSync(new URL("../icons/sites/index.json", import.meta.url), "utf8"));
 const siteIconFiles = new Set(readdirSync(new URL("../icons/sites/", import.meta.url)).filter((fileName) => fileName !== "index.json"));
 const alibabaSvgSource = readFileSync(new URL("../icons/sites/alibabadotcom.svg", import.meta.url), "utf8");
@@ -152,6 +153,16 @@ assert.match(source, /function renderSharedSiteIcon[\s\S]*cachedFirstPaintIconRe
 assert.match(source, /function applySiteIcon[\s\S]*iconSourceCanUseBitmapTileFusion\(iconSource\)[\s\S]*applyFaviconMatchedTile\(icon\);/, "Local and stored bitmap site icons must enter the shared favicon tile sampler.");
 assert.match(source, /function applyIconCandidate[\s\S]*iconSourceCanUseBitmapTileFusion\(nextIcon\)[\s\S]*applyFaviconMatchedTile\(icon\);/, "Fallback local and cloud bitmap icon candidates must enter the shared favicon tile sampler.");
 assert.match(source, /function applyFaviconMatchedTile[\s\S]*iconSourceCanUseBitmapTileFusion\(candidateToken\)[\s\S]*icon\.dataset\.iconTile !== "plain" && icon\.dataset\.iconTile !== "brand"/, "Bitmap fusion should accept both plain favicon tiles and local brand bitmap tiles.");
+assert.match(source, /function applyIconTileEdge[\s\S]*blackishCarrierColor\(tileColors\.dark\) \? "none" : "var\(--custom-site-icon-shadow\)"/, "Site icon edges must hide only blackish dark-mode carriers.");
+assert.match(cssSource, /\.recent-folder-logo,[\s\S]*\.site-icon:not\(\.favorite-icon\) \{\s*box-shadow: var\(--site-icon-edge-light, var\(--custom-site-icon-shadow\)\);/m, "Shared site icon edges must read the light-theme edge variable.");
+assert.match(cssSource, /:root\[data-theme="dark"\] \.recent-folder-logo,[\s\S]*:root\[data-theme="dark"\] \.site-icon:not\(\.favorite-icon\) \{\s*box-shadow: var\(--site-icon-edge-dark, var\(--custom-site-icon-shadow\)\);/m, "Shared site icon edges must read the dark-theme edge variable.");
+assert.match(cssSource, /\.ai-engine-pill img\.site-icon \{\s*box-shadow: none;\s*\}/m, "Search AI engine pill icons must stay outside shared site icon edge rendering.");
+assert.match(cssSource, /:root\[data-theme="dark"\] \.ai-engine-pill img\.site-icon \{\s*box-shadow: none;\s*\}/m, "Search AI engine pill icons must stay outside dark-mode shared site icon edge rendering.");
+assert.equal(
+  /\.settings-engine-icon[^{]*\{[^}]*--site-icon-edge/.test(cssSource),
+  false,
+  "Settings engine icons must not consume shared site icon edge variables."
+);
 assert.match(source, /function applySampledFaviconTile[\s\S]*const tileMode = icon\.dataset\.iconTile === "brand" \? "brand" : "plain";[\s\S]*fuseEmbeddedFaviconTile\(icon, sample, color, tileColors\);/, "Sampled favicon tiles must preserve local bitmap markers and run embedded tile fusion.");
 
 function normalizeHexColor(tileColor) {
@@ -1257,6 +1268,16 @@ function remoteBrandColorLooksNeutral(color) {
 function nearBlackBrandColor(color) {
   const normalized = normalizeHexColor(color);
   return Boolean(normalized && relativeLuminance(normalized) < 0.04);
+}
+
+function blackishCarrierColor(color) {
+  const normalized = normalizeHexColor(color);
+  if (!normalized) {
+    return false;
+  }
+  const [red, green, blue] = hexToRgb(normalized).map((channel) => channel / 255);
+  const chroma = Math.max(red, green, blue) - Math.min(red, green, blue);
+  return relativeLuminance(normalized) < 0.045 && chroma < 0.12;
 }
 
 function remoteBrandSvgBrandColor(svg, options = {}) {
@@ -2395,7 +2416,16 @@ function applyIconTileForTest(icon, tileMode, tileColors, hasLocalIcon) {
   icon.style.setProperty("--site-icon-tile", tileColors.light);
   icon.style.setProperty("--site-icon-tile-light", tileColors.light);
   icon.style.setProperty("--site-icon-tile-dark", tileColors.dark);
+  applyIconTileEdgeForTest(icon, tileColors);
   icon.classList.toggle("site-icon-local", Boolean(hasLocalIcon));
+}
+
+function applyIconTileEdgeForTest(icon, tileColors) {
+  icon.style.setProperty("--site-icon-edge-light", "var(--custom-site-icon-shadow)");
+  icon.style.setProperty(
+    "--site-icon-edge-dark",
+    blackishCarrierColor(tileColors.dark) ? "none" : "var(--custom-site-icon-shadow)"
+  );
 }
 
 function applySiteIconTileForTest(icon, site, iconPath = "") {
@@ -2623,6 +2653,27 @@ assert.equal(localBrandGlyphColorForTile("#f8fafc", "#ffcc00"), "#b39508", "Low-
 assert.equal(localBrandGlyphColorForTile(brandIconLightCarrierColorForTest("#1ed760"), "#1ed760"), "#ffffff", "Spotify-like mask SVGs use white glyphs on readable VI carriers.");
 assert.equal(localBrandGlyphColorForTile(brandIconLightCarrierColorForTest("#ffcc00"), "#ffcc00"), "#ffffff", "Yellow mask SVGs darken the VI carrier and keep a white glyph.");
 assert.equal(localBrandGlyphColorForTile("#f8fafc", "#362d59"), "#362d59", "Remote cached dark glyphs recover the brand color on night light tiles when local SVGs would.");
+
+{
+  const blackCarrierIcon = new TestIcon();
+  applyIconTileForTest(blackCarrierIcon, "brand", { light: "#000000", dark: "#000000" }, true);
+  assert.equal(blackCarrierIcon.style.getPropertyValue("--site-icon-edge-light"), "var(--custom-site-icon-shadow)", "Blackish carriers keep a defining edge in light mode.");
+  assert.equal(blackCarrierIcon.style.getPropertyValue("--site-icon-edge-dark"), "none", "Blackish carriers hide the redundant edge in dark mode.");
+}
+
+{
+  const darkBrandIcon = new TestIcon();
+  applyIconTileForTest(darkBrandIcon, "brand", { light: "#001a66", dark: "#001a66" }, true);
+  assert.equal(darkBrandIcon.style.getPropertyValue("--site-icon-edge-light"), "var(--custom-site-icon-shadow)", "Dark saturated brand carriers keep the light-mode edge.");
+  assert.equal(darkBrandIcon.style.getPropertyValue("--site-icon-edge-dark"), "var(--custom-site-icon-shadow)", "Dark saturated brand carriers are not treated as blackish grayscale.");
+}
+
+{
+  const paperCarrierIcon = new TestIcon();
+  applyIconTileForTest(paperCarrierIcon, "brand", { light: "#ffffff", dark: "#ffffff" }, true);
+  assert.equal(paperCarrierIcon.style.getPropertyValue("--site-icon-edge-light"), "var(--custom-site-icon-shadow)", "Paper carriers keep the light-mode edge.");
+  assert.equal(paperCarrierIcon.style.getPropertyValue("--site-icon-edge-dark"), "var(--custom-site-icon-shadow)", "Paper carriers keep the dark-mode edge.");
+}
 
 {
   const icon = new TestIcon();
