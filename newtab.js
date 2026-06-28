@@ -106,6 +106,8 @@ const MAX_BOOKMARK_PORTAL_ITEMS = 120;
 const MAX_BOOKMARK_HISTORY_ITEMS = 180;
 const BOOKMARK_HISTORY_LOOKBACK_DAYS = 45;
 const RECENT_BOOKMARK_LOOKBACK_MS = 3 * 24 * 60 * 60 * 1000;
+const BOOKMARK_ICON_RENDER_QUIET_MS = 120;
+const BOOKMARK_ICON_RENDER_SETTLE_TIMEOUT_MS = 2200;
 const ISSUE_FEEDBACK_URL = "https://github.com/je44/wayleaf/issues";
 const WAYLEAF_CONFIG_EXPORT_VERSION = 1;
 const CUSTOMIZABLE_SETTINGS_STORAGE_KEYS = [
@@ -12545,11 +12547,95 @@ async function renderSelectedBookmarkFolder() {
     groupBookmarkSitesByInitial(groupedSites).forEach((group) => {
       fragment.appendChild(createBookmarkInitialSection(group, { favoriteKeys, favoriteIconMap, iconRenders }));
     });
-    bookmarkGrid.replaceChildren(fragment);
+    bookmarkGrid.replaceChildren(await prepareBookmarkRouteFragment(fragment));
   } catch (error) {
     console.warn("Failed to load bookmarks", error);
     renderBookmarkEmptyState(t("bookmarkReadFailed"));
   }
+}
+
+async function prepareBookmarkRouteFragment(fragment) {
+  const staging = document.createElement("div");
+  staging.style.position = "fixed";
+  staging.style.inset = "0 auto auto -10000px";
+  staging.style.width = "1px";
+  staging.style.height = "1px";
+  staging.style.overflow = "hidden";
+  staging.style.opacity = "0";
+  staging.style.pointerEvents = "none";
+  staging.setAttribute("aria-hidden", "true");
+  staging.appendChild(fragment);
+  document.body.appendChild(staging);
+  try {
+    await waitForBookmarkRouteIcons(staging);
+    const ready = document.createDocumentFragment();
+    ready.append(...staging.childNodes);
+    return ready;
+  } finally {
+    staging.remove();
+  }
+}
+
+async function waitForBookmarkRouteIcons(root) {
+  await Promise.allSettled([...root.querySelectorAll(".bookmark-site-card img.site-icon")]
+    .map(waitForBookmarkRouteIcon));
+}
+
+function waitForBookmarkRouteIcon(icon) {
+  return new Promise((resolve) => {
+    let observer = null;
+    let quietTimer = 0;
+    let timeoutTimer = 0;
+    let finished = false;
+    const done = () => {
+      if (finished) {
+        return;
+      }
+      finished = true;
+      window.clearTimeout(quietTimer);
+      window.clearTimeout(timeoutTimer);
+      observer?.disconnect();
+      icon.removeEventListener("load", check);
+      icon.removeEventListener("error", check);
+      resolve();
+    };
+    const ready = () => {
+      if (!icon.isConnected) {
+        return true;
+      }
+      if (icon.dataset.iconDefaultProbe === "pending" || icon.dataset.iconDefaultRescue === "pending") {
+        return false;
+      }
+      return Boolean(icon.getAttribute("src")) && (icon.complete || icon.dataset.iconMissing === "true");
+    };
+    const check = () => {
+      window.clearTimeout(quietTimer);
+      if (ready()) {
+        quietTimer = window.setTimeout(done, BOOKMARK_ICON_RENDER_QUIET_MS);
+      }
+    };
+    observer = new MutationObserver(check);
+    observer.observe(icon, {
+      attributes: true,
+      attributeFilter: [
+        "src",
+        "class",
+        "style",
+        "data-icon-candidate",
+        "data-icon-source",
+        "data-icon-tile",
+        "data-icon-default-probe",
+        "data-icon-default-rescue",
+        "data-icon-fused-tile",
+        "data-icon-missing",
+        "data-remote-brand-icon-request"
+      ]
+    });
+    icon.addEventListener("load", check);
+    icon.addEventListener("error", check);
+    timeoutTimer = window.setTimeout(done, BOOKMARK_ICON_RENDER_SETTLE_TIMEOUT_MS);
+    check();
+  });
 }
 
 function renderBookmarkEmptyState(message) {

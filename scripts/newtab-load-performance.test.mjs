@@ -30,6 +30,7 @@ assert.match(
 );
 
 const initBody = source.match(/async function init\(\) \{([\s\S]*?)\n\}/)?.[1] || "";
+const createBookmarkSiteCardBody = source.match(/function createBookmarkSiteCard\(site, options = \{\}\) \{[\s\S]*?\n\}/)?.[0] || "";
 assert.match(
   html,
   /<html lang="en" class="[^"]*\blocale-hydrating\b[^"]*"/,
@@ -116,7 +117,7 @@ assert.match(
 
 assert.match(
   source,
-  /function cacheRenderedSiteIcon\(icon, site\)[\s\S]*iconRenders\[key\][\s\S]*source:[\s\S]*src,[\s\S]*tileLight,[\s\S]*tileDark/,
+  /function cacheRenderedSiteIcon\(icon, site\)[\s\S]*const src = icon\.getAttribute\("src"\)[\s\S]*const tileLight = icon\.style\.getPropertyValue\("--site-icon-tile-light"\)[\s\S]*const tileDark = icon\.style\.getPropertyValue\("--site-icon-tile-dark"\)[\s\S]*source: icon\.dataset\.iconSource/,
   "First-paint cache should preserve source metadata and reuse the existing icon algorithm's final rendered output."
 );
 
@@ -128,7 +129,7 @@ assert.match(
 
 assert.match(
   source,
-  /function applyFaviconSampleDecision\(icon, sample, options = \{\}\)[\s\S]*applySampledFaviconTile\(icon, sample, color, tileColors\);[\s\S]*cacheRenderedSiteIconFromContext\(icon\);/,
+  /function applyFaviconSampleDecision\(icon, sample, options = \{\}\)[\s\S]*applySampledFaviconTile\(icon, sample, color, tileColors[\s\S]*cacheRenderedSiteIconFromContext\(icon\);/,
   "Async favicon sampling should cache the settled tile after the existing color algorithm finishes."
 );
 
@@ -148,6 +149,24 @@ assert.match(
   source,
   /function createFavoriteSite\(site, index, options = \{\}\)[\s\S]*restoreFirstPaintIconRender[\s\S]*applySiteIcon/,
   "Favorite cards should restore cached icon output and retain the original icon algorithm as the cache-miss path."
+);
+
+assert.match(
+  source,
+  /function renderSelectedBookmarkFolder\(\)[\s\S]*bookmarkGrid\.replaceChildren\(await prepareBookmarkRouteFragment\(fragment\)\);/,
+  "Bookmark route content should be staged until its icons have settled instead of showing favicon rendering in place."
+);
+
+assert.match(
+  source,
+  /function waitForBookmarkRouteIcons\(root\) \{[\s\S]*root\.querySelectorAll\("\.bookmark-site-card img\.site-icon"\)/,
+  "Bookmark icon staging must stay scoped to second-level bookmark route cards."
+);
+
+assert.doesNotMatch(
+  createBookmarkSiteCardBody,
+  /cacheRenderedSiteIconOnLoad/,
+  "Bookmark route staging must not write second-level icon output into the shared first-paint icon cache."
 );
 
 assert.match(
