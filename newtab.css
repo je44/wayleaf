@@ -4932,10 +4932,6 @@ select:focus-visible {
   place-items: center;
 }
 
-.site-card.custom .site-icon {
-  box-shadow: none;
-}
-
 .site-card.custom:hover .site-remove,
 .site-card.custom:focus-within .site-remove {
   opacity: 1;
@@ -5173,6 +5169,17 @@ select:focus-visible {
   border-radius: 8px;
   background: var(--site-icon-tile-light, var(--site-icon-tile, #ffffff));
   object-fit: contain;
+  box-shadow: none;
+}
+
+.recent-folder-logo,
+.favorite-icon-shell,
+.search-suggestion-icon,
+.site-icon:not(.favorite-icon) {
+  box-shadow: var(--custom-site-icon-shadow);
+}
+
+.ai-engine-pill img.site-icon {
   box-shadow: none;
 }
 
@@ -5607,6 +5614,17 @@ select:focus-visible {
   border: 0;
   border-radius: 8px;
   background: var(--site-icon-tile-light, var(--site-icon-tile, #ffffff));
+  box-shadow: none;
+}
+
+.recent-folder-logo,
+.favorite-icon-shell,
+.search-suggestion-icon,
+.site-icon:not(.favorite-icon) {
+  box-shadow: var(--custom-site-icon-shadow);
+}
+
+.ai-engine-pill img.site-icon {
   box-shadow: none;
 }
 

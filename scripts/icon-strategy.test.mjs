@@ -5,9 +5,17 @@ const source = readFileSync(new URL("../newtab.js", import.meta.url), "utf8");
 const siteIconIndex = JSON.parse(readFileSync(new URL("../icons/sites/index.json", import.meta.url), "utf8"));
 const siteIconFiles = new Set(readdirSync(new URL("../icons/sites/", import.meta.url)).filter((fileName) => fileName !== "index.json"));
 const alibabaSvgSource = readFileSync(new URL("../icons/sites/alibabadotcom.svg", import.meta.url), "utf8");
+const alipaySvgSource = readFileSync(new URL("../icons/sites/alipay.svg", import.meta.url), "utf8");
+const antigravitySvgSource = readFileSync(new URL("../icons/sites/antigravity.svg", import.meta.url), "utf8");
 const chatgptSvgSource = readFileSync(new URL("../icons/sites/chatgpt.svg", import.meta.url), "utf8");
 const googleCalendarSvgSource = readFileSync(new URL("../icons/sites/googlecalendar.svg", import.meta.url), "utf8");
 const googleDocsSvgSource = readFileSync(new URL("../icons/sites/googledocs.svg", import.meta.url), "utf8");
+const doubaoSvgSource = readFileSync(new URL("../icons/sites/doubao.svg", import.meta.url), "utf8");
+const douyinSvgSource = readFileSync(new URL("../icons/sites/douyin.svg", import.meta.url), "utf8");
+const huggingfaceSvgSource = readFileSync(new URL("../icons/sites/huggingface.svg", import.meta.url), "utf8");
+const instagramSvgSource = readFileSync(new URL("../icons/sites/instagram.svg", import.meta.url), "utf8");
+const jimengSvgSource = readFileSync(new URL("../icons/sites/jimeng.svg", import.meta.url), "utf8");
+const kimiSvgSource = readFileSync(new URL("../icons/sites/kimi.svg", import.meta.url), "utf8");
 const zhihuSvgSource = readFileSync(new URL("../icons/sites/zhihu.svg", import.meta.url), "utf8");
 const linkedInSvgSource = readFileSync(new URL("../icons/sites/linkedin.svg", import.meta.url), "utf8");
 const grokSvgSource = readFileSync(new URL("../icons/sites/grok.svg", import.meta.url), "utf8");
@@ -19,7 +27,9 @@ const netflixSvgSource = readFileSync(new URL("../icons/sites/netflix.svg", impo
 const pinduoduoSvgSource = readFileSync(new URL("../icons/sites/pinduoduo.svg", import.meta.url), "utf8");
 const robloxSvgSource = readFileSync(new URL("../icons/sites/roblox.svg", import.meta.url), "utf8");
 const teamsSvgSource = readFileSync(new URL("../icons/sites/microsoftteams.svg", import.meta.url), "utf8");
+const tiktokSvgSource = readFileSync(new URL("../icons/sites/tiktok.svg", import.meta.url), "utf8");
 const tripdotcomSvgSource = readFileSync(new URL("../icons/sites/tripdotcom.svg", import.meta.url), "utf8");
+const vqqSvgSource = readFileSync(new URL("../icons/sites/vqq.svg", import.meta.url), "utf8");
 const wikipediaSvgSource = readFileSync(new URL("../icons/sites/wikipedia.svg", import.meta.url), "utf8");
 const whatsappSvgSource = readFileSync(new URL("../icons/sites/whatsapp.svg", import.meta.url), "utf8");
 const wechatSvgSource = readFileSync(new URL("../icons/sites/wechat.svg", import.meta.url), "utf8");
@@ -30,6 +40,8 @@ const availableSiteIconFiles = new Set(siteIconIndex);
 const BRAND_ICON_VI_CONTRAST_MIN = 2.75;
 const BRAND_ICON_DARK_MODE_CARRIER = "#f8fafc";
 const BRAND_ICON_LIGHT_MODE_DARK_CARRIER = "#102019";
+const BRAND_ICON_MULTICOLOR_PAPER_CARRIER = "#ffffff";
+const BRAND_ICON_MULTICOLOR_DARK_CARRIER = "#111827";
 const SITE_ICON_TILE_COLOR_BY_SITE_KEY_FOR_TEST = Object.freeze({
   "1688.com": "#ff6000",
   "aistudio.google.com": "#4285f4",
@@ -76,17 +88,6 @@ const SITE_ICON_TILE_COLOR_BY_SITE_KEY_FOR_TEST = Object.freeze({
   "xiaomimimo.com": "#000000",
   "zhihu.com": "#0084ff"
 });
-const MULTICOLOR_BRAND_ICON_SITE_KEYS_FOR_TEST = new Set([
-  "alipay.com",
-  "doubao.com",
-  "douyin.com",
-  "instagram.com",
-  "google.com",
-  "huggingface.co",
-  "jimeng.jianying.com",
-  "tiktok.com",
-  "v.qq.com"
-]);
 const ORIGINAL_ARTWORK_BRAND_TILE_SITE_KEYS_FOR_TEST = new Set([
   "developer.mozilla.org",
   "jd.com"
@@ -121,7 +122,7 @@ assert.doesNotMatch(source, /function remoteBrandGlyphColorForTile/, "Remote SVG
 assert.match(source, /isSvgDataUrl\(source\)[\s\S]*return localBrandGlyphColorForTile\(tileColor, brandColor\);/, "Remote SVG data URLs must use the same glyph strategy as local SVGs.");
 assert.equal(source.includes("`data-wayleaf-" + "tile-light="), false, "Remote SVG descriptors must not cache display tile decisions separately from local SVG rendering.");
 assert.equal(source.includes("`data-wayleaf-" + "glyph-light="), false, "Remote SVG descriptors must not cache display glyph decisions separately from local SVG rendering.");
-assert.match(source, /if \(iconPath && \(tileColor \|\| originalSvgColor\)\) \{[\s\S]*tileColors = brandIconTileColors\(tileColor \|\| originalSvgColor, siteKey, iconPath\);/, "Remote SVG data URLs must use the same tile strategy entrypoint as local SVGs.");
+assert.match(source, /if \(iconPath && \(tileColor \|\| originalSvgColor \|\| gradientSvgColor\)\) \{[\s\S]*tileColors = brandIconTileColors\(tileColor \|\| originalSvgColor \|\| gradientSvgColor, siteKey, iconPath\);/, "Remote SVG data URLs must use the same tile strategy entrypoint as local SVGs.");
 assert.match(source, /function remoteBrandSvgHasComplexPaint/, "Remote SVG classification must reject complex paint sources.");
 assert.match(source, /function remoteBrandSvgQuality/, "Remote SVGs must pass a quality gate before being cached.");
 assert.match(source, /function remoteBrandIconRankedCandidates/, "Remote slug candidates must be ranked before fetching.");
@@ -178,6 +179,36 @@ function relativeLuminance(color) {
 function contrastRatio(colorA, colorB) {
   const [lighter, darker] = [relativeLuminance(colorA), relativeLuminance(colorB)].sort((a, b) => b - a);
   return (lighter + 0.05) / (darker + 0.05);
+}
+
+function hexColorStatsForTest(tileColor) {
+  const color = normalizeHexColor(tileColor);
+  if (!color) {
+    return null;
+  }
+  const [red, green, blue] = hexToRgb(color).map((channel) => channel / 255);
+  const max = Math.max(red, green, blue);
+  const min = Math.min(red, green, blue);
+  const delta = max - min;
+  let hue = 0;
+  if (delta) {
+    if (max === red) {
+      hue = 60 * (((green - blue) / delta) % 6);
+    } else if (max === green) {
+      hue = 60 * ((blue - red) / delta + 2);
+    } else {
+      hue = 60 * ((red - green) / delta + 4);
+    }
+    if (hue < 0) {
+      hue += 360;
+    }
+  }
+  return {
+    hue,
+    luminance: relativeLuminance(color),
+    lightContrast: contrastRatio(color, "#ffffff"),
+    darkContrast: contrastRatio(color, "#102019")
+  };
 }
 
 function readableIconGlyphColor(tileColor) {
@@ -238,6 +269,19 @@ function assertReadableIconPair(tileColor, glyphColor, message, minContrast = BR
     contrastRatio(tileColor, glyphColor) >= minContrast,
     `${message}: ${tileColor} on ${glyphColor} contrast ${contrastRatio(tileColor, glyphColor).toFixed(2)}`
   );
+}
+
+function assertPaletteCarrierSeparatedForTest(iconPath, brandColor, carrierColor, mode, message) {
+  const palette = originalSvgVisiblePaletteForTest(brandColor, iconPath);
+  assert.ok(palette.length > 1, `${message}: SVG palette must be multicolor`);
+  assert.ok(
+    [BRAND_ICON_MULTICOLOR_PAPER_CARRIER, BRAND_ICON_MULTICOLOR_DARK_CARRIER].includes(carrierColor),
+    `${message}: ${carrierColor} must use the neutral app-icon carrier system`
+  );
+  const expected = paletteNeedsDarkAppIconCarrierForTest(palette)
+    ? BRAND_ICON_MULTICOLOR_DARK_CARRIER
+    : BRAND_ICON_MULTICOLOR_PAPER_CARRIER;
+  assert.equal(carrierColor, expected, `${message}: carrier must follow the paper-default design rule`);
 }
 
 function remoteBrandIconSlug(value) {
@@ -388,10 +432,17 @@ function remoteProviderCanRunForSiteKeyForTest(siteKey) {
 }
 
 function remoteBrandSvgHasComplexPaint(svg) {
-  const text = String(svg || "");
-  return /<(?:linearGradient|radialGradient|meshgradient|pattern|filter|mask)\b/i.test(text)
-    || /\s(?:fill|stroke)\s*=\s*(["'])\s*url\(/i.test(text)
-    || /(?:fill|stroke)\s*:\s*url\(/i.test(text);
+  return remoteBrandSvgHasComplexPaintAnalysisForTest(svgPaintAnalysis(svg));
+}
+
+function remoteBrandSvgHasComplexPaintAnalysisForTest(analysis) {
+  return analysis.paintServerColors.length > 1
+    || (analysis.paintServerColors.length > 0 && analysis.visibleColors.length > 1)
+    || (analysis.hasEffectPaintServer && analysis.visibleColors.length > 1);
+}
+
+function remoteBrandSvgUsesPaintServer(svg) {
+  return svgPaintAnalysis(svg).usesPaintServer;
 }
 
 function remoteBrandSvgGeometry(svg) {
@@ -500,12 +551,17 @@ function remoteBrandIconMissCacheIsFresh(entry, ttl, now) {
 
 function remoteBrandSvgDescriptor(svg, options = {}) {
   const brandColor = normalizeHexColor(options.brandColor || "") || "";
-  const isMonochrome = remoteBrandSvgIsMonochrome(svg);
-  const renderMode = isMonochrome ? "mask" : "original";
+  const analysis = svgPaintAnalysis(svg);
+  const isMonochrome = !analysis.usesPaintServer && analysis.visibleColors.length <= 1;
+  const renderMode = remoteBrandSvgHasComplexPaintAnalysisForTest(analysis)
+    ? "gradient"
+    : isMonochrome ? "mask" : "original";
   return {
     brandColor,
     isMonochrome,
     renderMode,
+    visibleColors: analysis.visibleColors,
+    embeddedCarrierColor: svgEmbeddedCarrierColorForTest(svg, analysis),
     qualityScore: Math.max(0, Math.min(100, Math.round(Number(options.qualityScore || 0))))
   };
 }
@@ -520,6 +576,8 @@ function remoteBrandSvgCacheStrategy(icon) {
     brandColor: descriptor.brandColor,
     renderMode: descriptor.renderMode,
     isMonochrome: descriptor.isMonochrome,
+    visibleColors: descriptor.visibleColors || [],
+    embeddedCarrierColor: descriptor.embeddedCarrierColor || "",
     qualityScore: descriptor.qualityScore
   };
 }
@@ -543,6 +601,8 @@ function remoteBrandSvgDescriptorFromSource(source) {
     brandColor: normalizeHexColor(attr("brand-color")),
     isMonochrome: attr("monochrome") === "true",
     renderMode: attr("render-mode") || "mask",
+    visibleColors: svgPaletteDataAttributeColors(attr("visible-colors")),
+    embeddedCarrierColor: normalizeHexColor(attr("embedded-carrier")),
     qualityScore: Number(attr("quality") || 0)
   };
 }
@@ -550,20 +610,284 @@ function remoteBrandSvgDescriptorFromSource(source) {
 function prepareRemoteBrandSvgForTest(svg, options = {}) {
   const descriptor = remoteBrandSvgDescriptor(svg, options);
   const color = descriptor.brandColor;
+  const visibleColorAttr = svgPaletteDataAttribute(descriptor.visibleColors);
+  const embeddedCarrierAttr = descriptor.embeddedCarrierColor || "";
   return String(svg || "").trim().replace(/<svg\b([^>]*)>/i, (match, attrs) => {
     const brandAttr = color ? ` data-wayleaf-brand-color="${color}"` : "";
+    const visibleColorsAttr = visibleColorAttr ? ` data-wayleaf-visible-colors="${visibleColorAttr}"` : "";
+    const embeddedCarrierColorAttr = embeddedCarrierAttr ? ` data-wayleaf-embedded-carrier="${embeddedCarrierAttr}"` : "";
     const metadataAttrs = [
       `data-wayleaf-remote-brand="true"`,
       `data-wayleaf-monochrome="${descriptor.isMonochrome ? "true" : "false"}"`,
       `data-wayleaf-render-mode="${descriptor.renderMode}"`,
       `data-wayleaf-quality="${descriptor.qualityScore}"`
     ];
-    return `<svg${attrs} ${metadataAttrs.join(" ")}${brandAttr}>`;
+    return `<svg${attrs} ${metadataAttrs.join(" ")}${brandAttr}${visibleColorsAttr}${embeddedCarrierColorAttr}>`;
   });
 }
 
+function svgEmbeddedCarrierColorForTest(svg, analysis = svgPaintAnalysis(svg)) {
+  if (uniqueNormalizedHexColorsForTest(analysis.visibleColors).length <= 1) {
+    return "";
+  }
+  const viewBox = svgViewBoxForTest(String(svg || ""));
+  if (!viewBox) {
+    return "";
+  }
+  const shape = String(svg || "").match(/<(path|rect)\b([^>]*)>/i);
+  if (!shape) {
+    return "";
+  }
+  const attrs = svgAttributesForTest(shape[2]);
+  const color = normalizeSvgHexColor(attrs.fill || svgStyleDeclarationPropertiesForTest(attrs.style || "").fill);
+  if (!color) {
+    return "";
+  }
+  const rounded = shape[1].toLowerCase() === "rect"
+    ? svgRectCoversViewBoxWithEqualRadiusForTest(attrs, viewBox)
+    : svgPathCoversViewBoxWithEqualRadiusForTest(attrs.d || "", viewBox);
+  return rounded ? color : "";
+}
+
+function svgViewBoxForTest(svg) {
+  const match = String(svg || "").match(/<svg\b[^>]*\sviewBox=(["'])([^"']+)\1/i);
+  const values = match?.[2]?.trim().split(/[\s,]+/).map(Number) || [];
+  return values.length === 4 && values.every(Number.isFinite)
+    ? { x: values[0], y: values[1], width: values[2], height: values[3] }
+    : null;
+}
+
+function svgRectCoversViewBoxWithEqualRadiusForTest(attrs, viewBox) {
+  const x = Number(attrs.x || 0);
+  const y = Number(attrs.y || 0);
+  const width = Number(attrs.width || viewBox.width);
+  const height = Number(attrs.height || viewBox.height);
+  const rx = Number(attrs.rx || attrs.ry || 0);
+  const ry = Number(attrs.ry || attrs.rx || 0);
+  return Math.abs(x - viewBox.x) <= 0.01
+    && Math.abs(y - viewBox.y) <= 0.01
+    && Math.abs(width - viewBox.width) <= 0.01
+    && Math.abs(height - viewBox.height) <= 0.01
+    && rx > 0
+    && Math.abs(rx - ry) <= 0.01;
+}
+
+function svgPathCoversViewBoxWithEqualRadiusForTest(d, viewBox) {
+  const segments = svgPathSegmentsForTest(d);
+  if (!segments.length) {
+    return false;
+  }
+  const points = segments.flatMap((segment) => segment.points);
+  const xs = points.map((point) => point.x);
+  const ys = points.map((point) => point.y);
+  const roundedCornerRadii = svgPathEqualCornerRadiiForTest(segments, viewBox);
+  return Math.abs(Math.min(...xs) - viewBox.x) <= 0.01
+    && Math.abs(Math.min(...ys) - viewBox.y) <= 0.01
+    && Math.abs(Math.max(...xs) - (viewBox.x + viewBox.width)) <= 0.01
+    && Math.abs(Math.max(...ys) - (viewBox.y + viewBox.height)) <= 0.01
+    && roundedCornerRadii.length === 4;
+}
+
+function svgPathSegmentsForTest(d) {
+  const tokens = [...String(d || "").matchAll(/[AaCcHhLlMmQqSsTtVvZz]|[-+]?(?:\d*\.\d+|\d+\.?)(?:e[-+]?\d+)?/gi)].map((match) => match[0]);
+  const segments = [];
+  let index = 0;
+  let command = "";
+  let point = { x: 0, y: 0 };
+  let startPoint = { x: 0, y: 0 };
+  let lastControl = null;
+  const isCommand = (value) => /^[AaCcHhLlMmQqSsTtVvZz]$/.test(value || "");
+  const hasNumbers = (count) => tokens.slice(index, index + count).length === count
+    && tokens.slice(index, index + count).every((token) => !isCommand(token));
+  const read = () => Number(tokens[index++]);
+  const skipInvalidPathToken = () => {
+    if (index < tokens.length && !isCommand(tokens[index])) {
+      index += 1;
+    } else {
+      command = "";
+    }
+  };
+  const makePoint = (x, y, relative) => ({
+    x: relative ? point.x + x : x,
+    y: relative ? point.y + y : y
+  });
+  const push = (type, end, extraPoints = [], extra = {}) => {
+    segments.push({ type, start: point, end, points: [point, ...extraPoints, end], ...extra });
+    point = end;
+  };
+  while (index < tokens.length) {
+    if (isCommand(tokens[index])) {
+      command = tokens[index++];
+    }
+    if (!command) {
+      break;
+    }
+    const relative = command === command.toLowerCase();
+    switch (command.toUpperCase()) {
+      case "M": {
+        if (!hasNumbers(2)) {
+          return segments;
+        }
+        point = makePoint(read(), read(), relative);
+        startPoint = point;
+        command = relative ? "l" : "L";
+        lastControl = null;
+        break;
+      }
+      case "L":
+        if (!hasNumbers(2)) {
+          skipInvalidPathToken();
+          break;
+        }
+        while (hasNumbers(2)) {
+          push("L", makePoint(read(), read(), relative));
+          lastControl = null;
+        }
+        break;
+      case "H":
+        if (!hasNumbers(1)) {
+          skipInvalidPathToken();
+          break;
+        }
+        while (hasNumbers(1)) {
+          const x = relative ? point.x + read() : read();
+          push("L", { x, y: point.y });
+          lastControl = null;
+        }
+        break;
+      case "V":
+        if (!hasNumbers(1)) {
+          skipInvalidPathToken();
+          break;
+        }
+        while (hasNumbers(1)) {
+          const y = relative ? point.y + read() : read();
+          push("L", { x: point.x, y });
+          lastControl = null;
+        }
+        break;
+      case "C":
+        if (!hasNumbers(6)) {
+          skipInvalidPathToken();
+          break;
+        }
+        while (hasNumbers(6)) {
+          const control1 = makePoint(read(), read(), relative);
+          const control2 = makePoint(read(), read(), relative);
+          push("C", makePoint(read(), read(), relative), [control1, control2]);
+          lastControl = control2;
+        }
+        break;
+      case "S":
+        if (!hasNumbers(4)) {
+          skipInvalidPathToken();
+          break;
+        }
+        while (hasNumbers(4)) {
+          const control1 = lastControl ? { x: point.x * 2 - lastControl.x, y: point.y * 2 - lastControl.y } : point;
+          const control2 = makePoint(read(), read(), relative);
+          push("S", makePoint(read(), read(), relative), [control1, control2]);
+          lastControl = control2;
+        }
+        break;
+      case "Q":
+        if (!hasNumbers(4)) {
+          skipInvalidPathToken();
+          break;
+        }
+        while (hasNumbers(4)) {
+          const control = makePoint(read(), read(), relative);
+          push("Q", makePoint(read(), read(), relative), [control]);
+          lastControl = control;
+        }
+        break;
+      case "T":
+        if (!hasNumbers(2)) {
+          skipInvalidPathToken();
+          break;
+        }
+        while (hasNumbers(2)) {
+          const control = lastControl ? { x: point.x * 2 - lastControl.x, y: point.y * 2 - lastControl.y } : point;
+          push("T", makePoint(read(), read(), relative), [control]);
+          lastControl = control;
+        }
+        break;
+      case "A":
+        if (!hasNumbers(7)) {
+          skipInvalidPathToken();
+          break;
+        }
+        while (hasNumbers(7)) {
+          const rx = Math.abs(read());
+          const ry = Math.abs(read());
+          read();
+          read();
+          read();
+          push("A", makePoint(read(), read(), relative), [], { radius: { x: rx, y: ry } });
+          lastControl = null;
+        }
+        break;
+      case "Z":
+        push("Z", startPoint);
+        lastControl = null;
+        command = "";
+        break;
+      default:
+        index += 1;
+    }
+  }
+  return segments;
+}
+
+function svgPathEqualCornerRadiiForTest(segments, viewBox) {
+  const tolerance = Math.max(0.01, Math.max(viewBox.width, viewBox.height) * 0.015);
+  const cornerSpecs = [
+    { key: "topLeft", x: viewBox.x, y: viewBox.y },
+    { key: "topRight", x: viewBox.x + viewBox.width, y: viewBox.y },
+    { key: "bottomRight", x: viewBox.x + viewBox.width, y: viewBox.y + viewBox.height },
+    { key: "bottomLeft", x: viewBox.x, y: viewBox.y + viewBox.height }
+  ];
+  const radii = new Map();
+  const onX = (point, x) => Math.abs(point.x - x) <= tolerance;
+  const onY = (point, y) => Math.abs(point.y - y) <= tolerance;
+  const acceptRadius = (corner, rx, ry, segment) => {
+    const radiusTolerance = Math.max(tolerance, Math.max(rx, ry) * 0.08);
+    if (rx <= tolerance || ry <= tolerance || Math.abs(rx - ry) > radiusTolerance) {
+      return;
+    }
+    if (segment.type === "A" && Math.abs(segment.radius.x - segment.radius.y) > radiusTolerance) {
+      return;
+    }
+    radii.set(corner.key, (rx + ry) / 2);
+  };
+  segments.filter((segment) => /[CQSTA]/.test(segment.type)).forEach((segment) => {
+    cornerSpecs.forEach((corner) => {
+      const points = [segment.start, segment.end];
+      const horizontal = points.find((candidate) => onY(candidate, corner.y));
+      const vertical = points.find((candidate) => onX(candidate, corner.x));
+      if (!horizontal || !vertical || horizontal === vertical) {
+        return;
+      }
+      acceptRadius(corner, Math.abs(horizontal.x - corner.x), Math.abs(vertical.y - corner.y), segment);
+    });
+  });
+  if (radii.size !== 4) {
+    return [];
+  }
+  const values = [...radii.values()];
+  const average = values.reduce((sum, value) => sum + value, 0) / values.length;
+  const radiusTolerance = Math.max(tolerance, average * 0.08);
+  return Math.max(...values) - Math.min(...values) <= radiusTolerance ? values : [];
+}
+
 function normalizeSvgHexColor(value) {
-  const color = String(value || "").trim().toLowerCase();
+  const color = String(value || "")
+    .trim()
+    .replace(/\s*!important\s*$/i, "")
+    .toLowerCase();
+  if (!color || /^(?:none|transparent|currentcolor|inherit|initial|unset)$/i.test(color) || /^url\(/i.test(color)) {
+    return "";
+  }
   if (/^#[0-9a-f]{6}$/i.test(color)) {
     return color;
   }
@@ -580,38 +904,342 @@ function normalizeSvgHexColor(value) {
     }
     return `#${red}${red}${green}${green}${blue}${blue}`;
   }
+  const rgbMatch = color.match(/^rgba?\(\s*([+-]?\d+(?:\.\d+)?)\s*,\s*([+-]?\d+(?:\.\d+)?)\s*,\s*([+-]?\d+(?:\.\d+)?)(?:\s*,\s*([+-]?\d*(?:\.\d+)?))?\s*\)$/i);
+  if (rgbMatch) {
+    if (rgbMatch[4] !== undefined && Number(rgbMatch[4]) <= 0) {
+      return "";
+    }
+    return rgbToHex([rgbMatch[1], rgbMatch[2], rgbMatch[3]].map((channel) => {
+      return Math.round(Math.max(0, Math.min(255, Number(channel))));
+    }));
+  }
+  const namedColors = {
+    black: "#000000",
+    blue: "#0000ff",
+    cyan: "#00ffff",
+    gray: "#808080",
+    green: "#008000",
+    grey: "#808080",
+    lime: "#00ff00",
+    magenta: "#ff00ff",
+    orange: "#ffa500",
+    purple: "#800080",
+    red: "#ff0000",
+    white: "#ffffff",
+    yellow: "#ffff00"
+  };
+  if (Object.hasOwn(namedColors, color)) {
+    return namedColors[color];
+  }
   return "";
 }
 
 function extractSvgColorPalette(svg) {
-  const palette = [];
+  return svgPaintAnalysis(svg).colors;
+}
+
+function extractSvgPaintServerColors(svg) {
+  return svgPaintAnalysis(svg).paintServerColors;
+}
+
+function svgPaletteDataAttribute(colors) {
+  const palette = uniqueNormalizedHexColorsForTest(colors);
+  return palette.length ? palette.join(",") : "";
+}
+
+function svgPaletteDataAttributeColors(value) {
+  return uniqueNormalizedHexColorsForTest(String(value || "").split(","));
+}
+
+function uniqueNormalizedHexColorsForTest(colors) {
+  const output = [];
   const seen = new Set();
-  const pushColor = (value) => {
-    const color = normalizeSvgHexColor(value);
+  (Array.isArray(colors) ? colors : []).forEach((color) => {
+    const normalized = normalizeHexColor(color);
+    if (!normalized || seen.has(normalized)) {
+      return;
+    }
+    seen.add(normalized);
+    output.push(normalized);
+  });
+  return output;
+}
+
+function svgPaintAnalysis(svg) {
+  return svgPaintAnalysisFromText(String(svg || ""));
+}
+
+const SVG_PAINT_COLOR_PROPERTIES_FOR_TEST = Object.freeze([
+  "fill",
+  "stroke",
+  "color",
+  "stop-color",
+  "flood-color",
+  "lighting-color"
+]);
+const SVG_PAINT_SERVER_REFERENCE_PROPERTIES_FOR_TEST = Object.freeze([
+  "fill",
+  "stroke",
+  "filter",
+  "mask"
+]);
+const SVG_PAINT_STYLE_PROPERTIES_FOR_TEST = Object.freeze([
+  ...new Set([...SVG_PAINT_COLOR_PROPERTIES_FOR_TEST, ...SVG_PAINT_SERVER_REFERENCE_PROPERTIES_FOR_TEST])
+]);
+
+function svgPaintAnalysisFromText(svg) {
+  const text = String(svg || "");
+  const elements = svgElementsForTest(text);
+  const byId = new Map(elements.filter((element) => element.attributes.id).map((element) => [element.attributes.id, element]));
+  const styleRules = svgStyleRulesForTest(text);
+  const colors = [];
+  const visibleColors = [];
+  const definitionColors = [];
+  const paintServerColors = [];
+  const seenColors = new Set();
+  const seenVisibleColors = new Set();
+  const seenDefinitionColors = new Set();
+  const seenPaintServerColors = new Set();
+  const effectPaintServerTags = new Set(["pattern", "filter", "mask"]);
+  const paintServerTags = new Set(["lineargradient", "radialgradient", "meshgradient", "pattern", "filter", "mask"]);
+  let usesPaintServer = false;
+  let hasEffectPaintServer = false;
+  const push = (target, seen, value, currentColor = "") => {
+    const color = normalizeSvgHexColor(resolveSvgColorValueForTest(value, currentColor));
     if (!color || seen.has(color)) {
       return;
     }
     seen.add(color);
-    palette.push(color);
+    target.push(color);
   };
-  const text = String(svg || "");
-  const colorAttributeMatches = text.matchAll(/\s(?:fill|stroke|color)\s*=\s*(["'])(#[0-9a-f]{3,8})\1/gi);
-  for (const match of colorAttributeMatches) {
-    pushColor(match[2]);
+  const styleValue = (element, property) => {
+    const attributeValue = element.attributes[property] || "";
+    let value = attributeValue;
+    styleRules.forEach((rule) => {
+      if (rule.properties[property] && svgElementMatchesForTest(element, rule.selector)) {
+        value = rule.properties[property];
+      }
+    });
+    return {
+      attributeValue,
+      value: svgStyleDeclarationPropertiesForTest(element.attributes.style || "")[property] || value
+    };
+  };
+  const paintValue = (element, property) => styleValue(element, property).value;
+  const isInsidePaintServerDefinition = (element) => {
+    let current = element;
+    while (current) {
+      if (paintServerTags.has(current.tag)) {
+        return true;
+      }
+      current = current.parent;
+    }
+    return false;
+  };
+  const inheritedColor = (element) => {
+    let current = element;
+    while (current) {
+      const color = normalizeSvgHexColor(resolveSvgColorValueForTest(paintValue(current, "color")));
+      if (color) {
+        return color;
+      }
+      current = current.parent;
+    }
+    return "";
+  };
+  const collectPaintServerColors = (paintServer, visited = new Set()) => {
+    if (!paintServer || visited.has(paintServer)) {
+      return;
+    }
+    visited.add(paintServer);
+    [paintServer, ...svgDescendantsForTest(paintServer)].forEach((element) => {
+      const currentColor = inheritedColor(element);
+      SVG_PAINT_COLOR_PROPERTIES_FOR_TEST.forEach((property) => {
+        const value = paintValue(element, property);
+        push(definitionColors, seenDefinitionColors, value, currentColor);
+        push(paintServerColors, seenPaintServerColors, value, currentColor);
+      });
+      const href = element.attributes.href || element.attributes["xlink:href"] || "";
+      const inheritedPaintServer = href.startsWith("#") ? byId.get(href.slice(1)) : null;
+      if (inheritedPaintServer) {
+        collectPaintServerColors(inheritedPaintServer, visited);
+      }
+    });
+  };
+  const collectPaintServer = (value) => {
+    const match = String(value || "").match(/url\(\s*#([^)\s]+)\s*\)/i);
+    if (!match) {
+      return;
+    }
+    const paintServer = byId.get(match[1]);
+    if (!paintServer) {
+      return;
+    }
+    usesPaintServer = true;
+    if (effectPaintServerTags.has(paintServer.tag)) {
+      hasEffectPaintServer = true;
+    }
+    collectPaintServerColors(paintServer);
+  };
+
+  elements.forEach((element) => {
+    const currentColor = inheritedColor(element);
+    SVG_PAINT_COLOR_PROPERTIES_FOR_TEST.forEach((property) => {
+      const { attributeValue, value } = styleValue(element, property);
+      if (!isInsidePaintServerDefinition(element)) {
+        push(visibleColors, seenVisibleColors, value, currentColor);
+        if (/^url\(/i.test(String(value || "").trim())) {
+          push(visibleColors, seenVisibleColors, attributeValue, currentColor);
+        }
+      } else {
+        push(definitionColors, seenDefinitionColors, value, currentColor);
+      }
+      collectPaintServer(value);
+    });
+    SVG_PAINT_SERVER_REFERENCE_PROPERTIES_FOR_TEST.forEach((property) => {
+      collectPaintServer(paintValue(element, property));
+    });
+  });
+  visibleColors.forEach((color) => push(colors, seenColors, color));
+  definitionColors.forEach((color) => push(colors, seenColors, color));
+  paintServerColors.forEach((color) => push(visibleColors, seenVisibleColors, color));
+  paintServerColors.forEach((color) => push(colors, seenColors, color));
+  return { colors, visibleColors, definitionColors, paintServerColors, usesPaintServer, hasEffectPaintServer };
+}
+
+function svgElementsForTest(svg) {
+  const root = { tag: "#root", attributes: {}, parent: null, children: [] };
+  const stack = [root];
+  const elements = [];
+  const leafTags = new Set(["path", "rect", "circle", "ellipse", "line", "polyline", "polygon", "stop", "feflood", "feblend", "fegaussianblur", "use"]);
+  for (const match of String(svg || "").matchAll(/<\/?([A-Za-z][\w:.-]*)([^<>]*?)(\/?)>/g)) {
+    const full = match[0];
+    const tag = match[1].toLowerCase();
+    if (full.startsWith("</")) {
+      while (stack.length > 1) {
+        const current = stack.pop();
+        if (current?.tag === tag) {
+          break;
+        }
+      }
+      continue;
+    }
+    if (/^<!(?:--|\[CDATA\[)/.test(full) || tag.startsWith("?")) {
+      continue;
+    }
+    const parent = stack[stack.length - 1];
+    const element = {
+      tag,
+      attributes: svgAttributesForTest(match[2] || ""),
+      parent,
+      children: []
+    };
+    parent.children.push(element);
+    elements.push(element);
+    if (!match[3] && !/\/>$/.test(full) && !leafTags.has(tag)) {
+      stack.push(element);
+    }
   }
-  const inlineStyleMatches = text.matchAll(/(?:^|["'{;\s])(?:fill|stroke|color)\s*:\s*(#[0-9a-f]{3,8})\b/gi);
-  for (const match of inlineStyleMatches) {
-    pushColor(match[1]);
+  return elements;
+}
+
+function svgDescendantsForTest(element) {
+  const descendants = [];
+  const visit = (current) => {
+    current.children.forEach((child) => {
+      descendants.push(child);
+      visit(child);
+    });
+  };
+  visit(element);
+  return descendants;
+}
+
+function svgAttributesForTest(attrs) {
+  const result = {};
+  for (const match of String(attrs || "").matchAll(/([:\w.-]+)\s*=\s*(["'])(.*?)\2/g)) {
+    result[match[1].toLowerCase()] = match[3];
   }
-  return palette;
+  return result;
+}
+
+function svgStyleRulesForTest(svg) {
+  const rules = [];
+  const stylePattern = /<style\b[^>]*>([\s\S]*?)<\/style>/gi;
+  const cssSources = [];
+  for (const match of String(svg || "").matchAll(stylePattern)) {
+    cssSources.push(match[1]);
+  }
+  cssSources.forEach((css) => {
+    for (const match of String(css || "").matchAll(/([^{}]+)\{([^{}]+)\}/g)) {
+      const properties = svgStyleDeclarationPropertiesForTest(match[2]);
+      if (!Object.keys(properties).length) {
+        continue;
+      }
+      match[1].split(",").map((selector) => selector.trim()).filter(Boolean).forEach((selector) => {
+        rules.push({ selector, properties });
+      });
+    }
+  });
+  return rules;
+}
+
+function svgStyleDeclarationPropertiesForTest(styleText) {
+  const properties = {};
+  String(styleText || "").split(";").forEach((declaration) => {
+    const separator = declaration.indexOf(":");
+    if (separator <= 0) {
+      return;
+    }
+    const property = declaration.slice(0, separator).trim().toLowerCase();
+    if (!SVG_PAINT_STYLE_PROPERTIES_FOR_TEST.includes(property)) {
+      return;
+    }
+    properties[property] = declaration.slice(separator + 1).trim();
+  });
+  return properties;
+}
+
+function svgElementMatchesForTest(element, selector) {
+  const value = String(selector || "").trim();
+  if (!value || /[\s>+~:[\]]/.test(value)) {
+    return false;
+  }
+  if (value === "*") {
+    return true;
+  }
+  if (value.startsWith(".")) {
+    return String(element.attributes.class || "").split(/\s+/).includes(value.slice(1));
+  }
+  if (value.startsWith("#")) {
+    return element.attributes.id === value.slice(1);
+  }
+  const compound = value.match(/^([a-z][\w:-]*)(?:\.([\w-]+))?$/i);
+  if (compound) {
+    return element.tag === compound[1].toLowerCase()
+      && (!compound[2] || String(element.attributes.class || "").split(/\s+/).includes(compound[2]));
+  }
+  return false;
+}
+
+function resolveSvgColorValueForTest(value, currentColor = "") {
+  const raw = String(value || "").trim();
+  if (/^currentColor$/i.test(raw)) {
+    return currentColor;
+  }
+  const varMatch = raw.match(/^var\(\s*--[^,\s)]+(?:\s*,\s*([^)]+))?\)$/i);
+  if (varMatch?.[1]) {
+    return varMatch[1].trim();
+  }
+  return raw;
 }
 
 function remoteBrandSvgIsMonochrome(svg) {
-  if (remoteBrandSvgHasComplexPaint(svg)) {
+  const analysis = svgPaintAnalysis(svg);
+  if (analysis.usesPaintServer) {
     return false;
   }
-  const palette = extractSvgColorPalette(svg);
-  return palette.length <= 1;
+  return analysis.visibleColors.length <= 1;
 }
 
 function remoteBrandColorLooksNeutral(color) {
@@ -661,18 +1289,25 @@ function remoteBrandSvgUsesImplicitBlack(svg) {
 
 function localSiteIconAnalysisFromSvgForTest(svg) {
   if (!remoteBrandSvgHasRootElement(svg)) {
-    return { brandColor: "", renderMode: "", hasExplicitBrandColor: false };
+    return { brandColor: "", renderMode: "", hasExplicitBrandColor: false, visibleColors: [], embeddedCarrierColor: "" };
   }
-  const isMonochrome = remoteBrandSvgIsMonochrome(svg);
-  const palette = extractSvgColorPalette(svg);
+  const analysis = svgPaintAnalysis(svg);
+  const isMonochrome = !analysis.usesPaintServer && analysis.visibleColors.length <= 1;
+  const palette = analysis.colors;
   const explicitBrandColor = isMonochrome && palette.length === 1
     ? remoteBrandSvgMonochromeBrandColor(svg, palette)
     : "";
   return {
     brandColor: explicitBrandColor || (isMonochrome && remoteBrandSvgUsesImplicitBlack(svg) ? "#000000" : ""),
-    renderMode: isMonochrome ? "mask" : "original",
-    hasExplicitBrandColor: Boolean(explicitBrandColor)
+    renderMode: remoteBrandSvgHasComplexPaintAnalysisForTest(analysis) ? "gradient" : isMonochrome ? "mask" : "original",
+    hasExplicitBrandColor: Boolean(explicitBrandColor),
+    visibleColors: analysis.visibleColors,
+    embeddedCarrierColor: svgEmbeddedCarrierColorForTest(svg, analysis)
   };
+}
+
+function svgUsesGradientIconCarrierForTest(svg) {
+  return remoteBrandSvgHasComplexPaint(svg);
 }
 
 const FAVICON_BACKGROUND_ALPHA_MIN = 0.35;
@@ -1352,13 +1987,21 @@ function embeddedSvgBrandColorForTest(value) {
 
 const LOCAL_SVG_SOURCE_BY_PATH_FOR_TEST = Object.freeze({
   "icons/sites/alibabadotcom.svg": alibabaSvgSource,
+  "icons/sites/alipay.svg": alipaySvgSource,
+  "icons/sites/antigravity.svg": antigravitySvgSource,
   "icons/sites/baidu.svg": '<svg viewBox="0 0 24 24"><path fill="currentColor" d="M0 0h24v24H0z"/></svg>',
   "icons/sites/bilibili.svg": '<svg fill="#00a1d6" viewBox="0 0 24 24"><path d="M0 0h24v24H0z"/></svg>',
   "icons/sites/chatgpt.svg": chatgptSvgSource,
   "icons/sites/dailymotion.svg": dailymotionSvgSource,
+  "icons/sites/doubao.svg": doubaoSvgSource,
+  "icons/sites/douyin.svg": douyinSvgSource,
   "icons/sites/epicgames.svg": epicGamesSvgSource,
   "icons/sites/googlecalendar.svg": googleCalendarSvgSource,
   "icons/sites/googledocs.svg": googleDocsSvgSource,
+  "icons/sites/huggingface.svg": huggingfaceSvgSource,
+  "icons/sites/instagram.svg": instagramSvgSource,
+  "icons/sites/jimeng.svg": jimengSvgSource,
+  "icons/sites/kimi.svg": kimiSvgSource,
   "icons/sites/google.svg": '<svg viewBox="0 0 24 24"><path fill="#4285f4"/><path fill="#ea4335"/></svg>',
   "icons/sites/unlistedmulticolor.svg": '<svg viewBox="0 0 24 24"><path fill="#4285f4"/><path fill="#ea4335"/></svg>',
   "icons/sites/grok.svg": grokSvgSource,
@@ -1369,7 +2012,9 @@ const LOCAL_SVG_SOURCE_BY_PATH_FOR_TEST = Object.freeze({
   "icons/sites/pinduoduo.svg": pinduoduoSvgSource,
   "icons/sites/roblox.svg": robloxSvgSource,
   "icons/sites/microsoftteams.svg": teamsSvgSource,
+  "icons/sites/tiktok.svg": tiktokSvgSource,
   "icons/sites/tripdotcom.svg": tripdotcomSvgSource,
+  "icons/sites/vqq.svg": vqqSvgSource,
   "icons/sites/wikipedia.svg": wikipediaSvgSource,
   "icons/sites/whatsapp.svg": whatsappSvgSource,
   "icons/sites/wechat.svg": wechatSvgSource,
@@ -1382,15 +2027,23 @@ const LOCAL_SVG_SOURCE_BY_PATH_FOR_TEST = Object.freeze({
 const localSiteIconBrandColorCacheForTest = new Map();
 const localSiteIconRenderModeCacheForTest = new Map();
 const localSiteIconExplicitBrandColorCacheForTest = new Map();
+const localSiteIconVisibleColorsCacheForTest = new Map();
+const localSiteIconEmbeddedCarrierColorCacheForTest = new Map();
+
+function cacheLocalSiteIconAnalysisForTest(source, analysis) {
+  localSiteIconBrandColorCacheForTest.set(source, analysis.brandColor);
+  localSiteIconRenderModeCacheForTest.set(source, analysis.renderMode);
+  localSiteIconExplicitBrandColorCacheForTest.set(source, analysis.hasExplicitBrandColor);
+  localSiteIconVisibleColorsCacheForTest.set(source, analysis.visibleColors);
+  localSiteIconEmbeddedCarrierColorCacheForTest.set(source, analysis.embeddedCarrierColor || "");
+}
 
 function localSiteIconBrandColorForTest(source) {
   if (localSiteIconBrandColorCacheForTest.has(source)) {
     return localSiteIconBrandColorCacheForTest.get(source);
   }
   const analysis = localSiteIconAnalysisFromSvgForTest(LOCAL_SVG_SOURCE_BY_PATH_FOR_TEST[source] || "");
-  localSiteIconBrandColorCacheForTest.set(source, analysis.brandColor);
-  localSiteIconRenderModeCacheForTest.set(source, analysis.renderMode);
-  localSiteIconExplicitBrandColorCacheForTest.set(source, analysis.hasExplicitBrandColor);
+  cacheLocalSiteIconAnalysisForTest(source, analysis);
   return analysis.brandColor;
 }
 
@@ -1399,9 +2052,7 @@ function localSiteIconHasExplicitBrandColorForTest(source) {
     return localSiteIconExplicitBrandColorCacheForTest.get(source);
   }
   const analysis = localSiteIconAnalysisFromSvgForTest(LOCAL_SVG_SOURCE_BY_PATH_FOR_TEST[source] || "");
-  localSiteIconBrandColorCacheForTest.set(source, analysis.brandColor);
-  localSiteIconRenderModeCacheForTest.set(source, analysis.renderMode);
-  localSiteIconExplicitBrandColorCacheForTest.set(source, analysis.hasExplicitBrandColor);
+  cacheLocalSiteIconAnalysisForTest(source, analysis);
   return analysis.hasExplicitBrandColor;
 }
 
@@ -1410,10 +2061,26 @@ function localSiteIconRenderModeForTest(source) {
     return localSiteIconRenderModeCacheForTest.get(source);
   }
   const analysis = localSiteIconAnalysisFromSvgForTest(LOCAL_SVG_SOURCE_BY_PATH_FOR_TEST[source] || "");
-  localSiteIconBrandColorCacheForTest.set(source, analysis.brandColor);
-  localSiteIconRenderModeCacheForTest.set(source, analysis.renderMode);
-  localSiteIconExplicitBrandColorCacheForTest.set(source, analysis.hasExplicitBrandColor);
+  cacheLocalSiteIconAnalysisForTest(source, analysis);
   return analysis.renderMode;
+}
+
+function localSiteIconVisibleColorsForTest(source) {
+  if (localSiteIconVisibleColorsCacheForTest.has(source)) {
+    return localSiteIconVisibleColorsCacheForTest.get(source);
+  }
+  const analysis = localSiteIconAnalysisFromSvgForTest(LOCAL_SVG_SOURCE_BY_PATH_FOR_TEST[source] || "");
+  cacheLocalSiteIconAnalysisForTest(source, analysis);
+  return analysis.visibleColors;
+}
+
+function localSiteIconEmbeddedCarrierColorForTest(source) {
+  if (localSiteIconEmbeddedCarrierColorCacheForTest.has(source)) {
+    return localSiteIconEmbeddedCarrierColorCacheForTest.get(source);
+  }
+  const analysis = localSiteIconAnalysisFromSvgForTest(LOCAL_SVG_SOURCE_BY_PATH_FOR_TEST[source] || "");
+  cacheLocalSiteIconAnalysisForTest(source, analysis);
+  return analysis.embeddedCarrierColor;
 }
 
 function siteKeyForUrlForTest(url) {
@@ -1487,22 +2154,30 @@ function keepsBrandIconOriginalForTest(siteKey, iconPath = "") {
   }
   const remoteDescriptor = remoteBrandSvgDescriptorFromSource(iconPath);
   if (remoteDescriptor) {
-    return remoteDescriptor.renderMode === "original";
+    return remoteDescriptor.renderMode === "original" || remoteDescriptor.renderMode === "gradient";
   }
   const localRenderMode = localSiteIconRenderModeForTest(iconPath);
+  if (localRenderMode === "gradient") {
+    return true;
+  }
   if (localRenderMode === "original") {
     return true;
   }
   if (localRenderMode === "mask") {
     return false;
   }
-  if (MULTICOLOR_BRAND_ICON_SITE_KEYS_FOR_TEST.has(siteKey)) {
-    return true;
-  }
   if (!siteIconSourceLooksLikeSvgForTest(iconPath)) {
     return true;
   }
   return /^data:image\/svg\+xml[,;]/i.test(iconPath) && !remoteBrandSvgSourceIsMaskableForTest(iconPath);
+}
+
+function usesGradientIconCarrierForTest(iconPath = "") {
+  const remoteDescriptor = remoteBrandSvgDescriptorFromSource(iconPath);
+  if (remoteDescriptor) {
+    return remoteDescriptor.renderMode === "gradient";
+  }
+  return localSiteIconRenderModeForTest(iconPath) === "gradient";
 }
 
 function keepsBrandIconOriginalOnBrandTileForTest(siteKey, iconPath = "") {
@@ -1516,16 +2191,121 @@ function brandIconTileColorsForTest(tileColor, siteKey = "", iconPath = "") {
   if (!color) {
     return { light: "#ffffff", dark: "#202922" };
   }
+  if (usesGradientIconCarrierForTest(iconPath)) {
+    return { light: "#000000", dark: "#ffffff" };
+  }
   if (keepsBrandIconOriginalOnBrandTileForTest(siteKey, iconPath)) {
     return { light: color, dark: color };
   }
-  if (keepsBrandIconOriginalForTest(siteKey, iconPath)) {
-    return { light: "#ffffff", dark: "#f8fafc" };
+  if (usesOriginalIconCarrierForTest(iconPath)) {
+    const paletteTileColors = originalSvgIconTileColorsForTest(color, iconPath);
+    if (paletteTileColors) {
+      return paletteTileColors;
+    }
   }
   return {
     light: brandIconLightCarrierColorForTest(color),
     dark: brandIconDarkCarrierColorForTest(color)
   };
+}
+
+function usesOriginalIconCarrierForTest(iconPath = "") {
+  const remoteDescriptor = remoteBrandSvgDescriptorFromSource(iconPath);
+  if (remoteDescriptor) {
+    return remoteDescriptor.renderMode === "original";
+  }
+  return localSiteIconRenderModeForTest(iconPath) === "original";
+}
+
+function originalSvgIconTileColorsForTest(brandColor, iconPath = "") {
+  const palette = originalSvgVisiblePaletteForTest(brandColor, iconPath);
+  if (palette.length <= 1) {
+    return null;
+  }
+  const embeddedCarrier = originalSvgEmbeddedCarrierColorForTest(iconPath);
+  if (embeddedCarrier) {
+    return {
+      light: embeddedCarrier,
+      dark: embeddedCarrier
+    };
+  }
+  return {
+    light: paletteAwareBrandIconCarrierColorForTest(brandColor, palette, "light"),
+    dark: paletteAwareBrandIconCarrierColorForTest(brandColor, palette, "dark")
+  };
+}
+
+function originalSvgEmbeddedCarrierColorForTest(iconPath = "") {
+  const remoteDescriptor = remoteBrandSvgDescriptorFromSource(iconPath);
+  return remoteDescriptor?.embeddedCarrierColor || localSiteIconEmbeddedCarrierColorForTest(iconPath);
+}
+
+function originalSvgVisiblePaletteForTest(brandColor, iconPath = "") {
+  const remoteDescriptor = remoteBrandSvgDescriptorFromSource(iconPath);
+  const visibleColors = remoteDescriptor?.visibleColors || localSiteIconVisibleColorsForTest(iconPath);
+  const palette = uniqueNormalizedHexColorsForTest(visibleColors);
+  if (palette.length > 1) {
+    return palette;
+  }
+  const brand = normalizeHexColor(brandColor);
+  return uniqueNormalizedHexColorsForTest([...palette, ...(brand && !remoteBrandColorLooksNeutral(brand) ? [brand] : [])]);
+}
+
+function paletteAwareBrandIconCarrierColorForTest(brandColor, palette, mode) {
+  const colors = uniqueNormalizedHexColorsForTest(palette);
+  const anchor = paletteCarrierAnchorColorForTest(brandColor, colors);
+  if (!anchor || colors.length <= 1) {
+    return mode === "dark" ? brandIconDarkCarrierColorForTest(anchor) : brandIconLightCarrierColorForTest(anchor);
+  }
+  return paletteNeedsDarkAppIconCarrierForTest(palette)
+    ? BRAND_ICON_MULTICOLOR_DARK_CARRIER
+    : BRAND_ICON_MULTICOLOR_PAPER_CARRIER;
+}
+
+function paletteColorTraitsForTest(palette) {
+  const colors = uniqueNormalizedHexColorsForTest(palette);
+  const samples = colors.map((color) => {
+    const stats = hexColorStatsForTest(color);
+    const [red, green, blue] = hexToRgb(color).map((channel) => channel / 255);
+    const chroma = Math.max(red, green, blue) - Math.min(red, green, blue);
+    return {
+      color,
+      chroma,
+      hue: stats?.hue || 0,
+      luminance: stats?.luminance ?? relativeLuminance(color),
+      saturated: chroma >= 0.24
+    };
+  });
+  const count = Math.max(1, samples.length);
+  const lightRatio = samples.filter((sample) => sample.luminance >= 0.72).length / count;
+  const darkRatio = samples.filter((sample) => sample.luminance <= 0.16).length / count;
+  const saturatedSamples = samples.filter((sample) => sample.saturated);
+  const coloredSamples = samples.filter((sample) => sample.chroma >= 0.18);
+  return {
+    hasDark: darkRatio > 0,
+    hasLight: lightRatio > 0,
+    lightDominant: lightRatio >= 0.5,
+    darkDominant: darkRatio >= 0.6,
+    saturatedMulticolor: saturatedSamples.length >= 2,
+    coloredRatio: coloredSamples.length / count,
+    averageLuminance: samples.reduce((sum, sample) => sum + sample.luminance, 0) / count
+  };
+}
+
+function paletteNeedsDarkAppIconCarrierForTest(palette) {
+  const traits = paletteColorTraitsForTest(palette);
+  return traits.lightDominant
+    && !traits.hasDark
+    && traits.averageLuminance >= 0.58
+    && traits.coloredRatio <= 0.5;
+}
+
+function paletteCarrierAnchorColorForTest(brandColor, palette) {
+  const brand = normalizeHexColor(brandColor);
+  if (brand && !remoteBrandColorLooksNeutral(brand)) {
+    return brand;
+  }
+  return uniqueNormalizedHexColorsForTest(palette).find((color) => !remoteBrandColorLooksNeutral(color)) || brand || "";
 }
 
 function brandIconLightCarrierColorForTest(brandColor) {
@@ -1624,11 +2404,12 @@ function applySiteIconTileForTest(icon, site, iconPath = "") {
   const tileColor = siteIconBrandColorForTest(siteKey, iconPath);
   const remoteDescriptor = remoteBrandSvgDescriptorFromSource(iconPath);
   const originalSvgColor = remoteDescriptor?.renderMode === "original" ? "#ffffff" : "";
+  const gradientSvgColor = usesGradientIconCarrierForTest(iconPath) ? "#ffffff" : "";
   const tileMode = iconPath ? "brand" : "plain";
   const isLocalIconSource = String(iconPath || "").startsWith("icons/");
   let tileColors = { light: "#ffffff", dark: "#202922" };
-  if (iconPath && (tileColor || originalSvgColor)) {
-    tileColors = brandIconTileColorsForTest(tileColor || originalSvgColor, siteKey, iconPath);
+  if (iconPath && (tileColor || originalSvgColor || gradientSvgColor)) {
+    tileColors = brandIconTileColorsForTest(tileColor || originalSvgColor || gradientSvgColor, siteKey, iconPath);
   }
   applyIconTileForTest(icon, tileMode, tileColors, isLocalIconSource);
 }
@@ -1898,8 +2679,16 @@ const adaptiveFixtureSvg = '<svg viewBox="0 0 24 24"><path fill="currentColor" d
   applySiteIconForTest(icon, { url: "https://www.google.com/search", icon: remoteCachedIcon });
   assert.equal(icon.dataset.iconSource, "icons/sites/google.svg", "Local multicolor SVGs outrank cached remote SVG data URLs.");
   assert.equal(icon.classList.contains("site-icon-local"), true, "Local multicolor SVGs keep the local marker.");
-  assert.equal(icon.style.getPropertyValue("--site-icon-tile-light"), "#ffffff", "Local multicolor SVGs keep a neutral day tile.");
-  assert.equal(icon.style.getPropertyValue("--site-icon-tile-dark"), "#f8fafc", "Local multicolor SVGs keep a neutral night tile.");
+  assert.deepEqual(
+    {
+      light: icon.style.getPropertyValue("--site-icon-tile-light"),
+      dark: icon.style.getPropertyValue("--site-icon-tile-dark")
+    },
+    brandIconTileColorsForTest("#4285f4", "google.com", "icons/sites/google.svg"),
+    "Local multicolor SVGs use palette-aware day and night carriers."
+  );
+  assertPaletteCarrierSeparatedForTest("icons/sites/google.svg", "#4285f4", icon.style.getPropertyValue("--site-icon-tile-light"), "light", "Local multicolor day carrier");
+  assertPaletteCarrierSeparatedForTest("icons/sites/google.svg", "#4285f4", icon.style.getPropertyValue("--site-icon-tile-dark"), "dark", "Local multicolor night carrier");
   assert.equal(icon.src, "icons/sites/google.svg", "Local multicolor SVGs render original artwork without mask recoloring.");
   testTheme = "dark";
   refreshAdaptiveSiteIconsForTest([icon]);
@@ -2209,28 +2998,43 @@ assert.deepEqual(genericSiteFallbackTileColors(), { light: "#f04424", dark: "#f0
 
 assert.deepEqual(extractSvgColorPalette('<svg><path fill="#abc"/><path stroke="#aabbcc"/></svg>'), ["#aabbcc"], "Equivalent short and long hex colors should dedupe.");
 assert.deepEqual(extractSvgColorPalette('<svg><path style="fill:#111;stroke:#222"/></svg>'), ["#111111", "#222222"], "Inline style colors must be included in the palette.");
+assert.deepEqual(
+  extractSvgColorPalette('<svg><style>.a{fill:red}.b{stroke:rgb(0, 128, 255)}</style><path class="a"/><path class="b"/></svg>'),
+  ["#ff0000", "#0080ff"],
+  "SVG style blocks should expose named and rgb body colors."
+);
+assert.deepEqual(
+  extractSvgColorPalette('<svg><linearGradient id="g"><stop stop-color="yellow"/><stop style="stop-color:rgba(0,128,255,1)"/></linearGradient></svg>'),
+  ["#ffff00", "#0080ff"],
+  "Gradient stop colors should be part of the parsed SVG body palette."
+);
+assert.deepEqual(
+  extractSvgColorPalette('<svg color="#13579b"><g><path fill="currentColor"/></g></svg>'),
+  ["#13579b"],
+  "Inherited currentColor should resolve before mask and gradient classification."
+);
 assert.equal(remoteBrandSvgIsMonochrome('<svg><path fill="#111"/><path stroke="#111"/></svg>'), true, "Single-color SVGs are maskable.");
 assert.equal(remoteBrandSvgIsMonochrome('<svg><path style="fill:#111;stroke:#222"/></svg>'), false, "Two-color SVGs are not maskable.");
 assert.equal(remoteBrandSvgIsMonochrome('<svg><linearGradient id="g"/><path fill="url(#g)"/></svg>'), false, "Gradient SVGs are not maskable.");
 assert.equal(remoteBrandSvgIsMonochrome('<svg><path fill="currentColor"/></svg>'), true, "CurrentColor-only SVGs are maskable.");
 assert.deepEqual(
   localSiteIconAnalysisFromSvgForTest('<svg viewBox="0 0 24 24"><path d="M0 0h24v24H0z"/></svg>'),
-  { brandColor: "#000000", renderMode: "mask", hasExplicitBrandColor: false },
+  { brandColor: "#000000", renderMode: "mask", hasExplicitBrandColor: false, visibleColors: [], embeddedCarrierColor: "" },
   "Implicit-black monochrome SVGs should render through the mask pipeline without claiming an explicit VI color."
 );
 assert.deepEqual(
   localSiteIconAnalysisFromSvgForTest('<svg viewBox="0 0 24 24"><path fill="currentColor" d="M0 0h24v24H0z"/></svg>'),
-  { brandColor: "", renderMode: "mask", hasExplicitBrandColor: false },
+  { brandColor: "", renderMode: "mask", hasExplicitBrandColor: false, visibleColors: [], embeddedCarrierColor: "" },
   "Unknown currentColor SVGs stay maskable but do not guess a VI color."
 );
 assert.deepEqual(
   localSiteIconAnalysisFromSvgForTest('<svg viewBox="0 0 24 24"><path fill="#111111" d="M0 0h24v24H0z"/></svg>'),
-  { brandColor: "#111111", renderMode: "mask", hasExplicitBrandColor: true },
+  { brandColor: "#111111", renderMode: "mask", hasExplicitBrandColor: true, visibleColors: ["#111111"], embeddedCarrierColor: "" },
   "Explicit dark monochrome SVGs should provide a stable VI color."
 );
 assert.deepEqual(
   localSiteIconAnalysisFromSvgForTest('<svg viewBox="0 0 24 24"><path fill="#ffffff" d="M0 0h24v24H0z"/></svg>'),
-  { brandColor: "", renderMode: "mask", hasExplicitBrandColor: false },
+  { brandColor: "", renderMode: "mask", hasExplicitBrandColor: false, visibleColors: ["#ffffff"], embeddedCarrierColor: "" },
   "Explicit white monochrome SVGs should not create white-on-white VI rendering."
 );
 assert.equal(
@@ -2239,9 +3043,34 @@ assert.equal(
   "Multicolor SVGs should preserve original artwork instead of entering mask recoloring."
 );
 assert.equal(
+  localSiteIconAnalysisFromSvgForTest(pinduoduoSvgSource).embeddedCarrierColor,
+  "#f40009",
+  "Pinduoduo-like multicolor SVGs with a full equal-radius carrier should expose the embedded carrier color."
+);
+assert.equal(
+  localSiteIconAnalysisFromSvgForTest('<svg viewBox="0 0 24 24"><rect width="24" height="24" rx="5" ry="5" fill="#f40009"/><path fill="#fff" d="M4 4h16v16H4z"/></svg>').embeddedCarrierColor,
+  "#f40009",
+  "Rounded rect multicolor SVGs should use their own app-icon carrier color."
+);
+assert.equal(
+  localSiteIconAnalysisFromSvgForTest('<svg viewBox="0 0 24 24"><rect width="24" height="24" fill="#f40009"/><path fill="#fff" d="M4 4h16v16H4z"/></svg>').embeddedCarrierColor,
+  "",
+  "Full rectangular multicolor SVG backgrounds without rounded corners must not be treated as embedded app-icon carriers."
+);
+assert.equal(
+  localSiteIconAnalysisFromSvgForTest('<svg viewBox="0 0 24 24"><path fill="#f40009" d="M4 0H20Q24 0 24 4V18Q24 24 18 24H6Q0 24 0 18V4Q0 0 4 0Z"/><path fill="#fff" d="M4 4h16v16H4z"/></svg>').embeddedCarrierColor,
+  "",
+  "Path backgrounds with unequal corner radii must not be treated as embedded app-icon carriers."
+);
+assert.equal(
   localSiteIconAnalysisFromSvgForTest('<svg viewBox="0 0 24 24"><linearGradient id="g"/><path fill="url(#g)" d="M0 0h24v24H0z"/></svg>').renderMode,
   "original",
-  "Gradient SVGs should preserve original artwork instead of entering mask recoloring."
+  "Gradient structure without readable body colors should not claim the fixed gradient carrier."
+);
+assert.equal(
+  localSiteIconAnalysisFromSvgForTest('<svg viewBox="0 0 24 24"><linearGradient id="g"><stop stop-color="red"/><stop stop-color="rgb(0,128,255)"/></linearGradient><path fill="url(#g)" d="M0 0h24v24H0z"/></svg>').renderMode,
+  "gradient",
+  "Gradient SVGs with readable body colors should keep original artwork while using the fixed gradient carrier."
 );
 
 
@@ -2253,12 +3082,13 @@ const realSiteSvgClassifications = siteIconIndex
     return [fileName, analysis.renderMode];
   });
 assert.equal(
-  realSiteSvgClassifications.every(([, renderMode]) => renderMode === "mask" || renderMode === "original"),
+  realSiteSvgClassifications.every(([, renderMode]) => ["mask", "original", "gradient"].includes(renderMode)),
   true,
-  "Every deployed local SVG must classify as either mask or original artwork."
+  "Every deployed local SVG must classify as mask, original artwork, or gradient artwork."
 );
 assert.equal(realSiteSvgClassifications.some(([, renderMode]) => renderMode === "mask"), true, "The deployed SVG set must keep maskable logo coverage.");
 assert.equal(realSiteSvgClassifications.some(([, renderMode]) => renderMode === "original"), true, "The deployed SVG set must keep original-artwork coverage.");
+assert.equal(realSiteSvgClassifications.some(([, renderMode]) => renderMode === "gradient"), true, "The deployed SVG set must keep gradient-artwork coverage.");
 assert.deepEqual(
   [
     "spotify.svg",
@@ -2266,6 +3096,8 @@ assert.deepEqual(
     "wechat.svg",
     "mgtv.svg",
     "googlegemini.svg",
+    "jimeng.svg",
+    "antigravity.svg",
     "github.svg",
     "x.svg"
   ].map((fileName) => [fileName, realSiteSvgClassifications.find(([name]) => name === fileName)?.[1] || "missing"]),
@@ -2274,7 +3106,9 @@ assert.deepEqual(
     ["whatsapp.svg", "mask"],
     ["wechat.svg", "mask"],
     ["mgtv.svg", "original"],
-    ["googlegemini.svg", "original"],
+    ["googlegemini.svg", "gradient"],
+    ["jimeng.svg", "gradient"],
+    ["antigravity.svg", "gradient"],
     ["github.svg", "mask"],
     ["x.svg", "mask"]
   ],
@@ -2474,6 +3308,8 @@ const cloudProviderSamples = [
       brandColor: "#ff6363",
       isMonochrome: true,
       renderMode: "mask",
+      visibleColors: ["#ff6363"],
+      embeddedCarrierColor: "",
       qualityScore: 100
     },
     tileColors: { light: "#ff6363", dark: "#f8fafc" },
@@ -2489,6 +3325,8 @@ const cloudProviderSamples = [
       brandColor: "#006bff",
       isMonochrome: true,
       renderMode: "mask",
+      visibleColors: ["#006bff"],
+      embeddedCarrierColor: "",
       qualityScore: 100
     },
     tileColors: { light: "#006bff", dark: "#f8fafc" },
@@ -2504,6 +3342,8 @@ const cloudProviderSamples = [
       brandColor: "#fcbfbd",
       isMonochrome: true,
       renderMode: "mask",
+      visibleColors: ["#fcbfbd"],
+      embeddedCarrierColor: "",
       qualityScore: 100
     },
     tileColors: { light: brandIconLightCarrierColorForTest("#fcbfbd"), dark: "#f8fafc" },
@@ -2595,48 +3435,43 @@ assert.equal(localIconForUrlForTest("https://www.tiktok.com/"), "icons/sites/tik
     "First-paint cached renders must refresh when a local multicolor SVG keeps the same source but has stale rendered data."
   );
 }
-assert.deepEqual(
-  brandIconTileColorsForTest("#1677ff", "alipay.com", "icons/sites/alipay.svg"),
-  { light: "#ffffff", dark: "#f8fafc" },
-  "Alipay should follow the Google-like multicolor white-tile strategy."
-);
-assert.deepEqual(
-  brandIconTileColorsForTest("#1e37fc", "doubao.com", "icons/sites/doubao.svg"),
-  { light: "#ffffff", dark: "#f8fafc" },
-  "Doubao should follow the Google-like multicolor white-tile strategy."
-);
-assert.deepEqual(
-  brandIconTileColorsForTest("#000000", "douyin.com", "icons/sites/douyin.svg"),
-  { light: "#ffffff", dark: "#f8fafc" },
-  "Douyin should follow the Google-like multicolor white-tile strategy."
-);
-assert.deepEqual(
-  brandIconTileColorsForTest("#e4405f", "instagram.com", "icons/sites/instagram.svg"),
-  { light: "#ffffff", dark: "#f8fafc" },
-  "Instagram should follow the Google-like multicolor white-tile strategy."
-);
-assert.deepEqual(
-  brandIconTileColorsForTest("#ffd21e", "huggingface.co", "icons/sites/huggingface.svg"),
-  { light: "#ffffff", dark: "#f8fafc" },
-  "Hugging Face should follow the Google-like multicolor white-tile strategy."
-);
+[
+  ["alipay.com", "icons/sites/alipay.svg", "#1677ff", { light: "#000000", dark: "#ffffff" }, "gradient"],
+  ["douyin.com", "icons/sites/douyin.svg", "#000000", { light: "#ffffff", dark: "#ffffff" }, "original"],
+  ["instagram.com", "icons/sites/instagram.svg", "#e4405f", { light: "#000000", dark: "#ffffff" }, "gradient"],
+  ["huggingface.co", "icons/sites/huggingface.svg", "#ffd21e", { light: "#ffffff", dark: "#ffffff" }, "original"],
+  ["tiktok.com", "icons/sites/tiktok.svg", "#000000", { light: "#ffffff", dark: "#ffffff" }, "original"],
+  ["v.qq.com", "icons/sites/vqq.svg", "#30a3f9", { light: "#ffffff", dark: "#ffffff" }, "original"]
+].forEach(([siteKey, iconPath, color, tileColors, renderMode]) => {
+  assert.equal(localSiteIconRenderModeForTest(iconPath), renderMode, `${iconPath} should classify from SVG content, not a site whitelist.`);
+  assert.deepEqual(brandIconTileColorsForTest(color, siteKey, iconPath), tileColors, `${iconPath} should derive tile colors from SVG content.`);
+  if (renderMode === "original") {
+    assertPaletteCarrierSeparatedForTest(iconPath, color, tileColors.light, "light", `${iconPath} light carrier`);
+    assertPaletteCarrierSeparatedForTest(iconPath, color, tileColors.dark, "dark", `${iconPath} dark carrier`);
+  }
+});
 assert.deepEqual(
   brandIconTileColorsForTest("#1c6fff", "jimeng.jianying.com", "icons/sites/jimeng.svg"),
-  { light: "#ffffff", dark: "#f8fafc" },
-  "Jimeng should follow the Google-like multicolor white-tile strategy."
+  { light: "#000000", dark: "#ffffff" },
+  "Jimeng should use the automatic gradient carrier without a site whitelist."
 );
 assert.deepEqual(
-  brandIconTileColorsForTest("#000000", "tiktok.com", "icons/sites/tiktok.svg"),
-  { light: "#ffffff", dark: "#f8fafc" },
-  "TikTok should follow the Google-like multicolor white-tile strategy."
-);
-assert.deepEqual(
-  brandIconTileColorsForTest("#30a3f9", "v.qq.com", "icons/sites/vqq.svg"),
-  { light: "#ffffff", dark: "#f8fafc" },
-  "Tencent Video should follow the multicolor white-tile strategy."
+  brandIconTileColorsForTest("#ffffff", "antigravity.example", "icons/sites/antigravity.svg"),
+  { light: "#000000", dark: "#ffffff" },
+  "Antigravity-like gradient SVGs should use the automatic gradient carrier without a site whitelist."
 );
 assert.equal(siteIconBrandColorForTest("chatglm.cn", "icons/sites/glm.svg"), "#3859ff", "GLM should use its blue VI color for mask recoloring.");
 assert.equal(siteIconBrandColorForTest("kimi.com", "icons/sites/kimi.svg"), "#111827", "Kimi should use its dark VI color for mask recoloring.");
+assert.deepEqual(
+  brandIconTileColorsForTest("#111827", "kimi.com", "icons/sites/kimi.svg"),
+  { light: "#111827", dark: "#111827" },
+  "Kimi-like light artwork should use one stable dark neutral carrier across themes."
+);
+assert.deepEqual(
+  brandIconTileColorsForTest("#1e37fc", "doubao.com", "icons/sites/doubao.svg"),
+  { light: "#ffffff", dark: "#ffffff" },
+  "Doubao-like saturated multicolor artwork should use the paper app-icon carrier across themes."
+);
 assert.equal(siteIconBrandColorForTest("mimo.mi.com", "icons/sites/xiaomimimo.svg"), "#000000", "MiMo should use a black tile for mask recoloring.");
 assert.equal(siteIconBrandColorForTest("openai.com", "icons/sites/chatgpt.svg"), "#000000", "ChatGPT/OpenAI local implicit-black SVG should not be overwritten by the OpenAI VI table color.");
 assert.equal(siteIconBrandColorForTest("xiaohongshu.com", "icons/sites/xiaohongshu.svg"), "#ff2442", "Known VI colors should override black single-color local SVG exports.");
@@ -2653,12 +3488,14 @@ assert.equal(localIconNeedsRemoteBrandColorForTest("trip.com", "icons/sites/trip
 assert.equal(localSiteIconRenderModeForTest("icons/sites/unlistedmulticolor.svg"), "original", "Local multicolor SVGs should classify as original without a manual siteKey list.");
 assert.equal(localSiteIconRenderModeForTest("icons/sites/mgtv.svg"), "original", "Mango TV's orange and dark-gray SVG should classify as original artwork without a site whitelist.");
 assert.equal(localSiteIconRenderModeForTest("icons/sites/pinduoduo.svg"), "original", "Pinduoduo multicolor local SVG should preserve original artwork.");
-assert.equal(localSiteIconRenderModeForTest("icons/sites/microsoftteams.svg"), "original", "Microsoft Teams multicolor local SVG should preserve original artwork.");
+assert.equal(localSiteIconRenderModeForTest("icons/sites/microsoftteams.svg"), "gradient", "Microsoft Teams gradient local SVG should use the fixed gradient carrier.");
 assert.deepEqual(
   brandIconTileColorsForTest("#ffffff", "unlisted-multicolor.example", "icons/sites/unlistedmulticolor.svg"),
-  { light: "#ffffff", dark: "#f8fafc" },
-  "Unlisted local multicolor SVGs should get neutral original-artwork carriers without manual maintenance."
+  { light: "#ffffff", dark: "#ffffff" },
+  "Unlisted local multicolor SVGs should use the paper app-icon carrier without manual maintenance."
 );
+assertPaletteCarrierSeparatedForTest("icons/sites/unlistedmulticolor.svg", "#ffffff", "#ffffff", "light", "Unlisted local multicolor light carrier");
+assertPaletteCarrierSeparatedForTest("icons/sites/unlistedmulticolor.svg", "#ffffff", "#ffffff", "dark", "Unlisted local multicolor dark carrier");
 
 [
   { name: "Xiaohongshu", url: "https://www.xiaohongshu.com/", lightTile: "#ff2442", darkGlyph: "#ff2442" },
@@ -2678,16 +3515,22 @@ assert.deepEqual(
 });
 
 [
-  { name: "Pinduoduo", url: "https://www.pinduoduo.com/", source: "icons/sites/pinduoduo.svg" },
-  { name: "Microsoft Teams", url: "https://teams.microsoft.com/", source: "icons/sites/microsoftteams.svg" }
+  { name: "Pinduoduo", url: "https://www.pinduoduo.com/", source: "icons/sites/pinduoduo.svg", lightTile: "#f40009", darkTile: "#f40009", brandColor: "#e02e24", renderMode: "original", embeddedCarrierColor: "#f40009" },
+  { name: "Microsoft Teams", url: "https://teams.microsoft.com/", source: "icons/sites/microsoftteams.svg", lightTile: "#000000", darkTile: "#ffffff" }
 ].forEach((sample) => {
   const icon = new TestIcon();
   testTheme = "light";
   applySiteIconForTest(icon, { url: sample.url, icon: "" });
   assert.equal(icon.dataset.iconSource, sample.source, `${sample.name} should use the deployed local SVG.`);
   assert.equal(icon.src, sample.source, `${sample.name} should preserve original artwork in light mode.`);
-  assert.equal(icon.style.getPropertyValue("--site-icon-tile-light"), "#ffffff", `${sample.name} should use a neutral original-artwork carrier.`);
-  assert.equal(icon.style.getPropertyValue("--site-icon-tile-dark"), "#f8fafc", `${sample.name} should use a neutral dark carrier.`);
+  assert.equal(icon.style.getPropertyValue("--site-icon-tile-light"), sample.lightTile, `${sample.name} should use its content-aware light carrier.`);
+  assert.equal(icon.style.getPropertyValue("--site-icon-tile-dark"), sample.darkTile, `${sample.name} should use its content-aware dark carrier.`);
+  if (sample.embeddedCarrierColor) {
+    assert.equal(originalSvgEmbeddedCarrierColorForTest(sample.source), sample.embeddedCarrierColor, `${sample.name} should inherit its own rounded SVG carrier.`);
+  } else if (sample.renderMode === "original") {
+    assertPaletteCarrierSeparatedForTest(sample.source, sample.brandColor, sample.lightTile, "light", `${sample.name} light carrier`);
+    assertPaletteCarrierSeparatedForTest(sample.source, sample.brandColor, sample.darkTile, "dark", `${sample.name} dark carrier`);
+  }
   testTheme = "dark";
   refreshAdaptiveSiteIconsForTest([icon]);
   assert.equal(icon.src, sample.source, `${sample.name} should preserve original artwork after theme switch.`);
@@ -2699,8 +3542,10 @@ assert.deepEqual(
   testTheme = "light";
   applySiteIconForTest(icon, { url: "https://www.mgtv.com/", icon: "" });
   assert.equal(icon.src, "icons/sites/mgtv.svg", "Mango TV should preserve its two-color local artwork in light mode.");
-  assert.equal(icon.style.getPropertyValue("--site-icon-tile-light"), "#ffffff", "Mango TV should use a neutral light carrier.");
-  assert.equal(icon.style.getPropertyValue("--site-icon-tile-dark"), "#f8fafc", "Mango TV should use a neutral dark-mode carrier.");
+  assert.equal(icon.style.getPropertyValue("--site-icon-tile-light"), "#ffffff", "Mango TV should use the paper app-icon carrier in light mode.");
+  assert.equal(icon.style.getPropertyValue("--site-icon-tile-dark"), "#ffffff", "Mango TV should use the paper app-icon carrier in dark mode.");
+  assertPaletteCarrierSeparatedForTest("icons/sites/mgtv.svg", "#f86f11", "#ffffff", "light", "Mango TV light carrier");
+  assertPaletteCarrierSeparatedForTest("icons/sites/mgtv.svg", "#f86f11", "#ffffff", "dark", "Mango TV dark carrier");
   testTheme = "dark";
   refreshAdaptiveSiteIconsForTest([icon]);
   assert.equal(icon.src, "icons/sites/mgtv.svg", "Mango TV should remain original artwork after a theme switch.");
@@ -2907,7 +3752,10 @@ assert.deepEqual(
   testTheme = "light";
   applySiteIconForTest(icon, { url: "https://example-cloud-multicolor.test/", icon: remoteDataUrl });
   assert.equal(icon.src, remoteDataUrl, "Multicolor remote SVGs preserve original artwork.");
-  assert.equal(icon.style.getPropertyValue("--site-icon-tile-light"), "#ffffff", "Multicolor remote SVGs use a neutral light carrier.");
+  assert.equal(icon.style.getPropertyValue("--site-icon-tile-light"), "#ffffff", "Multicolor remote SVGs use the paper light carrier.");
+  assert.equal(icon.style.getPropertyValue("--site-icon-tile-dark"), "#ffffff", "Multicolor remote SVGs use the paper dark carrier.");
+  assertPaletteCarrierSeparatedForTest(remoteDataUrl, "#4285f4", "#ffffff", "light", "Remote multicolor light carrier");
+  assertPaletteCarrierSeparatedForTest(remoteDataUrl, "#4285f4", "#ffffff", "dark", "Remote multicolor dark carrier");
   testTheme = "dark";
   refreshAdaptiveSiteIconsForTest([icon]);
   assert.equal(icon.src, remoteDataUrl, "Multicolor remote SVGs stay original after dark refresh.");
@@ -2943,6 +3791,8 @@ assert.deepEqual(
     brandColor: "#1db954",
     isMonochrome: true,
     renderMode: "mask",
+    visibleColors: ["#1db954"],
+    embeddedCarrierColor: "",
     qualityScore: 92
   },
   "Cloud maskable descriptors should cache source metadata only."
@@ -2953,6 +3803,8 @@ assert.deepEqual(
     brandColor: "#00a1d6",
     isMonochrome: true,
     renderMode: "mask",
+    visibleColors: [],
+    embeddedCarrierColor: "",
     qualityScore: 95
   },
   "Cloud maskable descriptors should not duplicate display tile/glyph decisions."
@@ -2963,6 +3815,8 @@ assert.deepEqual(
     brandColor: "#4285f4",
     isMonochrome: false,
     renderMode: "original",
+    visibleColors: ["#4285f4", "#ea4335"],
+    embeddedCarrierColor: "",
     qualityScore: 84
   },
   "Google-like cloud multicolor descriptors should remain source metadata only."
@@ -2972,19 +3826,37 @@ assert.deepEqual(
   const icon = new TestIcon();
   testTheme = "light";
   applySiteIconForTest(icon, { url: "https://example-cloud-multicolor.test/", icon: remoteDataUrl });
-  assert.equal(icon.style.getPropertyValue("--site-icon-tile-light"), "#ffffff", "Remote multicolor descriptors use the same neutral day tile as local multicolor SVGs.");
-  assert.equal(icon.style.getPropertyValue("--site-icon-tile-dark"), "#f8fafc", "Remote multicolor descriptors use the same neutral night tile as local multicolor SVGs.");
+  assert.equal(icon.style.getPropertyValue("--site-icon-tile-light"), "#ffffff", "Remote multicolor descriptors use the paper day carrier.");
+  assert.equal(icon.style.getPropertyValue("--site-icon-tile-dark"), "#ffffff", "Remote multicolor descriptors use the paper night carrier.");
+  assertPaletteCarrierSeparatedForTest(remoteDataUrl, "#4285f4", "#ffffff", "light", "Remote descriptor multicolor light carrier");
+  assertPaletteCarrierSeparatedForTest(remoteDataUrl, "#4285f4", "#ffffff", "dark", "Remote descriptor multicolor dark carrier");
   assert.equal(icon.src, remoteDataUrl, "Remote multicolor descriptors preserve original artwork like local multicolor SVGs.");
 }
+{
+  const roundedCarrierSvg = '<svg viewBox="0 0 24 24"><rect width="24" height="24" rx="5" ry="5" fill="#f40009"/><path fill="#fff" d="M4 4h16v16H4z"/></svg>';
+  const remoteDataUrl = svgTextDataUrl(prepareRemoteBrandSvgForTest(roundedCarrierSvg, { brandColor: "#f40009", qualityScore: 91 }));
+  const icon = new TestIcon();
+  assert.equal(
+    remoteBrandSvgDescriptorFromSource(remoteDataUrl).embeddedCarrierColor,
+    "#f40009",
+    "Remote rounded multicolor SVG metadata should round-trip the embedded carrier color."
+  );
+  testTheme = "light";
+  applySiteIconForTest(icon, { url: "https://example-cloud-rounded.test/", icon: remoteDataUrl });
+  assert.equal(icon.style.getPropertyValue("--site-icon-tile-light"), "#f40009", "Remote rounded multicolor SVGs should inherit their own light carrier.");
+  assert.equal(icon.style.getPropertyValue("--site-icon-tile-dark"), "#f40009", "Remote rounded multicolor SVGs should inherit their own dark carrier.");
+}
 assert.deepEqual(
-  remoteBrandSvgDescriptor('<svg viewBox="0 0 24 24"><linearGradient id="g"/><path fill="url(#g)" d="M0 0h24v24H0z"/></svg>', { brandColor: "#4a154b", qualityScore: 82 }),
+  remoteBrandSvgDescriptor('<svg viewBox="0 0 24 24"><linearGradient id="g"><stop stop-color="#4a154b"/><stop stop-color="rgb(0,128,255)"/></linearGradient><path fill="url(#g)" d="M0 0h24v24H0z"/></svg>', { brandColor: "#4a154b", qualityScore: 82 }),
   {
     brandColor: "#4a154b",
     isMonochrome: false,
-    renderMode: "original",
+    renderMode: "gradient",
+    visibleColors: ["#4a154b", "#0080ff"],
+    embeddedCarrierColor: "",
     qualityScore: 82
   },
-  "Slack/Figma-like multicolor or gradient descriptors should remain original-render metadata."
+  "Slack/Figma-like gradient descriptors should use gradient-render metadata."
 );
 {
   const steamGradientSvg = '<svg viewBox="0 0 65 65" fill="#fff"><defs><linearGradient id="A"><stop stop-color="#111d2e"/><stop stop-color="#1387b8"/></linearGradient></defs><path fill="url(#A)" d="M0 0h65v65H0z"/><path d="M4 4h12v12H4z"/></svg>';
@@ -2994,12 +3866,14 @@ assert.deepEqual(
   assert.deepEqual(remoteBrandSvgDescriptor(steamGradientSvg, { brandColor: "", qualityScore: 88 }), {
     brandColor: "",
     isMonochrome: false,
-    renderMode: "original",
+    renderMode: "gradient",
+    visibleColors: ["#ffffff", "#111d2e", "#1387b8"],
+    embeddedCarrierColor: "",
     qualityScore: 88
-  }, "Steam-like gradient provider SVGs should classify as original without a brand color.");
+  }, "Steam-like gradient provider SVGs should classify as gradient without a brand color.");
   applySiteIconForTest(icon, { url: "https://store.steampowered.com/", icon: remoteDataUrl });
-  assert.equal(icon.style.getPropertyValue("--site-icon-tile-light"), "#ffffff", "Steam-like gradient cloud SVGs use neutral light carrier without a manual siteKey list.");
-  assert.equal(icon.style.getPropertyValue("--site-icon-tile-dark"), "#f8fafc", "Steam-like gradient cloud SVGs use neutral dark carrier without a manual siteKey list.");
+  assert.equal(icon.style.getPropertyValue("--site-icon-tile-light"), "#000000", "Steam-like gradient cloud SVGs use the fixed light carrier without a manual siteKey list.");
+  assert.equal(icon.style.getPropertyValue("--site-icon-tile-dark"), "#ffffff", "Steam-like gradient cloud SVGs use the fixed dark carrier without a manual siteKey list.");
   assert.equal(icon.src, remoteDataUrl, "Steam-like gradient cloud SVGs preserve original artwork.");
 }
 const preparedRemoteSvg = prepareRemoteBrandSvgForTest(simpleSvg, { brandColor: "#1db954", qualityScore: 92 });
@@ -3010,6 +3884,8 @@ assert.deepEqual(
     brandColor: "#1db954",
     isMonochrome: true,
     renderMode: "mask",
+    visibleColors: ["#1db954"],
+    embeddedCarrierColor: "",
     qualityScore: 92
   },
   "Cached cloud SVG data URLs should round-trip source metadata only."
@@ -3021,6 +3897,8 @@ assert.deepEqual(
     brandColor: "#1db954",
     renderMode: "mask",
     isMonochrome: true,
+    visibleColors: ["#1db954"],
+    embeddedCarrierColor: "",
     qualityScore: 92
   },
   "Cached cloud SVG strategy must not store a separate display tile/glyph algorithm."

@@ -61,10 +61,10 @@ assert.match(
   assert.match(source, pattern, `${engineId} should use the requested settings icon strategy.`);
 });
 
-assert.match(
+assert.doesNotMatch(
   source,
-  /if \(target\.id === "jimeng"\) \{\s*applyIconTile\(icon, "brand", \{ light: "#000000", dark: "#000000" \}, true\);\s*\}/,
-  "Jimeng should use a black tile in the active AI engine pill."
+  /if \(target\.id === "jimeng"\) \{\s*applyIconTile\(icon, "brand"/,
+  "Jimeng active AI engine pill should use the shared SVG content strategy, not a hard-coded tile override."
 );
 
 [

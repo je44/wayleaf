@@ -155,6 +155,8 @@ const FAVICON_READABLE_CARRIER_MAX_MIX = 0.72;
 const BRAND_ICON_VI_CONTRAST_MIN = 2.75;
 const BRAND_ICON_DARK_MODE_CARRIER = "#f8fafc";
 const BRAND_ICON_LIGHT_MODE_DARK_CARRIER = "#102019";
+const BRAND_ICON_MULTICOLOR_PAPER_CARRIER = "#ffffff";
+const BRAND_ICON_MULTICOLOR_DARK_CARRIER = "#111827";
 const DEFAULT_FAVICON_MIN_COVERAGE = 0.12;
 const DEFAULT_FAVICON_MAX_COVERAGE = 0.46;
 const DEFAULT_FAVICON_MIN_NEUTRAL_RATIO = 0.88;
@@ -947,31 +949,6 @@ const SITE_ICON_TILE_COLOR_BY_SITE_KEY = Object.freeze({
   "youtube.com": "#ff0000",
   "zhihu.com": "#0084ff"
 });
-const MULTICOLOR_BRAND_ICON_SITE_KEYS = new Set([
-  "alipay.com",
-  "bing.com",
-  "calendar.google.com",
-  "chrome.google.com",
-  "cloud.google.com",
-  "colab.research.google.com",
-  "doubao.com",
-  "douyin.com",
-  "docs.google.com",
-  "drive.google.com",
-  "figma.com",
-  "gemini.google.com",
-  "gmail.com",
-  "google.com",
-  "huggingface.co",
-  "v.qq.com",
-  "instagram.com",
-  "jimeng.jianying.com",
-  "maps.google.com",
-  "meet.google.com",
-  "microsoft.com",
-  "slack.com",
-  "tiktok.com"
-]);
 const ORIGINAL_ARTWORK_BRAND_TILE_SITE_KEYS = new Set([
   "developer.mozilla.org",
   "jd.com"
@@ -2723,6 +2700,8 @@ const whiteSvgIconDataUrlCache = new Map();
 const localSiteIconBrandColorCache = new Map();
 const localSiteIconRenderModeCache = new Map();
 const localSiteIconExplicitBrandColorCache = new Map();
+const localSiteIconVisibleColorsCache = new Map();
+const localSiteIconEmbeddedCarrierColorCache = new Map();
 const localSiteIconBrandColorRequests = new Map();
 const siteIconDiscoveryCache = new Map();
 const remoteBrandIconIndexCache = new Map();
@@ -4419,9 +4398,6 @@ function renderAiEnginePill(engine, options = {}) {
     applyExplicitSiteIcon(icon, iconSite, explicitIcon);
   } else {
     applySiteIcon(icon, iconSite);
-  }
-  if (target.id === "jimeng") {
-    applyIconTile(icon, "brand", { light: "#000000", dark: "#000000" }, true);
   }
   aiEnginePill.replaceChildren(icon);
   aiEnginePill.hidden = false;
@@ -7771,6 +7747,8 @@ function remoteBrandSvgCacheStrategy(icon) {
     brandColor: descriptor.brandColor,
     renderMode: descriptor.renderMode,
     isMonochrome: descriptor.isMonochrome,
+    visibleColors: descriptor.visibleColors || [],
+    embeddedCarrierColor: descriptor.embeddedCarrierColor || "",
     qualityScore: descriptor.qualityScore
   };
 }
@@ -8060,6 +8038,8 @@ function prepareRemoteBrandSvg(svg, options = {}) {
   const descriptor = remoteBrandSvgDescriptor(svg, options);
   const color = descriptor.brandColor;
   const isMonochrome = descriptor.isMonochrome;
+  const visibleColorAttr = svgPaletteDataAttribute(descriptor.visibleColors);
+  const embeddedCarrierAttr = descriptor.embeddedCarrierColor || "";
   let output = String(svg || "").trim();
   output = output.replace(/<\?xml[^>]*>\s*/i, "");
   output = output.replace(/<!doctype[^>]*>\s*/i, "");
@@ -8076,27 +8056,36 @@ function prepareRemoteBrandSvg(svg, options = {}) {
       .replace(/\sdata-wayleaf-tile-dark=(["'])[^"']*\1/gi, "")
       .replace(/\sdata-wayleaf-glyph-light=(["'])[^"']*\1/gi, "")
       .replace(/\sdata-wayleaf-glyph-dark=(["'])[^"']*\1/gi, "")
+      .replace(/\sdata-wayleaf-visible-colors=(["'])[^"']*\1/gi, "")
+      .replace(/\sdata-wayleaf-embedded-carrier=(["'])[^"']*\1/gi, "")
       .replace(/\sdata-wayleaf-quality=(["'])[^"']*\1/gi, "");
     const brandAttr = color ? ` data-wayleaf-brand-color="${color}"` : "";
+    const visibleColorsAttr = visibleColorAttr ? ` data-wayleaf-visible-colors="${visibleColorAttr}"` : "";
+    const embeddedCarrierColorAttr = embeddedCarrierAttr ? ` data-wayleaf-embedded-carrier="${embeddedCarrierAttr}"` : "";
     const metadataAttrs = [
       `data-wayleaf-remote-brand="true"`,
       `data-wayleaf-monochrome="${isMonochrome ? "true" : "false"}"`,
       `data-wayleaf-render-mode="${descriptor.renderMode}"`,
       `data-wayleaf-quality="${descriptor.qualityScore}"`
     ];
-    return `<svg${cleanedAttrs} ${metadataAttrs.join(" ")}${brandAttr}>`;
+    return `<svg${cleanedAttrs} ${metadataAttrs.join(" ")}${brandAttr}${visibleColorsAttr}${embeddedCarrierColorAttr}>`;
   });
   return output;
 }
 
 function remoteBrandSvgDescriptor(svg, options = {}) {
   const brandColor = normalizeHexColor(options.brandColor || "") || "";
-  const isMonochrome = remoteBrandSvgIsMonochrome(svg);
-  const renderMode = isMonochrome ? "mask" : "original";
+  const analysis = svgPaintAnalysis(svg);
+  const isMonochrome = !analysis.usesPaintServer && analysis.visibleColors.length <= 1;
+  const renderMode = remoteBrandSvgHasComplexPaintAnalysis(analysis)
+    ? "gradient"
+    : isMonochrome ? "mask" : "original";
   return {
     brandColor,
     isMonochrome,
     renderMode,
+    visibleColors: analysis.visibleColors,
+    embeddedCarrierColor: svgEmbeddedCarrierColor(svg, analysis),
     qualityScore: Math.max(0, Math.min(100, Math.round(Number(options.qualityScore || 0))))
   };
 }
@@ -8118,6 +8107,8 @@ function remoteBrandSvgDescriptorFromSource(source) {
     brandColor: normalizeHexColor(attr("brand-color")),
     isMonochrome: attr("monochrome") === "true",
     renderMode: attr("render-mode") || "mask",
+    visibleColors: svgPaletteDataAttributeColors(attr("visible-colors")),
+    embeddedCarrierColor: normalizeHexColor(attr("embedded-carrier")),
     qualityScore: Number(attr("quality") || 0)
   };
 }
@@ -8175,11 +8166,11 @@ function remoteBrandSvgMonochromeBrandColor(svg, palette = extractSvgColorPalett
 }
 
 function remoteBrandSvgIsMonochrome(svg) {
-  if (remoteBrandSvgHasComplexPaint(svg)) {
+  const analysis = svgPaintAnalysis(svg);
+  if (analysis.usesPaintServer) {
     return false;
   }
-  const palette = extractSvgColorPalette(svg);
-  return palette.length <= 1;
+  return analysis.visibleColors.length <= 1;
 }
 
 function remoteBrandSvgUsesImplicitBlack(svg) {
@@ -8191,37 +8182,607 @@ function remoteBrandSvgUsesImplicitBlack(svg) {
 }
 
 function remoteBrandSvgHasComplexPaint(svg) {
-  const text = String(svg || "");
-  return /<(?:linearGradient|radialGradient|meshgradient|pattern|filter|mask)\b/i.test(text)
-    || /\s(?:fill|stroke)\s*=\s*(["'])\s*url\(/i.test(text)
-    || /(?:fill|stroke)\s*:\s*url\(/i.test(text);
+  return remoteBrandSvgHasComplexPaintAnalysis(svgPaintAnalysis(svg));
+}
+
+function remoteBrandSvgHasComplexPaintAnalysis(analysis) {
+  return analysis.paintServerColors.length > 1
+    || (analysis.paintServerColors.length > 0 && analysis.visibleColors.length > 1)
+    || (analysis.hasEffectPaintServer && analysis.visibleColors.length > 1);
+}
+
+function remoteBrandSvgUsesPaintServer(svg) {
+  return svgPaintAnalysis(svg).usesPaintServer;
 }
 
 function extractSvgColorPalette(svg) {
-  const palette = [];
+  return svgPaintAnalysis(svg).colors;
+}
+
+function extractSvgPaintServerColors(svg) {
+  return svgPaintAnalysis(svg).paintServerColors;
+}
+
+function svgEmbeddedCarrierColor(svg, analysis = svgPaintAnalysis(svg)) {
+  if (uniqueNormalizedHexColors(analysis.visibleColors).length <= 1) {
+    return "";
+  }
+  const viewBox = svgViewBox(String(svg || ""));
+  if (!viewBox) {
+    return "";
+  }
+  const shape = String(svg || "").match(/<(path|rect)\b([^>]*)>/i);
+  if (!shape) {
+    return "";
+  }
+  const attrs = svgAttributeMap(shape[2]);
+  const color = normalizeSvgHexColor(attrs.fill || svgInlineStyleProperty(attrs.style || "", "fill"));
+  if (!color || color === "none") {
+    return "";
+  }
+  const rounded = shape[1].toLowerCase() === "rect"
+    ? svgRectCoversViewBoxWithEqualRadius(attrs, viewBox)
+    : svgPathCoversViewBoxWithEqualRadius(attrs.d || "", viewBox);
+  return rounded ? color : "";
+}
+
+function svgViewBox(svg) {
+  const match = String(svg || "").match(/<svg\b[^>]*\sviewBox=(["'])([^"']+)\1/i);
+  if (!match) {
+    return null;
+  }
+  const values = match[2].trim().split(/[\s,]+/).map(Number);
+  if (values.length !== 4 || values.some((value) => !Number.isFinite(value))) {
+    return null;
+  }
+  return { x: values[0], y: values[1], width: values[2], height: values[3] };
+}
+
+function svgAttributeMap(attrs) {
+  const map = {};
+  for (const match of String(attrs || "").matchAll(/([:\w.-]+)\s*=\s*(["'])(.*?)\2/g)) {
+    map[match[1].toLowerCase()] = match[3];
+  }
+  return map;
+}
+
+function svgRectCoversViewBoxWithEqualRadius(attrs, viewBox) {
+  const x = Number(attrs.x || 0);
+  const y = Number(attrs.y || 0);
+  const width = Number(attrs.width || viewBox.width);
+  const height = Number(attrs.height || viewBox.height);
+  const rx = Number(attrs.rx || attrs.ry || 0);
+  const ry = Number(attrs.ry || attrs.rx || 0);
+  return Math.abs(x - viewBox.x) <= 0.01
+    && Math.abs(y - viewBox.y) <= 0.01
+    && Math.abs(width - viewBox.width) <= 0.01
+    && Math.abs(height - viewBox.height) <= 0.01
+    && rx > 0
+    && Math.abs(rx - ry) <= 0.01;
+}
+
+function svgPathCoversViewBoxWithEqualRadius(d, viewBox) {
+  const segments = svgPathSegments(d);
+  if (!segments.length) {
+    return false;
+  }
+  const points = segments.flatMap((segment) => segment.points);
+  const xs = points.map((point) => point.x);
+  const ys = points.map((point) => point.y);
+  const minX = Math.min(...xs);
+  const maxX = Math.max(...xs);
+  const minY = Math.min(...ys);
+  const maxY = Math.max(...ys);
+  const roundedCornerRadii = svgPathEqualCornerRadii(segments, viewBox);
+  return Math.abs(minX - viewBox.x) <= 0.01
+    && Math.abs(minY - viewBox.y) <= 0.01
+    && Math.abs(maxX - (viewBox.x + viewBox.width)) <= 0.01
+    && Math.abs(maxY - (viewBox.y + viewBox.height)) <= 0.01
+    && roundedCornerRadii.length === 4;
+}
+
+function svgPathSegments(d) {
+  const tokens = [...String(d || "").matchAll(/[AaCcHhLlMmQqSsTtVvZz]|[-+]?(?:\d*\.\d+|\d+\.?)(?:e[-+]?\d+)?/gi)].map((match) => match[0]);
+  const segments = [];
+  let index = 0;
+  let command = "";
+  let point = { x: 0, y: 0 };
+  let startPoint = { x: 0, y: 0 };
+  let lastControl = null;
+  const isCommand = (value) => /^[AaCcHhLlMmQqSsTtVvZz]$/.test(value || "");
+  const hasNumbers = (count) => tokens.slice(index, index + count).length === count
+    && tokens.slice(index, index + count).every((token) => !isCommand(token));
+  const read = () => Number(tokens[index++]);
+  const skipInvalidPathToken = () => {
+    if (index < tokens.length && !isCommand(tokens[index])) {
+      index += 1;
+    } else {
+      command = "";
+    }
+  };
+  const makePoint = (x, y, relative) => ({
+    x: relative ? point.x + x : x,
+    y: relative ? point.y + y : y
+  });
+  const push = (type, end, extraPoints = [], extra = {}) => {
+    segments.push({ type, start: point, end, points: [point, ...extraPoints, end], ...extra });
+    point = end;
+  };
+  while (index < tokens.length) {
+    if (isCommand(tokens[index])) {
+      command = tokens[index++];
+    }
+    if (!command) {
+      break;
+    }
+    const relative = command === command.toLowerCase();
+    switch (command.toUpperCase()) {
+      case "M": {
+        if (!hasNumbers(2)) {
+          return segments;
+        }
+        point = makePoint(read(), read(), relative);
+        startPoint = point;
+        command = relative ? "l" : "L";
+        lastControl = null;
+        break;
+      }
+      case "L":
+        if (!hasNumbers(2)) {
+          skipInvalidPathToken();
+          break;
+        }
+        while (hasNumbers(2)) {
+          push("L", makePoint(read(), read(), relative));
+          lastControl = null;
+        }
+        break;
+      case "H":
+        if (!hasNumbers(1)) {
+          skipInvalidPathToken();
+          break;
+        }
+        while (hasNumbers(1)) {
+          const x = relative ? point.x + read() : read();
+          push("L", { x, y: point.y });
+          lastControl = null;
+        }
+        break;
+      case "V":
+        if (!hasNumbers(1)) {
+          skipInvalidPathToken();
+          break;
+        }
+        while (hasNumbers(1)) {
+          const y = relative ? point.y + read() : read();
+          push("L", { x: point.x, y });
+          lastControl = null;
+        }
+        break;
+      case "C":
+        if (!hasNumbers(6)) {
+          skipInvalidPathToken();
+          break;
+        }
+        while (hasNumbers(6)) {
+          const control1 = makePoint(read(), read(), relative);
+          const control2 = makePoint(read(), read(), relative);
+          push("C", makePoint(read(), read(), relative), [control1, control2]);
+          lastControl = control2;
+        }
+        break;
+      case "S":
+        if (!hasNumbers(4)) {
+          skipInvalidPathToken();
+          break;
+        }
+        while (hasNumbers(4)) {
+          const control1 = lastControl ? { x: point.x * 2 - lastControl.x, y: point.y * 2 - lastControl.y } : point;
+          const control2 = makePoint(read(), read(), relative);
+          push("S", makePoint(read(), read(), relative), [control1, control2]);
+          lastControl = control2;
+        }
+        break;
+      case "Q":
+        if (!hasNumbers(4)) {
+          skipInvalidPathToken();
+          break;
+        }
+        while (hasNumbers(4)) {
+          const control = makePoint(read(), read(), relative);
+          push("Q", makePoint(read(), read(), relative), [control]);
+          lastControl = control;
+        }
+        break;
+      case "T":
+        if (!hasNumbers(2)) {
+          skipInvalidPathToken();
+          break;
+        }
+        while (hasNumbers(2)) {
+          const control = lastControl ? { x: point.x * 2 - lastControl.x, y: point.y * 2 - lastControl.y } : point;
+          push("T", makePoint(read(), read(), relative), [control]);
+          lastControl = control;
+        }
+        break;
+      case "A":
+        if (!hasNumbers(7)) {
+          skipInvalidPathToken();
+          break;
+        }
+        while (hasNumbers(7)) {
+          const rx = Math.abs(read());
+          const ry = Math.abs(read());
+          read();
+          read();
+          read();
+          push("A", makePoint(read(), read(), relative), [], { radius: { x: rx, y: ry } });
+          lastControl = null;
+        }
+        break;
+      case "Z":
+        push("Z", startPoint);
+        lastControl = null;
+        command = "";
+        break;
+      default:
+        index += 1;
+    }
+  }
+  return segments;
+}
+
+function svgPathEqualCornerRadii(segments, viewBox) {
+  const tolerance = Math.max(0.01, Math.max(viewBox.width, viewBox.height) * 0.015);
+  const cornerSpecs = [
+    { key: "topLeft", x: viewBox.x, y: viewBox.y },
+    { key: "topRight", x: viewBox.x + viewBox.width, y: viewBox.y },
+    { key: "bottomRight", x: viewBox.x + viewBox.width, y: viewBox.y + viewBox.height },
+    { key: "bottomLeft", x: viewBox.x, y: viewBox.y + viewBox.height }
+  ];
+  const radii = new Map();
+  const onX = (point, x) => Math.abs(point.x - x) <= tolerance;
+  const onY = (point, y) => Math.abs(point.y - y) <= tolerance;
+  const acceptRadius = (corner, rx, ry, segment) => {
+    const radiusTolerance = Math.max(tolerance, Math.max(rx, ry) * 0.08);
+    if (rx <= tolerance || ry <= tolerance || Math.abs(rx - ry) > radiusTolerance) {
+      return;
+    }
+    if (segment.type === "A" && Math.abs(segment.radius.x - segment.radius.y) > radiusTolerance) {
+      return;
+    }
+    radii.set(corner.key, (rx + ry) / 2);
+  };
+  segments.filter((segment) => /[CQSTA]/.test(segment.type)).forEach((segment) => {
+    cornerSpecs.forEach((corner) => {
+      const points = [segment.start, segment.end];
+      const horizontal = points.find((candidate) => onY(candidate, corner.y));
+      const vertical = points.find((candidate) => onX(candidate, corner.x));
+      if (!horizontal || !vertical || horizontal === vertical) {
+        return;
+      }
+      acceptRadius(corner, Math.abs(horizontal.x - corner.x), Math.abs(vertical.y - corner.y), segment);
+    });
+  });
+  if (radii.size !== 4) {
+    return [];
+  }
+  const values = [...radii.values()];
+  const average = values.reduce((sum, value) => sum + value, 0) / values.length;
+  const radiusTolerance = Math.max(tolerance, average * 0.08);
+  return Math.max(...values) - Math.min(...values) <= radiusTolerance ? values : [];
+}
+
+function svgPaletteDataAttribute(colors) {
+  const palette = uniqueNormalizedHexColors(colors);
+  return palette.length ? palette.join(",") : "";
+}
+
+function svgPaletteDataAttributeColors(value) {
+  return uniqueNormalizedHexColors(String(value || "").split(","));
+}
+
+function uniqueNormalizedHexColors(colors) {
+  const output = [];
   const seen = new Set();
-  const pushColor = (value) => {
-    const color = normalizeSvgHexColor(value);
+  (Array.isArray(colors) ? colors : []).forEach((color) => {
+    const normalized = normalizeHexColor(color);
+    if (!normalized || seen.has(normalized)) {
+      return;
+    }
+    seen.add(normalized);
+    output.push(normalized);
+  });
+  return output;
+}
+
+function svgPaintAnalysis(svg) {
+  const text = String(svg || "");
+  const domAnalysis = svgPaintAnalysisFromDom(text);
+  return domAnalysis || svgPaintAnalysisFromText(text);
+}
+
+function svgPaintAnalysisFromDom(svg) {
+  if (typeof DOMParser === "undefined" || !remoteBrandSvgHasRootElement(svg)) {
+    return null;
+  }
+  let doc;
+  try {
+    doc = new DOMParser().parseFromString(svg, "image/svg+xml");
+  } catch {
+    return null;
+  }
+  if (!doc?.documentElement || doc.querySelector("parsererror")) {
+    return null;
+  }
+  const colors = [];
+  const visibleColors = [];
+  const definitionColors = [];
+  const paintServerColors = [];
+  const seenColors = new Set();
+  const seenVisibleColors = new Set();
+  const seenDefinitionColors = new Set();
+  const seenPaintServerColors = new Set();
+  const paintServerTags = new Set(["lineargradient", "radialgradient", "meshgradient", "pattern", "filter", "mask"]);
+  const effectPaintServerTags = new Set(["pattern", "filter", "mask"]);
+  const styleRules = svgStyleRules(doc);
+  const idMap = new Map([...doc.querySelectorAll("[id]")].map((element) => [element.id, element]));
+  let usesPaintServer = false;
+  let hasEffectPaintServer = false;
+  const push = (target, seen, value, currentColor = "") => {
+    const color = normalizeSvgHexColor(resolveSvgColorValue(value, currentColor));
     if (!color || seen.has(color)) {
       return;
     }
     seen.add(color);
-    palette.push(color);
+    target.push(color);
+  };
+  const styleValue = (element, property) => {
+    const attributeValue = element.hasAttribute(property) ? element.getAttribute(property) || "" : "";
+    let value = attributeValue;
+    for (const rule of styleRules) {
+      if (rule.properties[property] && svgElementMatches(element, rule.selector)) {
+        value = rule.properties[property];
+      }
+    }
+    const inlineValue = svgInlineStyleProperty(element.getAttribute("style") || "", property);
+    return {
+      attributeValue,
+      value: inlineValue || value
+    };
+  };
+  const paintValue = (element, property) => styleValue(element, property).value;
+  const isInsidePaintServerDefinition = (element) => {
+    let current = element;
+    while (current?.nodeType === 1) {
+      if (paintServerTags.has(current.tagName.toLowerCase())) {
+        return true;
+      }
+      current = current.parentElement;
+    }
+    return false;
+  };
+  const inheritedColor = (element) => {
+    let current = element;
+    while (current?.nodeType === 1) {
+      const value = paintValue(current, "color");
+      const color = normalizeSvgHexColor(resolveSvgColorValue(value));
+      if (color) {
+        return color;
+      }
+      current = current.parentElement;
+    }
+    return "";
+  };
+  const collectPaintServerColors = (paintServer, visited = new Set()) => {
+    if (!paintServer || visited.has(paintServer)) {
+      return;
+    }
+    visited.add(paintServer);
+    [paintServer, ...paintServer.querySelectorAll("*")].forEach((element) => {
+      const currentColor = inheritedColor(element);
+      SVG_PAINT_COLOR_PROPERTIES.forEach((property) => {
+        const value = paintValue(element, property);
+        push(definitionColors, seenDefinitionColors, value, currentColor);
+        push(paintServerColors, seenPaintServerColors, value, currentColor);
+      });
+      const href = element.getAttribute("href") || element.getAttribute("xlink:href") || "";
+      const inheritedPaintServer = href.startsWith("#") ? idMap.get(href.slice(1)) : null;
+      if (inheritedPaintServer) {
+        collectPaintServerColors(inheritedPaintServer, visited);
+      }
+    });
+  };
+  const collectPaintServer = (value) => {
+    const match = String(value || "").match(/url\(\s*#([^)\s]+)\s*\)/i);
+    if (!match) {
+      return;
+    }
+    const paintServer = idMap.get(match[1]);
+    if (!paintServer) {
+      return;
+    }
+    usesPaintServer = true;
+    const tagName = paintServer.tagName.toLowerCase();
+    if (effectPaintServerTags.has(tagName)) {
+      hasEffectPaintServer = true;
+    }
+    collectPaintServerColors(paintServer);
+  };
+
+  doc.querySelectorAll("*").forEach((element) => {
+    const currentColor = inheritedColor(element);
+    SVG_PAINT_COLOR_PROPERTIES.forEach((property) => {
+      const { attributeValue, value } = styleValue(element, property);
+      if (!isInsidePaintServerDefinition(element)) {
+        push(visibleColors, seenVisibleColors, value, currentColor);
+        if (/^url\(/i.test(String(value || "").trim())) {
+          push(visibleColors, seenVisibleColors, attributeValue, currentColor);
+        }
+      } else {
+        push(definitionColors, seenDefinitionColors, value, currentColor);
+      }
+      collectPaintServer(value);
+    });
+    SVG_PAINT_SERVER_REFERENCE_PROPERTIES.forEach((property) => {
+      collectPaintServer(paintValue(element, property));
+    });
+  });
+  visibleColors.forEach((color) => push(colors, seenColors, color));
+  definitionColors.forEach((color) => push(colors, seenColors, color));
+  paintServerColors.forEach((color) => push(visibleColors, seenVisibleColors, color));
+  paintServerColors.forEach((color) => push(colors, seenColors, color));
+  return { colors, visibleColors, definitionColors, paintServerColors, usesPaintServer, hasEffectPaintServer };
+}
+
+const SVG_PAINT_COLOR_PROPERTIES = Object.freeze([
+  "fill",
+  "stroke",
+  "color",
+  "stop-color",
+  "flood-color",
+  "lighting-color"
+]);
+const SVG_PAINT_SERVER_REFERENCE_PROPERTIES = Object.freeze([
+  "fill",
+  "stroke",
+  "filter",
+  "mask"
+]);
+const SVG_PAINT_STYLE_PROPERTIES = Object.freeze([
+  ...new Set([...SVG_PAINT_COLOR_PROPERTIES, ...SVG_PAINT_SERVER_REFERENCE_PROPERTIES])
+]);
+
+function svgPaintAnalysisFromText(svg) {
+  const palette = [];
+  const visibleColors = [];
+  const definitionColors = [];
+  const paintServerColors = [];
+  const seen = new Set();
+  const seenVisibleColors = new Set();
+  const seenDefinitionColors = new Set();
+  const seenPaintServerColors = new Set();
+  const pushColor = (target, targetSeen, value) => {
+    const color = normalizeSvgHexColor(resolveSvgColorValue(value));
+    if (!color || targetSeen.has(color)) {
+      return;
+    }
+    targetSeen.add(color);
+    target.push(color);
   };
   const text = String(svg || "");
-  const colorAttributeMatches = text.matchAll(/\s(?:fill|stroke|color)\s*=\s*(["'])(#[0-9a-f]{3,8})\1/gi);
+  const paintServerBlockPattern = /<(?:linearGradient|radialGradient|meshgradient|pattern|filter|mask)\b[\s\S]*?<\/(?:linearGradient|radialGradient|meshgradient|pattern|filter|mask)>/gi;
+  const referencedPaintServer = /\s(?:fill|stroke|filter|mask)\s*=\s*(["'])\s*url\(/i.test(text)
+    || /(?:fill|stroke|filter|mask)\s*:\s*url\(/i.test(text);
+  const referencedEffectPaintServer = /\s(?:filter|mask)\s*=\s*(["'])\s*url\(/i.test(text)
+    || /(?:filter|mask)\s*:\s*url\(/i.test(text);
+  const directText = text.replace(paintServerBlockPattern, "");
+  const colorAttributeMatches = directText.matchAll(/\s(?:fill|stroke|color|stop-color|flood-color|lighting-color)\s*=\s*(["'])([^"']+)\1/gi);
   for (const match of colorAttributeMatches) {
-    pushColor(match[2]);
+    pushColor(visibleColors, seenVisibleColors, match[2]);
   }
-  const inlineStyleMatches = text.matchAll(/(?:^|["'{;\s])(?:fill|stroke|color)\s*:\s*(#[0-9a-f]{3,8})\b/gi);
+  const inlineStyleMatches = directText.matchAll(/(?:^|["'{;\s])(?:fill|stroke|color|stop-color|flood-color|lighting-color)\s*:\s*([^;"'}\s][^;"'}]*)/gi);
   for (const match of inlineStyleMatches) {
-    pushColor(match[1]);
+    pushColor(visibleColors, seenVisibleColors, match[1]);
   }
-  return palette;
+  const allPaintServerText = (String(svg || "").match(paintServerBlockPattern) || []).join("");
+  const allPaintServerAttributeMatches = allPaintServerText.matchAll(/\s(?:fill|stroke|color|stop-color|flood-color|lighting-color)\s*=\s*(["'])([^"']+)\1/gi);
+  for (const match of allPaintServerAttributeMatches) {
+    pushColor(definitionColors, seenDefinitionColors, match[2]);
+  }
+  const allPaintServerStyleMatches = allPaintServerText.matchAll(/(?:^|["'{;\s])(?:fill|stroke|color|stop-color|flood-color|lighting-color)\s*:\s*([^;"'}\s][^;"'}]*)/gi);
+  for (const match of allPaintServerStyleMatches) {
+    pushColor(definitionColors, seenDefinitionColors, match[1]);
+  }
+  const referencedPaintServerText = referencedPaintServer ? allPaintServerText : "";
+  const paintServerAttributeMatches = referencedPaintServerText.matchAll(/\s(?:fill|stroke|color|stop-color|flood-color|lighting-color)\s*=\s*(["'])([^"']+)\1/gi);
+  for (const match of paintServerAttributeMatches) {
+    pushColor(paintServerColors, seenPaintServerColors, match[2]);
+  }
+  const paintServerStyleMatches = referencedPaintServerText.matchAll(/(?:^|["'{;\s])(?:fill|stroke|color|stop-color|flood-color|lighting-color)\s*:\s*([^;"'}\s][^;"'}]*)/gi);
+  for (const match of paintServerStyleMatches) {
+    pushColor(paintServerColors, seenPaintServerColors, match[1]);
+  }
+  visibleColors.forEach((color) => pushColor(palette, seen, color));
+  definitionColors.forEach((color) => pushColor(palette, seen, color));
+  paintServerColors.forEach((color) => pushColor(visibleColors, seenVisibleColors, color));
+  paintServerColors.forEach((color) => pushColor(palette, seen, color));
+  return {
+    colors: palette,
+    visibleColors,
+    definitionColors,
+    paintServerColors,
+    usesPaintServer: referencedPaintServer,
+    hasEffectPaintServer: referencedEffectPaintServer
+      || (referencedPaintServer && /<(?:pattern|filter|mask)\b/i.test(text))
+  };
+}
+
+function svgStyleRules(doc) {
+  const rules = [];
+  doc.querySelectorAll("style").forEach((styleElement) => {
+    const css = styleElement.textContent || "";
+    for (const match of css.matchAll(/([^{}]+)\{([^{}]+)\}/g)) {
+      const properties = svgStyleDeclarationProperties(match[2]);
+      if (!Object.keys(properties).length) {
+        continue;
+      }
+      match[1].split(",").map((selector) => selector.trim()).filter(Boolean).forEach((selector) => {
+        rules.push({ selector, properties });
+      });
+    }
+  });
+  return rules;
+}
+
+function svgElementMatches(element, selector) {
+  try {
+    return element.matches(selector);
+  } catch {
+    return false;
+  }
+}
+
+function svgStyleDeclarationProperties(styleText) {
+  const properties = {};
+  String(styleText || "").split(";").forEach((declaration) => {
+    const separator = declaration.indexOf(":");
+    if (separator <= 0) {
+      return;
+    }
+    const property = declaration.slice(0, separator).trim().toLowerCase();
+    if (!SVG_PAINT_STYLE_PROPERTIES.includes(property)) {
+      return;
+    }
+    properties[property] = declaration.slice(separator + 1).trim();
+  });
+  return properties;
+}
+
+function svgInlineStyleProperty(styleText, property) {
+  return svgStyleDeclarationProperties(styleText)[property] || "";
+}
+
+function resolveSvgColorValue(value, currentColor = "") {
+  const raw = String(value || "").trim();
+  if (/^currentColor$/i.test(raw)) {
+    return currentColor;
+  }
+  const varMatch = raw.match(/^var\(\s*--[^,\s)]+(?:\s*,\s*([^)]+))?\)$/i);
+  if (varMatch?.[1]) {
+    return varMatch[1].trim();
+  }
+  return raw;
 }
 
 function normalizeSvgHexColor(value) {
-  const color = String(value || "").trim().toLowerCase();
+  const color = String(value || "")
+    .trim()
+    .replace(/\s*!important\s*$/i, "")
+    .toLowerCase();
+  if (!color || /^(?:none|transparent|currentcolor|inherit|initial|unset)$/i.test(color) || /^url\(/i.test(color)) {
+    return "";
+  }
   if (/^#[0-9a-f]{6}$/i.test(color)) {
     return color;
   }
@@ -8237,6 +8798,33 @@ function normalizeSvgHexColor(value) {
       return "";
     }
     return `#${red}${red}${green}${green}${blue}${blue}`;
+  }
+  const rgbMatch = color.match(/^rgba?\(\s*([+-]?\d+(?:\.\d+)?)\s*,\s*([+-]?\d+(?:\.\d+)?)\s*,\s*([+-]?\d+(?:\.\d+)?)(?:\s*,\s*([+-]?\d*(?:\.\d+)?))?\s*\)$/i);
+  if (rgbMatch) {
+    if (rgbMatch[4] !== undefined && Number(rgbMatch[4]) <= 0) {
+      return "";
+    }
+    return rgbToHex([rgbMatch[1], rgbMatch[2], rgbMatch[3]].map((channel) => {
+      return Math.round(Math.max(0, Math.min(255, Number(channel))));
+    }));
+  }
+  const namedColors = {
+    black: "#000000",
+    blue: "#0000ff",
+    cyan: "#00ffff",
+    gray: "#808080",
+    green: "#008000",
+    grey: "#808080",
+    lime: "#00ff00",
+    magenta: "#ff00ff",
+    orange: "#ffa500",
+    purple: "#800080",
+    red: "#ff0000",
+    white: "#ffffff",
+    yellow: "#ffff00"
+  };
+  if (Object.hasOwn(namedColors, color)) {
+    return namedColors[color];
   }
   return "";
 }
@@ -8990,6 +9578,8 @@ function applyRemoteBrandColorToLocalIcon(icon, site, localIcon, iconDataUrl) {
   localSiteIconBrandColorCache.set(localIcon, descriptor.brandColor);
   localSiteIconRenderModeCache.set(localIcon, localSiteIconRenderMode(localIcon) || "mask");
   localSiteIconExplicitBrandColorCache.set(localIcon, true);
+  localSiteIconVisibleColorsCache.set(localIcon, descriptor.visibleColors || []);
+  localSiteIconEmbeddedCarrierColorCache.set(localIcon, localSiteIconEmbeddedCarrierColor(localIcon));
   applySiteIconTile(icon, site, localIcon);
   const displayIcon = displayIconSource(icon, localIcon);
   if (displayIcon instanceof Promise) {
@@ -9112,11 +9702,12 @@ function applySiteIconTile(icon, site, iconPath = "") {
   const tileColor = siteIconBrandColor(siteKey, iconPath);
   const remoteDescriptor = remoteBrandSvgDescriptorFromSource(iconPath);
   const originalSvgColor = remoteDescriptor?.renderMode === "original" ? "#ffffff" : "";
+  const gradientSvgColor = usesGradientIconCarrier(iconPath) ? "#ffffff" : "";
   const tileMode = iconPath ? "brand" : "plain";
   const isLocalIconSource = String(iconPath || "").startsWith("icons/");
   let tileColors = genericIconTileColors(parsedUrl?.hostname || site.url || site.title);
-  if (iconPath && (tileColor || originalSvgColor)) {
-    tileColors = brandIconTileColors(tileColor || originalSvgColor, siteKey, iconPath);
+  if (iconPath && (tileColor || originalSvgColor || gradientSvgColor)) {
+    tileColors = brandIconTileColors(tileColor || originalSvgColor || gradientSvgColor, siteKey, iconPath);
   }
   applyIconTile(icon, tileMode, tileColors, isLocalIconSource);
 }
@@ -9130,7 +9721,7 @@ function hydrateLocalSiteIconBrandColor(icon, site, iconPath = "") {
       return;
     }
     const hasIconStrategy = siteIconBrandColor(icon.dataset.siteKey || siteGroupKey(safeUrl(site.url)), iconPath)
-      || localSiteIconRenderMode(iconPath) === "original";
+      || ["gradient", "original"].includes(localSiteIconRenderMode(iconPath));
     if (hasIconStrategy) {
       applySiteIconTile(icon, site, iconPath);
       const displayIcon = displayIconSource(icon, iconPath);
@@ -9165,15 +9756,15 @@ function loadLocalSiteIconBrandColor(source) {
     .then((response) => response.ok ? response.text() : "")
     .then((svg) => {
       const analysis = localSiteIconAnalysisFromSvg(svg);
-      localSiteIconBrandColorCache.set(value, analysis.brandColor);
-      localSiteIconRenderModeCache.set(value, analysis.renderMode);
-      localSiteIconExplicitBrandColorCache.set(value, analysis.hasExplicitBrandColor);
+      cacheLocalSiteIconAnalysis(value, analysis);
       return analysis.brandColor;
     })
     .catch(() => {
       localSiteIconBrandColorCache.set(value, "");
       localSiteIconRenderModeCache.set(value, "");
       localSiteIconExplicitBrandColorCache.set(value, false);
+      localSiteIconVisibleColorsCache.set(value, []);
+      localSiteIconEmbeddedCarrierColorCache.set(value, "");
       return "";
     });
   localSiteIconBrandColorRequests.set(value, request);
@@ -9207,9 +9798,7 @@ function localSiteIconBrandColor(source) {
   }
   if (isSvgDataUrl(value)) {
     const analysis = localSiteIconAnalysisFromSvg(decodeSvgDataUrl(value));
-    localSiteIconBrandColorCache.set(value, analysis.brandColor);
-    localSiteIconRenderModeCache.set(value, analysis.renderMode);
-    localSiteIconExplicitBrandColorCache.set(value, analysis.hasExplicitBrandColor);
+    cacheLocalSiteIconAnalysis(value, analysis);
     return analysis.brandColor;
   }
   return "";
@@ -9222,9 +9811,7 @@ function localSiteIconHasExplicitBrandColor(source) {
   }
   if (isSvgDataUrl(value)) {
     const analysis = localSiteIconAnalysisFromSvg(decodeSvgDataUrl(value));
-    localSiteIconBrandColorCache.set(value, analysis.brandColor);
-    localSiteIconRenderModeCache.set(value, analysis.renderMode);
-    localSiteIconExplicitBrandColorCache.set(value, analysis.hasExplicitBrandColor);
+    cacheLocalSiteIconAnalysis(value, analysis);
     return analysis.hasExplicitBrandColor;
   }
   return false;
@@ -9237,27 +9824,62 @@ function localSiteIconRenderMode(source) {
   }
   if (isSvgDataUrl(value)) {
     const analysis = localSiteIconAnalysisFromSvg(decodeSvgDataUrl(value));
-    localSiteIconBrandColorCache.set(value, analysis.brandColor);
-    localSiteIconRenderModeCache.set(value, analysis.renderMode);
-    localSiteIconExplicitBrandColorCache.set(value, analysis.hasExplicitBrandColor);
+    cacheLocalSiteIconAnalysis(value, analysis);
     return analysis.renderMode;
   }
   return "";
 }
 
+function localSiteIconVisibleColors(source) {
+  const value = String(source || "");
+  if (localSiteIconVisibleColorsCache.has(value)) {
+    return localSiteIconVisibleColorsCache.get(value);
+  }
+  if (isSvgDataUrl(value)) {
+    const analysis = localSiteIconAnalysisFromSvg(decodeSvgDataUrl(value));
+    cacheLocalSiteIconAnalysis(value, analysis);
+    return analysis.visibleColors;
+  }
+  return [];
+}
+
+function localSiteIconEmbeddedCarrierColor(source) {
+  const value = String(source || "");
+  if (localSiteIconEmbeddedCarrierColorCache.has(value)) {
+    return localSiteIconEmbeddedCarrierColorCache.get(value);
+  }
+  if (isSvgDataUrl(value)) {
+    const analysis = localSiteIconAnalysisFromSvg(decodeSvgDataUrl(value));
+    cacheLocalSiteIconAnalysis(value, analysis);
+    return analysis.embeddedCarrierColor;
+  }
+  return "";
+}
+
+function cacheLocalSiteIconAnalysis(source, analysis) {
+  localSiteIconBrandColorCache.set(source, analysis.brandColor);
+  localSiteIconRenderModeCache.set(source, analysis.renderMode);
+  localSiteIconExplicitBrandColorCache.set(source, analysis.hasExplicitBrandColor);
+  localSiteIconVisibleColorsCache.set(source, analysis.visibleColors);
+  localSiteIconEmbeddedCarrierColorCache.set(source, analysis.embeddedCarrierColor || "");
+}
+
 function localSiteIconAnalysisFromSvg(svg) {
   if (!remoteBrandSvgHasRootElement(svg)) {
-    return { brandColor: "", renderMode: "" };
+    return { brandColor: "", renderMode: "", hasExplicitBrandColor: false, visibleColors: [], embeddedCarrierColor: "" };
   }
-  const isMonochrome = remoteBrandSvgIsMonochrome(svg);
-  const palette = extractSvgColorPalette(svg);
+  const analysis = svgPaintAnalysis(svg);
+  const isMonochrome = !analysis.usesPaintServer && analysis.visibleColors.length <= 1;
+  const palette = analysis.colors;
   const explicitBrandColor = isMonochrome && palette.length === 1
     ? remoteBrandSvgMonochromeBrandColor(svg, palette)
     : "";
   return {
     brandColor: explicitBrandColor || (isMonochrome && remoteBrandSvgUsesImplicitBlack(svg) ? "#000000" : ""),
-    renderMode: isMonochrome ? "mask" : "original",
-    hasExplicitBrandColor: Boolean(explicitBrandColor)
+    renderMode: remoteBrandSvgHasComplexPaintAnalysis(analysis) ? "gradient" : isMonochrome ? "mask" : "original",
+    hasExplicitBrandColor: Boolean(explicitBrandColor),
+    visibleColors: analysis.visibleColors,
+    embeddedCarrierColor: svgEmbeddedCarrierColor(svg)
   };
 }
 
@@ -9271,22 +9893,127 @@ function brandIconTileColors(tileColor, siteKey = "", iconPath = "") {
   if (!color) {
     return genericIconTileColors("");
   }
+  if (usesGradientIconCarrier(iconPath)) {
+    return {
+      light: "#000000",
+      dark: "#ffffff"
+    };
+  }
   if (keepsBrandIconOriginalOnBrandTile(siteKey, iconPath)) {
     return {
       light: color,
       dark: color
     };
   }
-  if (keepsBrandIconOriginal(siteKey, iconPath)) {
-    return {
-      light: "#ffffff",
-      dark: "#f8fafc"
-    };
+  if (usesOriginalIconCarrier(iconPath)) {
+    const paletteTileColors = originalSvgIconTileColors(color, iconPath);
+    if (paletteTileColors) {
+      return paletteTileColors;
+    }
   }
   return {
     light: brandIconLightCarrierColor(color),
     dark: brandIconDarkCarrierColor(color)
   };
+}
+
+function usesOriginalIconCarrier(iconPath = "") {
+  const remoteDescriptor = remoteBrandSvgDescriptorFromSource(iconPath);
+  if (remoteDescriptor) {
+    return remoteDescriptor.renderMode === "original";
+  }
+  return localSiteIconRenderMode(iconPath) === "original";
+}
+
+function originalSvgIconTileColors(brandColor, iconPath = "") {
+  const palette = originalSvgVisiblePalette(brandColor, iconPath);
+  if (palette.length <= 1) {
+    return null;
+  }
+  const embeddedCarrier = originalSvgEmbeddedCarrierColor(iconPath);
+  if (embeddedCarrier) {
+    return {
+      light: embeddedCarrier,
+      dark: embeddedCarrier
+    };
+  }
+  return {
+    light: paletteAwareBrandIconCarrierColor(brandColor, palette, "light"),
+    dark: paletteAwareBrandIconCarrierColor(brandColor, palette, "dark")
+  };
+}
+
+function originalSvgEmbeddedCarrierColor(iconPath = "") {
+  const remoteDescriptor = remoteBrandSvgDescriptorFromSource(iconPath);
+  return remoteDescriptor?.embeddedCarrierColor || localSiteIconEmbeddedCarrierColor(iconPath);
+}
+
+function originalSvgVisiblePalette(brandColor, iconPath = "") {
+  const remoteDescriptor = remoteBrandSvgDescriptorFromSource(iconPath);
+  const visibleColors = remoteDescriptor?.visibleColors || localSiteIconVisibleColors(iconPath);
+  const palette = uniqueNormalizedHexColors(visibleColors);
+  if (palette.length > 1) {
+    return palette;
+  }
+  const brand = normalizeHexColor(brandColor);
+  return uniqueNormalizedHexColors([...palette, ...(brand && !remoteBrandColorLooksNeutral(brand) ? [brand] : [])]);
+}
+
+function paletteAwareBrandIconCarrierColor(brandColor, palette, mode) {
+  const colors = uniqueNormalizedHexColors(palette);
+  const anchor = paletteCarrierAnchorColor(brandColor, colors);
+  if (!anchor || colors.length <= 1) {
+    return mode === "dark" ? brandIconDarkCarrierColor(anchor) : brandIconLightCarrierColor(anchor);
+  }
+  return paletteNeedsDarkAppIconCarrier(palette)
+    ? BRAND_ICON_MULTICOLOR_DARK_CARRIER
+    : BRAND_ICON_MULTICOLOR_PAPER_CARRIER;
+}
+
+function paletteColorTraits(palette) {
+  const colors = uniqueNormalizedHexColors(palette);
+  const samples = colors.map((color) => {
+    const stats = hexColorStats(color);
+    const [red, green, blue] = hexToRgb(color).map((channel) => channel / 255);
+    const chroma = Math.max(red, green, blue) - Math.min(red, green, blue);
+    return {
+      color,
+      chroma,
+      hue: stats?.hue || 0,
+      luminance: stats?.luminance ?? relativeLuminance(color),
+      saturated: chroma >= 0.24
+    };
+  });
+  const count = Math.max(1, samples.length);
+  const lightRatio = samples.filter((sample) => sample.luminance >= 0.72).length / count;
+  const darkRatio = samples.filter((sample) => sample.luminance <= 0.16).length / count;
+  const saturatedSamples = samples.filter((sample) => sample.saturated);
+  const coloredSamples = samples.filter((sample) => sample.chroma >= 0.18);
+  return {
+    hasDark: darkRatio > 0,
+    hasLight: lightRatio > 0,
+    lightDominant: lightRatio >= 0.5,
+    darkDominant: darkRatio >= 0.6,
+    saturatedMulticolor: saturatedSamples.length >= 2,
+    coloredRatio: coloredSamples.length / count,
+    averageLuminance: samples.reduce((sum, sample) => sum + sample.luminance, 0) / count
+  };
+}
+
+function paletteNeedsDarkAppIconCarrier(palette) {
+  const traits = paletteColorTraits(palette);
+  return traits.lightDominant
+    && !traits.hasDark
+    && traits.averageLuminance >= 0.58
+    && traits.coloredRatio <= 0.5;
+}
+
+function paletteCarrierAnchorColor(brandColor, palette) {
+  const brand = normalizeHexColor(brandColor);
+  if (brand && !remoteBrandColorLooksNeutral(brand)) {
+    return brand;
+  }
+  return uniqueNormalizedHexColors(palette).find((color) => !remoteBrandColorLooksNeutral(color)) || brand || "";
 }
 
 function brandIconLightCarrierColor(brandColor) {
@@ -9320,22 +10047,34 @@ function keepsBrandIconOriginal(siteKey, iconPath = "") {
   }
   const remoteDescriptor = remoteBrandSvgDescriptorFromSource(iconPath);
   if (remoteDescriptor) {
-    return remoteDescriptor.renderMode === "original";
+    return remoteDescriptor.renderMode === "original" || remoteDescriptor.renderMode === "gradient";
   }
   const localRenderMode = localSiteIconRenderMode(iconPath);
+  if (localRenderMode === "gradient") {
+    return true;
+  }
   if (localRenderMode === "original") {
     return true;
   }
   if (localRenderMode === "mask") {
     return false;
   }
-  if (MULTICOLOR_BRAND_ICON_SITE_KEYS.has(siteKey)) {
-    return true;
-  }
   if (!siteIconSourceLooksLikeSvg(iconPath)) {
     return true;
   }
   return isSvgDataUrl(iconPath) && !remoteBrandSvgSourceIsMaskable(iconPath);
+}
+
+function usesGradientIconCarrier(iconPath = "") {
+  const remoteDescriptor = remoteBrandSvgDescriptorFromSource(iconPath);
+  if (remoteDescriptor) {
+    return remoteDescriptor.renderMode === "gradient";
+  }
+  return localSiteIconRenderMode(iconPath) === "gradient";
+}
+
+function svgUsesGradientIconCarrier(svg) {
+  return remoteBrandSvgHasComplexPaint(svg);
 }
 
 function keepsBrandIconOriginalOnBrandTile(siteKey, iconPath = "") {
