@@ -2997,6 +2997,7 @@ function restoreFirstPaintIconRender(icon, site, render) {
   }
   if (render.source) {
     icon.dataset.iconSource = render.source;
+    icon.dataset.iconCandidate = render.source;
   }
   icon.classList.toggle("site-icon-generic-fallback", render.generic);
   applyIconTile(icon, render.tile, { light: render.tileLight, dark: render.tileDark }, render.local);
@@ -3038,9 +3039,7 @@ function cacheRenderedSiteIcon(icon, site) {
   const iconRenders = { ...(cache.iconRenders || {}) };
   iconRenders[key] = {
     ...(iconRenders[key] || {}),
-    source: icon.dataset.iconSource && icon.dataset.iconSource !== src
-      ? icon.dataset.iconSource
-      : (iconRenders[key]?.source || ""),
+    source: icon.dataset.iconSource || iconRenders[key]?.source || "",
     [mode]: {
       src,
       tile: icon.dataset.iconTile || "plain",
@@ -10370,15 +10369,32 @@ function refreshRenderedSiteIcons() {
         refreshRemoteBrandIcon(icon, site);
         return;
       }
-      if (!firstPaintRenderStaleForLocalIcon(icon.dataset.siteKey, localIcon, {
-        source: icon.dataset.iconSource || "",
-        src: icon.getAttribute("src") || ""
-      })) {
-        if (icon.getAttribute("src") === localIcon) {
-          delete icon.dataset.iconCacheHydrated;
+      const siteKey = icon.dataset.siteKey || siteGroupKey(safeUrl(site.url));
+      icon.dataset.iconSource = localIcon;
+      icon.dataset.iconCandidate = localIcon;
+      loadLocalSiteIconBrandColor(localIcon).then(() => {
+        if (
+          !icon.isConnected
+          || icon.dataset.iconSource !== localIcon
+          || siteGroupKey(safeUrl(icon.dataset.siteUrl)) !== siteKey
+        ) {
+          return;
         }
-        return;
-      }
+        applySiteIconTile(icon, site, localIcon);
+        const nextSource = displayIconSource(icon, localIcon, { awaitDisplayIcon: true });
+        Promise.resolve(nextSource).then((source) => {
+          if (!icon.isConnected || icon.dataset.iconSource !== localIcon) {
+            return;
+          }
+          icon.src = source;
+          delete icon.dataset.iconCacheHydrated;
+          cacheRenderedSiteIcon(icon, site);
+          if (localIconNeedsRemoteBrandColor(siteKey, localIcon)) {
+            refreshRemoteBrandIcon(icon, site);
+          }
+        });
+      });
+      return;
     }
     if (localIcon) {
       delete icon.dataset.iconCacheHydrated;

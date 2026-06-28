@@ -2619,12 +2619,11 @@ function refreshRenderedSiteIconDecisionForTest(icon, site) {
     if (!localIcon) {
       return "refresh-remote-brand";
     }
-    if (!firstPaintRenderStaleForLocalIconForTest(icon.dataset.siteKey, localIcon, {
-      source: icon.dataset.iconSource || "",
-      src: icon.getAttribute("src") || ""
-    })) {
-      return "keep-local-cache";
-    }
+    icon.dataset.iconSource = localIcon;
+    icon.dataset.iconCandidate = localIcon;
+    applySiteIconTileForTest(icon, site, localIcon);
+    icon.src = displayIconSourceForTest(icon, localIcon);
+    return "sync-local-cache-render";
   }
   return localIcon ? "rerender-local" : "rerender-site";
 }
@@ -3470,9 +3469,31 @@ assert.equal(localIconForUrlForTest("https://www.tiktok.com/"), "icons/sites/tik
   icon.src = "icons/sites/doubao.svg";
   assert.equal(
     refreshRenderedSiteIconDecisionForTest(icon, { url: "https://www.doubao.com/chat/" }),
-    "keep-local-cache",
-    "First-paint cached local SVGs should keep the cheap local short-circuit."
+    "sync-local-cache-render",
+    "First-paint cached local SVG display nodes should resync from the shared Wayleaf icon result on refresh."
   );
+}
+{
+  const icon = new TestIcon();
+  icon.dataset.iconCacheHydrated = "true";
+  icon.dataset.siteKey = "google.com";
+  icon.src = "data:image/svg+xml,legacy-google-render";
+  assert.equal(
+    refreshRenderedSiteIconDecisionForTest(icon, { url: "https://www.google.com/search" }),
+    "sync-local-cache-render",
+    "Legacy first-paint local SVG cache should sync source and tile metadata without falling back to favicon."
+  );
+  assert.equal(icon.dataset.iconSource, "icons/sites/google.svg", "Legacy local cache recovers the shared source for theme refresh.");
+  assert.equal(icon.dataset.iconCandidate, "icons/sites/google.svg", "Legacy local cache recovers the shared candidate token.");
+  assert.deepEqual(
+    {
+      light: icon.style.getPropertyValue("--site-icon-tile-light"),
+      dark: icon.style.getPropertyValue("--site-icon-tile-dark")
+    },
+    brandIconTileColorsForTest("#4285f4", "google.com", "icons/sites/google.svg"),
+    "Legacy Google cache resyncs the existing multicolor carriers."
+  );
+  assert.equal(icon.src, "icons/sites/google.svg", "Legacy Google cache keeps the local Wayleaf icon path instead of favicon fallback.");
 }
 {
   const icon = new TestIcon();
@@ -3482,8 +3503,8 @@ assert.equal(localIconForUrlForTest("https://www.tiktok.com/"), "icons/sites/tik
   icon.src = "data:image/svg+xml,%3Csvg viewBox='0 0 24 24'%3E%3Cpath fill='%23092018' d='M4 2l16 10L4 22z'/%3E%3C/svg%3E";
   assert.equal(
     refreshRenderedSiteIconDecisionForTest(icon, { url: "https://v.qq.com/" }),
-    "rerender-local",
-    "First-paint cached renders must refresh when a local multicolor SVG keeps the same source but has stale rendered data."
+    "sync-local-cache-render",
+    "First-paint cached display nodes must sync from the shared local Wayleaf icon result when cached data is stale."
   );
 }
 [

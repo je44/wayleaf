@@ -116,8 +116,8 @@ assert.match(
 
 assert.match(
   source,
-  /function cacheRenderedSiteIcon\(icon, site\)[\s\S]*iconRenders\[key\][\s\S]*src,[\s\S]*tileLight,[\s\S]*tileDark/,
-  "First-paint cache should reuse the existing icon algorithm's final rendered output."
+  /function cacheRenderedSiteIcon\(icon, site\)[\s\S]*iconRenders\[key\][\s\S]*source:[\s\S]*src,[\s\S]*tileLight,[\s\S]*tileDark/,
+  "First-paint cache should preserve source metadata and reuse the existing icon algorithm's final rendered output."
 );
 
 assert.match(
