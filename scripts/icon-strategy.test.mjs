@@ -2811,7 +2811,7 @@ function brandIconTileColorsForTest(tileColor, siteKey = "", iconPath = "") {
     return { light: "#ffffff", dark: "#202922" };
   }
   if (usesGradientIconCarrierForTest(iconPath)) {
-    return { light: "#000000", dark: "#ffffff" };
+    return { light: "#f7fafd", dark: "#1b1b1b" };
   }
   if (keepsBrandIconOriginalOnBrandTileForTest(siteKey, iconPath)) {
     return { light: color, dark: color };
@@ -4598,9 +4598,9 @@ assert.equal(localIconForUrlForTest("https://www.tiktok.com/"), "icons/sites/tik
   );
 }
 [
-  ["alipay.com", "icons/sites/alipay.svg", "#1677ff", { light: "#000000", dark: "#ffffff" }, "gradient"],
+  ["alipay.com", "icons/sites/alipay.svg", "#1677ff", { light: "#f7fafd", dark: "#1b1b1b" }, "gradient"],
   ["douyin.com", "icons/sites/douyin.svg", "#000000", { light: "#ffffff", dark: "#ffffff" }, "original"],
-  ["instagram.com", "icons/sites/instagram.svg", "#e4405f", { light: "#000000", dark: "#ffffff" }, "gradient"],
+  ["instagram.com", "icons/sites/instagram.svg", "#e4405f", { light: "#f7fafd", dark: "#1b1b1b" }, "gradient"],
   ["huggingface.co", "icons/sites/huggingface.svg", "#ffd21e", { light: "#ffffff", dark: "#ffffff" }, "original"],
   ["tiktok.com", "icons/sites/tiktok.svg", "#000000", { light: "#ffffff", dark: "#ffffff" }, "original"],
   ["v.qq.com", "icons/sites/vqq.svg", "#30a3f9", { light: "#ffffff", dark: "#ffffff" }, "original"]
@@ -4614,12 +4614,12 @@ assert.equal(localIconForUrlForTest("https://www.tiktok.com/"), "icons/sites/tik
 });
 assert.deepEqual(
   brandIconTileColorsForTest("#1c6fff", "jimeng.jianying.com", "icons/sites/jimeng.svg"),
-  { light: "#000000", dark: "#ffffff" },
+  { light: "#f7fafd", dark: "#1b1b1b" },
   "Jimeng should use the automatic gradient carrier without a site whitelist."
 );
 assert.deepEqual(
   brandIconTileColorsForTest("#ffffff", "antigravity.example", "icons/sites/antigravity.svg"),
-  { light: "#000000", dark: "#ffffff" },
+  { light: "#f7fafd", dark: "#1b1b1b" },
   "Antigravity-like gradient SVGs should use the automatic gradient carrier without a site whitelist."
 );
 assert.equal(siteIconBrandColorForTest("chatglm.cn", "icons/sites/glm.svg"), "#3859ff", "GLM should use its blue VI color for mask recoloring.");
@@ -4678,7 +4678,7 @@ assertPaletteCarrierSeparatedForTest("icons/sites/unlistedmulticolor.svg", "#fff
 
 [
   { name: "Pinduoduo", url: "https://www.pinduoduo.com/", source: "icons/sites/pinduoduo.svg", lightTile: "#f40009", darkTile: "#f40009", brandColor: "#e02e24", renderMode: "original", embeddedCarrierColor: "#f40009" },
-  { name: "Microsoft Teams", url: "https://teams.microsoft.com/", source: "icons/sites/microsoftteams.svg", lightTile: "#000000", darkTile: "#ffffff" }
+  { name: "Microsoft Teams", url: "https://teams.microsoft.com/", source: "icons/sites/microsoftteams.svg", lightTile: "#f7fafd", darkTile: "#1b1b1b" }
 ].forEach((sample) => {
   const icon = new TestIcon();
   testTheme = "light";
@@ -5034,8 +5034,8 @@ assert.deepEqual(
     qualityScore: 88
   }, "Steam-like gradient provider SVGs should classify as gradient without a brand color.");
   applySiteIconForTest(icon, { url: "https://store.steampowered.com/", icon: remoteDataUrl });
-  assert.equal(icon.style.getPropertyValue("--site-icon-tile-light"), "#000000", "Steam-like gradient cloud SVGs use the fixed light carrier without a manual siteKey list.");
-  assert.equal(icon.style.getPropertyValue("--site-icon-tile-dark"), "#ffffff", "Steam-like gradient cloud SVGs use the fixed dark carrier without a manual siteKey list.");
+  assert.equal(icon.style.getPropertyValue("--site-icon-tile-light"), "#f7fafd", "Steam-like gradient cloud SVGs use the fixed light carrier without a manual siteKey list.");
+  assert.equal(icon.style.getPropertyValue("--site-icon-tile-dark"), "#1b1b1b", "Steam-like gradient cloud SVGs use the fixed dark carrier without a manual siteKey list.");
   assert.equal(icon.src, remoteDataUrl, "Steam-like gradient cloud SVGs preserve original artwork.");
 }
 const preparedRemoteSvg = prepareRemoteBrandSvgForTest(simpleSvg, { brandColor: "#1db954", qualityScore: 92 });

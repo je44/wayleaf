@@ -42,7 +42,7 @@ const SEARCH_SETTINGS_STORAGE_KEY = "searchSettings";
 const VIDEO_PIP_GLOBAL_ENABLED_STORAGE_KEY = "videoPipGlobalEnabled";
 const SOCIAL_VIDEO_EXTRACTOR_ENABLED_STORAGE_KEY = "socialVideoExtractorEnabled";
 const FIRST_PAINT_CACHE_STORAGE_KEY = "__wayleaf_first_paint_cache__";
-const FIRST_PAINT_CACHE_VERSION = 5;
+const FIRST_PAINT_CACHE_VERSION = 6;
 const AI_DIRECT_PROMPT_STORAGE_KEY = "aiDirectPrompts";
 const AI_PROMPT_HISTORY_STORAGE_KEY = "aiPromptHistory";
 const SYNC_META_STORAGE_KEY = "syncMeta";
@@ -9935,8 +9935,8 @@ function brandIconTileColors(tileColor, siteKey = "", iconPath = "") {
   }
   if (usesGradientIconCarrier(iconPath)) {
     return {
-      light: "#000000",
-      dark: "#ffffff"
+      light: "#f7fafd",
+      dark: "#1b1b1b"
     };
   }
   if (keepsBrandIconOriginalOnBrandTile(siteKey, iconPath)) {
