@@ -81,6 +81,9 @@ const MAX_LOCAL_SEARCH_RESULTS = 8;
 const MAX_AI_PROMPT_HISTORY_ITEMS = 48;
 const MAX_CACHED_SITE_ICONS = 80;
 const MAX_CACHED_SITE_ICON_BYTES = 96 * 1024;
+const SITE_ICON_RAW_SVG_CACHE_STORAGE_KEY = "__wayleaf_site_icon_svg__";
+const MAX_CACHED_SITE_ICON_SVG_BYTES = 24 * 1024;
+const MAX_CACHED_SITE_ICON_SVG_ENTRIES = MAX_FAVORITE_SITES + MAX_HISTORY_SITE_GROUPS + 16;
 const SITE_ICON_DISCOVERY_TIMEOUT_MS = 3500;
 const SITE_ICON_DOCUMENT_DISCOVERY_TIMEOUT_MS = 15000;
 const SITE_ICON_FETCH_TIMEOUT_MS = 4500;
@@ -2712,6 +2715,7 @@ const localSiteIconEmbeddedCarrierColorCache = new Map();
 const localSiteIconBrandColorRequests = new Map();
 const siteIconDiscoveryCache = new Map();
 const remoteBrandIconIndexCache = new Map();
+const siteIconRawSvgTextCache = new Map();
 
 ensureChromeApiFallback();
 document.addEventListener("DOMContentLoaded", initWithStorageMigration);
@@ -2861,10 +2865,15 @@ function cloudSyncPayload(values = {}) {
 function readFirstPaintCache() {
   try {
     const cache = JSON.parse(localStorage.getItem(FIRST_PAINT_CACHE_STORAGE_KEY) || "{}");
-    return cache?.version === FIRST_PAINT_CACHE_VERSION
-      && cache.extensionVersion === firstPaintExtensionVersion()
-      ? cache
-      : {};
+    if (cache?.version !== FIRST_PAINT_CACHE_VERSION || cache.extensionVersion !== firstPaintExtensionVersion()) {
+      return {};
+    }
+    if (cache.codeSignature !== iconRenderCodeSignature()) {
+      // Icon algorithm changed: keep the cheap site-list scaffold so layout still paints
+      // instantly, but drop the rendered icon outputs so they recompute from the latest code.
+      return { ...cache, iconRenders: {} };
+    }
+    return cache;
   } catch {
     return {};
   }
@@ -2876,7 +2885,8 @@ function writeFirstPaintCache(values = {}) {
       ...readFirstPaintCache(),
       ...values,
       version: FIRST_PAINT_CACHE_VERSION,
-      extensionVersion: firstPaintExtensionVersion()
+      extensionVersion: firstPaintExtensionVersion(),
+      codeSignature: iconRenderCodeSignature()
     }));
   } catch {}
 }
@@ -2889,7 +2899,113 @@ function firstPaintExtensionVersion() {
   }
 }
 
+// Signature over the icon-rendering functions' source. Any edit to the layer 1/2/3
+// rendering logic changes this string, so the first-paint render-output cache is
+// treated as empty and icons recompute from the latest code. The raw-SVG text cache
+// intentionally does NOT use this — raw text is algorithm input, not output.
+let iconRenderCodeSignatureMemo = "";
+function iconRenderCodeSignature() {
+  if (iconRenderCodeSignatureMemo) {
+    return iconRenderCodeSignatureMemo;
+  }
+  const fns = [
+    applySiteIcon, applySiteIconTile, computeSiteIconTile, displayIconSource, coloredSvgIconSource,
+    applySvgGlyphColor, iconGlyphColorForCurrentTile, shouldInvertBrandSvg, localBrandGlyphColorForTile,
+    brandIconTileColors, gradientSvgIconTileColors, originalSvgIconTileColors,
+    usesGradientIconCarrier, usesOriginalIconCarrier, svgEmbeddedCarrierColor, localSiteIconAnalysisFromSvg
+  ];
+  let hash = 0;
+  let lenSum = 0;
+  for (const fn of fns) {
+    let src = "";
+    try {
+      src = typeof fn === "function" ? fn.toString() : "";
+    } catch {
+      src = "";
+    }
+    lenSum += src.length;
+    for (let index = 0; index < src.length; index += 1) {
+      hash = ((hash << 5) - hash + src.charCodeAt(index)) | 0;
+    }
+  }
+  iconRenderCodeSignatureMemo = `${lenSum.toString(36)}.${(hash >>> 0).toString(36)}`;
+  return iconRenderCodeSignatureMemo;
+}
+
+function readSiteIconRawSvgCache() {
+  try {
+    const cache = JSON.parse(localStorage.getItem(SITE_ICON_RAW_SVG_CACHE_STORAGE_KEY) || "{}");
+    return cache && typeof cache === "object" && !Array.isArray(cache) ? cache : {};
+  } catch {
+    return {};
+  }
+}
+
+function writeSiteIconRawSvgCacheEntry(path, svg) {
+  const key = String(path || "");
+  const text = String(svg || "");
+  if (!key.startsWith(`${SITE_ICON_DIRECTORY}/`) || !text || text.length > MAX_CACHED_SITE_ICON_SVG_BYTES) {
+    return;
+  }
+  const cache = readSiteIconRawSvgCache();
+  cache[key] = { svg: text, updatedAt: Date.now() };
+  const evictPast = (entries, keepCount) => {
+    entries
+      .sort(([, first], [, second]) => Number(second?.updatedAt || 0) - Number(first?.updatedAt || 0))
+      .slice(keepCount)
+      .forEach(([staleKey]) => delete cache[staleKey]);
+  };
+  evictPast(Object.entries(cache), MAX_CACHED_SITE_ICON_SVG_ENTRIES);
+  try {
+    localStorage.setItem(SITE_ICON_RAW_SVG_CACHE_STORAGE_KEY, JSON.stringify(cache));
+  } catch {
+    evictPast(Object.entries(cache), Math.floor(MAX_CACHED_SITE_ICON_SVG_ENTRIES / 2));
+    try {
+      localStorage.setItem(SITE_ICON_RAW_SVG_CACHE_STORAGE_KEY, JSON.stringify(cache));
+    } catch {}
+  }
+}
+
+function rememberSiteIconRawSvgText(path, svg) {
+  const key = String(path || "");
+  const text = String(svg || "");
+  if (!key || !text) {
+    return;
+  }
+  siteIconRawSvgTextCache.set(key, text);
+  writeSiteIconRawSvgCacheEntry(key, text);
+}
+
+function localSiteIconRawSvgText(path) {
+  return siteIconRawSvgTextCache.get(String(path || "")) || "";
+}
+
+// Run the existing synchronous analysis pipeline over cached SVG text so tile/brand-color
+// decisions are warm before first paint. Never overrides an analysis already present
+// (e.g. remote-brand overrides set elsewhere).
+function hydrateLocalSiteIconAnalysisFromText(path, svg) {
+  const key = String(path || "");
+  const text = String(svg || "");
+  if (!key || !text || localSiteIconRenderModeCache.has(key)) {
+    return;
+  }
+  cacheLocalSiteIconAnalysis(key, localSiteIconAnalysisFromSvg(text));
+}
+
+function primeSiteIconRawSvgCacheFromStorage() {
+  const cache = readSiteIconRawSvgCache();
+  Object.entries(cache).forEach(([path, entry]) => {
+    const text = typeof entry?.svg === "string" ? entry.svg : "";
+    if (!text) {
+      return;
+    }
+    siteIconRawSvgTextCache.set(path, text);
+    hydrateLocalSiteIconAnalysisFromText(path, text);
+  });
+}
+
 function renderFirstPaintCache() {
+  primeSiteIconRawSvgCacheFromStorage();
   const cache = readFirstPaintCache();
   const favoriteSites = normalizeCachedFavoriteSites(cache.favoriteSites);
   const recentGroups = normalizeCachedRecentGroups(cache.recentGroups);
@@ -9690,10 +9806,9 @@ function preventNativeSiteIconDrag(event) {
   }
 }
 
-function applySiteIconTile(icon, site, iconPath = "") {
+function computeSiteIconTile(site, iconPath = "") {
   const parsedUrl = safeUrl(site.url);
   const siteKey = siteGroupKey(parsedUrl);
-  icon.dataset.siteKey = siteKey || "";
   const tileColor = siteIconBrandColor(siteKey, iconPath);
   const remoteDescriptor = remoteBrandSvgDescriptorFromSource(iconPath);
   const originalSvgColor = remoteDescriptor?.renderMode === "original" ? "#ffffff" : "";
@@ -9704,7 +9819,13 @@ function applySiteIconTile(icon, site, iconPath = "") {
   if (iconPath && (tileColor || originalSvgColor || gradientSvgColor)) {
     tileColors = brandIconTileColors(tileColor || originalSvgColor || gradientSvgColor, siteKey, iconPath);
   }
-  applyIconTile(icon, tileMode, tileColors, isLocalIconSource);
+  return { siteKey: siteKey || "", tileMode, tileColors, isLocalIconSource };
+}
+
+function applySiteIconTile(icon, site, iconPath = "") {
+  const tile = computeSiteIconTile(site, iconPath);
+  icon.dataset.siteKey = tile.siteKey;
+  applyIconTile(icon, tile.tileMode, tile.tileColors, tile.isLocalIconSource);
 }
 
 function hydrateLocalSiteIconBrandColor(icon, site, iconPath = "") {
@@ -9750,6 +9871,7 @@ function loadLocalSiteIconBrandColor(source) {
   const request = fetch(value)
     .then((response) => response.ok ? response.text() : "")
     .then((svg) => {
+      rememberSiteIconRawSvgText(value, svg);
       const analysis = localSiteIconAnalysisFromSvg(svg);
       cacheLocalSiteIconAnalysis(value, analysis);
       return analysis.brandColor;
@@ -10217,6 +10339,13 @@ function displayIconSource(icon, source, options = {}) {
   if (options.awaitDisplayIcon) {
     return coloredSvgIconSource(source, glyphColor);
   }
+  // Zero-delay: when the raw SVG text is already cached, recolor synchronously so the
+  // caller sets the final (recolored) src in one tick — no raw-then-recolor swap, and no
+  // visual change (same applySvgGlyphColor output as the async path).
+  const syncText = isSvgDataUrl(source) ? "" : localSiteIconRawSvgText(source);
+  if (syncText) {
+    return svgTextDataUrl(applySvgGlyphColor(syncText, glyphColor));
+  }
   const requestTheme = document.documentElement.dataset.theme;
   const requestToken = String(Number(icon.dataset.iconThemeRequest || 0) + 1);
   icon.dataset.iconThemeRequest = requestToken;
@@ -10233,6 +10362,46 @@ function displayIconSource(icon, source, options = {}) {
     }
   });
   return source;
+}
+
+// Synchronous tile for a local SVG icon, used by the first-paint reconcile so the
+// complete icon (tile + glyph) lands in one tick. Returns null when the analysis
+// can't be warmed synchronously (no cached raw text) so callers fall back to async.
+function syncLocalIconTile(site, iconPath) {
+  const path = String(iconPath || "");
+  if (!path.startsWith(`${SITE_ICON_DIRECTORY}/`) || !siteIconSourceLooksLikeSvg(path)) {
+    return null;
+  }
+  if (!localSiteIconRenderModeCache.has(path)) {
+    const text = localSiteIconRawSvgText(path);
+    if (!text) {
+      return null;
+    }
+    hydrateLocalSiteIconAnalysisFromText(path, text);
+  }
+  return computeSiteIconTile(site, path);
+}
+
+// Synchronous mirror of displayIconSource's decision, called AFTER the tile is applied
+// (glyph color reads the just-applied tile var). Returns null when recolor would need a
+// fetch (no cached raw text) so the caller can fall back to the async path.
+function syncLocalIconFinalSrc(icon, iconPath) {
+  const path = String(iconPath || "");
+  if (icon.dataset.iconTile !== "brand" || !siteIconSourceLooksLikeSvg(path)) {
+    return path;
+  }
+  if (!shouldInvertBrandSvg(icon, path)) {
+    return path;
+  }
+  const glyphColor = iconGlyphColorForCurrentTile(icon, path);
+  if (!glyphColor) {
+    return path;
+  }
+  const text = localSiteIconRawSvgText(path);
+  if (!text) {
+    return null;
+  }
+  return svgTextDataUrl(applySvgGlyphColor(text, glyphColor));
 }
 
 function currentIconTileColor(icon) {
@@ -10410,6 +10579,35 @@ function refreshRenderedSiteIcons() {
       const siteKey = icon.dataset.siteKey || siteGroupKey(safeUrl(site.url));
       icon.dataset.iconSource = localIcon;
       icon.dataset.iconCandidate = localIcon;
+      // Fast path: recompute the full render (tile + glyph) synchronously from cached raw
+      // SVG text and apply it atomically. Skip entirely when nothing changed (steady state).
+      const syncTile = syncLocalIconTile(site, localIcon);
+      if (syncTile) {
+        const currentLight = icon.style.getPropertyValue("--site-icon-tile-light").trim();
+        const currentDark = icon.style.getPropertyValue("--site-icon-tile-dark").trim();
+        const tileUnchanged = icon.dataset.iconTile === syncTile.tileMode
+          && currentLight === String(syncTile.tileColors.light)
+          && currentDark === String(syncTile.tileColors.dark);
+        if (!tileUnchanged) {
+          icon.dataset.siteKey = syncTile.siteKey;
+          applyIconTile(icon, syncTile.tileMode, syncTile.tileColors, syncTile.isLocalIconSource);
+        }
+        const nextSource = syncLocalIconFinalSrc(icon, localIcon);
+        if (nextSource !== null) {
+          if (tileUnchanged && icon.getAttribute("src") === nextSource) {
+            return;
+          }
+          icon.src = nextSource;
+          delete icon.dataset.iconCacheHydrated;
+          cacheRenderedSiteIcon(icon, site);
+          if (localIconNeedsRemoteBrandColor(siteKey, localIcon)) {
+            refreshRemoteBrandIcon(icon, site);
+          }
+          return;
+        }
+      }
+      // Fallback (raw text not cached yet): async render, which also warms the raw-text
+      // cache so the next refresh is synchronous.
       loadLocalSiteIconBrandColor(localIcon).then(() => {
         if (
           !icon.isConnected
@@ -10450,17 +10648,23 @@ function coloredSvgIconSource(source, glyphColor) {
   if (whiteSvgIconDataUrlCache.has(cacheKey)) {
     return whiteSvgIconDataUrlCache.get(cacheKey);
   }
+  const cachedText = isSvgDataUrl(source) ? "" : localSiteIconRawSvgText(source);
   const request = isSvgDataUrl(source)
     ? Promise.resolve(svgTextDataUrl(applySvgGlyphColor(decodeSvgDataUrl(source), color)))
-    : fetch(source)
-      .then((response) => {
-        if (!response.ok) {
-          throw new Error(`Icon request failed: ${response.status}`);
-        }
-        return response.text();
-      })
-      .then((svg) => svgTextDataUrl(applySvgGlyphColor(svg, color)))
-      .catch(() => source);
+    : cachedText
+      ? Promise.resolve(svgTextDataUrl(applySvgGlyphColor(cachedText, color)))
+      : fetch(source)
+        .then((response) => {
+          if (!response.ok) {
+            throw new Error(`Icon request failed: ${response.status}`);
+          }
+          return response.text();
+        })
+        .then((svg) => {
+          rememberSiteIconRawSvgText(source, svg);
+          return svgTextDataUrl(applySvgGlyphColor(svg, color));
+        })
+        .catch(() => source);
   whiteSvgIconDataUrlCache.set(cacheKey, request);
   return request;
 }
