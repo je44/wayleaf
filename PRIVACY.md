@@ -34,6 +34,8 @@ When Chrome extension sync is available and enabled in Wayleaf, selected setting
 
 Wayleaf does not sell, rent, or transfer user data to a Wayleaf-operated backend. Third-party sites receive only the requests needed for the features the user uses, such as searches, AI prompts, or icon discovery.
 
+Wayleaf's use of information received from Chrome extension APIs adheres to the Chrome Web Store User Data Policy, including the Limited Use requirements.
+
 ## Contact
 
 Report issues at https://github.com/je44/wayleaf/issues.

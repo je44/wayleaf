@@ -117,8 +117,8 @@
         return { ok: true };
       }
       if (request?.type === "entered") {
-        if (!activeOwner || sameSourceTab(activeOwner, target)) {
-          await setOwner(sessionFromTarget(target, request, sameTarget(activeOwner, target) ? activeOwner : null));
+        if (!activeOwner || sameTarget(activeOwner, target)) {
+          await setOwner(sessionFromTarget(target, request, activeOwner));
           return { ok: true, owner: true };
         }
         return { ok: true, owner: false };
@@ -149,7 +149,7 @@
       ) {
         return { ok: true, owner: false };
       }
-      if (activeOwner && !sameSourceTab(activeOwner, target)) {
+      if (activeOwner && activeOwner.status !== "source-lost" && !sameSourceTab(activeOwner, target)) {
         return { ok: true, owner: false };
       }
       if (activeOwner?.status === "active") {

@@ -54,6 +54,8 @@ for (const locale of supportedLocales) {
   const localeMessages = JSON.parse(readFileSync(new URL(`../_locales/${chromeLocale}/messages.json`, import.meta.url), "utf8"));
   assert.match(localeMessages.extName?.message || "", /^Wayleaf(?:\b| - )/, `${chromeLocale} should define a localized Wayleaf extension name.`);
   assert.ok(localeMessages.extDescription?.message?.trim(), `${chromeLocale} should define the extension description.`);
+  assert.ok(localeMessages.extName.message.length <= 75, `${chromeLocale} extension name should fit Chrome's 75-character manifest limit.`);
+  assert.ok(localeMessages.extDescription.message.length <= 132, `${chromeLocale} extension description should fit Chrome's 132-character manifest limit.`);
 }
 
 const messagesMatch = source.match(/const MESSAGES = (\{[\s\S]*?\n\});\nconst LOCALE_COMPLETIONS =/);

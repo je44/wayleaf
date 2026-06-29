@@ -4,6 +4,7 @@ import { readFileSync } from "node:fs";
 const styles = readFileSync(new URL("../newtab.css", import.meta.url), "utf8");
 const html = readFileSync(new URL("../newtab.html", import.meta.url), "utf8");
 const source = readFileSync(new URL("../newtab.js", import.meta.url), "utf8");
+const packageSource = readFileSync(new URL("./package-release.sh", import.meta.url), "utf8");
 
 assert.match(
   html,
@@ -138,6 +139,7 @@ for (const mode of ["system", "light", "dark"]) {
     `The ${mode} appearance option should embed its real Wayleaf preview asset.`
   );
 }
+assert.ok(packageSource.split(/\s+/).includes("assets"), "Release packages should include appearance preview assets.");
 
 assert.match(
   styles,

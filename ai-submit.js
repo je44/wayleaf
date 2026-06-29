@@ -419,7 +419,7 @@ async function submitPromptWhenReady(config, prompt, attachments = []) {
   const submitButton = attachments.length
     ? await waitForAttachmentReady(config, input, attachments.length)
     : await waitForSubmitButton(config, input, 6000);
-  if (attachments.length && config.engineId === "gemini" && !submitButton) {
+  if (attachments.length && !submitButton) {
     return "filled";
   }
   if (submitButton) {

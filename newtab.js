@@ -63,6 +63,7 @@ const ONBOARDING_PREVIEW_FAVORITES = [
 const AI_DIRECT_PROMPT_TOKEN_PARAM = "_wayleaf_prompt";
 const AI_DIRECT_PROMPT_TEXT_PARAM = "_wayleaf_text";
 const AI_DIRECT_PROMPT_TTL_MS = 2 * 60 * 1000;
+const AI_PROMPT_HISTORY_MAX_PROMPT_LENGTH = 12000;
 const AI_DIRECT_ATTACHMENT_MAX_COUNT = 2;
 const AI_DIRECT_ATTACHMENT_MAX_BYTES = 10 * 1024 * 1024;
 const AI_DIRECT_ATTACHMENT_ENGINE_IDS = new Set(["chatgpt", "claude", "gemini"]);
@@ -6331,7 +6332,7 @@ function localSearchDedupKey(url) {
 
 async function recordAiPromptHistory(engine, query) {
   const engineId = String(engine?.id || "");
-  const prompt = normalizeText(query).slice(0, WAYLEAF_MAX_PROMPT_LENGTH);
+  const prompt = normalizeText(query).slice(0, AI_PROMPT_HISTORY_MAX_PROMPT_LENGTH);
   if (!engineId || !prompt) {
     return;
   }
@@ -6365,7 +6366,7 @@ function normalizeAiPromptHistory(value) {
     ? value
       .map((item) => ({
         engineId: String(item?.engineId || ""),
-        prompt: normalizeText(item?.prompt).slice(0, WAYLEAF_MAX_PROMPT_LENGTH),
+        prompt: normalizeText(item?.prompt).slice(0, AI_PROMPT_HISTORY_MAX_PROMPT_LENGTH),
         updatedAt: Number(item?.updatedAt || 0),
         count: Math.max(1, Number(item?.count || 1))
       }))

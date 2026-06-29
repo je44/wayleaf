@@ -19,6 +19,10 @@ assert.match(newtabSource, /const AI_DIRECT_PROMPT_STORAGE_KEY = "aiDirectPrompt
 assert.match(newtabSource, /const AI_DIRECT_PROMPT_TOKEN_PARAM = "_wayleaf_prompt";/, "New tab prompt handoff must include a URL token parameter.");
 assert.match(newtabSource, /const AI_DIRECT_PROMPT_TEXT_PARAM = "_wayleaf_text";/, "New tab prompt handoff must include a URL-fragment prompt fallback.");
 assert.match(newtabSource, /const AI_DIRECT_PROMPT_TTL_MS = 2 \* 60 \* 1000;/, "New tab prompt handoff must keep a short prompt TTL.");
+assert.match(newtabSource, /const AI_PROMPT_HISTORY_MAX_PROMPT_LENGTH = 12000;/, "New tab AI prompt history should define its own prompt length cap.");
+assert.match(newtabSource, /function recordAiPromptHistory\(engine, query\)[\s\S]*slice\(0, AI_PROMPT_HISTORY_MAX_PROMPT_LENGTH\)/, "AI prompt history should use the defined prompt length cap.");
+assert.match(newtabSource, /function normalizeAiPromptHistory\(value\)[\s\S]*slice\(0, AI_PROMPT_HISTORY_MAX_PROMPT_LENGTH\)/, "Stored AI prompt history normalization should use the defined prompt length cap.");
+assert.doesNotMatch(newtabSource, /WAYLEAF_MAX_PROMPT_LENGTH/, "New tab should not reference content-script-only prompt length constants.");
 assert.match(newtabSource, /const AI_DIRECT_ATTACHMENT_MAX_COUNT = 2;/, "AI attachments should be capped at two files.");
 assert.match(newtabSource, /const AI_DIRECT_ATTACHMENT_MAX_BYTES = 10 \* 1024 \* 1024;/, "AI attachments should be capped at 10MB each.");
 assert.match(newtabSource, /const AI_DIRECT_ATTACHMENT_ENGINE_IDS = new Set\(\["chatgpt", "claude", "gemini"\]\);/, "AI attachments should be limited to ChatGPT, Claude, and Gemini.");
@@ -85,7 +89,7 @@ assert.match(submitSource, /function countGeminiReadyAttachments\(\)[\s\S]*uploa
 assert.doesNotMatch(submitSource, /function openAttachmentInput|function findAttachmentButton|function findAttachmentMenuItem/, "Provider attachment entry points should not be collapsed into a shared button/menu opener.");
 assert.match(submitSource, /function attachmentToFile\(attachment\)[\s\S]*atob\(match\[3\]\)[\s\S]*new File\(\[bytes\], attachment\.name/, "Stored attachment data URLs should be rebuilt as File objects.");
 assert.match(submitSource, /async function submitPromptWhenReady\(config, prompt, attachments = \[\]\) \{[\s\S]*let filesAttached = true[\s\S]*filesAttached = await attachPromptFiles\(config, attachments\)[\s\S]*if \(attachments\.length && !filesAttached\) \{[\s\S]*return "filled";/, "Attachment submits should fill but not auto-send when upload is not confirmed.");
-assert.match(submitSource, /if \(attachments\.length && config\.engineId === "gemini" && !submitButton\) \{[\s\S]*return "filled";[\s\S]*\}/, "Gemini attachment submits should not fall back to Enter when preview readiness times out.");
+assert.match(submitSource, /if \(attachments\.length && !submitButton\) \{[\s\S]*return "filled";[\s\S]*\}/, "Attachment submits should not fall back to Enter when provider readiness times out.");
 assert.match(submitSource, /async function fillPromptIntoLiveInput\(config, prompt, attempts = 1\) \{[\s\S]*waitForElement\([\s\S]*focusAndSetInputValue\(input, prompt\);[\s\S]*normalizePromptComparisonText\(inputText\(input\)\) === normalizedPrompt/, "Prompt filling should retry against the live composer until the expected text is present.");
 assert.match(submitSource, /"kimi\.com": \{[\s\S]*engineId: "kimi"[\s\S]*\.chat-input-editor\[role=\\"textbox\\"\]\[contenteditable=\\"true\\"\]/, "Kimi should prefer its chat-input editor before generic contenteditable fallbacks.");
 assert.match(submitSource, /async function fillPromptIntoLiveInput\(config, prompt, attempts = 1\) \{[\s\S]*config\.engineId === "kimi"[\s\S]*focusAndSetKimiInputValue\(input, prompt\)[\s\S]*focusAndSetInputValue\(input, prompt\)/, "Kimi should use a provider-specific fill path to avoid duplicated text.");

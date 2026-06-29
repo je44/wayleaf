@@ -337,6 +337,18 @@ function aiDirectPromptRequest(url) {
   }
 }
 
+function aiDirectRequestMatchesUrl(request, url) {
+  if (!request) {
+    return false;
+  }
+  try {
+    const parsed = new URL(url);
+    return parsed.hostname.replace(/^www\./, "") === request.host;
+  } catch {
+    return false;
+  }
+}
+
 async function injectAiSubmit(tabId, request) {
   if (!chrome.scripting?.executeScript) {
     return;
@@ -740,7 +752,11 @@ chrome.tabs?.onUpdated?.addListener((tabId, changeInfo, tab) => {
   if (changeInfo.status === "complete") {
     injectVideoPipControllerWhenGlobalEnabled(tabId, url).catch(reportBackgroundError);
   }
-  const pendingRequest = request || pendingAiDirectRequests.get(tabId);
+  const pendingRequest = request || (
+    aiDirectRequestMatchesUrl(pendingAiDirectRequests.get(tabId), url)
+      ? pendingAiDirectRequests.get(tabId)
+      : null
+  );
   if (pendingRequest) {
     pendingAiDirectRequests.delete(tabId);
     injectAiSubmit(tabId, pendingRequest).catch(reportBackgroundError);

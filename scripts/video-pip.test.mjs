@@ -829,9 +829,6 @@ assert.equal([...targetStates.values()].filter((state) => state.pip).length, 1, 
 await coordinator.handle({ type: "source-lost", sourceUrl: "https://youtube.example/reloaded" }, { tabId: targets.youtube.tabId });
 assert.equal(storedOwner?.status, "source-lost", "Reloading the source tab should mark the session source-lost.");
 assert.equal(storedOwner?.sourceTabId, targets.youtube.tabId, "A source-lost session should still remember its source tab.");
-await coordinator.handle({ type: "enter" }, targets.futurePlatform);
-assert.equal(storedOwner?.documentId, "youtube", "A non-source tab must not overwrite a source-lost session.");
-
 const youtubeReloaded = { tabId: 11, frameId: 0, documentId: "youtube-reloaded", score: 900 };
 targetStates.set("youtube-reloaded", { hidden: true, playing: true, pip: false });
 await coordinator.handle({ type: "enter", playing: true, currentTime: 12, volume: 0.5, muted: true }, youtubeReloaded);
@@ -842,7 +839,14 @@ assert.equal(storedOwner?.muted, true, "The PiP session should retain muted meta
 
 await coordinator.handle({ type: "removed" }, { tabId: targets.bilibili.tabId });
 assert.equal(storedOwner?.documentId, "youtube-reloaded", "Closing a non-source tab should not clear the PiP session.");
+await coordinator.handle({ type: "source-lost", sourceUrl: "https://youtube.example/lost-again" }, { tabId: targets.youtube.tabId });
+await coordinator.handle({ type: "enter" }, targets.futurePlatform);
+assert.equal(storedOwner?.documentId, "future-platform", "A non-source tab may take over after the previous source is lost.");
+await coordinator.handle({ type: "enter", playing: true, currentTime: 99 }, youtubeReloaded);
+assert.equal(storedOwner?.documentId, "future-platform", "A stale previous source must not overwrite a new active owner.");
 await coordinator.handle({ type: "removed" }, { tabId: targets.youtube.tabId });
+assert.equal(storedOwner?.documentId, "future-platform", "Closing the previous source tab should not clear the new active owner.");
+await coordinator.handle({ type: "removed" }, { tabId: targets.futurePlatform.tabId });
 assert.equal(storedOwner, null, "Closing the source tab should clear the PiP session.");
 await coordinator.handle({ type: "enter" }, targets.bilibili);
 assert.equal(storedOwner?.documentId, "bilibili", "A new source can own PiP after the previous source is closed.");

@@ -4,10 +4,15 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 
 version="$(node -e "process.stdout.write(require('./manifest.json').version)")"
+if [[ ! "$version" =~ ^[0-9]+(\.[0-9]+){1,3}$ ]]; then
+  echo "Invalid manifest version: $version" >&2
+  exit 1
+fi
 out_dir="dist/wayleaf-v${version}"
 zip_file="${out_dir}.zip"
 runtime_items=(
   _locales
+  assets
   ai-submit.js
   background.js
   data
