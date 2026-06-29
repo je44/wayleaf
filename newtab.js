@@ -2999,20 +2999,21 @@ function restoreFirstPaintIconRender(icon, site, render) {
   storeIconSiteContext(icon, site);
   icon.dataset.siteKey = firstPaintIconCacheKey(site);
   const localIcon = localIconForUrl(site.url);
+  const currentRender = firstPaintIconRenderWithCurrentTile(site, render);
   if (siteIconIndexLoaded && localIcon && firstPaintRenderStaleForLocalIcon(icon.dataset.siteKey, localIcon, render)) {
     applySiteIcon(icon, site);
     return;
   }
-  if (firstPaintRenderStaleForAdaptiveFavicon(localIcon, render)) {
+  if (firstPaintRenderStaleForAdaptiveFavicon(localIcon, currentRender)) {
     applySiteIcon(icon, site);
     return;
   }
-  if (render.source) {
-    icon.dataset.iconSource = render.source;
-    icon.dataset.iconCandidate = render.source;
+  if (currentRender.source) {
+    icon.dataset.iconSource = currentRender.source;
+    icon.dataset.iconCandidate = currentRender.source;
   }
-  icon.classList.toggle("site-icon-generic-fallback", render.generic);
-  applyIconTile(icon, render.tile, { light: render.tileLight, dark: render.tileDark }, render.local);
+  icon.classList.toggle("site-icon-generic-fallback", currentRender.generic);
+  applyIconTile(icon, currentRender.tile, { light: currentRender.tileLight, dark: currentRender.tileDark }, currentRender.local);
   icon.dataset.iconCacheHydrated = "true";
   icon.addEventListener("error", () => {
     if (icon.dataset.iconCacheHydrated === "true") {
@@ -3020,7 +3021,34 @@ function restoreFirstPaintIconRender(icon, site, render) {
       applySiteIcon(icon, site);
     }
   }, { once: true });
-  icon.src = render.src;
+  icon.src = currentRender.src;
+}
+
+function firstPaintIconRenderWithCurrentTile(site, render) {
+  const source = render.source || render.src || "";
+  const remoteDescriptor = remoteBrandSvgDescriptorFromSource(source);
+  if (!siteIconSourceLooksLikeSvg(source) && !remoteDescriptor) {
+    return render;
+  }
+  if (!remoteDescriptor && !localSiteIconRenderModeCache.has(source)) {
+    return render;
+  }
+  const tileSource = remoteDescriptor ? source : localIconForUrl(site.url) || source;
+  const siteKey = firstPaintIconCacheKey(site);
+  const tileColor = siteIconBrandColor(siteKey, tileSource);
+  const originalSvgColor = usesOriginalIconCarrier(tileSource) ? "#ffffff" : "";
+  const gradientSvgColor = usesGradientIconCarrier(tileSource) ? "#ffffff" : "";
+  if (!tileColor && !originalSvgColor && !gradientSvgColor) {
+    return render;
+  }
+  const tileColors = brandIconTileColors(tileColor || originalSvgColor || gradientSvgColor, siteKey, tileSource);
+  return {
+    ...render,
+    tile: tileSource ? "brand" : render.tile,
+    tileLight: tileColors.light,
+    tileDark: tileColors.dark,
+    local: String(tileSource || "").startsWith("icons/") || render.local
+  };
 }
 
 function firstPaintRenderStaleForLocalIcon(siteKey, localIcon, render) {
@@ -8117,7 +8145,7 @@ function remoteBrandSvgDescriptor(svg, options = {}) {
     brandColor,
     isMonochrome,
     renderMode,
-    visibleColors: analysis.visibleColors,
+    visibleColors: analysis.colors,
     embeddedCarrierColor: svgEmbeddedCarrierColor(svg, analysis),
     qualityScore: Math.max(0, Math.min(100, Math.round(Number(options.qualityScore || 0))))
   };
@@ -9921,7 +9949,7 @@ function localSiteIconAnalysisFromSvg(svg) {
     brandColor: explicitBrandColor || (isMonochrome && remoteBrandSvgUsesImplicitBlack(svg) ? "#000000" : ""),
     renderMode: remoteBrandSvgHasComplexPaintAnalysis(analysis) ? "gradient" : isMonochrome ? "mask" : "original",
     hasExplicitBrandColor: Boolean(explicitBrandColor),
-    visibleColors: analysis.visibleColors,
+    visibleColors: analysis.colors,
     embeddedCarrierColor: svgEmbeddedCarrierColor(svg)
   };
 }
@@ -9933,14 +9961,11 @@ function localSiteIconSourceCanLoadBrandColor(source) {
 
 function brandIconTileColors(tileColor, siteKey = "", iconPath = "") {
   const color = normalizeHexColor(tileColor);
+  if (usesGradientIconCarrier(iconPath)) {
+    return gradientSvgIconTileColors(color, iconPath);
+  }
   if (!color) {
     return genericIconTileColors("");
-  }
-  if (usesGradientIconCarrier(iconPath)) {
-    return {
-      light: "#f7fafd",
-      dark: "#1b1b1b"
-    };
   }
   if (keepsBrandIconOriginalOnBrandTile(siteKey, iconPath)) {
     return {
@@ -9958,6 +9983,59 @@ function brandIconTileColors(tileColor, siteKey = "", iconPath = "") {
     light: brandIconLightCarrierColor(color),
     dark: brandIconDarkCarrierColor(color)
   };
+}
+
+function gradientSvgIconTileColors(brandColor, iconPath = "") {
+  const palette = originalSvgVisiblePalette(brandColor, iconPath);
+  if (palette.length > 1) {
+    const carrier = gradientPaletteCarrierColor(palette);
+    return {
+      light: carrier,
+      dark: carrier
+    };
+  }
+  const color = normalizeHexColor(brandColor);
+  if (!color) {
+    return genericIconTileColors("");
+  }
+  return {
+    light: brandIconLightCarrierColor(color),
+    dark: brandIconDarkCarrierColor(color)
+  };
+}
+
+function gradientPaletteCarrierColor(palette) {
+  return gradientPaletteNeedsDarkAppIconCarrier(palette)
+    ? BRAND_ICON_MULTICOLOR_DARK_CARRIER
+    : BRAND_ICON_MULTICOLOR_PAPER_CARRIER;
+}
+
+function gradientPaletteNeedsDarkAppIconCarrier(palette) {
+  const colors = uniqueNormalizedHexColors(palette);
+  if (colors.length <= 1) {
+    return false;
+  }
+  const traits = paletteColorTraits(colors);
+  const lowContrastOnPaperRatio = colors.filter((color) => contrastRatio(color, BRAND_ICON_MULTICOLOR_PAPER_CARRIER) < BRAND_ICON_VI_CONTRAST_MIN).length / colors.length;
+  const hueSpan = paletteHueSpan(colors);
+  if (hueSpan >= 120 && (traits.averageLuminance < 0.5 || (traits.saturatedMulticolor && lowContrastOnPaperRatio < 0.8))) {
+    return false;
+  }
+  return !traits.hasDark
+    && lowContrastOnPaperRatio >= 0.65
+    && traits.averageLuminance >= 0.45;
+}
+
+function paletteHueSpan(palette) {
+  const hues = uniqueNormalizedHexColors(palette)
+    .map((color) => {
+      const stats = hexColorStats(color);
+      const [red, green, blue] = hexToRgb(color).map((channel) => channel / 255);
+      const chroma = Math.max(red, green, blue) - Math.min(red, green, blue);
+      return chroma >= 0.18 ? stats?.hue || 0 : null;
+    })
+    .filter((hue) => hue !== null);
+  return hues.length ? Math.max(...hues) - Math.min(...hues) : 0;
 }
 
 function usesOriginalIconCarrier(iconPath = "") {
@@ -10400,7 +10478,9 @@ function refreshRenderedSiteIcons() {
     const localIcon = localIconForUrl(site.url);
     if (icon.dataset.iconCacheHydrated === "true") {
       if (!localIcon) {
-        refreshRemoteBrandIcon(icon, site);
+        if (!remoteBrandSvgDescriptorFromSource(icon.dataset.iconSource || icon.currentSrc || icon.src || "")) {
+          refreshRemoteBrandIcon(icon, site);
+        }
         return;
       }
       const siteKey = icon.dataset.siteKey || siteGroupKey(safeUrl(site.url));
