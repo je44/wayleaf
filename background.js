@@ -203,6 +203,16 @@ async function refreshVideoPipControllersWhenGlobalEnabled() {
   }
 }
 
+async function injectVideoPipControllerWhenGlobalEnabled(tabId, url) {
+  if (!Number.isInteger(tabId) || !supportsVideoPip(url || "")) {
+    return;
+  }
+  const stored = await chrome.storage.local.get({ [VIDEO_PIP_GLOBAL_ENABLED_STORAGE_KEY]: false });
+  if (stored[VIDEO_PIP_GLOBAL_ENABLED_STORAGE_KEY] === true) {
+    await injectVideoPipController(tabId);
+  }
+}
+
 const videoPipCoordinator = globalThis.WayleafVideoPipCoordinator.create({
   command: sendVideoPipCommand,
   loadOwner: loadVideoPipOwner,
@@ -726,6 +736,9 @@ chrome.tabs?.onUpdated?.addListener((tabId, changeInfo, tab) => {
   }
   if (changeInfo.status && changeInfo.status !== "complete") {
     return;
+  }
+  if (changeInfo.status === "complete") {
+    injectVideoPipControllerWhenGlobalEnabled(tabId, url).catch(reportBackgroundError);
   }
   const pendingRequest = request || pendingAiDirectRequests.get(tabId);
   if (pendingRequest) {

@@ -36,16 +36,7 @@ for (const locale of ["zh-CN", "zh-TW", "en", "ja", "ko", "es", "fr", "de"]) {
 }
 
 const videoContentScript = manifest.content_scripts.find((entry) => entry.js?.includes("video-pip.js"));
-assert.ok(videoContentScript, "Manifest should load the video PiP controller on supported sites.");
-assert.deepEqual(
-  videoContentScript.matches,
-  ["http://*/*", "https://*/*"],
-  "The generic HTML5 video controller should be available to future platforms without host-specific code."
-);
-assert.equal(videoContentScript.all_frames, true, "Embedded players should use the same frame-aware PiP protocol.");
-assert.equal(videoContentScript.match_about_blank, true, "Related about:blank video frames should receive the PiP controller.");
-assert.equal(videoContentScript.match_origin_as_fallback, true, "Related blob/data video frames should receive the PiP controller.");
-assert.equal(videoContentScript.run_at, "document_start", "Automatic PiP should register the Chrome media-session handler as early as the page allows.");
+assert.equal(videoContentScript, undefined, "Video PiP should not statically inject into every http/https frame.");
 for (const runtimeFile of ["video-pip.js", "video-pip-coordinator.js"]) {
   assert.ok(packageSource.split(/\s+/).includes(runtimeFile), `Release packages should include ${runtimeFile}.`);
 }
@@ -81,6 +72,39 @@ assert.match(
 );
 assert.match(
   backgroundSource,
+  /function injectVideoPipControllerWhenGlobalEnabled\(tabId, url\)[\s\S]*supportsVideoPip\(url \|\| ""\)[\s\S]*chrome\.storage\.local\.get\(\{ \[VIDEO_PIP_GLOBAL_ENABLED_STORAGE_KEY\]: false \}\)[\s\S]*stored\[VIDEO_PIP_GLOBAL_ENABLED_STORAGE_KEY\] === true[\s\S]*injectVideoPipController\(tabId\)/,
+  "Completed page loads should attach the PiP controller only when global PiP is enabled."
+);
+const lazyInjectionSource = backgroundSource.match(/async function injectVideoPipControllerWhenGlobalEnabled\(tabId, url\) \{[\s\S]*?\n\}/)?.[0];
+assert.ok(lazyInjectionSource, "Global PiP lazy injection helper should be readable for behavior coverage.");
+let lazyInjectionEnabled = false;
+let lazyInjectionStorageReads = 0;
+const lazyInjectionTargets = [];
+const lazyInjectionContext = {
+  VIDEO_PIP_GLOBAL_ENABLED_STORAGE_KEY: "videoPipGlobalEnabled",
+  supportsVideoPip: (url) => /^https?:/.test(url),
+  injectVideoPipController: async (tabId) => lazyInjectionTargets.push(tabId),
+  chrome: {
+    storage: {
+      local: {
+        async get() {
+          lazyInjectionStorageReads += 1;
+          return { videoPipGlobalEnabled: lazyInjectionEnabled };
+        }
+      }
+    }
+  }
+};
+vm.runInNewContext(`${lazyInjectionSource}; globalThis.testLazyInjection = injectVideoPipControllerWhenGlobalEnabled;`, lazyInjectionContext);
+await lazyInjectionContext.testLazyInjection(7, "chrome://extensions/");
+assert.equal(lazyInjectionStorageReads, 0, "Unsupported pages should not read the global PiP setting.");
+await lazyInjectionContext.testLazyInjection(7, "https://www.youtube.com/watch?v=test");
+assert.deepEqual(lazyInjectionTargets, [], "Disabled global PiP should not inject into supported pages.");
+lazyInjectionEnabled = true;
+await lazyInjectionContext.testLazyInjection(9, "https://www.bilibili.com/video/test");
+assert.deepEqual(lazyInjectionTargets, [9], "Enabled global PiP should inject into supported pages.");
+assert.match(
+  backgroundSource,
   /onInstalled\?\.addListener[\s\S]*refreshVideoPipControllersWhenGlobalEnabled\(\)/,
   "Reloaded unpacked extensions should check whether old video tabs need reattaching."
 );
@@ -93,6 +117,11 @@ assert.match(
   backgroundSource,
   /chrome\.storage\?\.onChanged\?\.addListener[\s\S]*VIDEO_PIP_GLOBAL_ENABLED_STORAGE_KEY[\s\S]*refreshVideoPipControllersInOpenTabs\(\)/,
   "Turning global PiP on should attach controllers to already-open tabs."
+);
+assert.match(
+  backgroundSource,
+  /chrome\.tabs\?\.onUpdated\?\.addListener[\s\S]*changeInfo\.status === "complete"[\s\S]*injectVideoPipControllerWhenGlobalEnabled\(tabId, url\)/,
+  "New page loads should lazily attach the PiP controller after the global switch is enabled."
 );
 assert.match(
   backgroundSource,
