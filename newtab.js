@@ -9030,66 +9030,6 @@ async function fetchSiteIconDocument(url) {
 }
 
 function extractSiteIconDocumentCandidates(html, baseUrl) {
-  const parsedCandidates = extractSiteIconParsedDocumentCandidates(html, baseUrl);
-  const markupCandidates = extractSiteIconMarkupCandidates(html, baseUrl);
-  return {
-    icons: dedupeAndSortSiteIconCandidates([...parsedCandidates.icons, ...markupCandidates.icons]),
-    manifests: dedupeAndSortSiteIconCandidates([...parsedCandidates.manifests, ...markupCandidates.manifests])
-  };
-}
-
-function extractSiteIconParsedDocumentCandidates(html, baseUrl) {
-  const parsedDocument = parseSiteIconHtmlDocument(html);
-  if (!parsedDocument) {
-    return {
-      icons: [],
-      manifests: []
-    };
-  }
-  const icons = [];
-  const manifests = [];
-  [...parsedDocument.querySelectorAll("link[rel][href]")].forEach((link, index) => {
-    const relTokens = siteIconRelTokens(link.getAttribute("rel"));
-    const href = normalizeText(link.getAttribute("href"));
-    if (!href) {
-      return;
-    }
-    if (relTokens.has("manifest")) {
-      const manifestUrl = absoluteIconUrl(href, baseUrl);
-      if (manifestUrl) {
-        manifests.push({
-          url: manifestUrl,
-          source: "document",
-          score: 520 + index / 1000
-        });
-      }
-    }
-    const relScore = siteIconRelScore(relTokens);
-    if (!relScore) {
-      return;
-    }
-    const iconUrl = absoluteIconUrl(href, baseUrl);
-    if (!iconUrl) {
-      return;
-    }
-    const sizes = parseIconSizes(link.getAttribute("sizes"));
-    const type = normalizeText(link.getAttribute("type")).toLowerCase();
-    icons.push({
-      url: iconUrl,
-      source: "document",
-      score: relScore
-        + siteIconSizeScore(sizes)
-        + siteIconTypeScore(type, iconUrl)
-        + index / 1000
-    });
-  });
-  return {
-    icons: dedupeAndSortSiteIconCandidates(icons),
-    manifests: dedupeAndSortSiteIconCandidates(manifests)
-  };
-}
-
-function extractSiteIconMarkupCandidates(html, baseUrl) {
   const markup = String(html || "");
   const icons = [];
   const manifests = [];
@@ -9169,22 +9109,6 @@ function decodeHtmlAttribute(value) {
     .replace(/&#39;/g, "'")
     .replace(/&lt;/gi, "<")
     .replace(/&gt;/gi, ">");
-}
-
-function parseSiteIconHtmlDocument(html) {
-  try {
-    if (typeof DOMParser !== "undefined") {
-      return new DOMParser().parseFromString(String(html || ""), "text/html");
-    }
-    if (document?.implementation?.createHTMLDocument) {
-      const parsedDocument = document.implementation.createHTMLDocument("");
-      parsedDocument.documentElement.innerHTML = String(html || "");
-      return parsedDocument;
-    }
-  } catch {
-    return null;
-  }
-  return null;
 }
 
 function siteIconRelTokens(value) {

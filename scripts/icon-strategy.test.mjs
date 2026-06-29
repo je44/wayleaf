@@ -136,6 +136,10 @@ assert.match(source, /remoteBrandSvgDescriptorFromSource\(siteIcon\)/, "Cached r
 assert.match(source, /function remoteBrandSvgCacheStrategy/, "Remote SVG cache entries must retain a strategy descriptor.");
 assert.match(source, /const isLocalIconSource = String\(iconPath \|\| ""\)\.startsWith\("icons\/"\);/, "Only deployed local icon files should receive the local icon marker.");
 assert.match(source, /function remoteBrandSvgResponseMayContainSvg/, "Provider responses must reject explicit non-SVG content types.");
+assert.doesNotMatch(source, /parseFromString\([^)]*text\/html|createHTMLDocument/, "Remote site icon discovery must not parse third-party HTML as a live extension-page document.");
+const siteIconDocumentExtractorSource = source.match(/function extractSiteIconDocumentCandidates\([\s\S]*?\n}\n\nfunction parseHtmlTagAttributes/)?.[0] || "";
+assert.match(siteIconDocumentExtractorSource, /<link\\b/, "Remote site icon discovery should stay limited to link-tag markup extraction.");
+assert.doesNotMatch(siteIconDocumentExtractorSource, /DOMParser|createHTMLDocument|innerHTML|querySelectorAll|appendChild|insertAdjacentHTML/, "Remote site icon discovery must not reintroduce live third-party HTML parsing sinks.");
 assert.match(source, /function remoteBrandIconMissCacheIsFresh/, "Provider misses must have an explicit freshness gate.");
 assert.match(source, /remoteBrandSvgBrandColor\(svg, options\)/, "Fetched provider SVGs must derive brand color through the provider trust gate.");
 assert.match(source, /SITE_ICON_TILE_COLOR_BY_SITE_KEY\[options\.siteKey\]/, "Provider color fallback must compare against known local VI colors.");
