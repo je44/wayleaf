@@ -172,6 +172,7 @@ assert.equal(
   "Settings engine icons must not consume shared site icon edge variables."
 );
 assert.match(source, /function applySampledFaviconTile[\s\S]*const tileMode = icon\.dataset\.iconTile === "brand" \? "brand" : "plain";[\s\S]*fuseEmbeddedFaviconTile\(icon, sample, color, tileColors, options\);/, "Sampled favicon tiles must preserve local bitmap markers and run embedded tile fusion.");
+assert.match(source, /const FIRST_PAINT_CACHE_VERSION = 8;/, "First-paint cache must be bumped when adaptive favicon carrier output changes.");
 
 function normalizeHexColor(tileColor) {
   const color = String(tileColor || "").trim();
@@ -1364,7 +1365,7 @@ const FAVICON_EMBEDDED_TILE_FUSION_CLEAR_DISTANCE = 48;
 const FAVICON_EMBEDDED_TILE_FUSION_FEATHER_DISTANCE = 24;
 const FAVICON_READABLE_CARRIER_CONTRAST_MIN = 3;
 const FAVICON_READABLE_CARRIER_MAX_MIX = 0.72;
-const FAVICON_ADAPTIVE_CARRIER_VERSION = 9;
+const FAVICON_ADAPTIVE_CARRIER_VERSION = 10;
 const GENERIC_SITE_FALLBACK_TILE_COLOR = "#f04424";
 
 function rgbaSample(size, painter) {
@@ -1489,6 +1490,9 @@ function selectFaviconBackgroundCandidate(analysis, size, options = {}) {
   if (!analysis.pixels.length || !analysis.buckets.size) {
     return null;
   }
+  const unframedGlyph = Boolean(
+    options.adaptiveFaviconCarrier && faviconAnalysisLooksLikeUnframedGlyph(analysis, size)
+  );
   const baseBuckets = [...analysis.buckets.values()]
     .filter((bucket) => bucket.weight)
     .map(faviconAverageColorBucket)
@@ -1497,16 +1501,25 @@ function selectFaviconBackgroundCandidate(analysis, size, options = {}) {
   const candidates = baseBuckets
     .map((bucket) => faviconBackgroundCandidateFromBucket(bucket, analysis, size))
     .filter(Boolean)
+    .map((candidate) => ({
+      ...candidate,
+      unframedGlyph,
+      compactEmblem: Boolean(
+        options.adaptiveFaviconCarrier && faviconCandidateLooksLikeCompactEmblem(candidate, analysis, size)
+      )
+    }))
     .sort((a, b) => b.score - a.score || b.confidence - a.confidence);
   const candidate = (options.adaptiveFaviconCarrier ? faviconPreferredSelfContainedTileCandidate(candidates, analysis, size) : null)
     || ((candidates[0]?.confidence || 0) >= FAVICON_BACKGROUND_CONFIDENCE_MIN
     ? candidates[0]
-    : faviconTransparentGlyphCandidateFromBucket(baseBuckets[0], analysis)
-      || (options.adaptiveFaviconCarrier ? faviconTransparentGlyphCandidateFromAnalysis(analysis) : null));
+    : faviconTransparentGlyphCandidateFromBucket(baseBuckets[0], analysis, size)
+      || (options.adaptiveFaviconCarrier ? faviconTransparentGlyphCandidateFromAnalysis(analysis, size) : null));
   if (!candidate?.confidence) {
     return null;
   }
-  const matchMode = candidate.preferredSelfContainedTile ? "embedded-tile" : faviconBackgroundMatchMode(candidate);
+  const matchMode = candidate.compactEmblem
+    ? "full-surface"
+    : candidate.preferredSelfContainedTile ? "embedded-tile" : faviconBackgroundMatchMode(candidate);
   const selectedColor = matchMode === "embedded-tile"
     ? {
       red: Math.round(candidate.red),
@@ -1530,6 +1543,8 @@ function selectFaviconBackgroundCandidate(analysis, size, options = {}) {
     innerTileConfidence: candidate.innerTileConfidence,
     ownTileShapeConfidence: candidate.ownTileShapeConfidence,
     ownTileCornerStyle: candidate.ownTileCornerStyle,
+    unframedGlyph: Boolean(candidate.unframedGlyph),
+    compactEmblem: Boolean(candidate.compactEmblem),
     preferredSelfContainedTile: Boolean(candidate.preferredSelfContainedTile),
     matchMode,
     foreground: faviconForegroundStatsForCandidate(selectedColor, analysis, size),
@@ -1564,6 +1579,7 @@ function faviconPreferredSelfContainedTileCandidate(candidates, analysis, size) 
       blue: Math.round(item.blue)
     }, analysis, size);
     return (item.ownTileShapeConfidence || 0) >= 0.42
+      && !item.compactEmblem
       && !faviconCarrierLooksNeutralPaperLike(tileColor)
       && (!faviconAnalysisHasDominantPaperInset(analysis, size)
         || (item.edgeConfidence || 0) <= FAVICON_EMBEDDED_TILE_EDGE_CONFIDENCE_MAX)
@@ -1597,6 +1613,45 @@ function faviconAnalysisOwnTileShape(analysis, size) {
     size,
     analysis.opaqueWeight / Math.max(1, analysis.totalWeight)
   );
+}
+
+function faviconAnalysisLooksLikeUnframedGlyph(analysis, size) {
+  const opaqueCoverage = analysis.opaqueWeight / Math.max(1, analysis.totalWeight);
+  const bounds = analysis.pixels.reduce((result, pixel) => ({
+    minX: Math.min(result.minX, pixel.x),
+    minY: Math.min(result.minY, pixel.y),
+    maxX: Math.max(result.maxX, pixel.x),
+    maxY: Math.max(result.maxY, pixel.y)
+  }), { minX: size, minY: size, maxX: -1, maxY: -1 });
+  const width = Math.max(0, bounds.maxX - bounds.minX + 1);
+  const height = Math.max(0, bounds.maxY - bounds.minY + 1);
+  const density = analysis.opaqueWeight / Math.max(1, width * height);
+  return opaqueCoverage >= FAVICON_TRANSPARENT_GLYPH_COVERAGE_MIN
+    && opaqueCoverage <= FAVICON_TRANSPARENT_GLYPH_COVERAGE_MAX
+    && (density < 0.78 || faviconAnalysisOwnTileShape(analysis, size).confidence < 0.42);
+}
+
+function faviconCandidateLooksLikeCompactEmblem(candidate, analysis, size) {
+  const bounds = analysis.pixels.reduce((result, pixel) => ({
+    minX: Math.min(result.minX, pixel.x),
+    minY: Math.min(result.minY, pixel.y),
+    maxX: Math.max(result.maxX, pixel.x),
+    maxY: Math.max(result.maxY, pixel.y)
+  }), { minX: size, minY: size, maxX: -1, maxY: -1 });
+  if (bounds.maxX < bounds.minX || bounds.maxY < bounds.minY) {
+    return false;
+  }
+  const width = bounds.maxX - bounds.minX + 1;
+  const height = bounds.maxY - bounds.minY + 1;
+  const minSpan = Math.min(width, height) / size;
+  const aspectRatio = Math.min(width, height) / Math.max(width, height);
+  const density = analysis.opaqueWeight / Math.max(1, width * height);
+  const cornerStyle = candidate.ownTileCornerStyle || faviconAnalysisOwnTileShape(analysis, size).cornerStyle;
+  return cornerStyle === "rounded"
+    && minSpan >= 0.62
+    && aspectRatio >= 0.85
+    && density >= 0.5
+    && density <= 0.86;
 }
 
 function faviconCandidateLooksLikeSameHueFullSurfaceArtwork(candidate, foreground, tileColor, analysis, size) {
@@ -1651,7 +1706,7 @@ function faviconAnalysisHasDominantPaperInset(analysis, size) {
     && surface.spansCenter;
 }
 
-function faviconTransparentGlyphCandidateFromBucket(bucket, analysis) {
+function faviconTransparentGlyphCandidateFromBucket(bucket, analysis, size) {
   if (!bucket?.weight || !analysis.opaqueWeight || !analysis.totalWeight) {
     return null;
   }
@@ -1677,11 +1732,12 @@ function faviconTransparentGlyphCandidateFromBucket(bucket, analysis) {
   const opaqueCoverage = analysis.opaqueWeight / analysis.totalWeight;
   const coverage = weight / analysis.totalWeight;
   const edgeConfidence = edgeWeight / Math.max(1, analysis.edgeSampleWeight);
+  const unframedGlyph = faviconAnalysisLooksLikeUnframedGlyph(analysis, size);
   if (
     opaqueCoverage < FAVICON_TRANSPARENT_GLYPH_COVERAGE_MIN
     || opaqueCoverage > FAVICON_TRANSPARENT_GLYPH_COVERAGE_MAX
     || coverage / opaqueCoverage < FAVICON_TRANSPARENT_GLYPH_CANDIDATE_RATIO_MIN
-    || edgeConfidence > FAVICON_TRANSPARENT_GLYPH_EDGE_CONFIDENCE_MAX
+    || (edgeConfidence > FAVICON_TRANSPARENT_GLYPH_EDGE_CONFIDENCE_MAX && !unframedGlyph)
   ) {
     return null;
   }
@@ -1693,18 +1749,20 @@ function faviconTransparentGlyphCandidateFromBucket(bucket, analysis) {
     coverage,
     edgeConfidence,
     innerTileConfidence: 0,
+    unframedGlyph,
     score: FAVICON_BACKGROUND_CONFIDENCE_MIN
   };
 }
 
-function faviconTransparentGlyphCandidateFromAnalysis(analysis) {
+function faviconTransparentGlyphCandidateFromAnalysis(analysis, size) {
   const opaqueCoverage = analysis.opaqueWeight / analysis.totalWeight;
   const edgeConfidence = analysis.pixels.reduce((sum, pixel) => sum + pixel.edgeWeight, 0)
     / Math.max(1, analysis.edgeSampleWeight);
+  const unframedGlyph = faviconAnalysisLooksLikeUnframedGlyph(analysis, size);
   if (
     opaqueCoverage < FAVICON_TRANSPARENT_GLYPH_COVERAGE_MIN
     || opaqueCoverage > FAVICON_TRANSPARENT_GLYPH_COVERAGE_MAX
-    || edgeConfidence > FAVICON_TRANSPARENT_GLYPH_EDGE_CONFIDENCE_MAX
+    || (edgeConfidence > FAVICON_TRANSPARENT_GLYPH_EDGE_CONFIDENCE_MAX && !unframedGlyph)
   ) {
     return null;
   }
@@ -1722,6 +1780,7 @@ function faviconTransparentGlyphCandidateFromAnalysis(analysis) {
     coverage: opaqueCoverage,
     edgeConfidence,
     innerTileConfidence: 0,
+    unframedGlyph,
     score: FAVICON_BACKGROUND_CONFIDENCE_MIN
   };
 }
@@ -2179,7 +2238,7 @@ function faviconCandidateLooksLikeTransparentGlyph(color, tileColor) {
     opaqueCoverage <= 0
     || opaqueCoverage > FAVICON_TRANSPARENT_GLYPH_COVERAGE_MAX
     || (color.coverage || 0) / opaqueCoverage < FAVICON_TRANSPARENT_GLYPH_CANDIDATE_RATIO_MIN
-    || (color.edgeConfidence || 0) > FAVICON_TRANSPARENT_GLYPH_EDGE_CONFIDENCE_MAX
+    || ((color.edgeConfidence || 0) > FAVICON_TRANSPARENT_GLYPH_EDGE_CONFIDENCE_MAX && !color.unframedGlyph)
   ) {
     return false;
   }
@@ -2223,6 +2282,9 @@ function faviconCandidateNeedsReadableCarrier(color, tileColor, options = {}) {
 
 function faviconShouldFuseEmbeddedTile(color, tileColor, options = {}) {
   if (!normalizeHexColor(tileColor)) {
+    return false;
+  }
+  if (color?.compactEmblem) {
     return false;
   }
   if (color?.matchMode === "embedded-tile") {
@@ -2316,6 +2378,26 @@ function faviconSurfaceTileColors(tileColor, color, options = {}) {
   if (
     options.adaptiveFaviconCarrier
     && color.matchMode === "full-surface"
+    && faviconFullSurfaceHasPaperOutlineArtwork(color, tileColor, foregroundColors)
+  ) {
+    return {
+      light: "#ffffff",
+      dark: "#ffffff"
+    };
+  }
+  if (
+    options.adaptiveFaviconCarrier
+    && color.matchMode === "full-surface"
+    && faviconFullSurfaceHasLowContrastMonochromeArtwork(color, tileColor)
+  ) {
+    return {
+      light: "#ffffff",
+      dark: "#ffffff"
+    };
+  }
+  if (
+    options.adaptiveFaviconCarrier
+    && color.matchMode === "full-surface"
     && !faviconCandidateLooksLikeTransparentGlyph(color, tileColor)
     && faviconFullSurfacePrefersPaperCarrier(tileColor, foregroundColors)
   ) {
@@ -2378,6 +2460,9 @@ function faviconForegroundRepresentativeColor(color, fallbackColor) {
 }
 
 function faviconForegroundPaletteColors(color, fallbackColor) {
+  if (color.compactEmblem) {
+    return [fallbackColor];
+  }
   const foregroundColors = (color.foreground?.colors || []).map(normalizeHexColor).filter(Boolean);
   if (faviconCandidateLooksLikeTransparentGlyph(color, fallbackColor)) {
     return [...new Set([fallbackColor, ...foregroundColors])];
@@ -2482,6 +2567,32 @@ function faviconFullSurfacePrefersPaperCarrier(tileColor, palette) {
   }
   return faviconPalettePrefersPaperCarrier(palette)
     || faviconPaletteLooksLikeBlueGradientArtwork([carrier, ...palette]);
+}
+
+function faviconFullSurfaceHasPaperOutlineArtwork(color, tileColor, palette) {
+  const carrier = normalizeHexColor(tileColor);
+  if (!carrier) {
+    return false;
+  }
+  const [red, green, blue] = hexToRgb(carrier);
+  const foreground = color.foreground || {};
+  return relativeLuminance(carrier) <= 0.18
+    && colorSaturation(red, green, blue) <= 0.18
+    && (foreground.coverage || 0) >= FAVICON_PAPER_SURFACE_ARTWORK_COVERAGE_MIN
+    && (foreground.span || 0) >= 0.2
+    && (foreground.maxContrast || 0) >= FAVICON_READABLE_CARRIER_CONTRAST_MIN
+    && palette.some((foregroundColor) => faviconCarrierLooksPaperLike(foregroundColor));
+}
+
+function faviconFullSurfaceHasLowContrastMonochromeArtwork(color, tileColor) {
+  const carrier = normalizeHexColor(tileColor);
+  const foreground = color.foreground || {};
+  return Boolean(carrier)
+    && !faviconCarrierLooksPaperLike(carrier)
+    && (color.opaqueCoverage || 0) >= 0.78
+    && faviconCandidateHasVisibleForeground(color)
+    && (foreground.averageContrast || 0) <= 1.18
+    && contrastRatio(carrier, "#ffffff") >= FAVICON_READABLE_CARRIER_CONTRAST_MIN;
 }
 
 function faviconPalettePrefersPaperCarrier(palette) {
@@ -3704,6 +3815,13 @@ const faviconFixtureSize = 32;
 const centeredBox = (x, y, size, inset) => x >= inset && x < size - inset && y >= inset && y < size - inset;
 const centeredGlyph = (x, y, size) => centeredBox(x, y, size, 6);
 const smallGlyph = (x, y, size) => centeredBox(x, y, size, 11);
+const edgeReachingGlyph = (x, y) => (
+  (x >= 5 && x <= 26 && y >= 2 && y <= 7)
+  || (x >= 5 && x <= 26 && y >= 13 && y <= 18)
+  || (x >= 5 && x <= 26 && y >= 24 && y <= 29)
+  || (x >= 3 && x <= 8 && y >= 6 && y <= 15)
+  || (x >= 23 && x <= 28 && y >= 16 && y <= 25)
+);
 const sparseDotGlyph = (x, y) => {
   for (let dotX = 9; dotX <= 21; dotX += 4) {
     for (let dotY = 9; dotY <= 21; dotY += 4) {
@@ -4162,6 +4280,61 @@ const faviconTileDecision = (sample) => {
 }
 
 {
+  const { color, tileColors } = faviconTileDecision(rgbaSample(faviconFixtureSize, (x, y) => {
+    return edgeReachingGlyph(x, y) ? hexChannels("#333333") : [0, 0, 0, 0];
+  }));
+  assert.ok(color, "Edge-reaching transparent glyphs should remain readable candidates instead of falling back to an unrelated generic tile.");
+  const sampledGlyph = rgbChannelsToHex(color.red, color.green, color.blue);
+  assert.equal(faviconCandidateLooksLikeTransparentGlyph(color, sampledGlyph), true, "Irregular alpha silhouettes should be recognized as glyphs even when their artwork enters the edge sampling band.");
+  assert.notEqual(tileColors.light, sampledGlyph, "Edge-reaching neutral glyphs must not inherit a same-color carrier.");
+  assert.ok(contrastRatio(tileColors.light, sampledGlyph) >= FAVICON_READABLE_CARRIER_CONTRAST_MIN, "Edge-reaching neutral glyphs receive a readable carrier.");
+}
+
+{
+  const cursorBadgeSample = rgbaSample(faviconFixtureSize, (x, y, size) => {
+    const backgroundNoise = ((x * 13 + y * 17) % 32) - 16;
+    const background = [104 + backgroundNoise, 120 + backgroundNoise, 137 + backgroundNoise, 76];
+    const cursorHead = x >= 3 && x <= 16 && y >= 4 && y <= 17 && (x - 3) <= (y - 4) * 0.82;
+    const cursorStem = x >= 12 && x <= 23 && y >= 15 && y <= 27 && Math.abs((x - 12) - (y - 15)) <= 3;
+    const cursorFoot = x >= 15 && x <= 25 && y >= 22 && y <= 28 && Math.abs((x - 15) - (y - 22)) <= 2;
+    const cursor = cursorHead || cursorStem || cursorFoot;
+    const stroke = !cursor && (
+      (x >= 2 && x <= 17 && y >= 3 && y <= 18 && (x - 2) <= (y - 3) * 0.9)
+      || (x >= 11 && x <= 24 && y >= 14 && y <= 28 && Math.abs((x - 11) - (y - 14)) <= 4)
+    );
+    if (cursor) {
+      return hexChannels("#000000");
+    }
+    if (stroke) {
+      return hexChannels("#ffffff");
+    }
+    return background;
+  });
+  const { color, tileColors } = faviconTileDecision(cursorBadgeSample);
+  assert.equal(color.matchMode, "full-surface", "SSSAiCode-like cursor favicon should be treated as full-surface artwork, not a black embedded app tile.");
+  assert.equal(tileColors.light, "#ffffff", "SSSAiCode-like cursor favicon should render on a paper carrier instead of a black square.");
+  assert.equal(tileColors.dark, "#ffffff", "Sampled favicon paper carriers remain fixed across Wayleaf themes.");
+  assert.equal(faviconShouldFuseEmbeddedTile(color, tileColors.light, adaptiveFaviconOptions), false, "SSSAiCode-like cursor favicon pixels must not be fused into a black carrier.");
+}
+
+{
+  const circularEmblemSample = rgbaSample(faviconFixtureSize, (x, y) => {
+    const distance = Math.hypot(x - 15.5, y - 15.5);
+    if (distance > 15.5) {
+      return [0, 0, 0, 0];
+    }
+    const globeLine = Math.abs(x - 15.5) <= 1
+      || Math.abs(y - 15.5) <= 1
+      || Math.abs(distance - 9) <= 1;
+    return hexChannels(globeLine ? "#bbbbbb" : "#7e7e7e");
+  });
+  const { color, tileColors } = faviconTileDecision(circularEmblemSample);
+  assert.equal(color.compactEmblem, true, "Circular silhouettes should be read as complete emblems instead of rounded-square app tiles.");
+  assert.deepEqual(tileColors, { light: "#ffffff", dark: "#ffffff" }, "Neutral circular emblems should use a paper carrier selected from their outer silhouette.");
+  assert.equal(faviconShouldFuseEmbeddedTile(color, tileColors.light, adaptiveFaviconOptions), false, "Circular emblem pixels must stay intact instead of being fused as a square tile background.");
+}
+
+{
   const { color, tileColors } = faviconTileDecision(rgbaSample(faviconFixtureSize, (x, y, size) => {
     return sparseDotGlyph(x, y, size) ? hexChannels("#e89bc5") : [0, 0, 0, 0];
   }));
@@ -4170,6 +4343,18 @@ const faviconTileDecision = (sample) => {
   assert.notEqual(tileColors.light, sampledGlyph, "Transparent pink ico glyphs should use a neutral carrier instead of pink-on-pink.");
   assert.ok(contrastRatio(tileColors.light, sampledGlyph) >= FAVICON_READABLE_CARRIER_CONTRAST_MIN, "Transparent pink ico glyphs receive a readable neutral carrier.");
   assert.equal(tileColors.dark, tileColors.light, "Sampled favicon carriers must remain fixed when Wayleaf switches light/dark mode.");
+}
+
+{
+  const lowContrastPinkTileSample = rgbaSample(faviconFixtureSize, (x, y, size) => {
+    const mark = centeredBox(x, y, size, 8)
+      && (Math.abs((x - 16) - (y - 16)) <= 3 || Math.abs((x - 16) + (y - 16)) <= 3);
+    return hexChannels(mark ? "#dc91bb" : "#e89bc5");
+  });
+  const { color, tileColors } = faviconTileDecision(lowContrastPinkTileSample);
+  assert.equal(color.matchMode, "full-surface", "Low-contrast pink favicon tiles are complete artwork, not transparent glyphs.");
+  assert.deepEqual(tileColors, { light: "#ffffff", dark: "#ffffff" }, "Low-contrast pink favicon artwork should use a paper carrier instead of pink-on-pink masking.");
+  assert.equal(faviconShouldFuseEmbeddedTile(color, tileColors.light, adaptiveFaviconOptions), false, "Low-contrast full-surface favicon artwork should keep its bitmap, not fuse into the carrier.");
 }
 
 {
