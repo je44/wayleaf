@@ -3,6 +3,10 @@ set -euo pipefail
 
 cd "$(dirname "$0")/.."
 
+# Regenerate the local-icon registry from disk so the shipped index.json can
+# never drift from the actual icon files in the bundle.
+node scripts/build-icon-index.mjs
+
 version="$(node -e "process.stdout.write(require('./manifest.json').version)")"
 if [[ ! "$version" =~ ^[0-9]+(\.[0-9]+){1,3}$ ]]; then
   echo "Invalid manifest version: $version" >&2
