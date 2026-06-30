@@ -809,6 +809,10 @@ body.surface-open .surface-backdrop {
   border-radius: 8px;
 }
 
+.search-engine-search-icon:disabled {
+  cursor: default;
+}
+
 .search-workbench[data-ai-active] .search-engine-search-icon {
   opacity: 0;
   transform: translateX(3px) scale(0.72) rotate(-18deg);

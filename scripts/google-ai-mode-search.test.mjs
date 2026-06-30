@@ -85,7 +85,7 @@ assert.match(
 
 assert.match(
   source,
-  /function handleQuickSearchLeadingIconClick\(\) \{[\s\S]*!canActivateGoogleAiSearchMode\(\) \|\| !isQuickSearchActive\(\)[\s\S]*quickSearchInput\.focus\(\{ preventScroll: true \}\);[\s\S]*setQuickSearchActive\(true\);[\s\S]*exitGoogleAiSearchMode\(\);[\s\S]*googleAiSearchModeActive = true;[\s\S]*renderLocalSearchSuggestions\(normalizeText\(quickSearchInput\.value\)\);[\s\S]*quickSearchInput\.focus\(\{ preventScroll: true \}\);/,
+  /function handleQuickSearchLeadingIconClick\(\) \{[\s\S]*if \(!canActivateGoogleAiSearchMode\(\)\) \{[\s\S]*return;[\s\S]*if \(!isQuickSearchActive\(\)\) \{[\s\S]*quickSearchInput\.focus\(\{ preventScroll: true \}\);[\s\S]*setQuickSearchActive\(true\);[\s\S]*exitGoogleAiSearchMode\(\);[\s\S]*googleAiSearchModeActive = true;[\s\S]*renderLocalSearchSuggestions\(normalizeText\(quickSearchInput\.value\)\);[\s\S]*quickSearchInput\.focus\(\{ preventScroll: true \}\);/,
   "Clicking the leading search icon should toggle Google AI mode only while the search box is active and should preserve input focus and active search styling."
 );
 
@@ -97,8 +97,14 @@ assert.match(
 
 assert.match(
   source,
-  /function updateQuickSearchLeadingIcon\(\) \{[\s\S]*quickSearchLeadingIcon\.tabIndex = active \? 0 : -1;/,
-  "The leading search icon should stay clickable for focus while leaving keyboard order until the search box is active."
+  /function updateQuickSearchLeadingIcon\(\) \{[\s\S]*const available = canActivateGoogleAiSearchMode\(\);[\s\S]*quickSearchLeadingIcon\.disabled = !available;[\s\S]*quickSearchLeadingIcon\.tabIndex = active \? 0 : -1;[\s\S]*quickSearchLeadingIcon\.setAttribute\("aria-disabled", String\(!available\)\);[\s\S]*quickSearchLeadingIcon\.title = available \? quickSearchLeadingIcon\.getAttribute\("aria-label"\) : "";/,
+  "The leading search icon should be disabled outside Google's ordinary search engine, drop its tooltip, and leave keyboard order until Google search is active."
+);
+
+assert.match(
+  styles,
+  /\.search-engine-search-icon:disabled\s*\{[\s\S]*cursor:\s*default;/,
+  "The disabled leading search icon should not show a clickable cursor."
 );
 
 assert.match(

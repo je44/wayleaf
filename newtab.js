@@ -4585,9 +4585,11 @@ function updateQuickSearchLeadingIcon() {
   }
   const available = canActivateGoogleAiSearchMode();
   const active = available && isQuickSearchActive();
+  quickSearchLeadingIcon.disabled = !available;
   quickSearchLeadingIcon.tabIndex = active ? 0 : -1;
-  quickSearchLeadingIcon.setAttribute("aria-label", googleAiSearchModeActive ? t("quickSearch") : t("quickSearchWithGoogleAi"));
-  quickSearchLeadingIcon.title = googleAiSearchModeActive ? t("quickSearch") : t("quickSearchWithGoogleAi");
+  quickSearchLeadingIcon.setAttribute("aria-disabled", String(!available));
+  quickSearchLeadingIcon.setAttribute("aria-label", available && !googleAiSearchModeActive ? t("quickSearchWithGoogleAi") : t("quickSearch"));
+  quickSearchLeadingIcon.title = available ? quickSearchLeadingIcon.getAttribute("aria-label") : "";
   searchWorkbench?.toggleAttribute("data-google-ai-active", googleAiSearchModeActive);
   if (googleAiSearchModeActive) {
     window.clearTimeout(googleAiModeExitTimer);
@@ -5671,7 +5673,10 @@ function exitPlatformQuickSearchMode() {
 }
 
 function handleQuickSearchLeadingIconClick() {
-  if (!canActivateGoogleAiSearchMode() || !isQuickSearchActive()) {
+  if (!canActivateGoogleAiSearchMode()) {
+    return;
+  }
+  if (!isQuickSearchActive()) {
     quickSearchInput.focus({ preventScroll: true });
     return;
   }
