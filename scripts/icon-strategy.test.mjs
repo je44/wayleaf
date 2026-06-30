@@ -1647,11 +1647,18 @@ function faviconCandidateLooksLikeCompactEmblem(candidate, analysis, size) {
   const aspectRatio = Math.min(width, height) / Math.max(width, height);
   const density = analysis.opaqueWeight / Math.max(1, width * height);
   const cornerStyle = candidate.ownTileCornerStyle || faviconAnalysisOwnTileShape(analysis, size).cornerStyle;
-  return cornerStyle === "rounded"
-    && minSpan >= 0.62
+  if (cornerStyle !== "rounded" && cornerStyle !== "circle") {
+    return false;
+  }
+  const emblemGeometry = minSpan >= 0.62
     && aspectRatio >= 0.85
     && density >= 0.5
     && density <= 0.86;
+  if (cornerStyle === "circle") {
+    return emblemGeometry
+      && colorSaturation(candidate.red, candidate.green, candidate.blue) <= 0.22;
+  }
+  return emblemGeometry;
 }
 
 function faviconCandidateLooksLikeSameHueFullSurfaceArtwork(candidate, foreground, tileColor, analysis, size) {
@@ -2008,6 +2015,7 @@ function faviconOwnTileShapeSupport(samples, bounds, size, coverage) {
   const cornerSupport = faviconCandidateCornerSupport(samples, bounds);
   const sideSupport = faviconCandidateSideSupport(samples, bounds);
   const surfaceSupport = faviconCandidateSurfaceSupport(samples, bounds);
+  const aspectRatio = Math.min(width, height) / Math.max(width, height);
   const straightCornerConfidence = cornerSupport.extremeMinimum >= 0.5
     && cornerSupport.pointMinimum >= 0.5
     && cornerSupport.pointSpread <= 0.5
@@ -2019,13 +2027,29 @@ function faviconOwnTileShapeSupport(samples, bounds, size, coverage) {
     && surfaceSupport.columnRatio >= 0.5
     ? Math.max(1 - cornerSupport.extremeMaximum, 1 - cornerSupport.pointAverage, 1 - cornerSupport.average)
     : 0;
-  const confidence = Math.max(straightCornerConfidence, roundedCornerConfidence);
+  const circleCornerConfidence = cornerSupport.extremeMaximum <= 0.15
+    && cornerSupport.maximum <= 0.42
+    && sideSupport.supportedSides === 4
+    && surfaceSupport.rowRatio >= 0.45
+    && surfaceSupport.columnRatio >= 0.45
+    && aspectRatio >= 0.82
+    && minSpan >= 0.6
+    && density >= 0.45
+    && density <= 0.88
+    ? Math.max(1 - cornerSupport.maximum, 1 - cornerSupport.average)
+    : 0;
+  const confidence = circleCornerConfidence > 0
+    ? circleCornerConfidence
+    : Math.max(straightCornerConfidence, roundedCornerConfidence);
   if (confidence < 0.42) {
     return { confidence: 0, cornerStyle: "" };
   }
+  const cornerStyle = circleCornerConfidence > 0
+    ? "circle"
+    : roundedCornerConfidence > straightCornerConfidence ? "rounded" : "straight";
   return {
     confidence: Math.min(1, confidence * 0.72 + density * 0.16 + sideSupport.average * 0.12),
-    cornerStyle: roundedCornerConfidence > straightCornerConfidence ? "rounded" : "straight"
+    cornerStyle
   };
 }
 
@@ -2512,7 +2536,9 @@ function faviconCandidateHasPaperSurfaceArtwork(color) {
 function faviconCandidateHasOwnTileShape(color) {
   return (color.ownTileShapeConfidence || 0) >= 0.42
     && (color.edgeConfidence || 0) <= FAVICON_EMBEDDED_TILE_EDGE_CONFIDENCE_MAX
-    && (color.ownTileCornerStyle === "straight" || color.ownTileCornerStyle === "rounded");
+    && (color.ownTileCornerStyle === "straight"
+      || color.ownTileCornerStyle === "rounded"
+      || color.ownTileCornerStyle === "circle");
 }
 
 function faviconReadableCarrierTileColor(color, mode) {
@@ -4171,6 +4197,26 @@ const faviconTileDecision = (sample) => {
   const { color, tileColors } = faviconTileDecision(roundedPurpleTileSample);
   assert.equal(rgbChannelsToHex(color.red, color.green, color.blue), "#6255f6", "Purple self-contained favicon tiles should expose their own background.");
   assert.deepEqual(tileColors, { light: "#6255f6", dark: "#6255f6" }, "Purple self-contained favicon tiles should visually merge with a matching carrier.");
+}
+
+{
+  const circleFaviconSample = rgbaSample(faviconFixtureSize, (x, y, size) => {
+    const center = (size - 1) / 2;
+    const radius = size / 2 - 0.5;
+    if ((x - center) ** 2 + (y - center) ** 2 > radius ** 2) {
+      return [0, 0, 0, 0];
+    }
+    const glyph = (x >= 14 && x <= 17 && y >= 8 && y <= 20)
+      || (x >= 11 && x <= 20 && y >= 12 && y <= 15);
+    return hexChannels(glyph ? "#ffffff" : "#2f6bff");
+  });
+  const { color, tileColors } = faviconTileDecision(circleFaviconSample);
+  assert.equal(color.ownTileCornerStyle, "circle", "Full-bleed circular favicons should be classified as their own circular tile shape.");
+  assert.equal(color.compactEmblem, false, "A circular favicon tile must not be mistaken for a padded compact emblem.");
+  assert.equal(color.preferredSelfContainedTile, true, "Circular favicon tiles should take the self-contained colored tile path.");
+  assert.equal(rgbChannelsToHex(color.red, color.green, color.blue), "#2f6bff", "Circular favicon tiles should expose their own disc background color.");
+  assert.deepEqual(tileColors, { light: "#2f6bff", dark: "#2f6bff" }, "Circular favicons should fuse into a carrier matching their disc color, not a dark neutral mask.");
+  assert.equal(faviconShouldFuseEmbeddedTile(color, tileColors.light, adaptiveFaviconOptions), true, "Circular favicon disc backgrounds should fuse into the matching carrier.");
 }
 
 {
