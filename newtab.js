@@ -2716,6 +2716,8 @@ const localSiteIconBrandColorRequests = new Map();
 const siteIconDiscoveryCache = new Map();
 const remoteBrandIconIndexCache = new Map();
 const siteIconRawSvgTextCache = new Map();
+const siteIconRawSvgStalePaths = new Set();
+const siteIconRawSvgRevalidatedPaths = new Set();
 
 ensureChromeApiFallback();
 document.addEventListener("DOMContentLoaded", initWithStorageMigration);
@@ -2948,7 +2950,7 @@ function writeSiteIconRawSvgCacheEntry(path, svg) {
     return;
   }
   const cache = readSiteIconRawSvgCache();
-  cache[key] = { svg: text, updatedAt: Date.now() };
+  cache[key] = { svg: text, updatedAt: Date.now(), version: firstPaintExtensionVersion() };
   const evictPast = (entries, keepCount) => {
     entries
       .sort(([, first], [, second]) => Number(second?.updatedAt || 0) - Number(first?.updatedAt || 0))
@@ -2973,6 +2975,8 @@ function rememberSiteIconRawSvgText(path, svg) {
     return;
   }
   siteIconRawSvgTextCache.set(key, text);
+  // Freshly fetched under the current version → no longer version-stale.
+  siteIconRawSvgStalePaths.delete(key);
   writeSiteIconRawSvgCacheEntry(key, text);
 }
 
@@ -2994,6 +2998,7 @@ function hydrateLocalSiteIconAnalysisFromText(path, svg) {
 
 function primeSiteIconRawSvgCacheFromStorage() {
   const cache = readSiteIconRawSvgCache();
+  const currentVersion = firstPaintExtensionVersion();
   Object.entries(cache).forEach(([path, entry]) => {
     const text = typeof entry?.svg === "string" ? entry.svg : "";
     if (!text) {
@@ -3001,7 +3006,75 @@ function primeSiteIconRawSvgCacheFromStorage() {
     }
     siteIconRawSvgTextCache.set(path, text);
     hydrateLocalSiteIconAnalysisFromText(path, text);
+    // Cached under an older extension version: the bundled file may have changed in the
+    // update, so mark it for a one-time background revalidation when it next displays.
+    if (entry?.version !== currentVersion) {
+      siteIconRawSvgStalePaths.add(path);
+    }
   });
+}
+
+function invalidateLocalSiteIconRenderCaches(path) {
+  const key = String(path || "");
+  if (!key) {
+    return;
+  }
+  localSiteIconBrandColorCache.delete(key);
+  localSiteIconRenderModeCache.delete(key);
+  localSiteIconExplicitBrandColorCache.delete(key);
+  localSiteIconVisibleColorsCache.delete(key);
+  localSiteIconEmbeddedCarrierColorCache.delete(key);
+  localSiteIconBrandColorRequests.delete(key);
+  for (const memoKey of [...whiteSvgIconDataUrlCache.keys()]) {
+    if (memoKey.endsWith(`:${key}`)) {
+      whiteSvgIconDataUrlCache.delete(memoKey);
+    }
+  }
+}
+
+function scheduleIconIdleTask(task) {
+  if (typeof requestIdleCallback === "function") {
+    requestIdleCallback(task, { timeout: 2000 });
+  } else {
+    setTimeout(task, 200);
+  }
+}
+
+// Background, version-gated self-heal for a displayed local icon: only runs for paths
+// cached under an older extension version (a release may have swapped the bundled SVG).
+// Re-renders only when the file actually changed — unchanged files just re-stamp silently,
+// so the user never sees a reload for a fixed-style icon.
+function revalidateDisplayedLocalSiteIcon(path) {
+  const key = String(path || "");
+  if (!siteIconRawSvgStalePaths.has(key) || siteIconRawSvgRevalidatedPaths.has(key)) {
+    return;
+  }
+  siteIconRawSvgRevalidatedPaths.add(key);
+  fetch(key)
+    .then((response) => response.ok ? response.text() : "")
+    .then((svg) => {
+      if (!svg) {
+        siteIconRawSvgStalePaths.delete(key);
+        return;
+      }
+      const previous = siteIconRawSvgTextCache.get(key) || "";
+      rememberSiteIconRawSvgText(key, svg);
+      if (svg === previous) {
+        return;
+      }
+      invalidateLocalSiteIconRenderCaches(key);
+      hydrateLocalSiteIconAnalysisFromText(key, svg);
+      document.querySelectorAll("img[data-site-url]").forEach((node) => {
+        if (node.dataset.iconSource !== key) {
+          return;
+        }
+        applySiteIcon(node, {
+          title: node.dataset.siteTitle || node.alt || "",
+          url: node.dataset.siteUrl || ""
+        });
+      });
+    })
+    .catch(() => {});
 }
 
 function renderFirstPaintCache() {
@@ -10569,6 +10642,9 @@ function refreshRenderedSiteIcons() {
       url: icon.dataset.siteUrl || ""
     };
     const localIcon = localIconForUrl(site.url);
+    if (localIcon && siteIconRawSvgStalePaths.has(localIcon)) {
+      scheduleIconIdleTask(() => revalidateDisplayedLocalSiteIcon(localIcon));
+    }
     if (icon.dataset.iconCacheHydrated === "true") {
       if (!localIcon) {
         if (!remoteBrandSvgDescriptorFromSource(icon.dataset.iconSource || icon.currentSrc || icon.src || "")) {
