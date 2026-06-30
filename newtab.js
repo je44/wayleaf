@@ -8482,7 +8482,8 @@ function remoteBrandSvgBrandColor(svg, options = {}) {
     ? ""
     : normalizeHexColor(SITE_ICON_TILE_COLOR_BY_SITE_KEY[options.siteKey] || "");
   const expressiveColor = palette.find((color) => !remoteBrandColorLooksNeutral(color));
-  return expressiveColor || localColor || remoteBrandSvgMonochromeBrandColor(svg, palette) || "";
+  // 单色 svg（含 currentColor→黑）直接读色生效，优先于白名单 VI 表。
+  return expressiveColor || remoteBrandSvgMonochromeBrandColor(svg, palette) || localColor || "";
 }
 
 function remoteBrandColorLooksNeutral(color) {
@@ -8518,9 +8519,13 @@ function remoteBrandSvgMonochromeBrandColor(svg, palette = extractSvgColorPalett
   }
   if (palette.length === 1) {
     const color = normalizeHexColor(palette[0]);
-    return color && !nearWhiteBrandColor(color) ? color : "";
+    if (!color) {
+      return remoteBrandSvgMonochromeDefaultsToBlack(svg) ? "#000000" : "";
+    }
+    // 无彩度（黑/白/灰）锚定近黑，行黑色方案；有彩度则用本色。
+    return remoteBrandColorLooksNeutral(color) ? "#000000" : color;
   }
-  return remoteBrandSvgUsesImplicitBlack(svg) ? "#000000" : "";
+  return remoteBrandSvgMonochromeDefaultsToBlack(svg) ? "#000000" : "";
 }
 
 function remoteBrandSvgIsMonochrome(svg) {
@@ -8537,6 +8542,21 @@ function remoteBrandSvgUsesImplicitBlack(svg) {
     && remoteBrandSvgShapeCount(text) > 0
     && !/\s(?:fill|stroke|color)\s*=/i.test(text)
     && !/(?:fill|stroke|color)\s*:/i.test(text);
+}
+
+// 单色 svg 但抽唔到具体色（无声明 = 隐式黑，或仅 currentColor/var() 未解析）。
+// 呢类嘅有效渲染色就係 CSS 默认文字色黑，应锚定近黑行黑色方案。
+function remoteBrandSvgMonochromeDefaultsToBlack(svg) {
+  const text = String(svg || "");
+  if (!remoteBrandSvgHasRootElement(text) || remoteBrandSvgShapeCount(text) <= 0) {
+    return false;
+  }
+  const analysis = svgPaintAnalysis(text);
+  if (analysis.usesPaintServer || analysis.visibleColors.length > 0) {
+    return false;
+  }
+  return remoteBrandSvgUsesImplicitBlack(text)
+    || /(?:fill|stroke|color)\s*[:=]\s*["']?\s*currentColor\b/i.test(text);
 }
 
 function remoteBrandSvgHasComplexPaint(svg) {
@@ -10072,6 +10092,10 @@ function siteIconBrandColor(siteKey = "", iconPath = "") {
   if (localColor && !remoteBrandColorLooksNeutral(localColor) && !nearBlackBrandColor(localColor)) {
     return localColor;
   }
+  // 单色 svg 读到嘅锚色（含近黑/白→黑）直接生效，毋须白名单覆盖。
+  if (localColor && localSiteIconHasExplicitBrandColor(iconPath)) {
+    return localColor;
+  }
   if (localColor && !localSiteIconHasExplicitBrandColor(iconPath)) {
     return localColor;
   }
@@ -10159,13 +10183,12 @@ function localSiteIconAnalysisFromSvg(svg) {
   const analysis = svgPaintAnalysis(svg);
   const isMonochrome = !analysis.usesPaintServer && analysis.visibleColors.length <= 1;
   const palette = analysis.colors;
-  const explicitBrandColor = isMonochrome && palette.length === 1
-    ? remoteBrandSvgMonochromeBrandColor(svg, palette)
-    : "";
+  // 单色一律走统一锚色：有彩度=本色，无彩度/白/黑/currentColor=近黑。
+  const monochromeBrandColor = isMonochrome ? remoteBrandSvgMonochromeBrandColor(svg, palette) : "";
   return {
-    brandColor: explicitBrandColor || (isMonochrome && remoteBrandSvgUsesImplicitBlack(svg) ? "#000000" : ""),
+    brandColor: monochromeBrandColor,
     renderMode: remoteBrandSvgHasComplexPaintAnalysis(analysis) ? "gradient" : isMonochrome ? "mask" : "original",
-    hasExplicitBrandColor: Boolean(explicitBrandColor),
+    hasExplicitBrandColor: Boolean(monochromeBrandColor),
     visibleColors: analysis.colors,
     embeddedCarrierColor: svgEmbeddedCarrierColor(svg)
   };
@@ -10196,9 +10219,11 @@ function brandIconTileColors(tileColor, siteKey = "", iconPath = "") {
       return paletteTileColors;
     }
   }
+  // 白/近白锚定近黑（兜住白名单来源的白色，如 chatgpt #ffffff），避免深色模式白底白 logo。
+  const maskAnchor = nearWhiteBrandColor(color) ? "#000000" : color;
   return {
-    light: brandIconLightCarrierColor(color),
-    dark: brandIconDarkCarrierColor(color)
+    light: brandIconLightCarrierColor(maskAnchor),
+    dark: brandIconDarkCarrierColor(maskAnchor)
   };
 }
 
@@ -10898,10 +10923,63 @@ function applySvgGlyphColor(svg, glyphColor, options = {}) {
 function bindFaviconFallback(icon, site, size) {
   const candidateToken = icon.dataset.iconCandidate || "";
   icon.addEventListener("error", () => {
-    if (iconStillRenderingCandidate(icon, candidateToken)) {
+    if (!iconStillRenderingCandidate(icon, candidateToken)) {
+      return;
+    }
+    // 本地 svg 实际加载失败（文件已不在 bundle，但 index.json 仍列住）：把佢由「存在名单」
+    // 剔走，然后云端优先恢复 —— 先去 provider 揾，揾唔到先轮到 favicon。真正嘅 local→cloud→favicon，
+    // 毋须人手维护 index.json。
+    if (forgetMissingLocalSiteIcon(candidateToken)) {
+      recoverMissingLocalIconViaCloud(icon, site, size);
+      return;
+    }
+    applyFaviconIcon(icon, site, size, { skipLocalIcon: true });
+  }, { once: true });
+}
+
+function recoverMissingLocalIconViaCloud(icon, site, size) {
+  const parsedUrl = safeUrl(site.url);
+  const siteKey = siteGroupKey(parsedUrl);
+  if (!siteIconIndexLoaded || !parsedUrl || !siteKey) {
+    applyFaviconIcon(icon, site, size, { skipLocalIcon: true });
+    return;
+  }
+  // 先用 fallback.svg 占位（唔露坏图 glyph），再云端优先恢复。
+  applyGenericFallbackSiteIcon(icon, parsedUrl.hostname || site.title || "");
+  const requestToken = `recover:${siteKey}:${parsedUrl.href}`;
+  icon.dataset.remoteBrandIconRequest = requestToken;
+  const stillTargetingSite = () => icon.isConnected
+    && icon.dataset.remoteBrandIconRequest === requestToken
+    && siteGroupKey(safeUrl(icon.dataset.siteUrl)) === siteKey;
+  const fallToFavicon = () => {
+    if (stillTargetingSite()) {
+      delete icon.dataset.remoteBrandIconRequest;
       applyFaviconIcon(icon, site, size, { skipLocalIcon: true });
     }
-  }, { once: true });
+  };
+  discoverRemoteBrandIconDataUrl(parsedUrl.href).then((iconDataUrl) => {
+    if (!stillTargetingSite()) {
+      return;
+    }
+    if (iconDataUrl) {
+      applyRemoteBrandIcon(icon, site, iconDataUrl);
+      return;
+    }
+    fallToFavicon();
+  }).catch(fallToFavicon);
+}
+
+function forgetMissingLocalSiteIcon(candidate) {
+  const prefix = `${SITE_ICON_DIRECTORY}/`;
+  if (!String(candidate || "").startsWith(prefix)) {
+    return false;
+  }
+  const fileName = candidate.slice(prefix.length).split(/[?#]/)[0];
+  if (!fileName || !availableSiteIconFiles.has(fileName)) {
+    return false;
+  }
+  availableSiteIconFiles.delete(fileName);
+  return true;
 }
 
 function applyFaviconIcon(icon, site, size, options = {}) {
