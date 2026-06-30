@@ -5070,7 +5070,7 @@ select:focus-visible {
   opacity: 0.78;
   transform: scaleX(0);
   transform-origin: left center;
-  animation: bookmarkHoldProgress 700ms linear forwards;
+  animation: bookmarkHoldProgress 540ms linear forwards;
 }
 
 .bookmark-site-card.delete-ready {

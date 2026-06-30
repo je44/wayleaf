@@ -99,6 +99,8 @@ const REMOTE_BRAND_ICON_PROVIDER_VERSION = 2;
 const FAVORITE_REORDER_MS = 260;
 const FAVORITE_DELETE_EXIT_MS = 360;
 const FAVORITE_DELETE_CANCEL_MS = 280;
+const BOOKMARK_LONG_PRESS_MS = 700;
+const BOOKMARK_LONG_PRESS_FEEDBACK_DELAY_MS = 160;
 const SEARCH_SUGGESTIONS_EXIT_MS = 260;
 const SEARCH_SUGGESTIONS_OPEN_PADDING_Y = 18;
 const AI_MODE_EXIT_MS = 300;
@@ -13367,13 +13369,18 @@ async function rerenderBookmarkGridPreservingScroll() {
 
 function bindBookmarkLongPress(node, site) {
   const link = node.querySelector(".site-link");
-  let timer = 0;
+  let feedbackTimer = 0;
+  let holdTimer = 0;
   let suppressNextClick = false;
 
   const clearPressTimer = () => {
-    if (timer) {
-      clearTimeout(timer);
-      timer = 0;
+    if (feedbackTimer) {
+      clearTimeout(feedbackTimer);
+      feedbackTimer = 0;
+    }
+    if (holdTimer) {
+      clearTimeout(holdTimer);
+      holdTimer = 0;
     }
   };
 
@@ -13382,12 +13389,16 @@ function bindBookmarkLongPress(node, site) {
       return;
     }
     clearPressTimer();
-    node.classList.add("pressing");
-    timer = window.setTimeout(() => {
+    feedbackTimer = window.setTimeout(() => {
+      node.classList.add("pressing");
+      feedbackTimer = 0;
+    }, BOOKMARK_LONG_PRESS_FEEDBACK_DELAY_MS);
+    holdTimer = window.setTimeout(() => {
       node.classList.remove("pressing");
+      holdTimer = 0;
       suppressNextClick = true;
       showBookmarkDeleteMode(node);
-    }, 700);
+    }, BOOKMARK_LONG_PRESS_MS);
   };
 
   const cancelPress = () => {

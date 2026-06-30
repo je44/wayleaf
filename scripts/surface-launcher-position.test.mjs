@@ -64,6 +64,30 @@ assert.match(
 
 assert.match(
   styles,
+  /\.site-card:not\(\.bookmark-site-card\):hover \.site-link,\s*\.featured-category \.site-link:hover,\s*\.featured-category \.site-card:not\(\.bookmark-site-card\):hover \.site-link,\s*\.bookmark-site-card:hover \.site-link\s*\{[\s\S]*transform:\s*scale3d\(1\.03,\s*1\.03,\s*1\);/,
+  "Navigation hub rows should keep the move-in and move-out hover scale effect."
+);
+
+assert.match(
+  source,
+  /const BOOKMARK_LONG_PRESS_MS = 700;\s*const BOOKMARK_LONG_PRESS_FEEDBACK_DELAY_MS = 160;/,
+  "Bookmark rows should separate ordinary click timing from long-press feedback timing."
+);
+
+assert.match(
+  source,
+  /feedbackTimer = window\.setTimeout\(\(\) => \{\s*node\.classList\.add\("pressing"\);[\s\S]*\}, BOOKMARK_LONG_PRESS_FEEDBACK_DELAY_MS\);\s*holdTimer = window\.setTimeout/,
+  "Bookmark rows should not enter the long-press visual state immediately on pointerdown."
+);
+
+assert.match(
+  styles,
+  /\.bookmark-site-card\.pressing \.site-link::after\s*\{[\s\S]*animation:\s*bookmarkHoldProgress 540ms linear forwards;/,
+  "Bookmark hold progress should match the visible portion after the click-safe feedback delay."
+);
+
+assert.match(
+  styles,
   /\.bookmark-delete-button:hover,\s*\.bookmark-delete-button:focus-visible,\s*\.bookmark-delete-button\.is-filled\s*\{[\s\S]*outline:\s*0;/,
   "Bookmark delete hover/focus should not add an outer outline around the delete icon."
 );
