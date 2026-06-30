@@ -84,6 +84,8 @@ const MAX_CACHED_SITE_ICON_BYTES = 96 * 1024;
 const SITE_ICON_RAW_SVG_CACHE_STORAGE_KEY = "__wayleaf_site_icon_svg__";
 const MAX_CACHED_SITE_ICON_SVG_BYTES = 24 * 1024;
 const MAX_CACHED_SITE_ICON_SVG_ENTRIES = MAX_FAVORITE_SITES + MAX_HISTORY_SITE_GROUPS + 16;
+const SITE_ICON_CODE_HASH_STORAGE_KEY = "__wayleaf_icon_code_hash__";
+const ICON_CODE_SOURCE_FILES = ["newtab.js"];
 const SITE_ICON_DISCOVERY_TIMEOUT_MS = 3500;
 const SITE_ICON_DOCUMENT_DISCOVERY_TIMEOUT_MS = 15000;
 const SITE_ICON_FETCH_TIMEOUT_MS = 4500;
@@ -2905,10 +2907,13 @@ function firstPaintExtensionVersion() {
   }
 }
 
-// Signature over the icon-rendering functions' source. Any edit to the layer 1/2/3
-// rendering logic changes this string, so the first-paint render-output cache is
-// treated as empty and icons recompute from the latest code. The raw-SVG text cache
-// intentionally does NOT use this — raw text is algorithm input, not output.
+// Tier 1 (synchronous) of the render-cache invalidation. Signature over the icon-rendering
+// functions' source: an edit to any listed function changes this string, so the first-paint
+// render-output cache is treated as empty and icons recompute from current code — instantly,
+// on the same refresh. Tier 2 (verifyIconCodeHashAndHealStaleIcons) hashes the whole script
+// source asynchronously and backstops any helper not listed here, so coverage is absolute
+// even if this list drifts. The raw-SVG text cache intentionally uses neither — raw text is
+// algorithm input, not output.
 let iconRenderCodeSignatureMemo = "";
 function iconRenderCodeSignature() {
   if (iconRenderCodeSignatureMemo) {
@@ -2952,6 +2957,69 @@ function iconRenderCodeSignature() {
   }
   iconRenderCodeSignatureMemo = `${lenSum.toString(36)}.${(hash >>> 0).toString(36)}`;
   return iconRenderCodeSignatureMemo;
+}
+
+// Zero-maintenance, absolute-coverage safety net behind the function-list signature:
+// hash this script's own source. Any change to ANY icon-rendering code (including helpers
+// not listed in iconRenderCodeSignature) changes the hash; reverting the code restores it.
+// Async because reading the source needs a fetch, so it runs after first paint and heals
+// any stale render the synchronous signature missed.
+async function computeIconCodeSourceHash() {
+  const getUrl = globalThis.chrome?.runtime?.getURL;
+  if (typeof getUrl !== "function") {
+    return "";
+  }
+  let combined = 0;
+  let lenSum = 0;
+  for (const file of ICON_CODE_SOURCE_FILES) {
+    let text = "";
+    try {
+      const response = await fetch(getUrl(file));
+      text = response.ok ? await response.text() : "";
+    } catch {
+      text = "";
+    }
+    if (!text) {
+      return "";
+    }
+    lenSum += text.length;
+    let hash = 0;
+    for (let index = 0; index < text.length; index += 1) {
+      hash = ((hash << 5) - hash + text.charCodeAt(index)) | 0;
+    }
+    combined = ((combined << 5) - combined + hash) | 0;
+  }
+  return `${lenSum.toString(36)}.${(combined >>> 0).toString(36)}`;
+}
+
+// Compare the live source hash against the last verified one. If the icon code changed
+// since the render cache was written (e.g. an edit/revert to a helper the function-list
+// signature does not cover), drop the render-output cache and re-render the displayed
+// icons from current code. Unchanged source → no work; re-render is equality-gated so an
+// unchanged-output edit produces no visible flash.
+async function verifyIconCodeHashAndHealStaleIcons() {
+  const hash = await computeIconCodeSourceHash();
+  if (!hash) {
+    return;
+  }
+  let stored = "";
+  try {
+    stored = localStorage.getItem(SITE_ICON_CODE_HASH_STORAGE_KEY) || "";
+  } catch {
+    stored = "";
+  }
+  if (stored === hash) {
+    return;
+  }
+  try {
+    localStorage.setItem(SITE_ICON_CODE_HASH_STORAGE_KEY, hash);
+  } catch {}
+  // First run (no stored hash) just records the baseline — nothing to heal.
+  if (!stored) {
+    return;
+  }
+  writeFirstPaintCache({ iconRenders: {} });
+  refreshRenderedSiteIcons();
 }
 
 function readSiteIconRawSvgCache() {
@@ -3818,6 +3886,11 @@ async function init() {
   renderFirstPaintCache();
   const siteIconIndexReady = initSiteIconIndex();
   siteIconIndexReady.then(refreshRenderedSiteIcons).catch(() => {});
+  siteIconIndexReady.then(() => {
+    scheduleIconIdleTask(() => {
+      verifyIconCodeHashAndHealStaleIcons().catch(() => {});
+    });
+  }).catch(() => {});
   const themeModeReady = initThemeMode();
   const searchSettingsReady = initSearchSettings();
   const videoPipSettingReady = initVideoPipGlobalSetting();
