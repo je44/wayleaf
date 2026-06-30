@@ -180,6 +180,22 @@ const PROVIDERS = {
       "button[type=\"submit\"]"
     ]
   },
+  "chat.qwen.ai": {
+    engineId: "qwen",
+    inputSelectors: [
+      "textarea.message-input-textarea",
+      "textarea",
+      "div[contenteditable=\"true\"]",
+      "[contenteditable=\"true\"]"
+    ],
+    submitSelectors: [
+      "button.send-button",
+      "button[aria-label*=\"Send\"]",
+      "button[aria-label*=\"发送\"]",
+      "button[aria-label*=\"提交\"]",
+      "button[type=\"submit\"]"
+    ]
+  },
   "jimeng.jianying.com": {
     engineId: "jimeng",
     inputSelectors: [
@@ -450,6 +466,8 @@ async function fillPromptIntoLiveInput(config, prompt, attempts = 1) {
     }
     if (config.engineId === "kimi") {
       focusAndSetKimiInputValue(input, prompt);
+    } else if (config.engineId === "qwen") {
+      focusAndSetQwenInputValue(input, prompt);
     } else {
       focusAndSetInputValue(input, prompt);
     }
@@ -961,6 +979,22 @@ function focusAndSetKimiInputValue(input, value) {
   }
   dispatchBasicEvent(input, "input");
   dispatchBasicEvent(input, "change");
+}
+
+function focusAndSetQwenInputValue(input, value) {
+  input.focus();
+  if (input instanceof HTMLTextAreaElement || input instanceof HTMLInputElement) {
+    input.select?.();
+    const inserted = document.execCommand?.("insertText", false, value);
+    if (!inserted || inputText(input).trim() !== value.trim()) {
+      focusAndSetInputValue(input, value);
+      return;
+    }
+    dispatchBasicEvent(input, "input");
+    dispatchBasicEvent(input, "change");
+    return;
+  }
+  focusAndSetInputValue(input, value);
 }
 
 async function clickSubmitButton(button) {

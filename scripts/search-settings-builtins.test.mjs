@@ -37,14 +37,14 @@ assert.match(
 
 assert.match(
   source,
-  /const explicitIcon = engine\.id === "kimi" \? `\$\{SITE_ICON_DIRECTORY\}\/kimi\.svg` : doubaoAiIconUrl\(engine\);/,
+  /const explicitIcon = engine\.id === "kimi" \? `\$\{SITE_ICON_DIRECTORY\}\/kimi\.svg` : explicitAiIconUrl\(engine\);/,
   "Kimi's settings icon should use the updated local SVG directly instead of waiting for the async icon index."
 );
 
 assert.match(
   css,
-  /\.settings-engine-icon\[data-engine-icon="doubao"\],\s*\.settings-engine-icon\[data-engine-icon="kimi"\]\s*\{[\s\S]*box-shadow:\s*inset 0 0 0 1px rgb\(20 27 24 \/ 0\.1\),\s*0 0 0 1px rgb\(20 27 24 \/ 0\.1\);/,
-  "Doubao and Kimi settings icons should keep the same visible shell stroke as other engine icons."
+  /\.settings-engine-icon\[data-engine-icon="doubao"\],\s*\.settings-engine-icon\[data-engine-icon="kimi"\],\s*\.settings-engine-icon\[data-engine-icon="qwen"\]\s*\{[\s\S]*box-shadow:\s*inset 0 0 0 1px rgb\(20 27 24 \/ 0\.1\),\s*0 0 0 1px rgb\(20 27 24 \/ 0\.1\);/,
+  "Doubao, Kimi, and Qwen settings icons should keep the same visible shell stroke as other engine icons."
 );
 
 [
@@ -55,6 +55,7 @@ assert.match(
   ["glm", /glm:\s*\{\s*mode:\s*"mask",\s*tile:\s*"#ffffff",\s*glyph:\s*"#3859ff"\s*\}/],
   ["jimeng", /jimeng:\s*\{\s*mode:\s*"original",\s*tile:\s*"#000000"\s*\}/],
   ["kimi", /kimi:\s*\{\s*mode:\s*"original",\s*tile:\s*"#000000"\s*\}/],
+  ["qwen", /qwen:\s*\{\s*mode:\s*"original",\s*tile:\s*"#ffffff"\s*\}/],
   ["xiaohongshu", /xiaohongshu:\s*\{\s*mode:\s*"mask",\s*tile:\s*"#ff2442",\s*glyph:\s*"#ffffff"\s*\}/],
   ["zhihu", /zhihu:\s*\{\s*mode:\s*"mask",\s*tile:\s*"#0084ff",\s*glyph:\s*"#ffffff"\s*\}/]
 ].forEach(([engineId, pattern]) => {
@@ -76,6 +77,7 @@ assert.doesNotMatch(
   "doubao",
   "kimi",
   "glm",
+  "qwen",
   "jimeng"
 ].forEach((engineId) => {
   assert.match(source, new RegExp(`EDITABLE_AI_ENGINE_IDS = \\[[\\s\\S]*"${engineId}"`), `${engineId} should be included in AI settings.`);

@@ -476,7 +476,7 @@ const THEME_PALETTES = [
 ];
 const DEFAULT_LOCAL_SEARCH_ENGINE = "google";
 const EDITABLE_LOCAL_SEARCH_ENGINE_IDS = ["google", "baidu", "bing"];
-const EDITABLE_AI_ENGINE_IDS = ["chatgpt", "claude", "gemini", "grok", "deepseek", "doubao", "kimi", "glm", "jimeng"];
+const EDITABLE_AI_ENGINE_IDS = ["chatgpt", "claude", "gemini", "grok", "deepseek", "doubao", "kimi", "glm", "qwen", "jimeng"];
 const GOOGLE_AI_MODE_SEARCH_URL = "https://www.google.com/ai";
 const SETTINGS_ENGINE_ICON_STYLES = Object.freeze({
   baidu: { mode: "mask", tile: "#ffffff", glyph: "#2932e1" },
@@ -490,6 +490,7 @@ const SETTINGS_ENGINE_ICON_STYLES = Object.freeze({
   instagram: { mode: "original", tile: "#ffffff" },
   jimeng: { mode: "original", tile: "#000000" },
   kimi: { mode: "original", tile: "#000000" },
+  qwen: { mode: "original", tile: "#ffffff" },
   xiaohongshu: { mode: "mask", tile: "#ff2442", glyph: "#ffffff" },
   zhihu: { mode: "mask", tile: "#0084ff", glyph: "#ffffff" }
 });
@@ -506,6 +507,7 @@ const DEFAULT_SEARCH_ENGINES = [
   { id: "doubao", command: "/doubao", commands: ["/doubao", "/db"], label: "豆包", searchUrl: "https://www.doubao.com/chat/", queryParam: "q", aiDirect: true, autoSubmit: true, directUrl: "https://www.doubao.com/chat/", iconUrl: "icons/sites/doubao.png", themeColor: "#1e37fc" },
   { id: "kimi", command: "/kimi", label: "Kimi", searchUrl: "https://www.kimi.com/", queryParam: "q", aiDirect: true, autoSubmit: true, directUrl: "https://www.kimi.com/", themeColor: "#111827" },
   { id: "glm", command: "/glm", commands: ["/glm", "/chatglm", "/zhipu"], label: "GLM", searchUrl: "https://chatglm.cn/", queryParam: "q", aiDirect: true, autoSubmit: true, directUrl: "https://chatglm.cn/", themeColor: "#3859ff" },
+  { id: "qwen", command: "/qwen", label: "千问", searchUrl: "https://chat.qwen.ai/", queryParam: "q", aiDirect: true, autoSubmit: true, directUrl: "https://chat.qwen.ai/", iconUrl: "icons/sites/qwen.svg", themeColor: "#6f69f7", urlPromptFallback: true },
   { id: "jimeng", command: "/jimeng", commands: ["/jimeng", "/jm"], label: "即梦", searchUrl: "https://jimeng.jianying.com/ai-tool/home", queryParam: "q", aiDirect: true, autoSubmit: true, directUrl: "https://jimeng.jianying.com/ai-tool/home", themeColor: "#1c6fff", urlPromptFallback: true }
 ];
 const PLATFORM_SEARCH_TARGETS = Object.freeze([
@@ -4366,7 +4368,7 @@ function createEngineSettingsCard({ engine, meta, actionLabel, current = false }
 
 function createSettingsEngineIcon(engine) {
   const engineUrl = engine.searchUrl || engine.directUrl || "";
-  const explicitIcon = engine.id === "kimi" ? `${SITE_ICON_DIRECTORY}/kimi.svg` : doubaoAiIconUrl(engine);
+  const explicitIcon = engine.id === "kimi" ? `${SITE_ICON_DIRECTORY}/kimi.svg` : explicitAiIconUrl(engine);
   const iconSource = explicitIcon || localIconForUrl(engineUrl) || GENERIC_SITE_FALLBACK_ICON;
   const style = SETTINGS_ENGINE_ICON_STYLES[engine.id] || {};
   const label = searchEngineLabel(engine);
@@ -4643,7 +4645,7 @@ function renderAiEnginePill(engine, options = {}) {
   icon.alt = "";
   icon.decoding = "async";
   icon.dataset.engineIcon = target.id;
-  const explicitIcon = doubaoAiIconUrl(target);
+  const explicitIcon = explicitAiIconUrl(target);
   const iconSite = {
     url: target.searchUrl || target.directUrl || "",
     title: target.label || searchEngineLabel(target)
@@ -9715,9 +9717,9 @@ function applySiteIcon(icon, site, options = {}) {
   }
 }
 
-function doubaoAiIconUrl(engine) {
+function explicitAiIconUrl(engine) {
   const value = String(engine?.iconUrl || "").trim();
-  return engine?.id === "doubao" && value.startsWith(`${SITE_ICON_DIRECTORY}/`) ? value : "";
+  return (engine?.id === "doubao" || engine?.id === "qwen") && value.startsWith(`${SITE_ICON_DIRECTORY}/`) ? value : "";
 }
 
 function applyExplicitSiteIcon(icon, site, iconSource) {

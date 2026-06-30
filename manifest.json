@@ -37,6 +37,7 @@
         "https://kimi.moonshot.cn/*",
         "https://chatglm.cn/*",
         "https://z.ai/*",
+        "https://chat.qwen.ai/*",
         "https://jimeng.jianying.com/*"
       ],
       "js": [

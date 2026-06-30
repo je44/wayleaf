@@ -47,6 +47,7 @@ const AI_DIRECT_PROVIDER_HOSTS = new Set([
   "kimi.moonshot.cn",
   "chatglm.cn",
   "z.ai",
+  "chat.qwen.ai",
   "jimeng.jianying.com"
 ]);
 const pendingAiDirectRequests = new Map();
@@ -371,6 +372,17 @@ async function injectAiSubmit(tabId, request) {
       });
     }
   }
+  if (request.host === "chat.qwen.ai") {
+    const prompt = request.prompt || await readStoredAiPrompt(request.token, "qwen");
+    if (prompt) {
+      await chrome.scripting.executeScript({
+        target: { tabId },
+        world: "MAIN",
+        func: submitQwenPrompt,
+        args: [prompt]
+      });
+    }
+  }
 }
 
 async function handleGeminiAttachmentUpload(message, sender) {
@@ -501,6 +513,137 @@ function submitJimengPrompt(prompt) {
       return;
     }
     if (Date.now() >= deadline) {
+      window.clearInterval(intervalId);
+    }
+  }, 250);
+}
+
+function submitQwenPrompt(prompt) {
+  const marker = "data-wayleaf-qwen-handoff";
+  const text = String(prompt || "").trim();
+  if (!text) {
+    return;
+  }
+  document.documentElement.setAttribute(marker, "pending");
+
+  const deadline = Date.now() + 12000;
+  const isVisible = (node) => {
+    const rect = node.getBoundingClientRect();
+    const style = window.getComputedStyle(node);
+    return rect.width > 0 && rect.height > 0 && style.display !== "none" && style.visibility !== "hidden";
+  };
+  const findInput = () => [...document.querySelectorAll("textarea.message-input-textarea, textarea")]
+    .filter(isVisible)
+    .sort((a, b) => {
+      const ar = a.getBoundingClientRect();
+      const br = b.getBoundingClientRect();
+      return (br.width * br.height) - (ar.width * ar.height);
+    })[0] || null;
+  const findSubmit = () => [...document.querySelectorAll("button.send-button")]
+    .filter((node) => {
+      const disabled = node.disabled || node.getAttribute("aria-disabled") === "true" || node.getAttribute("data-disabled") === "true";
+      return !disabled && isVisible(node);
+    })[0] || null;
+  const dispatchMouseLikeEvent = (target, type) => {
+    const rect = target.getBoundingClientRect();
+    const options = {
+      bubbles: true,
+      cancelable: true,
+      composed: true,
+      view: window,
+      button: 0,
+      buttons: type.endsWith("down") ? 1 : 0,
+      clientX: rect.left + rect.width / 2,
+      clientY: rect.top + rect.height / 2
+    };
+    const EventConstructor = type.startsWith("pointer") && typeof PointerEvent === "function" ? PointerEvent : MouseEvent;
+    target.dispatchEvent(new EventConstructor(type, {
+      ...options,
+      pointerId: 1,
+      pointerType: "mouse",
+      isPrimary: true
+    }));
+  };
+  const dispatchEnter = (target) => {
+    target.focus();
+    for (const type of ["keydown", "keypress", "keyup"]) {
+      target.dispatchEvent(new KeyboardEvent(type, {
+        bubbles: true,
+        cancelable: true,
+        composed: true,
+        key: "Enter",
+        code: "Enter",
+        keyCode: 13,
+        which: 13
+      }));
+    }
+  };
+  const dispatchQwenSendEvent = () => {
+    document.dispatchEvent(new CustomEvent("QwenEvent.onSendMessage", {
+      bubbles: true,
+      cancelable: true,
+      composed: true,
+      detail: { inputText: text }
+    }));
+  };
+  const fillInput = (input) => {
+    input.focus();
+    const setter = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, "value")?.set
+      || Object.getOwnPropertyDescriptor(Object.getPrototypeOf(input), "value")?.set;
+    if (setter) {
+      setter.call(input, text);
+    } else {
+      input.value = text;
+    }
+    input._valueTracker?.setValue?.("");
+    input.dispatchEvent(new InputEvent("input", {
+      bubbles: true,
+      cancelable: true,
+      composed: true,
+      inputType: "insertText",
+      data: text
+    }));
+    input.dispatchEvent(new Event("change", { bubbles: true }));
+    return input.value.trim() === text;
+  };
+  const submitInput = (input, button) => {
+    dispatchQwenSendEvent();
+    button.focus({ preventScroll: true });
+    for (const type of ["pointerdown", "mousedown", "pointerup", "mouseup", "click"]) {
+      dispatchMouseLikeEvent(button, type);
+    }
+    button.click();
+    window.setTimeout(() => {
+      if (input.isConnected && input.value.trim() === text) {
+        dispatchEnter(input);
+      }
+    }, 600);
+  };
+  let filled = false;
+  let lastSubmitAt = 0;
+  const intervalId = window.setInterval(() => {
+    const input = findInput();
+    if (input && (!filled || input.value.trim() !== text)) {
+      filled = fillInput(input);
+    }
+    if (filled && input && input.value.trim() !== text) {
+      document.documentElement.setAttribute(marker, "submitted");
+      window.clearInterval(intervalId);
+      return;
+    }
+    if (filled) {
+      const submitButton = findSubmit();
+      if (input && submitButton && Date.now() - lastSubmitAt > 900) {
+        lastSubmitAt = Date.now();
+        submitInput(input, submitButton);
+        document.documentElement.setAttribute(marker, "submitting");
+      }
+      if (!submitButton) {
+        document.documentElement.setAttribute(marker, "filled");
+      }
+    }
+    if (Date.now() > deadline) {
+      document.documentElement.setAttribute(marker, filled ? "filled" : "missing");
       window.clearInterval(intervalId);
     }
   }, 250);

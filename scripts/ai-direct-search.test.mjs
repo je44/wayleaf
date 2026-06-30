@@ -33,7 +33,7 @@ assert.match(newtabSource, /await saveAiDirectPrompt\(token,[\s\S]*engineId: eng
 assert.match(newtabSource, /attachments: AI_DIRECT_ATTACHMENT_ENGINE_IDS\.has\(engine\.id\) \? aiDirectAttachments : \[\]/, "Only supported AI engines should receive staged attachments in the handoff payload.");
 assert.match(newtabSource, /let destination = engineSearchDestination\(engine, query\);[\s\S]*destination = aiDirectTargetUrl\(targetUrl, token, engine\.urlPromptFallback \? query : ""\);[\s\S]*console\.warn\("Failed to save AI direct prompt before navigation", error\);[\s\S]*window\.location\.assign\(destination\);/, "AI direct search must fall back to the provider query URL if prompt storage fails.");
 assert.match(newtabSource, /function pruneAiDirectPrompts\(prompts\) \{[\s\S]*now - Number\(item\?\.createdAt \|\| 0\) < AI_DIRECT_PROMPT_TTL_MS/, "New tab prompt handoff must prune expired prompts before storage writes.");
-assert.match(newtabSource, /const EDITABLE_AI_ENGINE_IDS = \["chatgpt", "claude", "gemini", "grok", "deepseek", "doubao", "kimi", "glm", "jimeng"\];/, "Search settings should expose all built-in AI direct engines.");
+assert.match(newtabSource, /const EDITABLE_AI_ENGINE_IDS = \["chatgpt", "claude", "gemini", "grok", "deepseek", "doubao", "kimi", "glm", "qwen", "jimeng"\];/, "Search settings should expose all built-in AI direct engines.");
 assert.match(newtabSource, /quickSearchAiPlaceholder:\s*"使用\{engine\}进行提问"/, "Chinese AI mode placeholder should name the active engine.");
 assert.match(newtabSource, /quickSearchAiPlaceholder:\s*"Ask with \{engine\}"/, "English AI mode placeholder should name the active engine.");
 assert.match(
@@ -46,6 +46,7 @@ assert.match(
   ["doubao", "/doubao", "https://www.doubao.com/chat/"],
   ["kimi", "/kimi", "https://www.kimi.com/"],
   ["glm", "/glm", "https://chatglm.cn/"],
+  ["qwen", "/qwen", "https://chat.qwen.ai/"],
   ["jimeng", "/jimeng", "https://jimeng.jianying.com/ai-tool/home"]
 ].forEach(([engineId, command, directUrl]) => {
   assert.match(
@@ -55,8 +56,11 @@ assert.match(
   );
 });
 assert.match(newtabSource, /\{ id: "jimeng"[\s\S]*commands: \["\/jimeng", "\/jm"\][\s\S]*urlPromptFallback: true/, "Jimeng should be an AI engine with a short command and URL-fragment fallback.");
+assert.match(newtabSource, /\{ id: "qwen"[\s\S]*urlPromptFallback: true/, "Qwen should keep a URL-fragment prompt fallback because its app shell may remount during boot.");
 assert.match(newtabSource, /\{ id: "doubao"[\s\S]*iconUrl: "icons\/sites\/doubao\.png"/, "Doubao AI engine should use the explicit PNG icon without changing generic doubao.com site icon routing.");
+assert.match(newtabSource, /\{ id: "qwen"[\s\S]*iconUrl: "icons\/sites\/qwen\.svg"/, "Qwen AI engine should use the existing local SVG icon.");
 assert.ok(newtabSource.includes('engine?.id === "doubao"'), "Explicit PNG icon routing should stay scoped to the Doubao AI engine.");
+assert.ok(newtabSource.includes('engine?.id === "qwen"'), "Qwen explicit SVG routing should stay scoped to the AI engine.");
 assert.equal(searchAiCommand("/g"), null, "A partial AI command should remain ordinary input.");
 assert.equal(searchAiCommand("/chat"), null, "A partial long AI alias should remain ordinary input.");
 assert.equal(searchAiCommand("/gptx"), null, "An AI command must match the complete configured command.");
@@ -93,7 +97,9 @@ assert.match(submitSource, /if \(attachments\.length && !submitButton\) \{[\s\S]
 assert.match(submitSource, /async function fillPromptIntoLiveInput\(config, prompt, attempts = 1\) \{[\s\S]*waitForElement\([\s\S]*focusAndSetInputValue\(input, prompt\);[\s\S]*normalizePromptComparisonText\(inputText\(input\)\) === normalizedPrompt/, "Prompt filling should retry against the live composer until the expected text is present.");
 assert.match(submitSource, /"kimi\.com": \{[\s\S]*engineId: "kimi"[\s\S]*\.chat-input-editor\[role=\\"textbox\\"\]\[contenteditable=\\"true\\"\]/, "Kimi should prefer its chat-input editor before generic contenteditable fallbacks.");
 assert.match(submitSource, /async function fillPromptIntoLiveInput\(config, prompt, attempts = 1\) \{[\s\S]*config\.engineId === "kimi"[\s\S]*focusAndSetKimiInputValue\(input, prompt\)[\s\S]*focusAndSetInputValue\(input, prompt\)/, "Kimi should use a provider-specific fill path to avoid duplicated text.");
+assert.match(submitSource, /async function fillPromptIntoLiveInput\(config, prompt, attempts = 1\) \{[\s\S]*config\.engineId === "qwen"[\s\S]*focusAndSetQwenInputValue\(input, prompt\)[\s\S]*focusAndSetInputValue\(input, prompt\)/, "Qwen should use a provider-specific textarea fill path.");
 assert.match(submitSource, /function focusAndSetKimiInputValue\(input, value\) \{[\s\S]*execCommand\?\.\("insertText", false, value\)[\s\S]*dispatchBasicEvent\(input, "input"\)[\s\S]*dispatchBasicEvent\(input, "change"\)/, "Kimi fill should use the editor insert path and dispatch input without replaying the full prompt as event data.");
+assert.match(submitSource, /function focusAndSetQwenInputValue\(input, value\) \{[\s\S]*input\.select\?\.\(\)[\s\S]*execCommand\?\.\("insertText", false, value\)[\s\S]*focusAndSetInputValue\(input, value\)/, "Qwen fill should try the browser editing path before falling back to direct value assignment.");
 assert.doesNotMatch(submitSource, /function focusAndSetKimiInputValue\(input, value\) \{[\s\S]*dispatchInputLikeEvent\(input, "input", value\)/, "Kimi fill must not replay the full prompt through InputEvent.data.");
 assert.match(submitSource, /const WAYLEAF_ATTACHMENT_READY_TIMEOUT_MS = 15000;/, "Attachment submits should allow extra time for provider-side upload processing.");
 assert.match(submitSource, /async function waitForChatgptAttachmentReady\(config, input, attachmentCount\) \{[\s\S]*countChatgptReadyAttachments\(\) >= attachmentCount[\s\S]*!hasChatgptAttachmentBusyState\(\)[\s\S]*WAYLEAF_ATTACHMENT_READY_STABLE_MS/, "ChatGPT attachment submits should wait for the upload to finish and stay stable before sending.");
@@ -114,6 +120,7 @@ assert.match(submitSource, /config\.engineId === "kimi"[\s\S]*findKimiSubmitButt
 assert.match(submitSource, /function findKimiSubmitButton\(input\) \{[\s\S]*send-button-container[\s\S]*!className\.includes\("disabled"\)[\s\S]*buttonCenterX\(node\) > inputRect\.left \+ inputRect\.width \* 0\.7[\s\S]*buttonCenterX\(b\) - buttonCenterX\(a\)/, "Kimi fallback should choose the enabled rightmost send button near the composer.");
 assert.match(submitSource, /config\.engineId === "glm"[\s\S]*findGlmSubmitButton\(input\)/, "GLM should use a provider-specific fallback for its unlabeled enter button.");
 assert.match(submitSource, /function findGlmSubmitButton\(input\) \{[\s\S]*enter-icon-container[\s\S]*!className\.includes\("empty"\)[\s\S]*buttonCenterX\(node\) > inputRect\.left \+ inputRect\.width \* 0\.7[\s\S]*buttonCenterX\(b\) - buttonCenterX\(a\)/, "GLM fallback should choose the enabled rightmost enter button near the composer.");
+assert.match(submitSource, /"chat\.qwen\.ai": \{[\s\S]*textarea\.message-input-textarea[\s\S]*button\.send-button/, "Qwen should target its visible composer textarea and send button.");
 assert.match(submitSource, /function promptSubmissionLooksComplete\(input, prompt, startedUrl\) \{[\s\S]*location\.href !== startedUrl[\s\S]*!document\.contains\(input\)[\s\S]*normalizePromptComparisonText\(inputText\(input\)\) !== normalizePromptComparisonText\(prompt\)/, "Submitted state must be based on URL, input removal/visibility, or normalized prompt text changing.");
 assert.match(submitSource, /function normalizePromptComparisonText\(value\) \{[\s\S]*replace\(\/\\u00a0\/g, " "\)[\s\S]*replace\(\/\\s\+\/g, " "\)/, "Submit completion checks must ignore editor whitespace normalization.");
 [
@@ -123,6 +130,7 @@ assert.match(submitSource, /function normalizePromptComparisonText\(value\) \{[\
   ["kimi.moonshot.cn", "kimi"],
   ["chatglm.cn", "glm"],
   ["z.ai", "glm"],
+  ["chat.qwen.ai", "qwen"],
   ["jimeng.jianying.com", "jimeng"]
 ].forEach(([host, engineId]) => {
   assert.match(submitSource, new RegExp(`"${host}": \\{[\\s\\S]*engineId: "${engineId}"`), `${host} should map to ${engineId}.`);
@@ -136,6 +144,7 @@ assert.match(submitSource, /发送\|提交\|傳送\|生成/, "Generic submit det
   "https://kimi.moonshot.cn/*",
   "https://chatglm.cn/*",
   "https://z.ai/*",
+  "https://chat.qwen.ai/*",
   "https://jimeng.jianying.com/*"
 ].forEach((matchPattern) => {
   assert.ok(manifest.content_scripts[0].matches.includes(matchPattern), `${matchPattern} should load the AI submit content script.`);
@@ -162,5 +171,14 @@ assert.match(backgroundSource, /world:\s*"MAIN"[\s\S]*func:\s*submitJimengPrompt
 assert.match(backgroundSource, /window\.setInterval\(\(\) => \{[\s\S]*filled = fillAndSubmit\(\)[\s\S]*clickSubmit\(\)/, "Jimeng handoff should wait for the editor and enabled generate button.");
 assert.match(backgroundSource, /document\.execCommand\?\.\("insertText", false, text\)/, "Jimeng handoff should insert prompt text through the editor.");
 assert.match(backgroundSource, /button\.click\(\)/, "Jimeng handoff should click the enabled generate button.");
+assert.match(backgroundSource, /request\.host === "chat\.qwen\.ai"[\s\S]*readStoredAiPrompt\(request\.token, "qwen"\)[\s\S]*world:\s*"MAIN"[\s\S]*func:\s*submitQwenPrompt/, "Qwen should receive a page-world textarea handoff.");
+assert.match(backgroundSource, /function submitQwenPrompt\(prompt\)[\s\S]*textarea\.message-input-textarea[\s\S]*HTMLTextAreaElement\.prototype/, "Qwen handoff should use the page textarea value setter.");
+assert.match(backgroundSource, /function submitQwenPrompt\(prompt\)[\s\S]*button\.send-button/, "Qwen handoff should find the Qwen send button.");
+assert.match(backgroundSource, /function submitQwenPrompt\(prompt\)[\s\S]*_valueTracker[\s\S]*InputEvent\("input"/, "Qwen handoff should sync the controlled textarea.");
+assert.match(backgroundSource, /function submitQwenPrompt\(prompt\)[\s\S]*data-wayleaf-qwen-handoff/, "Qwen handoff should mark handoff status.");
+assert.match(backgroundSource, /function submitQwenPrompt\(prompt\)[\s\S]*CustomEvent\("QwenEvent\.onSendMessage"[\s\S]*detail:\s*\{\s*inputText:\s*text\s*\}/, "Qwen handoff should use Qwen's native send event.");
+assert.match(backgroundSource, /function submitQwenPrompt\(prompt\)[\s\S]*pointerdown[\s\S]*mousedown[\s\S]*pointerup[\s\S]*mouseup[\s\S]*click[\s\S]*button\.click\(\)/, "Qwen handoff should dispatch a real click sequence on the enabled send button.");
+assert.match(backgroundSource, /function submitQwenPrompt\(prompt\)[\s\S]*KeyboardEvent\(type[\s\S]*key:\s*"Enter"[\s\S]*dispatchEnter\(input\)/, "Qwen handoff should fall back to Enter if the click leaves the prompt in the textarea.");
+assert.match(backgroundSource, /function submitQwenPrompt\(prompt\)[\s\S]*let lastSubmitAt = 0[\s\S]*input\.value\.trim\(\) !== text[\s\S]*setAttribute\(marker, "submitted"\)[\s\S]*Date\.now\(\) - lastSubmitAt > 900/, "Qwen handoff should only stop retrying after the textarea changes from the submitted prompt.");
 
 console.log("ai direct search fixtures passed");

@@ -3513,7 +3513,8 @@ html.theme-transitioning .search-workbench[data-ai-exiting] .favorite-icon {
 }
 
 .settings-engine-icon[data-engine-icon="doubao"],
-.settings-engine-icon[data-engine-icon="kimi"] {
+.settings-engine-icon[data-engine-icon="kimi"],
+.settings-engine-icon[data-engine-icon="qwen"] {
   box-shadow:
     inset 0 0 0 1px rgb(20 27 24 / 0.1),
     0 0 0 1px rgb(20 27 24 / 0.1);
