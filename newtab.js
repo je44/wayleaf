@@ -7923,7 +7923,16 @@ async function loadCachedSiteIconEntry(siteKey) {
 }
 
 function siteIconCacheEntryIsFresh(entry, ttl = SITE_ICON_CACHE_TTL_MS) {
-  return Boolean(entry && Date.now() - Number(entry.updatedAt || 0) <= ttl);
+  if (!entry || Date.now() - Number(entry.updatedAt || 0) > ttl) {
+    return false;
+  }
+  // 已准备好嘅 remote-brand SVG data-url 把渲染管线决策（render-mode / brand-color 等）
+  // 焗死喺 data-wayleaf-* 属性度。一旦图标渲染代码改变，必须连同第一帧缓存一齐失效，
+  // 否则会一直返焗死咗旧逻辑嘅 data-url。非 svg（favicon 等）只受 TTL 约束。
+  if (isSvgDataUrl(entry.icon)) {
+    return entry.codeSignature === iconRenderCodeSignature();
+  }
+  return true;
 }
 
 async function cacheSiteIcon(siteKey, icon, metadata = {}) {
@@ -7939,6 +7948,7 @@ async function cacheSiteIcon(siteKey, icon, metadata = {}) {
     tileColor,
     source: metadata.source || (tileColor ? "remote-brand" : "site-icon"),
     ...(strategy ? { strategy } : {}),
+    ...(isSvgDataUrl(normalizedIcon) ? { codeSignature: iconRenderCodeSignature() } : {}),
     missing: false,
     updatedAt: Date.now()
   };
