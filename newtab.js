@@ -8517,13 +8517,11 @@ function remoteBrandSvgMonochromeBrandColor(svg, palette = extractSvgColorPalett
   if (!remoteBrandSvgIsMonochrome(svg)) {
     return "";
   }
-  if (palette.length === 1) {
-    const color = normalizeHexColor(palette[0]);
-    if (!color) {
-      return remoteBrandSvgMonochromeDefaultsToBlack(svg) ? "#000000" : "";
-    }
+  // 以「可见色」为准（已排除 clipPath/defs 等纯定义色），决定单色锚 —— 唔受裁剪/定义色污染。
+  const visible = uniqueNormalizedHexColors(svgPaintAnalysis(svg).visibleColors);
+  if (visible.length === 1) {
     // 无彩度（黑/白/灰）锚定近黑，行黑色方案；有彩度则用本色。
-    return remoteBrandColorLooksNeutral(color) ? "#000000" : color;
+    return remoteBrandColorLooksNeutral(visible[0]) ? "#000000" : visible[0];
   }
   return remoteBrandSvgMonochromeDefaultsToBlack(svg) ? "#000000" : "";
 }
@@ -8901,7 +8899,8 @@ function svgPaintAnalysisFromDom(svg) {
   const seenVisibleColors = new Set();
   const seenDefinitionColors = new Set();
   const seenPaintServerColors = new Set();
-  const paintServerTags = new Set(["lineargradient", "radialgradient", "meshgradient", "pattern", "filter", "mask"]);
+  // clippath 係纯几何裁剪，其子元素嘅 fill 永远唔会上色，应当定义色处理（唔计入可见色）。
+  const paintServerTags = new Set(["lineargradient", "radialgradient", "meshgradient", "pattern", "filter", "mask", "clippath"]);
   const effectPaintServerTags = new Set(["pattern", "filter", "mask"]);
   const styleRules = svgStyleRules(doc);
   const idMap = new Map([...doc.querySelectorAll("[id]")].map((element) => [element.id, element]));
@@ -9049,7 +9048,7 @@ function svgPaintAnalysisFromText(svg) {
     target.push(color);
   };
   const text = String(svg || "");
-  const paintServerBlockPattern = /<(?:linearGradient|radialGradient|meshgradient|pattern|filter|mask)\b[\s\S]*?<\/(?:linearGradient|radialGradient|meshgradient|pattern|filter|mask)>/gi;
+  const paintServerBlockPattern = /<(?:linearGradient|radialGradient|meshgradient|pattern|filter|mask|clipPath)\b[\s\S]*?<\/(?:linearGradient|radialGradient|meshgradient|pattern|filter|mask|clipPath)>/gi;
   const referencedPaintServer = /\s(?:fill|stroke|filter|mask)\s*=\s*(["'])\s*url\(/i.test(text)
     || /(?:fill|stroke|filter|mask)\s*:\s*url\(/i.test(text);
   const referencedEffectPaintServer = /\s(?:filter|mask)\s*=\s*(["'])\s*url\(/i.test(text)
