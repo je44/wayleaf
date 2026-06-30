@@ -2914,11 +2914,27 @@ function iconRenderCodeSignature() {
   if (iconRenderCodeSignatureMemo) {
     return iconRenderCodeSignatureMemo;
   }
+  // Comprehensive over the icon visual pipeline: entry points, tile/carrier decision,
+  // glyph recolor, SVG paint/colour-complexity analysis, palette helpers, and the colour
+  // math they depend on. Editing any of these changes the signature, so the render-output
+  // cache is dropped and icons recompute from current code (this is what lets a code revert
+  // restore icons without a reinstall). Add new icon-render helpers here when introduced.
   const fns = [
-    applySiteIcon, applySiteIconTile, computeSiteIconTile, displayIconSource, coloredSvgIconSource,
-    applySvgGlyphColor, iconGlyphColorForCurrentTile, shouldInvertBrandSvg, localBrandGlyphColorForTile,
-    brandIconTileColors, gradientSvgIconTileColors, originalSvgIconTileColors,
-    usesGradientIconCarrier, usesOriginalIconCarrier, svgEmbeddedCarrierColor, localSiteIconAnalysisFromSvg
+    applySiteIcon, applySiteIconTile, computeSiteIconTile, applyIconTile, displayIconSource,
+    coloredSvgIconSource, applySvgGlyphColor, iconGlyphColorForCurrentTile, shouldInvertBrandSvg,
+    localBrandGlyphColorForTile, iconTileShouldUseOriginalGlyph, readableIconGlyphColor,
+    brandIconTileColors, gradientSvgIconTileColors, originalSvgIconTileColors, genericIconTileColors,
+    brandIconLightCarrierColor, brandIconDarkCarrierColor, blackishCarrierColor,
+    usesGradientIconCarrier, usesOriginalIconCarrier, keepsBrandIconOriginal, keepsBrandIconOriginalOnBrandTile,
+    gradientPaletteCarrierColor, gradientPaletteNeedsDarkAppIconCarrier, paletteHueSpan,
+    originalSvgVisiblePalette, originalSvgEmbeddedCarrierColor, paletteAwareBrandIconCarrierColor, paletteColorTraits,
+    svgEmbeddedCarrierColor, svgPaintAnalysis, svgPaintAnalysisFromDom, svgPaintAnalysisFromText,
+    localSiteIconAnalysisFromSvg, siteIconBrandColor, localSiteIconBrandColor, localSiteIconRenderMode,
+    localSiteIconVisibleColors, localSiteIconEmbeddedCarrierColor, embeddedSvgBrandColor,
+    remoteBrandSvgDescriptor, remoteBrandSvgBrandColor, remoteBrandSvgMonochromeBrandColor,
+    remoteBrandSvgIsMonochrome, remoteBrandSvgHasComplexPaint, remoteBrandSvgHasComplexPaintAnalysis,
+    remoteBrandSvgUsesPaintServer, uniqueNormalizedHexColors, contrastRatio, relativeLuminance,
+    mixHexColors, hexColorStats
   ];
   let hash = 0;
   let lenSum = 0;
