@@ -180,6 +180,9 @@ assert.equal(
 );
 assert.match(source, /function applySampledFaviconTile[\s\S]*const tileMode = icon\.dataset\.iconTile === "brand" \? "brand" : "plain";[\s\S]*fuseEmbeddedFaviconTile\(icon, sample, color, tileColors, options\);/, "Sampled favicon tiles must preserve local bitmap markers and run embedded tile fusion.");
 assert.match(source, /const FIRST_PAINT_CACHE_VERSION = 8;/, "First-paint cache must be bumped when adaptive favicon carrier output changes.");
+assert.match(source, /function primeSiteIconRawSvgCacheFromStorage\([\s\S]*siteIconRawSvgStalePaths\.add\(path\);/, "Cached local SVGs must revalidate after same-version asset edits.");
+assert.doesNotMatch(source, /entry\?\.version !== currentVersion/, "Local SVG revalidation must not depend on a manifest-version bump.");
+assert.match(source, /function revalidateDisplayedLocalSiteIcon\([\s\S]*fetch\(key, \{ cache: "no-store" \}\)/, "Local SVG revalidation must bypass the browser cache.");
 
 function normalizeHexColor(tileColor) {
   const color = String(tileColor || "").trim();
@@ -5104,7 +5107,7 @@ assert.deepEqual(
 );
 assert.equal(siteIconBrandColorForTest("mimo.mi.com", "icons/sites/xiaomimimo.svg"), "#000000", "MiMo should use a black tile for mask recoloring.");
 assert.equal(siteIconBrandColorForTest("openai.com", "icons/sites/chatgpt.svg"), "#000000", "ChatGPT/OpenAI local implicit-black SVG should not be overwritten by the OpenAI VI table color.");
-assert.equal(siteIconBrandColorForTest("xiaohongshu.com", "icons/sites/xiaohongshu.svg"), "#ff2442", "Known VI colors should override black single-color local SVG exports.");
+assert.equal(siteIconBrandColorForTest("xiaohongshu.com", "icons/sites/xiaohongshu.svg"), "#ff2442", "Xiaohongshu's explicit red SVG should drive its monochrome carrier.");
 assert.equal(siteIconBrandColorForTest("alibaba.com", "icons/sites/alibabadotcom.svg"), "#ff6a00", "Known VI colors should override black marketplace local SVG exports.");
 assert.equal(source.includes('"netflix.com":'), false, "Netflix should not be special-cased in the VI color table.");
 assert.equal(localSiteIconBrandColorForTest("icons/sites/netflix.svg"), "#e50914", "Netflix should recover its local SVG red as a trusted monochrome VI color.");

@@ -3082,7 +3082,6 @@ function hydrateLocalSiteIconAnalysisFromText(path, svg) {
 
 function primeSiteIconRawSvgCacheFromStorage() {
   const cache = readSiteIconRawSvgCache();
-  const currentVersion = firstPaintExtensionVersion();
   Object.entries(cache).forEach(([path, entry]) => {
     const text = typeof entry?.svg === "string" ? entry.svg : "";
     if (!text) {
@@ -3090,11 +3089,9 @@ function primeSiteIconRawSvgCacheFromStorage() {
     }
     siteIconRawSvgTextCache.set(path, text);
     hydrateLocalSiteIconAnalysisFromText(path, text);
-    // Cached under an older extension version: the bundled file may have changed in the
-    // update, so mark it for a one-time background revalidation when it next displays.
-    if (entry?.version !== currentVersion) {
-      siteIconRawSvgStalePaths.add(path);
-    }
+    // ponytail: unpacked extensions can replace an SVG without changing the manifest
+    // version; revalidate only displayed paths once per page so edits self-heal on refresh.
+    siteIconRawSvgStalePaths.add(path);
   });
 }
 
@@ -3124,8 +3121,8 @@ function scheduleIconIdleTask(task) {
   }
 }
 
-// Background, version-gated self-heal for a displayed local icon: only runs for paths
-// cached under an older extension version (a release may have swapped the bundled SVG).
+// Background self-heal for a displayed local icon. This also covers unpacked extensions
+// where a bundled SVG changes without a manifest-version bump.
 // Re-renders only when the file actually changed — unchanged files just re-stamp silently,
 // so the user never sees a reload for a fixed-style icon.
 function revalidateDisplayedLocalSiteIcon(path) {
@@ -3134,7 +3131,7 @@ function revalidateDisplayedLocalSiteIcon(path) {
     return;
   }
   siteIconRawSvgRevalidatedPaths.add(key);
-  fetch(key)
+  fetch(key, { cache: "no-store" })
     .then((response) => response.ok ? response.text() : "")
     .then((svg) => {
       if (!svg) {
