@@ -267,7 +267,7 @@ const THEME_PALETTES = [
     id: "sage",
     labelKey: "themePaletteSage",
     light: "#3f7f68",
-    dark: "#86b9a4",
+    dark: "#78a18f",
     modes: {
       light: {
         accent: "#3f7f68",
@@ -283,17 +283,17 @@ const THEME_PALETTES = [
         faint: "#7a827c"
       },
       dark: {
-        accent: "#86b9a4",
-        accentStrong: "#b3d7c8",
-        focus: "#9bbfdf",
-        paper: "#252d2b",
-        panel: "#303936",
-        panelSoft: "#3a4742",
-        inputBg: "#303936",
-        hoverBg: "#404d48",
-        ink: "#f0f3ef",
-        muted: "#bac4bc",
-        faint: "#89938b",
+        accent: "#78a18f",
+        accentStrong: "#9ab9ac",
+        focus: "#829fb8",
+        paper: "#202624",
+        panel: "#29312e",
+        panelSoft: "#323c38",
+        inputBg: "#29312e",
+        hoverBg: "#38433f",
+        ink: "#e4e9e5",
+        muted: "#abb5ad",
+        faint: "#849089",
         onAccent: "#102019"
       }
     }
@@ -337,7 +337,7 @@ const THEME_PALETTES = [
     id: "amber",
     labelKey: "themePaletteAmber",
     light: "#c78b1d",
-    dark: "#e4b95a",
+    dark: "#94702f",
     modes: {
       light: {
         accent: "#c78b1d",
@@ -354,17 +354,17 @@ const THEME_PALETTES = [
         onAccent: "#ffffff"
       },
       dark: {
-        accent: "#e4b95a",
-        accentStrong: "#f2d58e",
-        focus: "#9ebfdb",
-        paper: "#302b22",
-        panel: "#3b3428",
-        panelSoft: "#493f2f",
-        inputBg: "#3b3428",
-        hoverBg: "#544835",
-        ink: "#f5f0e6",
-        muted: "#c8bda8",
-        faint: "#988d79",
+        accent: "#94702f",
+        accentStrong: "#c4a162",
+        focus: "#849fb6",
+        paper: "#28241e",
+        panel: "#312c23",
+        panelSoft: "#3b3428",
+        inputBg: "#312c23",
+        hoverBg: "#443b2d",
+        ink: "#e9e3d8",
+        muted: "#b8ad99",
+        faint: "#958a79",
         onAccent: "#ffffff"
       }
     }
@@ -373,7 +373,7 @@ const THEME_PALETTES = [
     id: "sky",
     labelKey: "themePaletteSky",
     light: "#4f7ea8",
-    dark: "#92b7dc",
+    dark: "#7d9fbd",
     modes: {
       light: {
         accent: "#4f7ea8",
@@ -389,17 +389,17 @@ const THEME_PALETTES = [
         faint: "#79838b"
       },
       dark: {
-        accent: "#92b7dc",
-        accentStrong: "#bed7ee",
-        focus: "#9ed0bd",
-        paper: "#232b34",
-        panel: "#2d3742",
-        panelSoft: "#384653",
-        inputBg: "#2d3742",
-        hoverBg: "#435461",
-        ink: "#f0f3f5",
-        muted: "#bcc6cf",
-        faint: "#89939d",
+        accent: "#7d9fbd",
+        accentStrong: "#a1b9cc",
+        focus: "#85ad9e",
+        paper: "#20262d",
+        panel: "#29313a",
+        panelSoft: "#333d47",
+        inputBg: "#29313a",
+        hoverBg: "#3a4752",
+        ink: "#e4e8eb",
+        muted: "#adb7c0",
+        faint: "#87929c",
         onAccent: "#0d1b2a"
       }
     }
@@ -408,7 +408,7 @@ const THEME_PALETTES = [
     id: "peach",
     labelKey: "themePalettePeach",
     light: "#b06f55",
-    dark: "#d8a28b",
+    dark: "#966452",
     modes: {
       light: {
         accent: "#b06f55",
@@ -425,17 +425,17 @@ const THEME_PALETTES = [
         onAccent: "#ffffff"
       },
       dark: {
-        accent: "#d8a28b",
-        accentStrong: "#ecc4b4",
-        focus: "#9fb7d5",
-        paper: "#302724",
-        panel: "#3b302c",
-        panelSoft: "#493b35",
-        inputBg: "#3b302c",
-        hoverBg: "#55443d",
-        ink: "#f5f1ed",
-        muted: "#c8bcb4",
-        faint: "#978b83",
+        accent: "#966452",
+        accentStrong: "#bd9382",
+        focus: "#869ab4",
+        paper: "#292220",
+        panel: "#322a27",
+        panelSoft: "#3d322e",
+        inputBg: "#322a27",
+        hoverBg: "#463833",
+        ink: "#eae4df",
+        muted: "#b6aaa3",
+        faint: "#948881",
         onAccent: "#ffffff"
       }
     }
