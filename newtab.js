@@ -693,6 +693,7 @@ const SITE_GROUP_SUFFIXES = [
   "npmjs.com",
   "notion.so",
   "pinterest.com",
+  "qq.com",
   "stackoverflow.com",
   "taobao.com",
   "threads.com",
@@ -8989,6 +8990,20 @@ function svgPaintAnalysisFromDom(svg) {
     }
     collectPaintServerColors(paintServer);
   };
+  const hasImplicitBlackPaint = (element) => {
+    if (!["path", "circle", "rect", "polygon", "polyline", "line", "ellipse"].includes(element.tagName.toLowerCase())
+      || isInsidePaintServerDefinition(element)) {
+      return false;
+    }
+    let current = element;
+    while (current?.nodeType === 1) {
+      if (styleValue(current, "fill").value || styleValue(current, "stroke").value) {
+        return false;
+      }
+      current = current.parentElement;
+    }
+    return true;
+  };
 
   doc.querySelectorAll("*").forEach((element) => {
     const currentColor = inheritedColor(element);
@@ -9008,6 +9023,9 @@ function svgPaintAnalysisFromDom(svg) {
       collectPaintServer(paintValue(element, property));
     });
   });
+  if (visibleColors.length > 1 && [...doc.querySelectorAll("*")].some(hasImplicitBlackPaint)) {
+    push(visibleColors, seenVisibleColors, "#000000");
+  }
   visibleColors.forEach((color) => push(colors, seenColors, color));
   definitionColors.forEach((color) => push(colors, seenColors, color));
   paintServerColors.forEach((color) => push(visibleColors, seenVisibleColors, color));
@@ -9064,6 +9082,14 @@ function svgPaintAnalysisFromText(svg) {
   const inlineStyleMatches = directText.matchAll(/(?:^|["'{;\s])(?:fill|stroke|color|stop-color|flood-color|lighting-color)\s*:\s*([^;"'}\s][^;"'}]*)/gi);
   for (const match of inlineStyleMatches) {
     pushColor(visibleColors, seenVisibleColors, match[1]);
+  }
+  const implicitBlackShapeMatches = [...directText.matchAll(/<(?:path|circle|rect|polygon|polyline|line|ellipse)\b(?:(?!\s(?:fill|stroke|class|id)\s*=)[^>])*?>/gi)];
+  if (visibleColors.length > 1) {
+    for (const match of implicitBlackShapeMatches) {
+      if (!/style\s*=\s*(["'])(?:(?!\1)[\s\S])*(?:fill|stroke)\s*:/i.test(match[0])) {
+        pushColor(visibleColors, seenVisibleColors, "#000000");
+      }
+    }
   }
   const allPaintServerText = (String(svg || "").match(paintServerBlockPattern) || []).join("");
   const allPaintServerAttributeMatches = allPaintServerText.matchAll(/\s(?:fill|stroke|color|stop-color|flood-color|lighting-color)\s*=\s*(["'])([^"']+)\1/gi);
@@ -10022,7 +10048,8 @@ function applySiteIconTile(icon, site, iconPath = "") {
 }
 
 function hydrateLocalSiteIconBrandColor(icon, site, iconPath = "") {
-  if (!localSiteIconSourceCanLoadBrandColor(iconPath) || localSiteIconRenderMode(iconPath)) {
+  if (!localSiteIconSourceCanLoadBrandColor(iconPath)
+    || (localSiteIconRenderMode(iconPath) && !siteIconRawSvgStalePaths.has(iconPath))) {
     return;
   }
   loadLocalSiteIconBrandColor(iconPath).then(() => {
@@ -10055,13 +10082,14 @@ function loadLocalSiteIconBrandColor(source) {
   if (!localSiteIconSourceCanLoadBrandColor(value)) {
     return Promise.resolve("");
   }
-  if (localSiteIconBrandColorCache.has(value)) {
+  const shouldRevalidate = siteIconRawSvgStalePaths.has(value);
+  if (!shouldRevalidate && localSiteIconBrandColorCache.has(value)) {
     return Promise.resolve(localSiteIconBrandColorCache.get(value));
   }
-  if (localSiteIconBrandColorRequests.has(value)) {
+  if (!shouldRevalidate && localSiteIconBrandColorRequests.has(value)) {
     return localSiteIconBrandColorRequests.get(value);
   }
-  const request = fetch(value)
+  const request = fetch(value, shouldRevalidate ? { cache: "no-store" } : undefined)
     .then((response) => response.ok ? response.text() : "")
     .then((svg) => {
       rememberSiteIconRawSvgText(value, svg);

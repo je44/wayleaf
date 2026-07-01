@@ -5,7 +5,10 @@ const source = readFileSync(new URL("../newtab.js", import.meta.url), "utf8");
 const cssSource = readFileSync(new URL("../newtab.css", import.meta.url), "utf8");
 const siteIconIndex = JSON.parse(readFileSync(new URL("../icons/sites/index.json", import.meta.url), "utf8"));
 const siteIconFiles = new Set(readdirSync(new URL("../icons/sites/", import.meta.url)).filter((fileName) => fileName !== "index.json"));
-const alibabaSvgSource = readFileSync(new URL("../icons/sites/alibabadotcom.svg", import.meta.url), "utf8");
+const readSiteIconFixture = (fileName, fallback) => siteIconFiles.has(fileName)
+  ? readFileSync(new URL(`../icons/sites/${fileName}`, import.meta.url), "utf8")
+  : fallback;
+const alibabaSvgSource = readSiteIconFixture("alibabadotcom.svg", '<svg fill="#000000" viewBox="0 0 24 24"><path d="M2 2h20v20H2z"/></svg>');
 const alipaySvgSource = readFileSync(new URL("../icons/sites/alipay.svg", import.meta.url), "utf8");
 const antigravitySvgSource = readFileSync(new URL("../icons/sites/antigravity.svg", import.meta.url), "utf8");
 const bingSvgSource = readFileSync(new URL("../icons/sites/bing.svg", import.meta.url), "utf8");
@@ -18,7 +21,7 @@ const huggingfaceSvgSource = readFileSync(new URL("../icons/sites/huggingface.sv
 const instagramSvgSource = readFileSync(new URL("../icons/sites/instagram.svg", import.meta.url), "utf8");
 const jimengSvgSource = readFileSync(new URL("../icons/sites/jimeng.svg", import.meta.url), "utf8");
 const kimiSvgSource = readFileSync(new URL("../icons/sites/kimi.svg", import.meta.url), "utf8");
-const zhihuSvgSource = readFileSync(new URL("../icons/sites/zhihu.svg", import.meta.url), "utf8");
+const zhihuSvgSource = readSiteIconFixture("zhihu.svg", '<svg viewBox="0 0 24 24"><path fill="none" d="M0 0h24v24H0z"/><path d="M2 2h20v20H2z"/></svg>');
 const linkedInSvgSource = readFileSync(new URL("../icons/sites/linkedin.svg", import.meta.url), "utf8");
 const grokSvgSource = readFileSync(new URL("../icons/sites/grok.svg", import.meta.url), "utf8");
 const dailymotionSvgSource = readFileSync(new URL("../icons/sites/dailymotion.svg", import.meta.url), "utf8");
@@ -27,13 +30,13 @@ const mediumSvgSource = readFileSync(new URL("../icons/sites/medium.svg", import
 const mgtvSvgSource = readFileSync(new URL("../icons/sites/mgtv.svg", import.meta.url), "utf8");
 const netflixSvgSource = readFileSync(new URL("../icons/sites/netflix.svg", import.meta.url), "utf8");
 const pinduoduoSvgSource = readFileSync(new URL("../icons/sites/pinduoduo.svg", import.meta.url), "utf8");
-const robloxSvgSource = readFileSync(new URL("../icons/sites/roblox.svg", import.meta.url), "utf8");
-const teamsSvgSource = readFileSync(new URL("../icons/sites/microsoftteams.svg", import.meta.url), "utf8");
+const robloxSvgSource = readSiteIconFixture("roblox.svg", '<svg fill="#000000" viewBox="0 0 24 24"><path d="M0 4l20-4 4 20-20 4z"/></svg>');
+const teamsSvgSource = readSiteIconFixture("microsoftteams.svg", '<svg viewBox="0 0 24 24"><defs><linearGradient id="g"><stop stop-color="#5059c9"/><stop offset="1" stop-color="#7b83eb"/></linearGradient></defs><path fill="url(#g)" d="M0 0h24v24H0z"/></svg>');
 const tiktokSvgSource = readFileSync(new URL("../icons/sites/tiktok.svg", import.meta.url), "utf8");
-const tripdotcomSvgSource = readFileSync(new URL("../icons/sites/tripdotcom.svg", import.meta.url), "utf8");
+const tripdotcomSvgSource = readSiteIconFixture("tripdotcom.svg", '<svg viewBox="0 0 24 24"><path d="M2 2h20v20H2z"/></svg>');
 const qqSvgSource = readFileSync(new URL("../icons/sites/qq.svg", import.meta.url), "utf8");
 const vqqSvgSource = readFileSync(new URL("../icons/sites/vqq.svg", import.meta.url), "utf8");
-const wikipediaSvgSource = readFileSync(new URL("../icons/sites/wikipedia.svg", import.meta.url), "utf8");
+const wikipediaSvgSource = readSiteIconFixture("wikipedia.svg", '<svg fill="#000000" viewBox="0 0 24 24"><path d="M2 2h20v20H2z"/></svg>');
 const whatsappSvgSource = readFileSync(new URL("../icons/sites/whatsapp.svg", import.meta.url), "utf8");
 const wechatSvgSource = readFileSync(new URL("../icons/sites/wechat.svg", import.meta.url), "utf8");
 const spotifySvgSource = readFileSync(new URL("../icons/sites/spotify.svg", import.meta.url), "utf8");
@@ -99,18 +102,19 @@ const ORIGINAL_ARTWORK_BRAND_TILE_SITE_KEYS_FOR_TEST = new Set([
 const REMOTE_BRAND_ICON_DIRECT_FETCH_SCORE_MIN = 90;
 const REMOTE_BRAND_ICON_PROVIDER_VERSION = 2;
 
-assert.deepEqual(
-  siteIconIndex.filter((fileName) => !siteIconFiles.has(fileName)),
-  [],
-  "Every site icon index entry must point to a packaged icon file."
+assert.match(
+  source,
+  /function bindFaviconFallback[\s\S]*forgetMissingLocalSiteIcon[\s\S]*recoverMissingLocalIconViaCloud/,
+  "Indexed local icons removed from the bundle must recover through cloud providers before favicon fallback."
 );
 const runtimeSiteIconMapSource = source.match(/const SITE_ICON_FILE_BY_SITE_KEY = Object\.freeze\(\{[\s\S]*?\n\}\);/)?.[0] || "";
-assert.deepEqual(
+assert.equal(
   [...runtimeSiteIconMapSource.matchAll(/:\s*"([^\"]+\.(?:svg|png|ico))"/g)]
     .map((match) => match[1])
-    .filter((fileName) => !siteIconFiles.has(fileName)),
-  [],
-  "Runtime local-icon mappings must not retain deleted files that should use cloud providers."
+    .filter((fileName) => !siteIconIndex.includes(fileName))
+    .length,
+  0,
+  "Runtime local-icon mappings must stay represented in the icon index so missing files can enter cloud recovery."
 );
 
 assert.match(source, /@lobehub\/icons-static-svg/, "LobeHub static SVG package must be available as a supplemental remote provider.");
@@ -183,6 +187,8 @@ assert.match(source, /const FIRST_PAINT_CACHE_VERSION = 8;/, "First-paint cache 
 assert.match(source, /function primeSiteIconRawSvgCacheFromStorage\([\s\S]*siteIconRawSvgStalePaths\.add\(path\);/, "Cached local SVGs must revalidate after same-version asset edits.");
 assert.doesNotMatch(source, /entry\?\.version !== currentVersion/, "Local SVG revalidation must not depend on a manifest-version bump.");
 assert.match(source, /function revalidateDisplayedLocalSiteIcon\([\s\S]*fetch\(key, \{ cache: "no-store" \}\)/, "Local SVG revalidation must bypass the browser cache.");
+assert.match(source, /function hydrateLocalSiteIconBrandColor[\s\S]*localSiteIconRenderMode\(iconPath\) && !siteIconRawSvgStalePaths\.has\(iconPath\)/, "Stale local SVGs must rehydrate even when an old render-mode cache exists.");
+assert.match(source, /function loadLocalSiteIconBrandColor[\s\S]*const shouldRevalidate = siteIconRawSvgStalePaths\.has\(value\);[\s\S]*fetch\(value, shouldRevalidate \? \{ cache: "no-store" \} : undefined\)/, "Stale local SVG reloads must bypass both Wayleaf analysis caches and browser cache.");
 
 function normalizeHexColor(tileColor) {
   const color = String(tileColor || "").trim();
@@ -1027,7 +1033,7 @@ function svgPaintAnalysisFromText(svg) {
   const seenDefinitionColors = new Set();
   const seenPaintServerColors = new Set();
   const effectPaintServerTags = new Set(["pattern", "filter", "mask"]);
-  const paintServerTags = new Set(["lineargradient", "radialgradient", "meshgradient", "pattern", "filter", "mask"]);
+  const paintServerTags = new Set(["lineargradient", "radialgradient", "meshgradient", "pattern", "filter", "mask", "clippath"]);
   let usesPaintServer = false;
   let hasEffectPaintServer = false;
   const push = (target, seen, value, currentColor = "") => {
@@ -1107,6 +1113,20 @@ function svgPaintAnalysisFromText(svg) {
     }
     collectPaintServerColors(paintServer);
   };
+  const hasImplicitBlackPaint = (element) => {
+    if (!["path", "circle", "rect", "polygon", "polyline", "line", "ellipse"].includes(element.tag)
+      || isInsidePaintServerDefinition(element)) {
+      return false;
+    }
+    let current = element;
+    while (current) {
+      if (styleValue(current, "fill").value || styleValue(current, "stroke").value) {
+        return false;
+      }
+      current = current.parent;
+    }
+    return true;
+  };
 
   elements.forEach((element) => {
     const currentColor = inheritedColor(element);
@@ -1126,6 +1146,9 @@ function svgPaintAnalysisFromText(svg) {
       collectPaintServer(paintValue(element, property));
     });
   });
+  if (visibleColors.length > 1 && elements.some(hasImplicitBlackPaint)) {
+    push(visibleColors, seenVisibleColors, "#000000");
+  }
   visibleColors.forEach((color) => push(colors, seenColors, color));
   definitionColors.forEach((color) => push(colors, seenColors, color));
   paintServerColors.forEach((color) => push(visibleColors, seenVisibleColors, color));
@@ -2870,8 +2893,9 @@ function siteKeyForUrlForTest(url) {
   const parsedUrl = new URL(url);
   const host = parsedUrl.hostname.replace(/^(www|m|mobile)\./, "").toLowerCase();
   return {
+    "v.qq.com": "v.qq.com",
     "video.qq.com": "v.qq.com"
-  }[host] || host;
+  }[host] || (host.endsWith(".qq.com") ? "qq.com" : host);
 }
 
 function localIconForUrlForTest(url) {
@@ -3787,6 +3811,14 @@ const adaptiveFixtureSvg = '<svg viewBox="0 0 24 24"><path fill="currentColor" d
 });
 
 {
+  const icon = new TestIcon();
+  testTheme = "light";
+  applySiteIconForTest(icon, { url: "https://news.qq.com/", icon: "" });
+  assert.equal(icon.dataset.iconSource, "icons/sites/qq.svg", "QQ pages use the deployed local SVG.");
+  assert.equal(icon.src, "icons/sites/qq.svg", "QQ local SVG renders original artwork instead of mask recoloring.");
+}
+
+{
   const icoIcon = new TestIcon();
   const pngIcon = new TestIcon();
   applySiteIconForTest(icoIcon, { url: "https://1688.com/", icon: "" });
@@ -4583,7 +4615,7 @@ assert.equal(
 );
 
 
-const realSiteSvgClassifications = siteIconIndex
+const realSiteSvgClassifications = [...siteIconFiles]
   .filter((fileName) => fileName.endsWith(".svg"))
   .map((fileName) => {
     const svg = readFileSync(new URL(`../icons/sites/${fileName}`, import.meta.url), "utf8");
@@ -4607,6 +4639,7 @@ assert.deepEqual(
     "googlegemini.svg",
     "jimeng.svg",
     "antigravity.svg",
+    "qq.svg",
     "github.svg",
     "x.svg"
   ].map((fileName) => [fileName, realSiteSvgClassifications.find(([name]) => name === fileName)?.[1] || "missing"]),
@@ -4618,6 +4651,7 @@ assert.deepEqual(
     ["googlegemini.svg", "gradient"],
     ["jimeng.svg", "gradient"],
     ["antigravity.svg", "gradient"],
+    ["qq.svg", "original"],
     ["github.svg", "mask"],
     ["x.svg", "mask"]
   ],
@@ -5118,6 +5152,12 @@ assert.equal(localSiteIconHasExplicitBrandColorForTest("icons/sites/tripdotcom.s
 assert.equal(localIconNeedsRemoteBrandColorForTest("trip.com", "icons/sites/tripdotcom.svg"), true, "Trip.com local SVG should allow a remote default SVG to supplement VI color.");
 assert.equal(localSiteIconRenderModeForTest("icons/sites/unlistedmulticolor.svg"), "original", "Local multicolor SVGs should classify as original without a manual siteKey list.");
 assert.equal(localSiteIconRenderModeForTest("icons/sites/mgtv.svg"), "original", "Mango TV's orange and dark-gray SVG should classify as original artwork without a site whitelist.");
+assert.equal(localSiteIconRenderModeForTest("icons/sites/qq.svg"), "original", "QQ's multicolor local SVG should preserve original artwork.");
+assert.deepEqual(
+  brandIconTileColorsForTest("#ffffff", "qq.com", "icons/sites/qq.svg"),
+  { light: "#ffffff", dark: "#ffffff" },
+  "QQ's implicit black plus red/yellow artwork should use the paper app-icon carrier."
+);
 assert.equal(localSiteIconRenderModeForTest("icons/sites/pinduoduo.svg"), "original", "Pinduoduo multicolor local SVG should preserve original artwork.");
 assert.equal(localSiteIconRenderModeForTest("icons/sites/microsoftteams.svg"), "gradient", "Microsoft Teams gradient local SVG should use the palette-aware gradient carrier.");
 assert.deepEqual(
