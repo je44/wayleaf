@@ -12,8 +12,6 @@ const bingSvgSource = readFileSync(new URL("../icons/sites/bing.svg", import.met
 const chatgptSvgSource = readFileSync(new URL("../icons/sites/chatgpt.svg", import.meta.url), "utf8");
 const chromeSvgSource = readFileSync(new URL("../icons/sites/chrome.svg", import.meta.url), "utf8");
 const googleSvgSource = readFileSync(new URL("../icons/sites/google.svg", import.meta.url), "utf8");
-const googleCalendarSvgSource = readFileSync(new URL("../icons/sites/googlecalendar.svg", import.meta.url), "utf8");
-const googleDocsSvgSource = readFileSync(new URL("../icons/sites/googledocs.svg", import.meta.url), "utf8");
 const doubaoSvgSource = readFileSync(new URL("../icons/sites/doubao.svg", import.meta.url), "utf8");
 const douyinSvgSource = readFileSync(new URL("../icons/sites/douyin.svg", import.meta.url), "utf8");
 const huggingfaceSvgSource = readFileSync(new URL("../icons/sites/huggingface.svg", import.meta.url), "utf8");
@@ -33,6 +31,7 @@ const robloxSvgSource = readFileSync(new URL("../icons/sites/roblox.svg", import
 const teamsSvgSource = readFileSync(new URL("../icons/sites/microsoftteams.svg", import.meta.url), "utf8");
 const tiktokSvgSource = readFileSync(new URL("../icons/sites/tiktok.svg", import.meta.url), "utf8");
 const tripdotcomSvgSource = readFileSync(new URL("../icons/sites/tripdotcom.svg", import.meta.url), "utf8");
+const qqSvgSource = readFileSync(new URL("../icons/sites/qq.svg", import.meta.url), "utf8");
 const vqqSvgSource = readFileSync(new URL("../icons/sites/vqq.svg", import.meta.url), "utf8");
 const wikipediaSvgSource = readFileSync(new URL("../icons/sites/wikipedia.svg", import.meta.url), "utf8");
 const whatsappSvgSource = readFileSync(new URL("../icons/sites/whatsapp.svg", import.meta.url), "utf8");
@@ -105,6 +104,14 @@ assert.deepEqual(
   [],
   "Every site icon index entry must point to a packaged icon file."
 );
+const runtimeSiteIconMapSource = source.match(/const SITE_ICON_FILE_BY_SITE_KEY = Object\.freeze\(\{[\s\S]*?\n\}\);/)?.[0] || "";
+assert.deepEqual(
+  [...runtimeSiteIconMapSource.matchAll(/:\s*"([^\"]+\.(?:svg|png|ico))"/g)]
+    .map((match) => match[1])
+    .filter((fileName) => !siteIconFiles.has(fileName)),
+  [],
+  "Runtime local-icon mappings must not retain deleted files that should use cloud providers."
+);
 
 assert.match(source, /@lobehub\/icons-static-svg/, "LobeHub static SVG package must be available as a supplemental remote provider.");
 assert.match(source, /function remoteBrandProviderHasSlug[\s\S]*remoteBrandProviderSlugs/, "Remote providers must check an index before fetching a slug.");
@@ -149,7 +156,7 @@ assert.match(source, /function keepsBrandIconOriginalOnBrandTile/, "Local SVGs w
 assert.match(source, /"suno\.com": "#000000"/, "Suno's monochrome local SVG must share the black/white mask carrier used by X and GitHub.");
 assert.doesNotMatch(source, /nativeRoundedBrandIcon|NATIVE_ROUNDED_BRAND_ICON_SITE_KEYS/, "Grok must not keep a dedicated native-rounded SVG rendering branch.");
 assert.match(zhihuSvgSource, /<path\b/i, "Zhihu local SVG keeps a maskable path resource.");
-assert.match(linkedInSvgSource, /fill:\s*rgb\(0,\s*0,\s*0\)/i, "LinkedIn local SVG exercises inline style recoloring.");
+assert.match(linkedInSvgSource, /fill=["']#0A66C2["']/i, "LinkedIn local SVG keeps its explicit brand blue.");
 assert.match(source, /function discoverRemoteBrandIconDataUrl[\s\S]*localIconForUrl\(parsedUrl\.href\)[\s\S]*return "";/, "Remote provider discovery must short-circuit for deployed local icons.");
 assert.match(source, /function refreshRemoteBrandIcon[\s\S]*localIconForUrl\(site\.url\)[\s\S]*return;/, "Async remote refresh must short-circuit for deployed local icons.");
 assert.match(source, /const GENERIC_SITE_FALLBACK_ICON = `\$\{SITE_ICON_DIRECTORY\}\/fallback\.svg`;/, "No-site-ico fallback should use the full SVG asset instead of the old PNG tile.");
@@ -408,7 +415,6 @@ const SITE_ICON_FILE_BY_SITE_KEY_FOR_TEST = Object.freeze({
   "azure.microsoft.com": "azure.svg",
   "b.ai": "bai.png",
   "bitbucket.org": "bitbucket.svg",
-  "calendar.google.com": "googlecalendar.svg",
   "chrome.google.com": "chrome.svg",
   "chatglm.cn": "glm.svg",
   "cloud.google.com": "googlecloud.svg",
@@ -416,15 +422,11 @@ const SITE_ICON_FILE_BY_SITE_KEY_FOR_TEST = Object.freeze({
   "developer.mozilla.org": "mdn.svg",
   "doubao.com": "doubao.svg",
   "douyin.com": "douyin.svg",
-  "docs.google.com": "googledocs.svg",
-  "drive.google.com": "googledrive.svg",
   "firefly.adobe.com": "adobefirefly.svg",
   "firebase.google.com": "firebase.svg",
   "gemini.google.com": "googlegemini.svg",
   "iqiyi.com": "iqiyi.svg",
   "jimeng.jianying.com": "jimeng.svg",
-  "maps.google.com": "googlemaps.svg",
-  "meet.google.com": "googlemeet.svg",
   "mimo.mi.com": "xiaomimimo.svg",
   "mimo.xiaomi.com": "xiaomimimo.svg",
   "mgtv.com": "mgtv.svg",
@@ -434,6 +436,7 @@ const SITE_ICON_FILE_BY_SITE_KEY_FOR_TEST = Object.freeze({
   "office.com": "microsoftoffice.svg",
   "openai.com": "chatgpt.svg",
   "pinduoduo.com": "pinduoduo.svg",
+  "qq.com": "qq.svg",
   "stackoverflow.com": "stackoverflow.svg",
   "store.epicgames.com": "epicgames.svg",
   "teams.microsoft.com": "microsoftteams.svg",
@@ -2754,8 +2757,6 @@ const LOCAL_SVG_SOURCE_BY_PATH_FOR_TEST = Object.freeze({
   "icons/sites/doubao.svg": doubaoSvgSource,
   "icons/sites/douyin.svg": douyinSvgSource,
   "icons/sites/epicgames.svg": epicGamesSvgSource,
-  "icons/sites/googlecalendar.svg": googleCalendarSvgSource,
-  "icons/sites/googledocs.svg": googleDocsSvgSource,
   "icons/sites/huggingface.svg": huggingfaceSvgSource,
   "icons/sites/instagram.svg": instagramSvgSource,
   "icons/sites/jimeng.svg": jimengSvgSource,
@@ -2768,6 +2769,7 @@ const LOCAL_SVG_SOURCE_BY_PATH_FOR_TEST = Object.freeze({
   "icons/sites/mgtv.svg": mgtvSvgSource,
   "icons/sites/netflix.svg": netflixSvgSource,
   "icons/sites/pinduoduo.svg": pinduoduoSvgSource,
+  "icons/sites/qq.svg": qqSvgSource,
   "icons/sites/roblox.svg": robloxSvgSource,
   "icons/sites/microsoftteams.svg": teamsSvgSource,
   "icons/sites/tiktok.svg": tiktokSvgSource,
@@ -4921,6 +4923,20 @@ assert.equal(remoteProviderCanRunForSiteKeyForTest("shadcn.com"), true, "shadcn 
 assert.equal(remoteBrandIconSlugCandidatesForTest("shadcn.com", "Shadcn")[0].slug, "shadcn", "shadcn should produce a deterministic provider slug before falling back.");
 assert.equal(remoteBrandSvgResponseMayContainSvg("text/html", "https://ui.shadcn.com"), false, "A shadcn-style non-SVG provider/fetch response must not be cached as a remote SVG.");
 
+for (const [siteKey, providerSlug] of [
+  ["analytics.google.com", "googleanalytics"],
+  ["calendar.google.com", "googlecalendar"],
+  ["docs.google.com", "googledocs"],
+  ["drive.google.com", "googledrive"],
+  ["maps.google.com", "googlemaps"],
+  ["meet.google.com", "googlemeet"]
+]) {
+  assert.equal(localIconForSiteKeyForTest(siteKey), "", `${siteKey} should not retain a deleted local icon mapping.`);
+  assert.equal(remoteProviderCanRunForSiteKeyForTest(siteKey), true, `${siteKey} should remain eligible for cloud provider discovery.`);
+  assert.equal(remoteBrandIconSlugCandidatesForTest(siteKey, "", [providerSlug, "google"])[0].slug, providerSlug, `${siteKey} should prefer its specific cloud provider slug.`);
+  assert.equal(source.includes(`"${siteKey}": ["${providerSlug}", "google"]`), true, `${siteKey} should wire its cloud provider aliases in runtime code.`);
+}
+
 assert.equal(localIconForUrlForTest("https://www.doubao.com/chat/"), "icons/sites/doubao.svg", "Doubao should use the deployed multicolor local SVG.");
 assert.equal(localIconForUrlForTest("https://www.kimi.com/"), "icons/sites/kimi.svg", "Kimi should use the deployed local SVG.");
 assert.equal(localIconForUrlForTest("https://chatglm.cn/"), "icons/sites/glm.svg", "GLM/ChatGLM should use the deployed local SVG.");
@@ -4932,6 +4948,7 @@ assert.equal(localIconForUrlForTest("https://huggingface.co/"), "icons/sites/hug
 assert.equal(localIconForUrlForTest("https://jimeng.jianying.com/"), "icons/sites/jimeng.svg", "Jimeng should use the deployed multicolor local SVG.");
 assert.equal(localIconForUrlForTest("https://mimo.mi.com/"), "icons/sites/xiaomimimo.svg", "MiMo should use the deployed local SVG.");
 assert.equal(localIconForUrlForTest("https://www.mgtv.com/"), "icons/sites/mgtv.svg", "MGTV should use the deployed local SVG.");
+assert.equal(localIconForUrlForTest("https://www.qq.com/"), "icons/sites/qq.svg", "QQ should use the deployed local SVG.");
 assert.equal(localIconForUrlForTest("https://video.qq.com/"), "icons/sites/vqq.svg", "Tencent Video should use the deployed local SVG without taking over all qq.com pages.");
 assert.equal(localIconForUrlForTest("https://v.qq.com/x/cover/sample.html"), "icons/sites/vqq.svg", "v.qq.com should use the deployed Tencent Video SVG.");
 assert.equal(localIconForUrlForTest("https://www.tiktok.com/"), "icons/sites/tiktok.svg", "TikTok should use the deployed multicolor local SVG.");
@@ -5089,8 +5106,6 @@ assert.equal(siteIconBrandColorForTest("mimo.mi.com", "icons/sites/xiaomimimo.sv
 assert.equal(siteIconBrandColorForTest("openai.com", "icons/sites/chatgpt.svg"), "#000000", "ChatGPT/OpenAI local implicit-black SVG should not be overwritten by the OpenAI VI table color.");
 assert.equal(siteIconBrandColorForTest("xiaohongshu.com", "icons/sites/xiaohongshu.svg"), "#ff2442", "Known VI colors should override black single-color local SVG exports.");
 assert.equal(siteIconBrandColorForTest("alibaba.com", "icons/sites/alibabadotcom.svg"), "#ff6a00", "Known VI colors should override black marketplace local SVG exports.");
-assert.equal(siteIconBrandColorForTest("docs.google.com", "icons/sites/googledocs.svg"), "#4285f4", "Google Docs should use its VI color instead of the black source SVG export.");
-assert.equal(siteIconBrandColorForTest("calendar.google.com", "icons/sites/googlecalendar.svg"), "#4285f4", "Google Calendar should use its VI color instead of the black source SVG export.");
 assert.equal(source.includes('"netflix.com":'), false, "Netflix should not be special-cased in the VI color table.");
 assert.equal(localSiteIconBrandColorForTest("icons/sites/netflix.svg"), "#e50914", "Netflix should recover its local SVG red as a trusted monochrome VI color.");
 assert.equal(siteIconBrandColorForTest("netflix.com", "icons/sites/netflix.svg"), "#e50914", "Netflix should use parsed local SVG VI color when the siteKey table has no entry.");
@@ -5112,9 +5127,7 @@ assertPaletteCarrierSeparatedForTest("icons/sites/unlistedmulticolor.svg", "#fff
 
 [
   { name: "Xiaohongshu", url: "https://www.xiaohongshu.com/", lightTile: "#ff2442", darkGlyph: "#ff2442" },
-  { name: "Alibaba", url: "https://www.alibaba.com/", lightTile: "#ff6a00", darkGlyph: "#f56701" },
-  { name: "Google Docs", url: "https://docs.google.com/", lightTile: "#4285f4", darkGlyph: "#4285f4" },
-  { name: "Google Calendar", url: "https://calendar.google.com/", lightTile: "#4285f4", darkGlyph: "#4285f4" }
+  { name: "Alibaba", url: "https://www.alibaba.com/", lightTile: "#ff6a00", darkGlyph: "#f56701" }
 ].forEach((sample) => {
   const icon = new TestIcon();
   testTheme = "light";
