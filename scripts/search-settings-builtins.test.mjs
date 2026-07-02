@@ -4,6 +4,8 @@ import { readFileSync } from "node:fs";
 const source = readFileSync(new URL("../newtab.js", import.meta.url), "utf8");
 const html = readFileSync(new URL("../newtab.html", import.meta.url), "utf8");
 const css = readFileSync(new URL("../newtab.css", import.meta.url), "utf8");
+const siteIconIndex = JSON.parse(readFileSync(new URL("../icons/sites/index.json", import.meta.url), "utf8"));
+const zhihuSettingsSvg = readFileSync(new URL("../assets/zhihu.svg", import.meta.url), "utf8");
 
 assert.match(
   html,
@@ -37,9 +39,19 @@ assert.match(
 
 assert.match(
   source,
-  /const explicitIcon = engine\.id === "kimi" \? `\$\{SITE_ICON_DIRECTORY\}\/kimi\.svg` : explicitAiIconUrl\(engine\);/,
+  /engine\.id === "kimi" \? `\$\{SITE_ICON_DIRECTORY\}\/kimi\.svg`/,
   "Kimi's settings icon should use the updated local SVG directly instead of waiting for the async icon index."
 );
+
+assert.match(
+  source,
+  /engine\.id === "zhihu" \? "assets\/zhihu\.svg"/,
+  "Zhihu's platform-search settings card should use its settings-only SVG asset."
+);
+
+assert.equal(source.match(/assets\/zhihu\.svg/g)?.length, 1, "The Zhihu settings asset should have one runtime reference.");
+assert.ok(!siteIconIndex.includes("zhihu.svg"), "The Zhihu settings asset must stay out of the outer site-icon catalog.");
+assert.match(zhihuSettingsSvg, /<svg\b[^>]*fill=["']#0084FF["']/i, "The Zhihu settings SVG should preserve its original blue logo color.");
 
 assert.match(
   css,
@@ -57,7 +69,7 @@ assert.match(
   ["kimi", /kimi:\s*\{\s*mode:\s*"original",\s*tile:\s*"#000000"\s*\}/],
   ["qwen", /qwen:\s*\{\s*mode:\s*"original",\s*tile:\s*"#ffffff"\s*\}/],
   ["xiaohongshu", /xiaohongshu:\s*\{\s*mode:\s*"mask",\s*tile:\s*"#ff2442",\s*glyph:\s*"#ffffff"\s*\}/],
-  ["zhihu", /zhihu:\s*\{\s*mode:\s*"mask",\s*tile:\s*"#0084ff",\s*glyph:\s*"#ffffff"\s*\}/]
+  ["zhihu", /zhihu:\s*\{\s*mode:\s*"original",\s*tile:\s*"#ffffff"\s*\}/]
 ].forEach(([engineId, pattern]) => {
   assert.match(source, pattern, `${engineId} should use the requested settings icon strategy.`);
 });

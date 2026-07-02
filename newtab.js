@@ -496,7 +496,7 @@ const SETTINGS_ENGINE_ICON_STYLES = Object.freeze({
   kimi: { mode: "original", tile: "#000000" },
   qwen: { mode: "original", tile: "#ffffff" },
   xiaohongshu: { mode: "mask", tile: "#ff2442", glyph: "#ffffff" },
-  zhihu: { mode: "mask", tile: "#0084ff", glyph: "#ffffff" }
+  zhihu: { mode: "original", tile: "#ffffff" }
 });
 const DEFAULT_SEARCH_ENGINES = [
   { id: "local", label: "Aggregate search", labelKey: "quickSearchAggregate", local: true },
@@ -4453,7 +4453,9 @@ function createEngineSettingsCard({ engine, meta, actionLabel, current = false }
 
 function createSettingsEngineIcon(engine) {
   const engineUrl = engine.searchUrl || engine.directUrl || "";
-  const explicitIcon = engine.id === "kimi" ? `${SITE_ICON_DIRECTORY}/kimi.svg` : explicitAiIconUrl(engine);
+  const explicitIcon = engine.id === "zhihu" ? "assets/zhihu.svg"
+    : engine.id === "kimi" ? `${SITE_ICON_DIRECTORY}/kimi.svg`
+      : explicitAiIconUrl(engine);
   const iconSource = explicitIcon || localIconForUrl(engineUrl) || GENERIC_SITE_FALLBACK_ICON;
   const style = SETTINGS_ENGINE_ICON_STYLES[engine.id] || {};
   const label = searchEngineLabel(engine);
