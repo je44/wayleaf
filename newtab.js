@@ -501,27 +501,27 @@ const SETTINGS_ENGINE_ICON_STYLES = Object.freeze({
 const DEFAULT_SEARCH_ENGINES = [
   { id: "local", label: "Aggregate search", labelKey: "quickSearchAggregate", local: true },
   { id: "google", label: "Google", searchUrl: "https://www.google.com/search", queryParam: "q", aggregateDefault: true },
-  { id: "baidu", label: "百度", searchUrl: "https://www.baidu.com/s", queryParam: "wd" },
+  { id: "baidu", label: "Baidu", labelKey: "brandBaidu", searchUrl: "https://www.baidu.com/s", queryParam: "wd" },
   { id: "bing", label: "Bing", searchUrl: "https://www.bing.com/search", queryParam: "q", aggregateDefault: true },
   { id: "chatgpt", command: "/gpt", commands: ["/gpt", "/chatgpt"], label: "ChatGPT", searchUrl: "https://chatgpt.com/", queryParam: "q", aiDirect: true, autoSubmit: true, directUrl: "https://chatgpt.com/", themeColor: "#10a37f" },
   { id: "claude", command: "/claude", label: "Claude", searchUrl: "https://claude.ai/new", queryParam: "q", aiDirect: true, autoSubmit: true, directUrl: "https://claude.ai/new", themeColor: "#d97757" },
   { id: "gemini", command: "/gemini", label: "Gemini", searchUrl: "https://gemini.google.com/app", queryParam: "q", aiDirect: true, autoSubmit: true, directUrl: "https://gemini.google.com/app", themeColor: "#4285f4" },
   { id: "grok", command: "/grok", label: "Grok", searchUrl: "https://grok.com/", queryParam: "q", aiDirect: true, autoSubmit: true, directUrl: "https://grok.com/", themeColor: "#777f86" },
   { id: "deepseek", command: "/deepseek", commands: ["/deepseek", "/ds"], label: "DeepSeek", searchUrl: "https://chat.deepseek.com/", queryParam: "q", aiDirect: true, autoSubmit: true, directUrl: "https://chat.deepseek.com/", themeColor: "#4d6bfe" },
-  { id: "doubao", command: "/doubao", commands: ["/doubao", "/db"], label: "豆包", searchUrl: "https://www.doubao.com/chat/", queryParam: "q", aiDirect: true, autoSubmit: true, directUrl: "https://www.doubao.com/chat/", iconUrl: "icons/sites/doubao.png", themeColor: "#1e37fc" },
+  { id: "doubao", command: "/doubao", commands: ["/doubao", "/db"], label: "Doubao", labelKey: "brandDoubao", searchUrl: "https://www.doubao.com/chat/", queryParam: "q", aiDirect: true, autoSubmit: true, directUrl: "https://www.doubao.com/chat/", iconUrl: "icons/sites/doubao.png", themeColor: "#1e37fc" },
   { id: "kimi", command: "/kimi", label: "Kimi", searchUrl: "https://www.kimi.com/", queryParam: "q", aiDirect: true, autoSubmit: true, directUrl: "https://www.kimi.com/", themeColor: "#111827" },
   { id: "glm", command: "/glm", commands: ["/glm", "/chatglm", "/zhipu"], label: "GLM", searchUrl: "https://chatglm.cn/", queryParam: "q", aiDirect: true, autoSubmit: true, directUrl: "https://chatglm.cn/", themeColor: "#3859ff" },
-  { id: "qwen", command: "/qwen", label: "千问", searchUrl: "https://chat.qwen.ai/", queryParam: "q", aiDirect: true, autoSubmit: true, directUrl: "https://chat.qwen.ai/", iconUrl: "icons/sites/qwen.svg", themeColor: "#6f69f7", urlPromptFallback: true },
-  { id: "jimeng", command: "/jimeng", commands: ["/jimeng", "/jm"], label: "即梦", searchUrl: "https://jimeng.jianying.com/ai-tool/home", queryParam: "q", aiDirect: true, autoSubmit: true, directUrl: "https://jimeng.jianying.com/ai-tool/home", themeColor: "#1c6fff", urlPromptFallback: true }
+  { id: "qwen", command: "/qwen", label: "Qwen", labelKey: "brandQwen", searchUrl: "https://chat.qwen.ai/", queryParam: "q", aiDirect: true, autoSubmit: true, directUrl: "https://chat.qwen.ai/", iconUrl: "icons/sites/qwen.svg", themeColor: "#6f69f7", urlPromptFallback: true },
+  { id: "jimeng", command: "/jimeng", commands: ["/jimeng", "/jm"], label: "Jimeng", labelKey: "brandJimeng", searchUrl: "https://jimeng.jianying.com/ai-tool/home", queryParam: "q", aiDirect: true, autoSubmit: true, directUrl: "https://jimeng.jianying.com/ai-tool/home", themeColor: "#1c6fff", urlPromptFallback: true }
 ];
 const PLATFORM_SEARCH_TARGETS = Object.freeze([
   { id: "youtube", label: "YouTube", prefixes: ["*yt", "*youtube"], searchUrl: "https://www.youtube.com/results", queryParam: "search_query", iconUrl: "https://www.youtube.com/", themeColor: "#ff0000", behaviorKey: "platformSearchDirectBehavior" },
   { id: "x", label: "X", prefixes: ["*x", "*twitter"], searchUrl: "https://x.com/search", queryParam: "q", searchParams: { src: "typed_query" }, iconUrl: "https://x.com/", themeColor: "#000000", behaviorKey: "platformSearchLoginBehavior" },
-  { id: "xiaohongshu", label: "小红书", prefixes: ["*xhs", "*rednote"], searchUrl: "https://www.xiaohongshu.com/search_result", queryParam: "keyword", searchParams: { source: "web_explore_feed" }, iconUrl: "https://www.xiaohongshu.com/", themeColor: "#ff2442", behaviorKey: "platformSearchLoginBehavior" },
+  { id: "xiaohongshu", label: "RedNote", labelKey: "brandXiaohongshu", prefixes: ["*xhs", "*rednote"], searchUrl: "https://www.xiaohongshu.com/search_result", queryParam: "keyword", searchParams: { source: "web_explore_feed" }, iconUrl: "https://www.xiaohongshu.com/", themeColor: "#ff2442", behaviorKey: "platformSearchLoginBehavior" },
   { id: "instagram", label: "Instagram", prefixes: ["*ig", "*instagram"], searchUrl: "https://www.instagram.com/explore/search/keyword/", queryParam: "q", iconUrl: "https://www.instagram.com/", fallback: true, themeColor: "#e4405f", behaviorKey: "platformSearchFallbackBehavior" },
   { id: "threads", label: "Threads", prefixes: ["*threads", "*th"], searchUrl: "https://www.threads.com/search", queryParam: "q", iconUrl: "https://www.threads.com/", fallback: true, themeColor: "#000000", behaviorKey: "platformSearchFallbackBehavior" },
-  { id: "douyin", label: "抖音", prefixes: ["*dy", "*douyin"], searchUrl: "https://www.douyin.com/search/", pathQuery: true, searchParams: { type: "general" }, iconUrl: "https://www.douyin.com/", themeColor: "#000000", behaviorKey: "platformSearchLoginBehavior" },
-  { id: "zhihu", label: "知乎", prefixes: ["*zhihu", "*zh"], searchUrl: "https://www.zhihu.com/search", queryParam: "q", searchParams: { type: "content" }, iconUrl: "https://www.zhihu.com/", themeColor: "#0084ff", behaviorKey: "platformSearchDirectBehavior" },
+  { id: "douyin", label: "Douyin", labelKey: "brandDouyin", prefixes: ["*dy", "*douyin"], searchUrl: "https://www.douyin.com/search/", pathQuery: true, searchParams: { type: "general" }, iconUrl: "https://www.douyin.com/", themeColor: "#000000", behaviorKey: "platformSearchLoginBehavior" },
+  { id: "zhihu", label: "Zhihu", labelKey: "brandZhihu", prefixes: ["*zhihu", "*zh"], searchUrl: "https://www.zhihu.com/search", queryParam: "q", searchParams: { type: "content" }, iconUrl: "https://www.zhihu.com/", themeColor: "#0084ff", behaviorKey: "platformSearchDirectBehavior" },
   { id: "bilibili", label: "Bilibili", prefixes: ["*bili", "*bilibili"], searchUrl: "https://search.bilibili.com/all", queryParam: "keyword", iconUrl: "https://www.bilibili.com/", themeColor: "#00a1d6", behaviorKey: "platformSearchDirectBehavior" },
   { id: "tiktok", label: "TikTok", prefixes: ["*tt", "*tiktok"], searchUrl: "https://www.tiktok.com/search", queryParam: "q", iconUrl: "https://www.tiktok.com/", themeColor: "#000000", behaviorKey: "platformSearchLoginBehavior" }
 ]);
@@ -1105,6 +1105,13 @@ const MESSAGES = {
     syncSettingsImportFailed: "导入失败",
     syncSettingsImportFailedDetail: "请选择 Wayleaf .wy 配置文件。",
     syncSettingsActionsLabel: "同步方式",
+    brandBaidu: "百度",
+    brandDoubao: "豆包",
+    brandQwen: "千问",
+    brandJimeng: "即梦",
+    brandXiaohongshu: "小红书",
+    brandDouyin: "抖音",
+    brandZhihu: "知乎",
     searchSettingsDefaultTitle: "基本搜索",
     searchSettingsDefaultDescription: "设置普通关键词默认使用的搜索入口",
     searchSettingsDefaultHint: "输入普通关键词时，Wayleaf 会优先使用标记为默认的基本搜索。",
@@ -1310,6 +1317,13 @@ const MESSAGES = {
     syncSettingsImportFailed: "匯入失敗",
     syncSettingsImportFailedDetail: "請選擇 Wayleaf .wy 設定檔。",
     syncSettingsActionsLabel: "同步方式",
+    brandBaidu: "百度",
+    brandDoubao: "豆包",
+    brandQwen: "千問",
+    brandJimeng: "即夢",
+    brandXiaohongshu: "小紅書",
+    brandDouyin: "抖音",
+    brandZhihu: "知乎",
     searchSettingsDefaultTitle: "基本搜尋",
     searchSettingsDefaultDescription: "設定普通關鍵字預設使用的搜尋入口",
     searchSettingsDefaultHint: "輸入普通關鍵字時，Wayleaf 會優先使用標記為預設的基本搜尋。",
@@ -1500,6 +1514,13 @@ const MESSAGES = {
     syncSettingsImportFailed: "Import failed",
     syncSettingsImportFailedDetail: "Choose a Wayleaf .wy config file.",
     syncSettingsActionsLabel: "Sync method",
+    brandBaidu: "Baidu",
+    brandDoubao: "Doubao",
+    brandQwen: "Qwen",
+    brandJimeng: "Jimeng",
+    brandXiaohongshu: "RedNote",
+    brandDouyin: "Douyin",
+    brandZhihu: "Zhihu",
     searchSettingsDefaultTitle: "Basic search",
     searchSettingsDefaultDescription: "Configure the search entry used for regular queries",
     searchSettingsDefaultHint: "Wayleaf uses the basic search marked as default for regular keywords.",
@@ -1645,6 +1666,13 @@ const MESSAGES = {
     syncSettingsImportFailed: "インポートに失敗しました",
     syncSettingsImportFailedDetail: "Wayleaf .wy 設定ファイルを選択してください。",
     syncSettingsActionsLabel: "同期方法",
+    brandBaidu: "Baidu",
+    brandDoubao: "Doubao",
+    brandQwen: "Qwen",
+    brandJimeng: "Jimeng",
+    brandXiaohongshu: "RedNote",
+    brandDouyin: "Douyin",
+    brandZhihu: "Zhihu",
     searchSettingsDefaultTitle: "基本検索",
     searchSettingsDefaultDescription: "通常のキーワードで使う検索先を設定",
     searchSettingsDefaultHint: "通常のキーワードでは、既定に設定した基本検索を優先して使います。",
@@ -1742,6 +1770,13 @@ const MESSAGES = {
     syncSettingsImportFailed: "가져오기 실패",
     syncSettingsImportFailedDetail: "Wayleaf .wy 설정 파일을 선택하세요.",
     syncSettingsActionsLabel: "동기화 방식",
+    brandBaidu: "Baidu",
+    brandDoubao: "Doubao",
+    brandQwen: "Qwen",
+    brandJimeng: "Jimeng",
+    brandXiaohongshu: "RedNote",
+    brandDouyin: "Douyin",
+    brandZhihu: "Zhihu",
     searchSettingsDefaultTitle: "기본 검색",
     searchSettingsDefaultDescription: "일반 키워드에 사용할 기본 검색 항목 설정",
     searchSettingsDefaultHint: "일반 키워드에는 기본으로 표시된 기본 검색을 우선 사용합니다.",
@@ -1839,6 +1874,13 @@ const MESSAGES = {
     syncSettingsImportFailed: "Error al importar",
     syncSettingsImportFailedDetail: "Elige un archivo .wy de Wayleaf.",
     syncSettingsActionsLabel: "Método de sincronización",
+    brandBaidu: "Baidu",
+    brandDoubao: "Doubao",
+    brandQwen: "Qwen",
+    brandJimeng: "Jimeng",
+    brandXiaohongshu: "RedNote",
+    brandDouyin: "Douyin",
+    brandZhihu: "Zhihu",
     searchSettingsDefaultTitle: "Búsqueda básica",
     searchSettingsDefaultDescription: "Configura el buscador para consultas normales",
     searchSettingsDefaultHint: "Wayleaf usa el buscador básico marcado como predeterminado para palabras clave normales.",
@@ -1936,6 +1978,13 @@ const MESSAGES = {
     syncSettingsImportFailed: "Échec de l'import",
     syncSettingsImportFailedDetail: "Choisissez un fichier Wayleaf .wy.",
     syncSettingsActionsLabel: "Méthode de synchronisation",
+    brandBaidu: "Baidu",
+    brandDoubao: "Doubao",
+    brandQwen: "Qwen",
+    brandJimeng: "Jimeng",
+    brandXiaohongshu: "RedNote",
+    brandDouyin: "Douyin",
+    brandZhihu: "Zhihu",
     searchSettingsDefaultTitle: "Recherche de base",
     searchSettingsDefaultDescription: "Configurer le moteur utilisé pour les requêtes normales",
     searchSettingsDefaultHint: "Wayleaf utilise le moteur de base marqué par défaut pour les mots-clés normaux.",
@@ -2033,6 +2082,13 @@ const MESSAGES = {
     syncSettingsImportFailed: "Import fehlgeschlagen",
     syncSettingsImportFailedDetail: "Wähle eine Wayleaf-.wy-Datei.",
     syncSettingsActionsLabel: "Synchronisierungsart",
+    brandBaidu: "Baidu",
+    brandDoubao: "Doubao",
+    brandQwen: "Qwen",
+    brandJimeng: "Jimeng",
+    brandXiaohongshu: "RedNote",
+    brandDouyin: "Douyin",
+    brandZhihu: "Zhihu",
     searchSettingsDefaultTitle: "Basissuche",
     searchSettingsDefaultDescription: "Suchziel für normale Suchanfragen konfigurieren",
     searchSettingsDefaultHint: "Wayleaf verwendet für normale Suchbegriffe die als Standard markierte Basissuche.",
@@ -3480,7 +3536,7 @@ function searchEngineLabel(engine) {
   if (!engine) {
     return "";
   }
-  return engine.labelKey ? t(engine.labelKey) : (engine.label || "");
+  return engine.customLabel || (engine.labelKey ? t(engine.labelKey) : (engine.label || ""));
 }
 
 function themePaletteLabel(palette) {
@@ -4185,7 +4241,7 @@ function defaultSearchSettings() {
     aiEngines: Object.fromEntries(defaultAiSearchEngines().map((engine) => [
       engine.id,
       {
-        label: engine.label,
+        label: "",
         commands: aiEngineCommands(engine),
         searchUrl: engine.searchUrl || engine.directUrl || ""
       }
@@ -4203,7 +4259,7 @@ function normalizeSearchSettings(value) {
     const saved = value?.aiEngines?.[engine.id] || {};
     const fallbackCommands = fallback.aiEngines[engine.id]?.commands || aiEngineCommands(engine);
     const commands = normalizeAiCommandList(saved.commands, fallbackCommands);
-    const label = normalizeSettingText(saved.label, engine.label, 32);
+    const label = normalizeSearchEngineCustomLabel(saved.label, engine);
     const searchUrl = normalizeSearchSettingsUrl(saved.searchUrl, engine.searchUrl || engine.directUrl || "");
     aiEngines[engine.id] = { label, commands, searchUrl };
   });
@@ -4222,7 +4278,7 @@ function applySearchSettings(settings, options = {}) {
     if (!aiSettings || !nextEngine.aiDirect) {
       return nextEngine;
     }
-    nextEngine.label = aiSettings.label;
+    nextEngine.customLabel = aiSettings.label;
     nextEngine.commands = aiSettings.commands;
     nextEngine.command = aiSettings.commands[0] || nextEngine.command;
     nextEngine.searchUrl = aiSettings.searchUrl;
@@ -4284,6 +4340,15 @@ function platformSearchTargets() {
 function normalizeSettingText(value, fallback, maxLength) {
   const normalized = normalizeText(value).slice(0, maxLength);
   return normalized || fallback;
+}
+
+function normalizeSearchEngineCustomLabel(value, engine) {
+  const label = normalizeSettingText(value, "", 32);
+  const builtInLabels = new Set([
+    engine.label,
+    ...SUPPORTED_LOCALES.map((locale) => MESSAGES[locale]?.[engine.labelKey])
+  ].filter(Boolean));
+  return builtInLabels.has(label) ? "" : label;
 }
 
 function normalizeAiCommandList(value, fallbackCommands) {
@@ -4354,7 +4419,7 @@ function createAiEngineSettingsCard(engine) {
       label: t("searchSettingsEngineName"),
       field: "label",
       name: `${engine.id}-label`,
-      value: engine.label
+      value: searchEngineLabel(engine)
     }),
     createSearchSettingsInput({
       label: t("searchSettingsEngineCommands"),
@@ -4401,6 +4466,7 @@ function createPlatformSearchSettingsCard(platform) {
     engine: {
       id: platform.id,
       label: platform.label,
+      labelKey: platform.labelKey,
       searchUrl: platform.iconUrl || platform.searchUrl
     },
     meta: `${t("searchSettingsPlatformPrefix")}: ${prefixes} · ${platformSearchBehaviorLabel(platform)}`,
@@ -4645,7 +4711,7 @@ function updateQuickSearchModeUi() {
   const platform = engine.local ? platformSearchTargetById(activePlatformSearchTarget) : null;
   const modeTarget = platform || engine;
   const placeholder = platform
-    ? t("quickSearchPlatformPlaceholder", { platform: platform.label })
+    ? t("quickSearchPlatformPlaceholder", { platform: searchEngineLabel(platform) })
     : googleAiSearchModeActive
       ? t("quickSearchAiPlaceholder", { engine: "Google AI" })
       : engine.local
@@ -4735,7 +4801,7 @@ function renderAiEnginePill(engine, options = {}) {
   const explicitIcon = explicitAiIconUrl(target);
   const iconSite = {
     url: target.searchUrl || target.directUrl || "",
-    title: target.label || searchEngineLabel(target)
+    title: searchEngineLabel(target)
   };
   if (explicitIcon) {
     applyExplicitSiteIcon(icon, iconSite, explicitIcon);
@@ -6099,10 +6165,10 @@ function renderPlatformActivationHint(value) {
     return false;
   }
   const label = match.alternative
-    ? `${match.prefix}: ${match.platform.label} · ${match.alternative.prefix}: ${match.alternative.platform.label}`
+    ? `${match.prefix}: ${searchEngineLabel(match.platform)} · ${match.alternative.prefix}: ${searchEngineLabel(match.alternative.platform)}`
     : t("quickSearchPlatformActivationHint", {
       prefix: match.prefix,
-      platform: match.platform.label
+      platform: searchEngineLabel(match.platform)
     });
   platformActivationHint.textContent = label;
   platformActivationHint.title = label;
@@ -6417,7 +6483,7 @@ function createSearchEngineSuggestion(query) {
       type: "engine-search",
       title: query,
       meta: "",
-      hint: t("quickSearchWithPlatform", { platform: platform.label }),
+      hint: t("quickSearchWithPlatform", { platform: searchEngineLabel(platform) }),
       query,
       selectedPlatformId: platform.id
     };

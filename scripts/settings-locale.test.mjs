@@ -98,6 +98,13 @@ assert.doesNotMatch(
 
 const settingsLocaleKeys = [
   "quickSearchAggregate",
+  "brandBaidu",
+  "brandDoubao",
+  "brandQwen",
+  "brandJimeng",
+  "brandXiaohongshu",
+  "brandDouyin",
+  "brandZhihu",
   "openSettings",
   "settingsBackHome",
   "settingsTitle",
@@ -187,6 +194,45 @@ assert.match(
   /\{ id: "local", label: "Aggregate search", labelKey: "quickSearchAggregate", local: true \}/,
   "The local aggregate search engine should expose a locale key for display."
 );
+
+for (const [engineId, label, labelKey] of [
+  ["baidu", "Baidu", "brandBaidu"],
+  ["doubao", "Doubao", "brandDoubao"],
+  ["qwen", "Qwen", "brandQwen"],
+  ["jimeng", "Jimeng", "brandJimeng"],
+  ["xiaohongshu", "RedNote", "brandXiaohongshu"],
+  ["douyin", "Douyin", "brandDouyin"],
+  ["zhihu", "Zhihu", "brandZhihu"]
+]) {
+  assert.match(
+    source,
+    new RegExp(`\\{ id: "${engineId}"[^}]*label: "${label}", labelKey: "${labelKey}"`),
+    `${engineId} should use an English baseline plus a localized display key.`
+  );
+}
+
+for (const locale of ["en", "ja", "ko", "es", "fr", "de"]) {
+  for (const key of ["brandBaidu", "brandDoubao", "brandQwen", "brandJimeng", "brandXiaohongshu", "brandDouyin", "brandZhihu"]) {
+    assert.doesNotMatch(messages[locale][key], /[\u3400-\u9fff]/, `${locale}.${key} should not leak a Chinese default name.`);
+  }
+}
+
+const normalizeCustomLabelSource = source.match(/function normalizeSearchEngineCustomLabel\(value, engine\) \{[\s\S]*?\n\}/)?.[0];
+assert.ok(normalizeCustomLabelSource, "Built-in search engine label migration should be declared.");
+const normalizeCustomLabel = Function(
+  "normalizeSettingText",
+  "SUPPORTED_LOCALES",
+  "MESSAGES",
+  `${normalizeCustomLabelSource}; return normalizeSearchEngineCustomLabel;`
+)(
+  (value, fallback, maxLength) => String(value || "").trim().slice(0, maxLength) || fallback,
+  supportedLocales,
+  messages
+);
+const doubaoEngine = { label: "Doubao", labelKey: "brandDoubao" };
+assert.equal(normalizeCustomLabel("豆包", doubaoEngine), "", "A saved Simplified Chinese default should migrate to the active locale.");
+assert.equal(normalizeCustomLabel("Doubao", doubaoEngine), "", "A saved English default should remain locale-driven.");
+assert.equal(normalizeCustomLabel("My assistant", doubaoEngine), "My assistant", "A user-customized engine name should remain unchanged.");
 
 assert.match(
   source,

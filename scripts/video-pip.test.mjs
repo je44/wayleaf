@@ -35,6 +35,10 @@ for (const locale of ["zh-CN", "zh-TW", "en", "ja", "ko", "es", "fr", "de"]) {
   }
 }
 
+for (const locale of ["zh-CN", "zh-TW", "en", "ja", "ko", "es", "fr", "de"]) {
+  assert.match(controllerSource, new RegExp(`(?:"${locale}"|${locale}):`), `Video extraction prompt should cover ${locale}.`);
+}
+
 const videoContentScript = manifest.content_scripts.find((entry) => entry.js?.includes("video-pip.js"));
 assert.equal(videoContentScript, undefined, "Video PiP should not statically inject into every http/https frame.");
 for (const runtimeFile of ["video-pip.js", "video-pip-coordinator.js"]) {
@@ -304,7 +308,10 @@ function createControllerHarness(initialController = undefined, options = {}) {
     storage: {
       local: {
         get(_defaults, callback) {
-          callback({ videoPipGlobalEnabled: false });
+          callback({
+            videoPipGlobalEnabled: false,
+            languagePreference: options.languagePreference || "system"
+          });
         }
       },
       onChanged: {
@@ -484,14 +491,14 @@ assert.equal(harness.requestCount, 0, "Toolbar messages must not enter generic P
 storageListeners[0]({ videoPipGlobalEnabled: { newValue: true } }, "local");
 assert.equal(typeof harness.mediaSessionHandler, "function", "Global PiP should register the automatic PiP media-session handler.");
 
-const extractHarness = createControllerHarness();
+const extractHarness = createControllerHarness(undefined, { languagePreference: "en" });
 extractHarness.documentMock.querySelectorAll = querySelectorAllForLightAndShadow([extractHarness.video]);
 let extractStartResponse = null;
 extractHarness.runtimeListeners[0]({ action: "wayleaf:social-video-extract-start" }, {}, (response) => {
   extractStartResponse = response;
 });
 assert.equal(extractStartResponse?.extractorActive, true, "Toolbar extraction should start a page-level video picker.");
-assert.equal(extractHarness.appendedElements.at(-2)?.textContent, "選擇需要小窗化的視頻窗口", "Extraction should show the pinned bottom prompt.");
+assert.equal(extractHarness.appendedElements.at(-2)?.textContent, "Select a video to open in Picture-in-Picture", "English extraction should not leak the previous Chinese prompt.");
 assert.equal(extractHarness.appendedElements.at(-2)?.style.background, "rgb(0 0 0 / 80%)", "Extraction prompt should use an 80% transparent dark capsule.");
 assert.equal(extractHarness.appendedElements.at(-2)?.style.boxShadow, "0 14px 34px rgb(0 0 0 / 26%)", "Extraction prompt should use a soft outer shadow.");
 assert.equal(extractHarness.appendedElements.at(-2)?.style.borderRadius, "999px", "Extraction prompt should render as a capsule.");
@@ -512,6 +519,11 @@ assert.equal(extractHarness.requestCount, 1, "Clicking a detected video should r
 assert.equal(extractPrompt?.isConnected, false, "Extraction prompt should disappear after choosing a video.");
 assert.equal(extractHarness.appendedElements.at(-1)?.isConnected, false, "Extraction should remove the overlay after a PiP attempt.");
 assert.equal(extractHarness.coordinatorRequests.at(-1)?.type, "entered", "A successful extraction should clear the toolbar waiting state.");
+
+const traditionalChineseExtractHarness = createControllerHarness(undefined, { languagePreference: "zh-TW" });
+traditionalChineseExtractHarness.documentMock.querySelectorAll = querySelectorAllForLightAndShadow([traditionalChineseExtractHarness.video]);
+traditionalChineseExtractHarness.runtimeListeners[0]({ action: "wayleaf:social-video-extract-start" }, {}, () => {});
+assert.equal(traditionalChineseExtractHarness.appendedElements.at(-2)?.textContent, "選擇要以小視窗播放的影片", "Traditional Chinese extraction should use localized copy.");
 
 documentMock.visibilityState = "hidden";
 dispatch("visibilitychange");

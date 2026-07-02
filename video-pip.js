@@ -3,6 +3,7 @@
 (() => {
   const CONTROLLER_KEY = "__wayleafVideoPipController";
   const GLOBAL_ENABLED_STORAGE_KEY = "videoPipGlobalEnabled";
+  const LANGUAGE_STORAGE_KEY = "languagePreference";
   const EXTRACT_START_ACTION = "wayleaf:social-video-extract-start";
   const EXTRACT_STATUS_ACTION = "wayleaf:social-video-extract-status";
   const REQUEST_ACTION = "wayleaf:video-pip-request";
@@ -10,7 +11,18 @@
   const EXTRACT_HIGHLIGHT_COLOR = "#00b8d9";
   const MIN_EXTRACT_VIDEO_AREA = 12000;
   const SOCIAL_VIDEO_EXTRACT_HOSTS = new Set(["x.com", "twitter.com", "xiaohongshu.com"]);
+  const EXTRACT_PROMPT_BY_LOCALE = {
+    "zh-CN": "选择需要小窗播放的视频",
+    "zh-TW": "選擇要以小視窗播放的影片",
+    en: "Select a video to open in Picture-in-Picture",
+    ja: "ピクチャーインピクチャーで開く動画を選択",
+    ko: "PIP로 열 동영상을 선택하세요",
+    es: "Selecciona un vídeo para abrirlo en imagen en imagen",
+    fr: "Sélectionnez une vidéo à ouvrir en image dans l’image",
+    de: "Wähle ein Video für Bild-in-Bild aus"
+  };
   let globalEnabled = false;
+  let languagePreference = "system";
   let entering = false;
   let extractEntering = false;
   let extractorActive = false;
@@ -404,7 +416,7 @@
       return extractPrompt;
     }
     const prompt = document.createElement("div");
-    prompt.textContent = "選擇需要小窗化的視頻窗口";
+    prompt.textContent = extractPromptText();
     prompt.style.setProperty("all", "initial");
     prompt.style.position = "fixed";
     prompt.style.left = "50%";
@@ -429,6 +441,17 @@
     (document.body || document.documentElement)?.append(prompt);
     extractPrompt = prompt;
     return prompt;
+  }
+
+  function extractPromptText() {
+    const language = languagePreference === "system"
+      ? (guardExtensionContext(() => chrome.i18n?.getUILanguage?.(), "") || navigator.language || "en")
+      : languagePreference;
+    const normalized = String(language).replace("_", "-");
+    const locale = /^zh(?:-|$)/i.test(normalized)
+      ? (/(?:tw|hk|mo|hant)/i.test(normalized) ? "zh-TW" : "zh-CN")
+      : normalized.split("-")[0].toLowerCase();
+    return EXTRACT_PROMPT_BY_LOCALE[locale] || EXTRACT_PROMPT_BY_LOCALE.en;
   }
 
   function removeExtractPrompt() {
@@ -688,12 +711,19 @@
   }
 
   try {
-    chrome.storage.local.get({ [GLOBAL_ENABLED_STORAGE_KEY]: false }, (result) => {
+    chrome.storage.local.get({
+      [GLOBAL_ENABLED_STORAGE_KEY]: false,
+      [LANGUAGE_STORAGE_KEY]: "system"
+    }, (result) => {
       updateGlobalEnabled(result?.[GLOBAL_ENABLED_STORAGE_KEY]);
+      languagePreference = result?.[LANGUAGE_STORAGE_KEY] || "system";
     });
     storageChangeListener = (changes, areaName) => {
       if (areaName === "local" && changes[GLOBAL_ENABLED_STORAGE_KEY]) {
         updateGlobalEnabled(changes[GLOBAL_ENABLED_STORAGE_KEY].newValue);
+      }
+      if (areaName === "local" && changes[LANGUAGE_STORAGE_KEY]) {
+        languagePreference = changes[LANGUAGE_STORAGE_KEY].newValue || "system";
       }
     };
     chrome.storage.onChanged.addListener(storageChangeListener);
