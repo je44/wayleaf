@@ -418,7 +418,7 @@
     prompt.style.background = "rgb(0 0 0 / 80%)";
     prompt.style.boxShadow = "0 14px 34px rgb(0 0 0 / 26%)";
     prompt.style.color = "#fff";
-    prompt.style.fontFamily = '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+    prompt.style.fontFamily = "system-ui, sans-serif";
     prompt.style.fontSize = "14px";
     prompt.style.fontWeight = "600";
     prompt.style.lineHeight = "20px";

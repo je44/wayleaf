@@ -1,10 +1,14 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
+import vm from "node:vm";
 
 const styles = readFileSync(new URL("../newtab.css", import.meta.url), "utf8");
 const html = readFileSync(new URL("../newtab.html", import.meta.url), "utf8");
 const source = readFileSync(new URL("../newtab.js", import.meta.url), "utf8");
 const packageSource = readFileSync(new URL("./package-release.sh", import.meta.url), "utf8");
+
+assert.match(styles, /:root\s*\{[\s\S]*font-family:\s*system-ui, sans-serif;/, "Global UI typography should follow the user's platform and locale.");
+assert.doesNotMatch(styles, /PingFang|Microsoft YaHei|-apple-system|BlinkMacSystemFont|Segoe UI/, "Global UI typography should not hard-code platform or Chinese locale fonts.");
 
 assert.match(
   html,
@@ -78,28 +82,61 @@ assert.doesNotMatch(
   "Disconnected custom-theme color picker code should stay removed."
 );
 
+const paletteSource = source.match(/const THEME_PALETTES = (?<value>\[[\s\S]*?\n\]);\nconst DEFAULT_LOCAL_SEARCH_ENGINE =/)?.groups?.value;
+assert.ok(paletteSource, "Theme palettes should remain readable by the palette regression check.");
+const visiblePalettes = vm.runInNewContext(paletteSource).filter(({ id }) => ["sage", "amber", "peach", "sky"].includes(id));
+
+function relativeLuminance(hex) {
+  return hex.slice(1).match(/../g).map((value) => Number.parseInt(value, 16) / 255)
+    .map((value) => value <= 0.04045 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4)
+    .reduce((sum, value, index) => sum + value * [0.2126, 0.7152, 0.0722][index], 0);
+}
+
+function contrastRatio(first, second) {
+  const [lighter, darker] = [relativeLuminance(first), relativeLuminance(second)].sort((a, b) => b - a);
+  return (lighter + 0.05) / (darker + 0.05);
+}
+
+for (const palette of visiblePalettes) {
+  for (const surface of ["paper", "panel", "panelSoft", "inputBg", "hoverBg"]) {
+    assert.ok(contrastRatio(palette.modes.light[surface], "#ffffff") >= 1.12, `${palette.id} ${surface} must remain distinct from white icon carriers.`);
+    assert.ok(contrastRatio(palette.modes.dark[surface], "#000000") >= 1.35, `${palette.id} ${surface} must remain distinct from black icon carriers.`);
+  }
+  for (const mode of ["light", "dark"]) {
+    const colors = palette.modes[mode];
+    assert.ok(contrastRatio(colors.ink, colors.panel) >= 7, `${palette.id} ${mode} primary text must meet enhanced contrast.`);
+    assert.ok(contrastRatio(colors.muted, colors.panel) >= 4.5, `${palette.id} ${mode} secondary text must meet normal-text contrast.`);
+    assert.ok(contrastRatio(colors.accent, colors.onAccent) >= 4.5, `${palette.id} ${mode} accent content must remain readable.`);
+  }
+}
+
+assert.match(styles, /\.search-panel\s*\{[\s\S]*linear-gradient\(var\(--input-bg\), var\(--input-bg\)\) padding-box/, "The main search surface should follow each palette input background.");
+assert.match(styles, /\.recent-card-inner\s*\{[\s\S]*background:\s*var\(--panel\);/, "Recent browsing cards should follow each palette panel background.");
+assert.match(styles, /\.settings-group\s*\{[\s\S]*background:\s*color-mix\(in srgb, var\(--panel\) 88%, transparent\);/, "Settings cards should follow each palette panel background.");
+assert.match(styles, /\.portal-panel\s*\{[\s\S]*background:\s*var\(--panel\);/, "The navigation hub should follow each palette panel background.");
+
 assert.match(
   source,
-  /id:\s*"amber"[\s\S]*light:\s*\{[\s\S]*onAccent:\s*"#ffffff"[\s\S]*dark:/,
-  "Amber light palette should use white hint text on accent surfaces."
+  /id:\s*"sage"[\s\S]*accent:\s*"#26766d"[\s\S]*focus:\s*"#b85f58"[\s\S]*paper:\s*"#eceee9"/,
+  "The Wayleaf palette should reuse the extension icon's leaf and coral family on quiet surfaces."
 );
 
 assert.match(
   source,
-  /id:\s*"amber"[\s\S]*dark:\s*\{[\s\S]*onAccent:\s*"#ffffff"[\s\S]*id:\s*"sky"/,
-  "Amber dark palette should use white hint text on accent surfaces."
+  /themePaletteSage:\s*"Wayleaf"[\s\S]*themePaletteAmber:\s*"Yuzu"[\s\S]*themePaletteSky:\s*"Denim"[\s\S]*themePalettePeach:\s*"Papaya"/,
+  "The English palette labels should describe the new material color directions."
 );
 
 assert.match(
   source,
-  /id:\s*"peach"[\s\S]*light:\s*\{[\s\S]*onAccent:\s*"#ffffff"[\s\S]*dark:/,
-  "Coral light palette should use white hint text on accent surfaces."
+  /id:\s*"amber"[\s\S]*accent:\s*"#8a6515"[\s\S]*id:\s*"sky"[\s\S]*accent:\s*"#3a6f96"[\s\S]*id:\s*"peach"[\s\S]*accent:\s*"#a95643"/,
+  "Yuzu, denim, and papaya should keep distinct restrained accent families."
 );
 
 assert.match(
   source,
-  /id:\s*"peach"[\s\S]*dark:\s*\{[\s\S]*onAccent:\s*"#ffffff"[\s\S]*id:\s*"neutral"/,
-  "Coral dark palette should use white hint text on accent surfaces."
+  /id:\s*"peach"[\s\S]*dark:\s*\{[\s\S]*onAccent:\s*"#282422"[\s\S]*id:\s*"neutral"/,
+  "Papaya dark mode should use dark text on its lighter accent."
 );
 
 assert.match(
