@@ -14595,7 +14595,7 @@ function createRecentFolderItem(group, options = {}) {
     card.dataset.pageIndex = String(index);
     face.href = activePage?.url || group.url;
     face.setAttribute("aria-label", t("openPage", { title: activeTitle }));
-    pageTitle.textContent = activeTitle;
+    pageTitle.textContent = index === 0 ? "" : activeTitle;
     previousButton.disabled = pageCount < 2;
     nextButton.disabled = pageCount < 2;
     pageIndicator.querySelectorAll(".recent-card-page-dot").forEach((dot, dotIndex) => {
