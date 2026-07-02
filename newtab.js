@@ -42,7 +42,7 @@ const SEARCH_SETTINGS_STORAGE_KEY = "searchSettings";
 const VIDEO_PIP_GLOBAL_ENABLED_STORAGE_KEY = "videoPipGlobalEnabled";
 const SOCIAL_VIDEO_EXTRACTOR_ENABLED_STORAGE_KEY = "socialVideoExtractorEnabled";
 const FIRST_PAINT_CACHE_STORAGE_KEY = "__wayleaf_first_paint_cache__";
-const FIRST_PAINT_CACHE_VERSION = 8;
+const FIRST_PAINT_CACHE_VERSION = 9;
 const AI_DIRECT_PROMPT_STORAGE_KEY = "aiDirectPrompts";
 const AI_PROMPT_HISTORY_STORAGE_KEY = "aiPromptHistory";
 const SYNC_META_STORAGE_KEY = "syncMeta";
@@ -782,9 +782,8 @@ const GENERIC_SITE_FALLBACK_TILE_COLOR = "#f04424";
 const SITE_ICON_FILE_BY_SITE_KEY = Object.freeze({
   "1688.com": "1688.ico",
   "alipay.com": "alipay.svg",
-  "alibaba.com": "alibabadotcom.svg",
+  "alibaba.com": "alibaba.svg",
   "aistudio.google.com": "aistudio.svg",
-  "aws.amazon.com": "aws.svg",
   "atlassian.net": "jira.svg",
   "azure.microsoft.com": "azure.svg",
   "b.ai": "bai.png",
@@ -793,7 +792,6 @@ const SITE_ICON_FILE_BY_SITE_KEY = Object.freeze({
   "bsky.app": "bluesky.svg",
   "chrome.google.com": "chrome.svg",
   "cloud.google.com": "googlecloud.svg",
-  "code.visualstudio.com": "visualstudiocode.svg",
   "colab.research.google.com": "colab.svg",
   "datadoghq.com": "datadog.svg",
   "developer.mozilla.org": "mdn.svg",
@@ -816,16 +814,12 @@ const SITE_ICON_FILE_BY_SITE_KEY = Object.freeze({
   "mimo.xiaomi.com": "xiaomimimo.svg",
   "mgtv.com": "mgtv.svg",
   "music.163.com": "neteasecloudmusic.svg",
-  "nextjs.org": "nextdotjs.svg",
   "nodejs.org": "nodedotjs.svg",
   "npmjs.com": "npm.svg",
-  "office.com": "microsoftoffice.svg",
   "pinduoduo.com": "pinduoduo.svg",
   "proton.me": "protonmail.svg",
   "qq.com": "qq.svg",
-  "teams.microsoft.com": "microsoftteams.svg",
   "tmall.com": "tmall.png",
-  "trip.com": "tripdotcom.svg",
   "uizard.io": "uizard.ico",
   "v.qq.com": "vqq.svg",
   "vuejs.org": "vuedotjs.svg",
@@ -10638,7 +10632,7 @@ function displayIconSource(icon, source, options = {}) {
   // Zero-delay: when the raw SVG text is already cached, recolor synchronously so the
   // caller sets the final (recolored) src in one tick — no raw-then-recolor swap, and no
   // visual change (same applySvgGlyphColor output as the async path).
-  const syncText = isSvgDataUrl(source) ? "" : localSiteIconRawSvgText(source);
+  const syncText = isSvgDataUrl(source) ? decodeSvgDataUrl(source) : localSiteIconRawSvgText(source);
   if (syncText) {
     return svgTextDataUrl(applySvgGlyphColor(syncText, glyphColor));
   }

@@ -111,10 +111,15 @@ const runtimeSiteIconMapSource = source.match(/const SITE_ICON_FILE_BY_SITE_KEY 
 assert.equal(
   [...runtimeSiteIconMapSource.matchAll(/:\s*"([^\"]+\.(?:svg|png|ico))"/g)]
     .map((match) => match[1])
-    .filter((fileName) => !siteIconIndex.includes(fileName))
+    .filter((fileName) => !siteIconFiles.has(fileName))
     .length,
   0,
-  "Runtime local-icon mappings must stay represented in the icon index so missing files can enter cloud recovery."
+  "Runtime local-icon mappings must point only at files present in the bundle."
+);
+assert.deepEqual(
+  siteIconIndex.filter((fileName) => !siteIconFiles.has(fileName)),
+  [],
+  "Local icon index must not list files missing from the bundle; stale entries block cloud recovery."
 );
 
 assert.match(source, /@lobehub\/icons-static-svg/, "LobeHub static SVG package must be available as a supplemental remote provider.");
@@ -183,7 +188,7 @@ assert.equal(
   "Settings engine icons must not consume shared site icon edge variables."
 );
 assert.match(source, /function applySampledFaviconTile[\s\S]*const tileMode = icon\.dataset\.iconTile === "brand" \? "brand" : "plain";[\s\S]*fuseEmbeddedFaviconTile\(icon, sample, color, tileColors, options\);/, "Sampled favicon tiles must preserve local bitmap markers and run embedded tile fusion.");
-assert.match(source, /const FIRST_PAINT_CACHE_VERSION = 8;/, "First-paint cache must be bumped when adaptive favicon carrier output changes.");
+assert.match(source, /const FIRST_PAINT_CACHE_VERSION = 9;/, "First-paint cache must be bumped when visible icon render output changes.");
 assert.match(source, /function primeSiteIconRawSvgCacheFromStorage\([\s\S]*siteIconRawSvgStalePaths\.add\(path\);/, "Cached local SVGs must revalidate after same-version asset edits.");
 assert.doesNotMatch(source, /entry\?\.version !== currentVersion/, "Local SVG revalidation must not depend on a manifest-version bump.");
 assert.match(source, /function revalidateDisplayedLocalSiteIcon\([\s\S]*fetch\(key, \{ cache: "no-store" \}\)/, "Local SVG revalidation must bypass the browser cache.");
@@ -416,11 +421,10 @@ function remoteBrandShouldFetchCandidateForTest(slugs, candidate) {
 
 const SITE_ICON_FILE_BY_SITE_KEY_FOR_TEST = Object.freeze({
   "1688.com": "1688.ico",
-  "alibaba.com": "alibabadotcom.svg",
+  "alibaba.com": "alibaba.svg",
   "alipay.com": "alipay.svg",
   "aistudio.google.com": "aistudio.svg",
   "atlassian.net": "jira.svg",
-  "aws.amazon.com": "aws.svg",
   "azure.microsoft.com": "azure.svg",
   "b.ai": "bai.png",
   "bitbucket.org": "bitbucket.svg",
@@ -442,14 +446,11 @@ const SITE_ICON_FILE_BY_SITE_KEY_FOR_TEST = Object.freeze({
   "music.163.com": "neteasecloudmusic.svg",
   "kimi.com": "kimi.svg",
   "npmjs.com": "npm.svg",
-  "office.com": "microsoftoffice.svg",
   "openai.com": "chatgpt.svg",
   "pinduoduo.com": "pinduoduo.svg",
   "qq.com": "qq.svg",
   "stackoverflow.com": "stackoverflow.svg",
   "store.epicgames.com": "epicgames.svg",
-  "teams.microsoft.com": "microsoftteams.svg",
-  "trip.com": "tripdotcom.svg",
   "v.qq.com": "vqq.svg",
   "xiaohongshu.com": "xiaohongshu.svg"
 });
@@ -4749,14 +4750,14 @@ assert.equal(remoteBrandProviderSlugForCandidateForTest(theSvgProviderSlugs, "vi
 assert.equal(remoteBrandProviderHasSlugForTest(theSvgProviderSlugs, "wordmark"), false, "theSVG provider index should not treat non-default variants as brand slugs.");
 
 assert.deepEqual(
-  ["bilibili.com", "github.com", "google.com", "figma.com", "slack.com", "spotify.com", "suno.com", "notion.so"]
+  ["bilibili.com", "github.com", "google.com", "figma.com", "discord.com", "spotify.com", "suno.com", "notion.so"]
     .map((siteKey) => [siteKey, localIconForSiteKeyForTest(siteKey), remoteProviderCanRunForSiteKeyForTest(siteKey)]),
   [
     ["bilibili.com", "icons/sites/bilibili.svg", false],
     ["github.com", "icons/sites/github.svg", false],
     ["google.com", "icons/sites/google.svg", false],
     ["figma.com", "icons/sites/figma.svg", false],
-    ["slack.com", "icons/sites/slack.svg", false],
+    ["discord.com", "icons/sites/discord.svg", false],
     ["spotify.com", "icons/sites/spotify.svg", false],
     ["suno.com", "icons/sites/suno.svg", false],
     ["notion.so", "icons/sites/notion.svg", false]
@@ -4797,10 +4798,10 @@ assert.deepEqual(
     ["chromewebstore.google.com", true, "icons/sites/chrome.svg", false],
     ["console.firebase.google.com", true, "icons/sites/firebase.svg", false],
     ["firefly.adobe.com", true, "icons/sites/adobefirefly.svg", false],
-    ["console.aws.amazon.com", true, "icons/sites/aws.svg", false],
+    ["console.aws.amazon.com", true, "", true],
     ["portal.azure.com", true, "icons/sites/azure.svg", false],
-    ["microsoft365.com", true, "icons/sites/microsoftoffice.svg", false],
-    ["teams.live.com", true, "icons/sites/microsoftteams.svg", false],
+    ["microsoft365.com", true, "", true],
+    ["teams.live.com", true, "", true],
     ["jira.atlassian.com", true, "icons/sites/jira.svg", false],
     ["bitbucket.atlassian.com", true, "icons/sites/bitbucket.svg", false],
     ["chat.openai.com", true, "icons/sites/chatgpt.svg", false],
@@ -4923,6 +4924,23 @@ const cloudProviderSamples = [
     tileColors: { light: brandIconLightCarrierColorForTest("#fcbfbd"), dark: "#f8fafc" },
     lightGlyph: "#ffffff",
     darkGlyph: "#b08c89"
+  },
+  {
+    siteKey: "unsplash.com",
+    siteName: "Unsplash",
+    color: "#000000",
+    svg: '<svg fill="#000000" role="img" viewBox="0 0 24 24"><title>Unsplash</title><path d="M7.5 6.75V0h9v6.75h-9zm9 3.75H24V24H0V10.5h7.5v6.75h9V10.5z"/></svg>',
+    descriptor: {
+      brandColor: "#000000",
+      isMonochrome: true,
+      renderMode: "mask",
+      visibleColors: ["#000000"],
+      embeddedCarrierColor: "",
+      qualityScore: 100
+    },
+    tileColors: { light: "#000000", dark: "#f8fafc" },
+    lightGlyph: "#ffffff",
+    darkGlyph: "#000000"
   }
 ];
 
@@ -4946,6 +4964,7 @@ for (const sample of cloudProviderSamples) {
     `${sample.siteName} cached cloud SVG should use the same tile colors as local SVG rendering.`
   );
   assert.match(decodeSvgDataUrl(icon.src), new RegExp(`fill="${sample.lightGlyph}"`), `${sample.siteName} cached cloud SVG should use the shared light glyph rule.`);
+  assert.doesNotMatch(decodeSvgDataUrl(icon.src), /<svg[^>]*fill="#000000"/, `${sample.siteName} cached cloud SVG must not render the raw provider SVG as the first visible source.`);
   assertReadableIconPair(sample.tileColors.light, sample.lightGlyph, `${sample.siteName} cloud day carrier and glyph must be readable`);
   testTheme = "dark";
   refreshAdaptiveSiteIconsForTest([icon]);
@@ -5142,14 +5161,13 @@ assert.deepEqual(
 assert.equal(siteIconBrandColorForTest("mimo.mi.com", "icons/sites/xiaomimimo.svg"), "#000000", "MiMo should use a black tile for mask recoloring.");
 assert.equal(siteIconBrandColorForTest("openai.com", "icons/sites/chatgpt.svg"), "#000000", "ChatGPT/OpenAI local implicit-black SVG should not be overwritten by the OpenAI VI table color.");
 assert.equal(siteIconBrandColorForTest("xiaohongshu.com", "icons/sites/xiaohongshu.svg"), "#ff2442", "Xiaohongshu's explicit red SVG should drive its monochrome carrier.");
-assert.equal(siteIconBrandColorForTest("alibaba.com", "icons/sites/alibabadotcom.svg"), "#ff6a00", "Known VI colors should override black marketplace local SVG exports.");
+assert.equal(siteIconBrandColorForTest("alibaba.com", "icons/sites/alibaba.svg"), "#ff6003", "Alibaba should use the deployed local SVG color.");
 assert.equal(source.includes('"netflix.com":'), false, "Netflix should not be special-cased in the VI color table.");
 assert.equal(localSiteIconBrandColorForTest("icons/sites/netflix.svg"), "#e50914", "Netflix should recover its local SVG red as a trusted monochrome VI color.");
 assert.equal(siteIconBrandColorForTest("netflix.com", "icons/sites/netflix.svg"), "#e50914", "Netflix should use parsed local SVG VI color when the siteKey table has no entry.");
 assert.equal(siteIconBrandColorForTest("youtube.com", "icons/sites/youtube.svg"), "#ff0000", "YouTube should still prefer its maintained VI table color.");
-assert.equal(localSiteIconBrandColorForTest("icons/sites/tripdotcom.svg"), "#000000", "Trip.com local SVG should have a readable implicit-black mask fallback.");
-assert.equal(localSiteIconHasExplicitBrandColorForTest("icons/sites/tripdotcom.svg"), false, "Trip.com local SVG still has no explicit VI color.");
-assert.equal(localIconNeedsRemoteBrandColorForTest("trip.com", "icons/sites/tripdotcom.svg"), true, "Trip.com local SVG should allow a remote default SVG to supplement VI color.");
+assert.equal(localIconForSiteKeyForTest("trip.com"), "", "Trip.com should not retain a deleted local SVG mapping.");
+assert.equal(remoteProviderCanRunForSiteKeyForTest("trip.com"), true, "Trip.com should recover through the cloud provider after local SVG deletion.");
 assert.equal(localSiteIconRenderModeForTest("icons/sites/unlistedmulticolor.svg"), "original", "Local multicolor SVGs should classify as original without a manual siteKey list.");
 assert.equal(localSiteIconRenderModeForTest("icons/sites/mgtv.svg"), "original", "Mango TV's orange and dark-gray SVG should classify as original artwork without a site whitelist.");
 assert.equal(localSiteIconRenderModeForTest("icons/sites/qq.svg"), "original", "QQ's multicolor local SVG should preserve original artwork.");
@@ -5159,7 +5177,6 @@ assert.deepEqual(
   "QQ's implicit black plus red/yellow artwork should use the paper app-icon carrier."
 );
 assert.equal(localSiteIconRenderModeForTest("icons/sites/pinduoduo.svg"), "original", "Pinduoduo multicolor local SVG should preserve original artwork.");
-assert.equal(localSiteIconRenderModeForTest("icons/sites/microsoftteams.svg"), "gradient", "Microsoft Teams gradient local SVG should use the palette-aware gradient carrier.");
 assert.deepEqual(
   brandIconTileColorsForTest("#ffffff", "unlisted-multicolor.example", "icons/sites/unlistedmulticolor.svg"),
   { light: "#ffffff", dark: "#ffffff" },
@@ -5170,7 +5187,7 @@ assertPaletteCarrierSeparatedForTest("icons/sites/unlistedmulticolor.svg", "#fff
 
 [
   { name: "Xiaohongshu", url: "https://www.xiaohongshu.com/", lightTile: "#ff2442", darkGlyph: "#ff2442" },
-  { name: "Alibaba", url: "https://www.alibaba.com/", lightTile: "#ff6a00", darkGlyph: "#f56701" }
+  { name: "Alibaba", url: "https://www.alibaba.com/", lightTile: "#ff6003", darkGlyph: "#ff6003" }
 ].forEach((sample) => {
   const icon = new TestIcon();
   testTheme = "light";
@@ -5184,8 +5201,7 @@ assertPaletteCarrierSeparatedForTest("icons/sites/unlistedmulticolor.svg", "#fff
 });
 
 [
-  { name: "Pinduoduo", url: "https://www.pinduoduo.com/", source: "icons/sites/pinduoduo.svg", lightTile: "#f40009", darkTile: "#f40009", brandColor: "#e02e24", renderMode: "original", embeddedCarrierColor: "#f40009" },
-  { name: "Microsoft Teams", url: "https://teams.microsoft.com/", source: "icons/sites/microsoftteams.svg", lightTile: "#ffffff", darkTile: "#ffffff" }
+  { name: "Pinduoduo", url: "https://www.pinduoduo.com/", source: "icons/sites/pinduoduo.svg", lightTile: "#f40009", darkTile: "#f40009", brandColor: "#e02e24", renderMode: "original", embeddedCarrierColor: "#f40009" }
 ].forEach((sample) => {
   const icon = new TestIcon();
   testTheme = "light";
@@ -5242,29 +5258,6 @@ assertPaletteCarrierSeparatedForTest("icons/sites/unlistedmulticolor.svg", "#fff
   }, "OpenAI local implicit-black SVG after remote fallback probe");
 }
 
-{
-  const tripRemoteDefaultSvg = tripdotcomSvgSource.replace("<svg ", '<svg fill="#287DFA" ');
-  const remoteDataUrl = svgTextDataUrl(prepareRemoteBrandSvgForTest(tripRemoteDefaultSvg, { brandColor: "#287dfa", qualityScore: 100 }));
-  const providerCalls = [];
-  const icon = new TestIcon();
-  testTheme = "light";
-  applySiteIconForTest(icon, { url: "https://trip.com/", icon: "" });
-  assert.equal(icon.dataset.iconSource, "icons/sites/tripdotcom.svg", "Trip.com starts from the deployed local SVG.");
-  assert.equal(icon.dataset.remoteBrandRefreshEligible, "true", "Trip.com local SVG with no VI color should still refresh the remote provider.");
-  assert.equal(discoverRemoteBrandIconDataUrlForTest("https://trip.com/", (siteKey) => {
-    providerCalls.push(siteKey);
-    return remoteDataUrl;
-  }), remoteDataUrl, "Trip.com remote provider may supplement VI color even though a local SVG exists.");
-  assert.deepEqual(providerCalls, ["trip.com"], "Trip.com provider refresh stays scoped to its site key.");
-  assert.equal(applyRemoteBrandColorToLocalIconForTest(icon, { url: "https://trip.com/" }, "icons/sites/tripdotcom.svg", remoteDataUrl), true, "Trip.com remote default SVG color should hydrate the local icon strategy.");
-  assert.equal(icon.dataset.iconSource, "icons/sites/tripdotcom.svg", "Trip.com keeps the local SVG as the render source after remote VI hydration.");
-  assertIconRenderStrategy(icon, {
-    lightTile: "#287dfa",
-    darkTile: "#f8fafc",
-    lightGlyph: "#ffffff",
-    darkGlyph: "#287dfa"
-  }, "Trip.com local SVG with cloud VI color");
-}
 
 [
   {
@@ -5278,18 +5271,6 @@ assertPaletteCarrierSeparatedForTest("icons/sites/unlistedmulticolor.svg", "#fff
     url: "https://store.epicgames.com/",
     source: "icons/sites/epicgames.svg",
     color: "#313131"
-  },
-  {
-    name: "Roblox",
-    url: "https://www.roblox.com/",
-    source: "icons/sites/roblox.svg",
-    color: "#000000"
-  },
-  {
-    name: "Wikipedia",
-    url: "https://www.wikipedia.org/",
-    source: "icons/sites/wikipedia.svg",
-    color: "#000000"
   },
   {
     name: "Medium",
