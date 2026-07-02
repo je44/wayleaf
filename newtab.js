@@ -4453,9 +4453,9 @@ function createEngineSettingsCard({ engine, meta, actionLabel, current = false }
 
 function createSettingsEngineIcon(engine) {
   const engineUrl = engine.searchUrl || engine.directUrl || "";
-  const explicitIcon = engine.id === "zhihu" ? "assets/zhihu.svg"
-    : engine.id === "kimi" ? `${SITE_ICON_DIRECTORY}/kimi.svg`
-      : explicitAiIconUrl(engine);
+  const explicitIcon = (engine.id === "kimi" || engine.id === "zhihu")
+    ? `${SITE_ICON_DIRECTORY}/${engine.id}.svg`
+    : explicitAiIconUrl(engine);
   const iconSource = explicitIcon || localIconForUrl(engineUrl) || GENERIC_SITE_FALLBACK_ICON;
   const style = SETTINGS_ENGINE_ICON_STYLES[engine.id] || {};
   const label = searchEngineLabel(engine);

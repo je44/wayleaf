@@ -21,6 +21,7 @@ const huggingfaceSvgSource = readFileSync(new URL("../icons/sites/huggingface.sv
 const instagramSvgSource = readFileSync(new URL("../icons/sites/instagram.svg", import.meta.url), "utf8");
 const jimengSvgSource = readFileSync(new URL("../icons/sites/jimeng.svg", import.meta.url), "utf8");
 const kimiSvgSource = readFileSync(new URL("../icons/sites/kimi.svg", import.meta.url), "utf8");
+const zhihuSvgSource = readSiteIconFixture("zhihu.svg", '<svg viewBox="0 0 24 24"><path fill="none" d="M0 0h24v24H0z"/><path d="M2 2h20v20H2z"/></svg>');
 const linkedInSvgSource = readFileSync(new URL("../icons/sites/linkedin.svg", import.meta.url), "utf8");
 const grokSvgSource = readFileSync(new URL("../icons/sites/grok.svg", import.meta.url), "utf8");
 const dailymotionSvgSource = readFileSync(new URL("../icons/sites/dailymotion.svg", import.meta.url), "utf8");
@@ -158,6 +159,7 @@ assert.match(source, /function applyRemoteBrandColorToLocalIcon[\s\S]*localSiteI
 assert.match(source, /function keepsBrandIconOriginalOnBrandTile/, "Local SVGs with an embedded VI carrier can preserve original artwork on a brand tile.");
 assert.match(source, /"suno\.com": "#000000"/, "Suno's monochrome local SVG must share the black/white mask carrier used by X and GitHub.");
 assert.doesNotMatch(source, /nativeRoundedBrandIcon|NATIVE_ROUNDED_BRAND_ICON_SITE_KEYS/, "Grok must not keep a dedicated native-rounded SVG rendering branch.");
+assert.match(zhihuSvgSource, /<path\b/i, "Zhihu local SVG keeps a maskable path resource.");
 assert.match(linkedInSvgSource, /fill=["']#0A66C2["']/i, "LinkedIn local SVG keeps its explicit brand blue.");
 assert.match(source, /function discoverRemoteBrandIconDataUrl[\s\S]*localIconForUrl\(parsedUrl\.href\)[\s\S]*return "";/, "Remote provider discovery must short-circuit for deployed local icons.");
 assert.match(source, /function refreshRemoteBrandIcon[\s\S]*localIconForUrl\(site\.url\)[\s\S]*return;/, "Async remote refresh must short-circuit for deployed local icons.");
@@ -2804,7 +2806,8 @@ const LOCAL_SVG_SOURCE_BY_PATH_FOR_TEST = Object.freeze({
   "icons/sites/wechat.svg": wechatSvgSource,
   "icons/sites/spotify.svg": spotifySvgSource,
   "icons/sites/xiaohongshu.svg": xiaohongshuSvgSource,
-  "icons/sites/youtube.svg": youtubeSvgSource
+  "icons/sites/youtube.svg": youtubeSvgSource,
+  "icons/sites/zhihu.svg": zhihuSvgSource
 });
 
 const localSiteIconBrandColorCacheForTest = new Map();
@@ -3744,6 +3747,14 @@ const adaptiveFixtureSvg = '<svg viewBox="0 0 24 24"><path fill="currentColor" d
 }
 
 [
+  {
+    name: "Zhihu",
+    url: "https://www.zhihu.com/",
+    source: "icons/sites/zhihu.svg",
+    tile: "#0084ff",
+    carriers: { light: "#0084ff", dark: "#f8fafc" },
+    glyphs: { light: "#ffffff", dark: "#0084ff" }
+  },
   {
     name: "LinkedIn",
     url: "https://www.linkedin.com/",

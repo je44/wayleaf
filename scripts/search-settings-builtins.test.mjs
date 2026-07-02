@@ -5,7 +5,7 @@ const source = readFileSync(new URL("../newtab.js", import.meta.url), "utf8");
 const html = readFileSync(new URL("../newtab.html", import.meta.url), "utf8");
 const css = readFileSync(new URL("../newtab.css", import.meta.url), "utf8");
 const siteIconIndex = JSON.parse(readFileSync(new URL("../icons/sites/index.json", import.meta.url), "utf8"));
-const zhihuSettingsSvg = readFileSync(new URL("../assets/zhihu.svg", import.meta.url), "utf8");
+const zhihuSettingsSvg = readFileSync(new URL("../icons/sites/zhihu.svg", import.meta.url), "utf8");
 
 assert.match(
   html,
@@ -39,19 +39,12 @@ assert.match(
 
 assert.match(
   source,
-  /engine\.id === "kimi" \? `\$\{SITE_ICON_DIRECTORY\}\/kimi\.svg`/,
-  "Kimi's settings icon should use the updated local SVG directly instead of waiting for the async icon index."
+  /\(engine\.id === "kimi" \|\| engine\.id === "zhihu"\)[\s\S]*`\$\{SITE_ICON_DIRECTORY\}\/\$\{engine\.id\}\.svg`/,
+  "Kimi and Zhihu settings cards should use their shared local site SVGs directly."
 );
 
-assert.match(
-  source,
-  /engine\.id === "zhihu" \? "assets\/zhihu\.svg"/,
-  "Zhihu's platform-search settings card should use its settings-only SVG asset."
-);
-
-assert.equal(source.match(/assets\/zhihu\.svg/g)?.length, 1, "The Zhihu settings asset should have one runtime reference.");
-assert.ok(!siteIconIndex.includes("zhihu.svg"), "The Zhihu settings asset must stay out of the outer site-icon catalog.");
-assert.match(zhihuSettingsSvg, /<svg\b[^>]*fill=["']#0084FF["']/i, "The Zhihu settings SVG should preserve its original blue logo color.");
+assert.ok(siteIconIndex.includes("zhihu.svg"), "The outer Wayleaf icon flow should share the Zhihu SVG.");
+assert.match(zhihuSettingsSvg, /<svg\b[^>]*fill=["']#0084FF["']/i, "The shared Zhihu SVG should preserve its original blue logo color.");
 
 assert.match(
   css,
