@@ -1,7 +1,9 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 
-const source = readFileSync(new URL("../newtab.js", import.meta.url), "utf8");
+const newtabSource = readFileSync(new URL("../newtab.js", import.meta.url), "utf8");
+const iconSource = readFileSync(new URL("../wayleaf-icon.js", import.meta.url), "utf8");
+const source = `${newtabSource}\n${iconSource}`;
 
 assert.match(
   source,

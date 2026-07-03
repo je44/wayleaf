@@ -1,7 +1,9 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 
-const source = readFileSync(new URL("../newtab.js", import.meta.url), "utf8");
+const newtabSource = readFileSync(new URL("../newtab.js", import.meta.url), "utf8");
+const iconSource = readFileSync(new URL("../wayleaf-icon.js", import.meta.url), "utf8");
+const source = `${iconSource}\n${newtabSource}`;
 const styles = readFileSync(new URL("../newtab.css", import.meta.url), "utf8");
 const html = readFileSync(new URL("../newtab.html", import.meta.url), "utf8");
 const background = readFileSync(new URL("../background.js", import.meta.url), "utf8");
@@ -71,3 +73,48 @@ assert.match(
   /img\[data-icon-tile="brand"\]\[data-site-url\][\s\S]*if \(!source\)[\s\S]*applySiteIcon\(icon, site\);/,
   "Theme switching must recover and refresh cached recent icons that predate source metadata."
 );
+
+// --- Recent browsing <-> Today history toggle ---------------------------------------------------
+assert.match(html, /<button class="recent-view-toggle" id="recentViewToggleButton"[^>]*aria-controls="recentHistoryFolders"/, "The recent-browsing header must expose the today-history toggle button.");
+assert.match(source, /const recentViewToggleButton = document\.querySelector\("#recentViewToggleButton"\);/, "The today-history toggle button must be wired.");
+assert.match(source, /const RECENT_VIEW_MODE_STORAGE_KEY = "recentViewMode";/, "The chosen recent view must persist across sessions.");
+assert.match(source, /const MAX_TODAY_HISTORY_ITEMS_PER_PAGE = 12;/, "Today history must page in bounded rows.");
+assert.match(source, /let recentViewMode = "recent";[\s\S]*let latestTodayHistoryItems = \[\];[\s\S]*let todayHistoryPageIndex = 0;[\s\S]*let todayHistoryHydrated = false;/, "Today-history view needs its own mode, item, page, and hydration state.");
+assert.match(source, /recentViewToggleButton\?\.addEventListener\("click", \(event\) => \{[\s\S]*setRecentViewMode\(recentViewMode === "today" \? "recent" : "today"\)/, "The toggle button must flip between recent browsing and today history.");
+
+// The toggle only adds a surface; it must reuse the SAME icon pipeline as recent cards (cache hit ->
+// restore captured render, cache miss -> the original applySiteIcon). No bespoke icon path.
+assert.match(source, /function renderHistorySiteIcon\(icon, site, options = \{\}\) \{\s*renderSharedSiteIcon\(icon, site, options\);\s*WayleafIcon\.cacheRenderedSiteIconOnLoad\(icon, site\);\s*\}/, "History icons (recent + today) must go through the shared render + first-paint cache path, not a new algorithm.");
+assert.match(source, /function createTodayHistoryItem\(item, options = \{\}\) \{[\s\S]*renderHistorySiteIcon\(icon, iconSite, options\);/, "Today-history rows must render their icon through the shared history icon path.");
+assert.match(source, /function renderTodayHistory\(options = \{\}\) \{[\s\S]*todayHistoryPageCount\(\)[\s\S]*createTodayHistoryItem\(item, \{ \.\.\.options, iconRenders \}\)/, "Today history must render bounded, paged rows with the shared icon render context.");
+assert.match(source, /function renderRecentSurface\(groups, options = \{\}\) \{[\s\S]*if \(recentViewMode === "today"\) \{[\s\S]*renderTodayHistory\(options\);[\s\S]*renderRecentFolders\(latestRecentFolderGroups, options\)/, "The refresh entry point must route to whichever surface is active.");
+assert.match(source, /const siteIconIndexReady = WayleafIcon\.initSiteIconIndex\(\);[\s\S]*const themeModeReady = initThemeMode\(\);[\s\S]*Promise\.all\(\[siteIconIndexReady, themeModeReady\]\)\.then\(\(\) => \{[\s\S]*WayleafIcon\.refreshRenderedSiteIcons\(\);[\s\S]*\}\)\.catch\(\(\) => \{\}\);/, "Recent/history first-paint icons must be refreshed after the real theme is applied, not only after the icon index loads.");
+
+// Today history is sourced from today's real history, deduped and time-sorted; refresh must not block.
+assert.match(source, /function todayHistoryItems\(items\) \{\s*return dedupeHistory\(items\)[\s\S]*compareHistoryItemsByRecentVisit\)/, "Today history must reuse the existing dedupe + recency ordering.");
+assert.match(source, /const todayHistoryReady = chrome\.history\.search\(\{[\s\S]*startTime: todayStartTime[\s\S]*latestTodayHistoryItems = todayHistoryItems\(todayItems\)/, "refreshHistory must load today's history alongside the recent groups.");
+
+// Locale coverage for the new surface (checked on the primary shipping locales).
+assert.match(source, /todayHistoryTitle: "今日历史记录"[\s\S]*recentViewToggleToToday: "切换到今日历史记录"/, "Simplified Chinese today-history strings must exist.");
+assert.match(source, /todayHistoryTitle: "Today history"[\s\S]*recentViewToggleToToday: "Show today's history"/, "English today-history strings must exist.");
+
+// Styling: today-history rows and toggle button must be styled.
+assert.match(styles, /\.recent-view-toggle\s*\{[\s\S]*width:\s*28px;[\s\S]*height:\s*28px;/, "The today-history toggle needs a stable icon-button size.");
+assert.match(styles, /\.recent-folders\[data-recent-view="today"\] \.recent-folder-grid\s*\{[\s\S]*grid-template-columns:\s*repeat\(4,/, "Today history must lay its rows out in the dedicated grid.");
+assert.match(styles, /\.today-history-logo\s*\{[\s\S]*--site-icon-box-size:\s*24px;/, "Today-history logos must use the compact 24px icon box while sharing the recent-folder-logo tile pipeline.");
+
+// Same-site favicon tiles must be consistent. Today history shows several pages of one site at
+// once; each favicon sample is non-deterministic, so without a per-site memo the same site (e.g.
+// CloudFox / Kedaya) would render different tile colours side by side. Resolve once per site+theme,
+// reuse for every later same-site row.
+assert.match(source, /const faviconSiteTileMemo = new Map\(\);/, "There must be a per-session per-site favicon tile memo so one site reads as one tile.");
+assert.match(source, /function faviconSiteTileMemoKey\(icon\) \{[\s\S]*icon\.dataset\.siteKey \|\| siteGroupKey\(safeUrl\(icon\.dataset\.siteUrl\)\)[\s\S]*document\.documentElement\.dataset\.theme === "dark" \? "dark" : "light"/, "The favicon tile memo must key by site group + theme (the fused bitmap is theme-specific).");
+assert.match(source, /function applyFaviconMatchedTile\(icon, options = \{\}\) \{[\s\S]*if \(restoreFaviconSiteTile\(icon\)\) \{[\s\S]*return;[\s\S]*\}[\s\S]*resolveFaviconTile\(icon, candidateToken, sampleOptions\);/, "applyFaviconMatchedTile must reuse the site's already-resolved tile, then hand off to the single deterministic resolver.");
+// Determinism: the favicon must be DECODED before the canvas is read (a load event is not a decode),
+// otherwise the same favicon samples to different pixels/tiles. And each site resolves at most once
+// per session via an in-flight map, so parallel same-site rows never sample two competing bitmaps.
+assert.match(source, /async function decodedFaviconSample\(icon\) \{[\s\S]*await icon\.decode\(\);[\s\S]*const sample = sampleFaviconImageData\(icon\);/, "decodedFaviconSample must decode the favicon before the (deterministic) canvas read.");
+assert.match(source, /const faviconTileResolveInFlight = new Map\(\);/, "Tier-2 resolution must be de-duplicated per site so parallel same-site rows share one sample.");
+assert.match(source, /function resolveFaviconTile\(icon, candidateToken, options = \{\}\) \{[\s\S]*faviconTileResolveInFlight\.get\(inFlightKey\)[\s\S]*decodedFaviconSample\(icon\)\.then\(\(sample\) => \{[\s\S]*applyFaviconSampleDecision\(icon, sample, options\)/, "resolveFaviconTile must await an in-flight same-site resolution, else decode+sample once and feed the unchanged colour decision.");
+assert.match(source, /function applySampledFaviconTile\(icon, sample, color, tileColors, options = \{\}\) \{[\s\S]*fuseEmbeddedFaviconTile\(icon, sample, color, tileColors, options\);[\s\S]*rememberFaviconSiteTile\(icon, entry\);\s*broadcastFaviconSiteTile\(icon, entry\);/, "A freshly sampled favicon tile must be published to the per-site memo AND broadcast to same-site siblings already on screen.");
+assert.match(source, /function broadcastFaviconSiteTile\(sourceIcon, entry\) \{[\s\S]*document\.querySelectorAll\("img\[data-site-url\]"\)[\s\S]*sibling\.classList\.contains\("site-icon-local"\)[\s\S]*siblingKey !== siteKey[\s\S]*applyIconTile\(sibling, entry\.tileMode, entry\.tileColors, false\)/, "The broadcast must converge every on-screen same-site tier-2 tile without ever touching a tier-1 local icon.");

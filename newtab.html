@@ -92,7 +92,12 @@
       </section>
       <section class="recent-folders" aria-labelledby="recent-folders-title" hidden>
         <div class="recent-folders-header">
-          <h2 id="recent-folders-title">Recent browsing</h2>
+          <div class="recent-folders-titlebar">
+            <h2 id="recent-folders-title">Recent browsing</h2>
+            <button class="recent-view-toggle" id="recentViewToggleButton" type="button" aria-controls="recentHistoryFolders" aria-label="Show today's history" disabled>
+              <span class="button-icon" aria-hidden="true"></span>
+            </button>
+          </div>
           <div class="recent-folder-switch-controls" role="group" aria-label="Switch recent browsing cards">
             <button class="recent-folder-switch-button previous" id="recentFoldersPreviousButton" type="button" aria-controls="recentHistoryFolders" aria-label="Previous recent browsing group" disabled>
               <span class="button-icon" aria-hidden="true"></span>
@@ -475,6 +480,7 @@
     <script src="vendor/gsap/gsap.min.js"></script>
     <script src="vendor/gsap/Flip.min.js"></script>
     <script src="data/recommendedSites.js"></script>
+    <script src="wayleaf-icon.js"></script>
     <script src="newtab.js"></script>
   </body>
 </html>

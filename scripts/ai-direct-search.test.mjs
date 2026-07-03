@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 
 const newtabSource = readFileSync(new URL("../newtab.js", import.meta.url), "utf8");
+const iconSource = readFileSync(new URL("../wayleaf-icon.js", import.meta.url), "utf8");
 const submitSource = readFileSync(new URL("../ai-submit.js", import.meta.url), "utf8");
 const backgroundSource = readFileSync(new URL("../background.js", import.meta.url), "utf8");
 const manifest = JSON.parse(readFileSync(new URL("../manifest.json", import.meta.url), "utf8"));
@@ -59,8 +60,8 @@ assert.match(newtabSource, /\{ id: "jimeng"[\s\S]*commands: \["\/jimeng", "\/jm"
 assert.match(newtabSource, /\{ id: "qwen"[\s\S]*urlPromptFallback: true/, "Qwen should keep a URL-fragment prompt fallback because its app shell may remount during boot.");
 assert.match(newtabSource, /\{ id: "doubao"[\s\S]*iconUrl: "icons\/sites\/doubao\.png"/, "Doubao AI engine should use the explicit PNG icon without changing generic doubao.com site icon routing.");
 assert.match(newtabSource, /\{ id: "qwen"[\s\S]*iconUrl: "icons\/sites\/qwen\.svg"/, "Qwen AI engine should use the existing local SVG icon.");
-assert.ok(newtabSource.includes('engine?.id === "doubao"'), "Explicit PNG icon routing should stay scoped to the Doubao AI engine.");
-assert.ok(newtabSource.includes('engine?.id === "qwen"'), "Qwen explicit SVG routing should stay scoped to the AI engine.");
+assert.ok(iconSource.includes('engine?.id === "doubao"'), "Explicit PNG icon routing should stay scoped to the Doubao AI engine.");
+assert.ok(iconSource.includes('engine?.id === "qwen"'), "Qwen explicit SVG routing should stay scoped to the AI engine.");
 assert.equal(searchAiCommand("/g"), null, "A partial AI command should remain ordinary input.");
 assert.equal(searchAiCommand("/chat"), null, "A partial long AI alias should remain ordinary input.");
 assert.equal(searchAiCommand("/gptx"), null, "An AI command must match the complete configured command.");

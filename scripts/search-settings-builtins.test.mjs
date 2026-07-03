@@ -39,7 +39,7 @@ assert.match(
 
 assert.match(
   source,
-  /\(engine\.id === "kimi" \|\| engine\.id === "zhihu"\)[\s\S]*`\$\{SITE_ICON_DIRECTORY\}\/\$\{engine\.id\}\.svg`/,
+  /\(engine\.id === "kimi" \|\| engine\.id === "zhihu"\)[\s\S]*`\$\{WayleafIcon\.siteIconDirectory\}\/\$\{engine\.id\}\.svg`/,
   "Kimi and Zhihu settings cards should use their shared local site SVGs directly."
 );
 
@@ -48,8 +48,26 @@ assert.match(zhihuSettingsSvg, /<svg\b[^>]*fill=["']#0084FF["']/i, "The shared Z
 
 assert.match(
   css,
-  /\.settings-engine-icon\[data-engine-icon="doubao"\],\s*\.settings-engine-icon\[data-engine-icon="kimi"\],\s*\.settings-engine-icon\[data-engine-icon="qwen"\]\s*\{[\s\S]*box-shadow:\s*inset 0 0 0 1px rgb\(20 27 24 \/ 0\.1\),\s*0 0 0 1px rgb\(20 27 24 \/ 0\.1\);/,
-  "Doubao, Kimi, and Qwen settings icons should keep the same visible shell stroke as other engine icons."
+  /\.settings-engine-icon\s*\{[\s\S]*box-sizing:\s*border-box;[\s\S]*border:\s*1px solid rgb\(20 27 24 \/ 0\.1\);/,
+  "Settings AI engine icons should keep one visible outer shell stroke."
+);
+
+assert.doesNotMatch(
+  css,
+  /\.settings-engine-icon\[data-engine-icon="[^"]+"\][\s\S]*(?:border|box-shadow):/,
+  "Individual settings AI engine icons must not override the shared shell stroke."
+);
+
+assert.match(
+  css,
+  /\.ai-engine-pill img\[data-engine-icon="doubao"\]\[data-explicit-ai-icon="true"\]\s*\{[\s\S]*padding:\s*0;[\s\S]*object-fit:\s*cover;/,
+  "Doubao active AI icon should keep its original full-bleed PNG crop."
+);
+
+assert.match(
+  css,
+  /\.settings-engine-icon-image\[data-engine-icon="doubao"\]\[data-explicit-ai-icon="true"\]\s*\{[\s\S]*width:\s*100%;[\s\S]*height:\s*100%;[\s\S]*object-fit:\s*cover;/,
+  "Doubao settings AI icon should keep its original full-bleed PNG crop."
 );
 
 [

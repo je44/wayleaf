@@ -26,6 +26,7 @@ runtime_items=(
   newtab.html
   newtab.js
   theme-preload.js
+  wayleaf-icon.js
   vendor
   video-pip-coordinator.js
   video-pip.js

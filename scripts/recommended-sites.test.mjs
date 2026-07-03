@@ -9,10 +9,11 @@ const packageSource = readFileSync(new URL("./package-release.sh", import.meta.u
 
 assert.match(
   html,
-  /<script src="data\/recommendedSites\.js"><\/script>\s*<script src="newtab\.js"><\/script>/,
-  "Recommended sites should load as local static data before newtab.js."
+  /<script src="data\/recommendedSites\.js"><\/script>\s*<script src="wayleaf-icon\.js"><\/script>\s*<script src="newtab\.js"><\/script>/,
+  "Recommended sites should load before the Wayleaf icon module, and the icon module should load before newtab.js."
 );
 assert.ok(packageSource.split(/\s+/).includes("data"), "Release packages should include local recommendation data.");
+assert.ok(packageSource.split(/\s+/).includes("wayleaf-icon.js"), "Release packages should include the Wayleaf icon module.");
 
 const context = { window: {} };
 vm.runInNewContext(recommendationsSource, context);
@@ -85,7 +86,7 @@ assert.match(
 );
 assert.match(
   source,
-  /const iconSite = site\?\.recommended \? site : siteWithFavoriteIcon\(site, options\.favoriteIconMap\);[\s\S]*const cachedIconRender = site\?\.recommended \? null : cachedFirstPaintIconRender\(options\.iconRenders, iconSite\);[\s\S]*applySiteIcon\(icon, iconSite\);/,
+  /const iconSite = site\?\.recommended \? site : siteWithFavoriteIcon\(site, options\.favoriteIconMap\);[\s\S]*const cachedIconRender = site\?\.recommended \? null : WayleafIcon\.cachedFirstPaintIconRender\(options\.iconRenders, iconSite\);[\s\S]*WayleafIcon\.applySiteIcon\(icon, iconSite\);/,
   "Recommended site icons should enter the URL-based icon priority flow instead of favorite or first-paint icon caches."
 );
 assert.match(

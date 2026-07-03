@@ -1,9 +1,23 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 
-const source = readFileSync(new URL("../newtab.js", import.meta.url), "utf8");
+const newtabSource = readFileSync(new URL("../newtab.js", import.meta.url), "utf8");
+const iconSource = readFileSync(new URL("../wayleaf-icon.js", import.meta.url), "utf8");
+const source = `${iconSource}\n${newtabSource}`;
 const html = readFileSync(new URL("../newtab.html", import.meta.url), "utf8");
 const css = readFileSync(new URL("../newtab.css", import.meta.url), "utf8");
+
+assert.ok(
+  html.indexOf('<script src="wayleaf-icon.js"></script>') !== -1
+    && html.indexOf('<script src="wayleaf-icon.js"></script>') < html.indexOf('<script src="newtab.js"></script>'),
+  "Wayleaf icon rendering must load as an independent module before newtab.js."
+);
+
+assert.doesNotMatch(
+  newtabSource,
+  /\b(?:async function|function|const)\s+(?:resolvePrimarySiteIconRoute|startSecondaryFaviconRoute|renderPrimarySiteIcon|renderFallbackSiteIcon|discoverRemoteBrandIconDataUrl|applySiteIconTile|displayIconSource|syncLocalIconTile|sampleFaviconImageData|selectFaviconBackgroundCandidate|iconRenderCodeSignature|SITE_ICON_CACHE_STORAGE_KEY|FAVICON_BACKGROUND_SAMPLE_SIZE|BRAND_ICON_VI_CONTRAST_MIN)\b/,
+  "newtab.js must not own Wayleaf icon route, cache, SVG, favicon, or carrier algorithms."
+);
 
 assert.match(
   source,
@@ -29,8 +43,8 @@ assert.match(
   "Synced settings should fall back to chrome.storage.sync when local storage is empty after reinstall."
 );
 
-const initBody = source.match(/async function init\(\) \{([\s\S]*?)\n\}/)?.[1] || "";
-const createBookmarkSiteCardBody = source.match(/function createBookmarkSiteCard\(site, options = \{\}\) \{[\s\S]*?\n\}/)?.[0] || "";
+const initBody = newtabSource.match(/async function init\(\) \{([\s\S]*?)\n\}/)?.[1] || "";
+const createBookmarkSiteCardBody = newtabSource.match(/function createBookmarkSiteCard\(site, options = \{\}\) \{[\s\S]*?\n\}/)?.[0] || "";
 assert.match(
   html,
   /<html lang="en" class="[^"]*\blocale-hydrating\b[^"]*"/,
@@ -64,8 +78,8 @@ assert.match(
 
 assert.match(
   initBody,
-  /const siteIconIndexReady = initSiteIconIndex\(\);[\s\S]*siteIconIndexReady\.then\(refreshRenderedSiteIcons\)/,
-  "Site icon index loading should refresh rendered icons instead of blocking the first content render."
+  /const siteIconIndexReady = WayleafIcon\.initSiteIconIndex\(\);[\s\S]*const themeModeReady = initThemeMode\(\);[\s\S]*Promise\.all\(\[siteIconIndexReady, themeModeReady\]\)\.then\(\(\) => \{[\s\S]*WayleafIcon\.refreshRenderedSiteIcons\(\);[\s\S]*\}\)\.catch\(\(\) => \{\}\);/,
+  "Site icon index and resolved theme should refresh rendered icons together without blocking first content render."
 );
 
 assert.match(
@@ -76,14 +90,14 @@ assert.match(
 
 assert.match(
   source,
-  /async function discoverRemoteBrandIconDataUrl\(url\) \{[\s\S]*const localIcon = localIconForUrl\(parsedUrl\.href\);[\s\S]*localIcon && !localIconNeedsRemoteBrandColor\(siteKey, localIcon\)[\s\S]*return "";/,
+  /async function discoverRemoteBrandIconDataUrl\(url, options = \{\}\) \{[\s\S]*const localIcon = localIconForUrl\(parsedUrl\.href\);[\s\S]*localIcon && !localIconNeedsRemoteBrandColor\(siteKey, localIcon\)[\s\S]*return "";/,
   "Remote brand discovery should wait for the local icon index and skip deployed local icons unless they need cloud VI-color hydration."
 );
 
 assert.match(
   source,
-  /const shouldRefreshRemoteBrand = localIcon[\s\S]*localIconNeedsRemoteBrandColor\(siteGroupKey\(safeUrl\(site\.url\)\), localIcon\)[\s\S]*siteIcon && !siteIconIsRemoteBrand;[\s\S]*if \(shouldRefreshRemoteBrand\) \{[\s\S]*refreshRemoteBrandIcon\(icon, site\);/,
-  "Stored site ico renders and local SVGs missing VI color should still allow the remote SVG branch after the local icon index is ready."
+  /async function resolvePrimarySiteIconRoute[\s\S]*localIconForUrl\(site\.url\)[\s\S]*discoverRemoteBrandIconDataUrl\(site\.url, \{ requireStableMiss: true \}\)[\s\S]*setIconRouteState\(icon, "primary_miss"[\s\S]*startSecondaryFaviconRoute/,
+  "Cloud SVG resolution must finish before a primary miss can enter the secondary favicon route."
 );
 
 assert.match(
@@ -105,7 +119,7 @@ assert.doesNotMatch(
 
 assert.ok(
   initBody.indexOf("renderFirstPaintCache();") !== -1
-    && initBody.indexOf("renderFirstPaintCache();") < initBody.indexOf("const siteIconIndexReady = initSiteIconIndex();"),
+    && initBody.indexOf("renderFirstPaintCache();") < initBody.indexOf("const siteIconIndexReady = WayleafIcon.initSiteIconIndex();"),
   "Favorite and recent card snapshots should render before async icon/storage/history startup work."
 );
 
@@ -117,7 +131,7 @@ assert.match(
 
 assert.match(
   source,
-  /function cacheRenderedSiteIcon\(icon, site\)[\s\S]*const src = icon\.getAttribute\("src"\)[\s\S]*const tileLight = icon\.style\.getPropertyValue\("--site-icon-tile-light"\)[\s\S]*const tileDark = icon\.style\.getPropertyValue\("--site-icon-tile-dark"\)[\s\S]*source: icon\.dataset\.iconSource/,
+  /function cacheRenderedSiteIcon\(icon, site\)[\s\S]*const src = icon\.getAttribute\("src"\)[\s\S]*const source = icon\.dataset\.iconSource \|\| src[\s\S]*const tileLight = icon\.style\.getPropertyValue\("--site-icon-tile-light"\)[\s\S]*const tileDark = icon\.style\.getPropertyValue\("--site-icon-tile-dark"\)[\s\S]*source: source \|\| iconRenders\[key\]\?\.source/,
   "First-paint cache should preserve source metadata and reuse the existing icon algorithm's final rendered output."
 );
 
@@ -125,6 +139,16 @@ assert.match(
   source,
   /function cacheRenderedSiteIcon\(icon, site\)[\s\S]*iconDefaultProbe === "pending"[\s\S]*iconDefaultRescue === "pending"[\s\S]*return;/,
   "An unreadable favicon must not cache its temporary generic tile while async sampling or rescue is pending."
+);
+
+// Tier integrity: no surface may persist a tier-1 site as a tier-2 favicon. Before the icon index
+// is known we cannot tell the tier (don't cache); once known, a site that HAS a local icon may only
+// be cached as its local render, never as a stand-in favicon. This is what stops today history (or
+// any future surface) from racing e.g. Iconify down to a favicon in the shared first-paint cache.
+assert.match(
+  source,
+  /function cacheRenderedSiteIcon\(icon, site\)[\s\S]*if \(!siteIconIndexLoaded\) \{\s*return;\s*\}\s*if \(localIconForUrl\(site\.url\) && !icon\.classList\.contains\("site-icon-local"\)\) \{\s*return;\s*\}/,
+  "cacheRenderedSiteIcon must never persist a pre-index or tier-2 render for a site that has a tier-1 local icon."
 );
 
 assert.match(
@@ -135,14 +159,20 @@ assert.match(
 
 assert.match(
   source,
-  /\.slice\(MAX_FAVORITE_SITES \+ MAX_HISTORY_SITE_GROUPS\)[\s\S]*delete iconRenders\[staleKey\]/,
-  "First-paint icon output must remain bounded to the cards that can be rendered."
+  /const protectedKeys = firstPaintProtectedIconKeys\(cache\);[\s\S]*\.filter\(\(\[entryKey\]\) => !protectedKeys\.has\(entryKey\)\)[\s\S]*\.slice\(MAX_CACHED_SITE_ICONS\)[\s\S]*delete iconRenders\[staleKey\]/,
+  "First-paint icon output must stay bounded (transient renders capped at MAX_CACHED_SITE_ICONS) while the always-present favorites/recent renders are protected from eviction."
 );
 
 assert.match(
   source,
-  /function createRecentFolderItem\(group, options = \{\}\)[\s\S]*cachedFirstPaintIconRender[\s\S]*restoreFirstPaintIconRender[\s\S]*applyHistoryIcon/,
-  "Recent cards should restore cached icon output and retain the original icon algorithm as the cache-miss path."
+  /function firstPaintProtectedIconKeys\(cache = readFirstPaintCache\(\)\)[\s\S]*normalizeCachedFavoriteSites\(cache\.favoriteSites\)[\s\S]*cache\.recentGroups[\s\S]*keys\.add\(String\(group\.key\)\)/,
+  "Protected first-paint keys must cover both favorites and recent groups so the today-history view can never evict their cached tiles (which would re-sample the same favicon differently each refresh)."
+);
+
+assert.match(
+  source,
+  /function createRecentFolderItem\(group, options = \{\}\)[\s\S]*renderHistorySiteIcon\(icon, iconSite, options\);/,
+  "Recent cards must use the shared history icon display path instead of owning cache/restore/apply order."
 );
 
 assert.match(
@@ -159,8 +189,26 @@ assert.match(
 
 assert.match(
   source,
-  /function waitForBookmarkRouteIcons\(root\) \{[\s\S]*root\.querySelectorAll\("\.bookmark-site-card img\.site-icon"\)/,
-  "Bookmark icon staging must stay scoped to second-level bookmark route cards."
+  /function waitForBookmarkRouteIcons\(root, iconSelector = "\.bookmark-site-card img\.site-icon"\) \{[\s\S]*root\.querySelectorAll\(iconSelector\)/,
+  "Bookmark icon staging must default to second-level bookmark route cards."
+);
+
+assert.doesNotMatch(
+  source,
+  /function renderTodayHistory\(options = \{\}\)[\s\S]*prepareBookmarkRouteFragment\(/,
+  "Today history must render rows immediately instead of waiting for icon staging."
+);
+
+assert.match(
+  source,
+  /function renderTodayHistory\(options = \{\}\)[\s\S]*recentHistoryFolders\.replaceChildren\(fragment\);/,
+  "Today history data should replace the visible list as soon as rows are built."
+);
+
+assert.doesNotMatch(
+  source.match(/function waitForBookmarkRouteIcons[\s\S]*?\n}\n\nfunction waitForBookmarkRouteIcon/)?.[0] || "",
+  /favorite-site|favorite-icon|#favoriteStrip/,
+  "Staged icon waiting must not include first-level favorite route icons."
 );
 
 assert.doesNotMatch(
@@ -179,7 +227,7 @@ const themePreload = readFileSync(new URL("../theme-preload.js", import.meta.url
 assert.match(themePreload, /root\.dataset\.theme = resolved;[\s\S]*root\.dataset\.themePalette = palette;[\s\S]*root\.style\.setProperty\(name, value\)/,
   "Theme preload should restore mode, palette, and generated theme variables before CSS paints.");
 
-assert.match(source, /if \(previousResolvedTheme && previousResolvedTheme !== resolvedTheme\) \{\s*refreshAdaptiveSiteIcons\(\);/,
+assert.match(source, /if \(previousResolvedTheme && previousResolvedTheme !== resolvedTheme\) \{\s*WayleafIcon\.refreshAdaptiveSiteIcons\(\);/,
   "Theme hydration should not rerender adaptive icons when the resolved mode is unchanged.");
 
 const adaptiveIconRefresh = source.match(/function refreshAdaptiveSiteIcons\(\) \{[\s\S]*?\n\}/)?.[0] || "";
