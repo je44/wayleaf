@@ -593,6 +593,24 @@ assert.equal(harness.requestCount, 3, "A stale Chrome automatic PiP handler shou
 storageListeners[0]({ videoPipGlobalEnabled: { newValue: true } }, "local");
 assert.equal(typeof harness.mediaSessionHandler, "function", "Re-enabling global PiP should restore the automatic PiP handler.");
 
+const candidateHarness = createControllerHarness();
+candidateHarness.documentMock.querySelectorAll = querySelectorAllForLightAndShadow([candidateHarness.video]);
+candidateHarness.storageListeners[0]({ videoPipGlobalEnabled: { newValue: true } }, "local");
+candidateHarness.video.paused = true;
+candidateHarness.documentMock.visibilityState = "hidden";
+assert.equal((await candidateHarness.command("enter"))?.entered, true, "Coordinator grants should fall back to a ready PiP candidate after live pages churn playback state.");
+assert.equal(candidateHarness.requestCount, 1, "A ready candidate video should be able to re-enter PiP even when playback state is temporarily stale.");
+
+const renderedSurfaceHarness = createControllerHarness();
+renderedSurfaceHarness.documentMock.querySelectorAll = querySelectorAllForLightAndShadow([renderedSurfaceHarness.video]);
+renderedSurfaceHarness.storageListeners[0]({ videoPipGlobalEnabled: { newValue: true } }, "local");
+renderedSurfaceHarness.video.videoWidth = 0;
+renderedSurfaceHarness.video.videoHeight = 0;
+renderedSurfaceHarness.video.paused = false;
+renderedSurfaceHarness.documentMock.visibilityState = "hidden";
+assert.equal((await renderedSurfaceHarness.command("enter"))?.entered, true, "Generic PiP detection should accept rendered player surfaces even when intrinsic video dimensions are temporarily unavailable.");
+assert.equal(renderedSurfaceHarness.requestCount, 1, "Rendered player surface detection should not need a site whitelist.");
+
 for (const hostname of ["x.com", "www.xiaohongshu.com"]) {
   const socialHarness = createControllerHarness(undefined, { hostname });
   socialHarness.documentMock.querySelectorAll = querySelectorAllForLightAndShadow([socialHarness.video]);
@@ -747,6 +765,21 @@ reinjectedHarness.dispatch("playing", reinjectedHarness.video);
 await settle();
 await reinjectedHarness.mediaSessionHandler();
 assert.equal(reinjectedHarness.requestCount, 1, "The replacement controller should handle browser-triggered auto PiP after reinjection.");
+vm.runInContext(controllerSource, reinjectedHarness.context);
+reinjectedHarness.documentMock.pictureInPictureElement = null;
+reinjectedHarness.dispatch("leavepictureinpicture", reinjectedHarness.video);
+await settle();
+assert.equal(reinjectedHarness.coordinatorRequests.at(-1)?.type, "left", "A reinjected controller should release stale ownership when the native PiP window closes.");
+
+const pageHideHarness = createControllerHarness();
+pageHideHarness.documentMock.querySelectorAll = querySelectorAllForLightAndShadow([pageHideHarness.video]);
+pageHideHarness.storageListeners[0]({ videoPipGlobalEnabled: { newValue: true } }, "local");
+pageHideHarness.video.paused = false;
+pageHideHarness.documentMock.visibilityState = "hidden";
+assert.equal((await pageHideHarness.command("enter"))?.entered, true, "Page-hide cleanup coverage should start from an owned PiP session.");
+pageHideHarness.dispatch("pagehide", pageHideHarness.documentMock);
+await settle();
+assert.equal(pageHideHarness.coordinatorRequests.at(-1)?.type, "left", "A source frame unload should release browser-level PiP ownership.");
 
 const invalidatedCommandHarness = createControllerHarness();
 Object.defineProperty(invalidatedCommandHarness.documentMock, "visibilityState", {

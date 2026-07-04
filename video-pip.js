@@ -212,7 +212,6 @@
     try {
       return video instanceof HTMLVideoElement &&
         supportsPictureInPicture(video) &&
-        video.disablePictureInPicture === false &&
         Number(video.readyState || 0) !== 0;
     } catch (error) {
       noteExtensionContextError(error);
@@ -229,6 +228,11 @@
       noteExtensionContextError(error);
       return 0;
     }
+  }
+
+  function hasUsableVideoSurface(video) {
+    return videoArea(video) >= MIN_EXTRACT_VIDEO_AREA ||
+      (Number(video?.videoWidth || 0) > 0 && Number(video?.videoHeight || 0) > 0);
   }
 
   function visibleVideoRect(video) {
@@ -334,8 +338,7 @@
 
   function supportsPictureInPicture(video) {
     try {
-      return Number(video.videoWidth || 0) > 0 &&
-        Number(video.videoHeight || 0) > 0 &&
+      return hasUsableVideoSurface(video) &&
         typeof video.requestPictureInPicture === "function";
     } catch (error) {
       noteExtensionContextError(error);
@@ -614,7 +617,7 @@
       if (!enabled() || document.visibilityState !== "hidden" || entering || exiting || document.pictureInPictureElement) {
         return false;
       }
-      const video = pickPlayingVideo();
+      const video = pickPlayingVideo() || pickPictureInPictureCandidateVideo();
       return requestPictureInPictureForVideo(video);
     }, false);
   }
@@ -762,15 +765,22 @@
 
   function handleLeavePictureInPicture(event) {
     guardExtensionContext(() => {
-      if (event.target === managedPipVideo) {
-        managedPipNeedsCleanup = false;
-        managedPipVideo = null;
-        notifyCoordinator("left");
-      }
+      managedPipNeedsCleanup = false;
+      managedPipVideo = null;
+      notifyCoordinator("left", event.target instanceof HTMLVideoElement ? event.target : null);
+    });
+  }
+
+  function handlePageHide() {
+    guardExtensionContext(() => {
+      managedPipNeedsCleanup = false;
+      managedPipVideo = null;
+      notifyCoordinator("left");
     });
   }
 
   addDocumentListener("visibilitychange", handleVisibilityChange, true);
+  addDocumentListener("pagehide", handlePageHide, true);
   addDocumentListener("pointermove", handleExtractorPointerMove, true);
   addDocumentListener("click", handleExtractorClick, true);
   addDocumentListener("keydown", handleExtractorKeydown, true);
