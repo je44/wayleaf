@@ -313,11 +313,11 @@ function cachedFirstPaintIconRender(iconRenders, site) {
 function restoreFirstPaintIconRender(icon, site, render) {
   storeIconSiteContext(icon, site);
   icon.dataset.siteKey = firstPaintIconCacheKey(site);
-  if (render.generic) {
+  const localIcon = localIconForUrl(site.url) || warmFirstPaintLocalIconForUrl(site.url);
+  if (render.generic && (localIcon || normalizeStoredSiteIcon(site.icon || ""))) {
     applySiteIcon(icon, site);
     return;
   }
-  const localIcon = localIconForUrl(site.url) || warmFirstPaintLocalIconForUrl(site.url);
   const localTile = localIcon ? syncLocalIconTile(site, localIcon) : null;
   const currentRender = firstPaintIconRenderWithCurrentTile(site, render);
   if (localIcon && firstPaintRenderStaleForLocalIcon(icon.dataset.siteKey, localIcon, render)) {
@@ -336,6 +336,9 @@ function restoreFirstPaintIconRender(icon, site, render) {
   if (currentRender.source) {
     icon.dataset.iconSource = currentRender.source;
     icon.dataset.iconCandidate = currentRender.source;
+  }
+  if (currentRender.generic) {
+    setIconRouteState(icon, "fallback");
   }
   icon.classList.toggle("site-icon-generic-fallback", currentRender.generic);
   applyIconTile(icon, currentRender.tile, { light: currentRender.tileLight, dark: currentRender.tileDark }, currentRender.local);
@@ -470,7 +473,7 @@ function cacheRenderedSiteIcon(icon, site) {
   if (icon.dataset.iconDefaultProbe === "pending" || icon.dataset.iconDefaultRescue === "pending") {
     return;
   }
-  if (["primary_pending", "primary_miss", "secondary_pending", "fallback"].includes(icon.dataset.iconRouteState || "")) {
+  if (["primary_pending", "primary_miss", "secondary_pending"].includes(icon.dataset.iconRouteState || "")) {
     return;
   }
   // Do not cache a temporary favicon render over a known local Wayleaf icon.

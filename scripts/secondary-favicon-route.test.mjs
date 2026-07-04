@@ -27,6 +27,7 @@ function markerCount(marker) {
 const primaryRouteSource = sourceBetween(primaryStartMarker, primaryEndMarker, "The primary icon route");
 const routeSource = sourceBetween(startMarker, endMarker, "The secondary favicon route");
 const fallbackRouteSource = sourceBetween(fallbackStartMarker, fallbackEndMarker, "The fallback icon route");
+const cacheRenderedSiteIconSource = source.match(/function cacheRenderedSiteIcon\(icon, site\) \{[\s\S]*?\n\}\n\nfunction firstPaintRenderIsThemeInvariant/)?.[0] || "";
 
 for (const marker of [
   primaryStartMarker,
@@ -281,10 +282,11 @@ assert.match(
   "The browser-native favicon URL must be handed directly to the image element."
 );
 assert.match(
-  source,
-  /function cacheRenderedSiteIcon\(icon, site\)[\s\S]*"secondary_pending"[\s\S]*"fallback"[\s\S]*function firstPaintRenderIsThemeInvariant/,
-  "First-paint cache must skip pending/fallback route states without excluding settled secondary favicons."
+  cacheRenderedSiteIconSource,
+  /"primary_pending"[\s\S]*"primary_miss"[\s\S]*"secondary_pending"/,
+  "First-paint cache must skip pending route states without excluding settled secondary favicons or the final generic fallback."
 );
+assert.doesNotMatch(cacheRenderedSiteIconSource, /"fallback"/, "Settled fallback.svg renders must remain cacheable for first paint.");
 assert.match(
   fallbackRouteSource,
   /GENERIC_SITE_FALLBACK_ICON[\s\S]*site-icon-generic-fallback[\s\S]*icon\.src = GENERIC_SITE_FALLBACK_ICON/,
