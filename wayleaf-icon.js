@@ -313,6 +313,10 @@ function cachedFirstPaintIconRender(iconRenders, site) {
 function restoreFirstPaintIconRender(icon, site, render) {
   storeIconSiteContext(icon, site);
   icon.dataset.siteKey = firstPaintIconCacheKey(site);
+  if (render.generic) {
+    applySiteIcon(icon, site);
+    return;
+  }
   const localIcon = localIconForUrl(site.url) || warmFirstPaintLocalIconForUrl(site.url);
   const localTile = localIcon ? syncLocalIconTile(site, localIcon) : null;
   const currentRender = firstPaintIconRenderWithCurrentTile(site, render);
@@ -612,7 +616,7 @@ function secondaryFaviconDisplaySource(site) {
     return localFavicon;
   }
   const storedIcon = normalizeStoredSiteIcon(site.icon || "");
-  if (storedIcon && !siteIconSourceLooksLikeSvg(storedIcon)) {
+  if (storedIcon) {
     return storedIcon;
   }
   try {
@@ -633,11 +637,62 @@ function applySecondaryFaviconFallback(icon, site, siteKey, requestToken) {
   applyGenericFallbackSiteIcon(icon, safeUrl(site.url)?.hostname || site.title || "");
 }
 
+function discoverSecondarySiteIcon(icon, site, siteKey, requestToken, currentSource = "") {
+  if (!secondaryFaviconRequestStillCurrent(icon, siteKey, requestToken)) {
+    return;
+  }
+  const parsedUrl = safeUrl(site.url);
+  if (!parsedUrl) {
+    applySecondaryFaviconFallback(icon, site, siteKey, requestToken);
+    return;
+  }
+  discoverSiteIconCandidateEntries(parsedUrl.href).then((candidates) => {
+    if (!secondaryFaviconRequestStillCurrent(icon, siteKey, requestToken)) {
+      return;
+    }
+    applySecondarySiteIconCandidates(
+      icon,
+      site,
+      siteKey,
+      requestToken,
+      candidates.filter((candidate) => candidate?.url && candidate.url !== currentSource)
+    );
+  }).catch(() => applySecondaryFaviconFallback(icon, site, siteKey, requestToken));
+}
+
+function applySecondarySiteIconCandidates(icon, site, siteKey, requestToken, candidates = []) {
+  const [candidate, ...remainingCandidates] = candidates.filter((entry) => entry?.url);
+  if (!candidate?.url) {
+    applySecondaryFaviconFallback(icon, site, siteKey, requestToken);
+    return;
+  }
+  fetchImageDataUrl(candidate.url).then((iconDataUrl) => {
+    if (!secondaryFaviconRequestStillCurrent(icon, siteKey, requestToken)) {
+      return;
+    }
+    if (!iconDataUrl) {
+      applySecondarySiteIconCandidates(icon, site, siteKey, requestToken, remainingCandidates);
+      return;
+    }
+    paintSecondaryFaviconSource(icon, site, siteKey, iconDataUrl, requestToken);
+  }).catch(() => {
+    if (secondaryFaviconRequestStillCurrent(icon, siteKey, requestToken)) {
+      applySecondarySiteIconCandidates(icon, site, siteKey, requestToken, remainingCandidates);
+    }
+  });
+}
+
+function secondaryFaviconSourceIsDirect(source) {
+  const value = String(source || "");
+  return Boolean(value.startsWith(`${SITE_ICON_DIRECTORY}/`) || normalizeStoredSiteIcon(value));
+}
+
 function paintSecondaryFaviconSource(icon, site, siteKey, source, requestToken) {
   if (!secondaryFaviconRequestStillCurrent(icon, siteKey, requestToken)) {
     return;
   }
-  setIconRouteState(icon, "secondary_pending", requestToken);
+  const directSource = secondaryFaviconSourceIsDirect(source);
+  setIconRouteState(icon, directSource ? "secondary_hit" : "secondary_pending", requestToken);
   icon.removeAttribute("srcset");
   icon.dataset.iconMissing = "false";
   icon.dataset.iconCandidate = source;
@@ -652,6 +707,10 @@ function paintSecondaryFaviconSource(icon, site, siteKey, source, requestToken) 
   icon.addEventListener("load", () => {
     if (secondaryFaviconRequestStillCurrent(icon, siteKey, requestToken)
       && icon.dataset.iconCandidate === source) {
+      if (faviconCandidateIsChromeFavicon(source) && faviconElementLooksLikeBrowserDefault(icon)) {
+        discoverSecondarySiteIcon(icon, site, siteKey, requestToken, source);
+        return;
+      }
       setIconRouteState(icon, "secondary_hit", requestToken);
       cacheRenderedSiteIcon(icon, site);
     }
@@ -659,7 +718,11 @@ function paintSecondaryFaviconSource(icon, site, siteKey, source, requestToken) 
   icon.addEventListener("error", () => {
     if (secondaryFaviconRequestStillCurrent(icon, siteKey, requestToken)
       && icon.dataset.iconCandidate === source) {
-      applySecondaryFaviconFallback(icon, site, siteKey, requestToken);
+      if (faviconCandidateIsChromeFavicon(source)) {
+        discoverSecondarySiteIcon(icon, site, siteKey, requestToken, source);
+      } else {
+        applySecondaryFaviconFallback(icon, site, siteKey, requestToken);
+      }
     }
   }, { once: true });
   icon.src = source;
@@ -2905,11 +2968,11 @@ function normalizeSiteIconMime(value) {
 }
 
 function supportedSiteIconMime(mime) {
-  return /^image\/(?:png|jpe?g|webp|svg\+xml|x-icon|vnd\.microsoft\.icon)$/i.test(mime);
+  return /^image\/[-+.\w]+$/i.test(mime);
 }
 
 function siteIconUrlLooksLikeImage(url) {
-  return /\.(?:ico|png|jpe?g|webp|svg)(?:[?#].*)?$/i.test(String(url || ""));
+  return /\.(?:avif|bmp|gif|ico|jpe?g|png|svg|webp)(?:[?#].*)?$/i.test(String(url || ""));
 }
 
 function siteIconMimeFromUrl(url) {
@@ -2928,6 +2991,15 @@ function siteIconMimeFromUrl(url) {
   }
   if (pathname.endsWith(".jpg") || pathname.endsWith(".jpeg")) {
     return "image/jpeg";
+  }
+  if (pathname.endsWith(".avif")) {
+    return "image/avif";
+  }
+  if (pathname.endsWith(".bmp")) {
+    return "image/bmp";
+  }
+  if (pathname.endsWith(".gif")) {
+    return "image/gif";
   }
   if (pathname.endsWith(".webp")) {
     return "image/webp";
@@ -2952,7 +3024,7 @@ function normalizeStoredSiteIcon(icon) {
   if (!value || value.length > MAX_CACHED_SITE_ICON_BYTES * 2) {
     return "";
   }
-  return /^data:image\/(?:png|jpe?g|webp|svg\+xml|x-icon|vnd\.microsoft\.icon);base64,/i.test(value)
+  return /^data:image\/[-+.\w]+(?:;[^,]*)?;base64,/i.test(value)
     || /^data:image\/svg\+xml(?:;charset=[^,;]+)?(?:;utf8)?[,;]/i.test(value)
     ? value
     : "";

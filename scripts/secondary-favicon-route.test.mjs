@@ -41,6 +41,8 @@ for (const marker of [
 
 const fallbackCalls = [];
 const cachedIcons = [];
+const discoveredUrls = [];
+const fetchedUrls = [];
 const context = {
   URL,
   Object,
@@ -48,6 +50,8 @@ const context = {
   String,
   Boolean,
   Set,
+  Promise,
+  SITE_ICON_DIRECTORY: "icons/sites",
   safeUrl: (value) => {
     try {
       return new URL(value);
@@ -63,6 +67,20 @@ const context = {
     ? String(value)
     : "",
   siteIconSourceLooksLikeSvg: (value) => /image\/svg|\.svg(?:[?#]|$)/i.test(String(value || "")),
+  faviconCandidateIsChromeFavicon: (value) => String(value || "").includes("/_favicon/"),
+  faviconElementLooksLikeBrowserDefault: (icon) => icon.dataset.browserDefault === "true",
+  discoverSiteIconCandidateEntries: (value) => {
+    discoveredUrls.push(value);
+    const hostname = new URL(value).hostname;
+    return Promise.resolve(hostname === "empty.example" ? [] : [{
+      url: `https://${hostname}/site-icon`,
+      source: "document"
+    }]);
+  },
+  fetchImageDataUrl: (value) => {
+    fetchedUrls.push(value);
+    return Promise.resolve("data:image/avif;base64,AAAA");
+  },
   chrome: {
     runtime: {
       getURL: (path) => `chrome-extension://test${path}`
@@ -97,6 +115,7 @@ const api = context.__secondaryRouteTestApi;
 
 function createIcon(siteKey = "example.com", state = "primary_miss", requestToken = "1") {
   const listeners = new Map();
+  const classes = new Set();
   return {
     dataset: {
       siteKey,
@@ -105,9 +124,22 @@ function createIcon(siteKey = "example.com", state = "primary_miss", requestToke
       iconRouteState: state
     },
     classList: {
-      add() {},
-      remove() {},
-      toggle() {}
+      add(name) {
+        classes.add(name);
+      },
+      remove(name) {
+        classes.delete(name);
+      },
+      toggle(name, enabled) {
+        if (enabled) {
+          classes.add(name);
+        } else {
+          classes.delete(name);
+        }
+      },
+      contains(name) {
+        return classes.has(name);
+      }
     },
     removeAttribute() {},
     addEventListener(type, listener) {
@@ -146,8 +178,8 @@ assert.match(
     url: "https://example.com/path",
     icon: "data:image/svg+xml;base64,PHN2Zy8+"
   }),
-  /^chrome-extension:\/\/test\/_favicon\/\?pageUrl=https%3A%2F%2Fexample\.com%2Fpath&size=64$/,
-  "Secondary routing must leave SVG to the primary route and use Chrome's native favicon URL."
+  /^data:image\/svg\+xml;base64,PHN2Zy8\+$/,
+  "Secondary routing must render any stored site image data URL without format filtering."
 );
 
 const icon = createIcon();
@@ -166,12 +198,53 @@ assert.deepEqual(cachedIcons, [{
   url: "https://example.com/path"
 }], "A settled secondary favicon must enter first-paint cache so refresh can replay the site icon.");
 
+const defaultIcon = createIcon("default.example");
+api.startSecondaryFaviconRoute(defaultIcon, { title: "Default", url: "https://default.example/path" }, "1");
+defaultIcon.dataset.browserDefault = "true";
+defaultIcon.dispatch("load");
+await Promise.resolve();
+await Promise.resolve();
+assert.equal(defaultIcon.dataset.iconRouteState, "secondary_hit", "Chrome's loaded default globe must be replaced by the site's extracted icon.");
+assert.equal(defaultIcon.src, "data:image/avif;base64,AAAA");
+assert.deepEqual(discoveredUrls, ["https://default.example/path"]);
+assert.deepEqual(fetchedUrls, ["https://default.example/site-icon"]);
+assert.deepEqual(fallbackCalls, []);
+
+const storedIcon = createIcon("stored.example");
+api.startSecondaryFaviconRoute(storedIcon, {
+  title: "Stored",
+  url: "https://stored.example/path",
+  icon: "data:image/png;base64,AAAA"
+}, "1");
+assert.equal(storedIcon.dataset.iconRouteState, "secondary_hit", "A site-provided raster icon should render directly without a loading state.");
+assert.equal(storedIcon.classList.contains("site-icon-loading"), false, "Direct secondary icons must not show the loading treatment.");
+assert.equal(storedIcon.src, "data:image/png;base64,AAAA");
+
 const broken = createIcon("broken.example");
 api.startSecondaryFaviconRoute(broken, { title: "Broken", url: "https://broken.example" }, "1");
 broken.dispatch("error");
-assert.equal(broken.dataset.iconRouteState, "fallback");
-assert.equal(broken.dataset.fallback, "true");
-assert.deepEqual(fallbackCalls, ["broken.example"]);
+await Promise.resolve();
+await Promise.resolve();
+assert.equal(broken.dataset.iconRouteState, "secondary_hit");
+assert.equal(broken.src, "data:image/avif;base64,AAAA");
+assert.deepEqual(discoveredUrls, ["https://default.example/path", "https://broken.example/"]);
+assert.deepEqual(fetchedUrls, ["https://default.example/site-icon", "https://broken.example/site-icon"]);
+assert.deepEqual(fallbackCalls, []);
+
+const empty = createIcon("empty.example");
+api.startSecondaryFaviconRoute(empty, { title: "Empty", url: "https://empty.example/path" }, "1");
+empty.dispatch("error");
+await Promise.resolve();
+assert.equal(empty.dataset.iconRouteState, "fallback");
+assert.equal(empty.dataset.fallback, "true");
+assert.deepEqual(fallbackCalls, ["empty.example"]);
+
+const brokenDirect = createIcon("local.example");
+api.startSecondaryFaviconRoute(brokenDirect, { title: "Local", url: "https://local.example/path" }, "1");
+brokenDirect.dispatch("error");
+assert.equal(brokenDirect.dataset.iconRouteState, "fallback");
+assert.equal(brokenDirect.dataset.fallback, "true");
+assert.deepEqual(fallbackCalls, ["empty.example", "local.example"]);
 
 const stale = createIcon();
 api.beginIconRouteRequest(stale, "primary_hit");
@@ -189,18 +262,18 @@ assert.doesNotMatch(
 );
 assert.doesNotMatch(
   routeSource,
-  /fetch\(|arrayBuffer|Uint8Array|DataView|createImageBitmap|canvas|getImageData|toDataURL|tileColor|AverageColor|Fingerprint|secondaryFaviconCache|localStorage|setStoredValues|getStoredValues/,
-  "Secondary routing must not fetch, decode, sample, recolor, fingerprint, or cache favicon bytes."
+  /arrayBuffer|Uint8Array|DataView|createImageBitmap|canvas|getImageData|toDataURL|tileColor|AverageColor|Fingerprint|secondaryFaviconCache|localStorage|setStoredValues|getStoredValues/,
+  "Secondary routing must not decode, sample, recolor, fingerprint, or cache favicon bytes."
 );
 assert.doesNotMatch(
   routeSource,
   /document\.documentElement\.dataset\.theme|data-theme|themeMode|resolvedTheme/,
   "The fixed secondary tile must not depend on theme state."
 );
-assert.doesNotMatch(
+assert.match(
   routeSource,
-  /favicon\.ico|apple-touch-icon|discoverSiteIconCandidateEntries|fetchImageDataUrl/,
-  "Secondary routing must not probe or extract site icon files."
+  /discoverSiteIconCandidateEntries[\s\S]*fetchImageDataUrl[\s\S]*paintSecondaryFaviconSource/,
+  "Secondary routing must extract declared/root site icons without format filtering before the final fallback route."
 );
 assert.match(
   routeSource,
