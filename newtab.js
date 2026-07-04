@@ -29,7 +29,6 @@ const PORTALS = [
 ];
 const CUSTOM_PORTALS_STORAGE_KEY = "customPortals";
 const FAVORITE_SITES_STORAGE_KEY = "favoriteSites";
-const OPEN_TAB_ACTIVITY_STORAGE_KEY = "openTabActivity";
 const RECENT_HISTORY_STARTED_AT_STORAGE_KEY = "recentHistoryStartedAt";
 const RECENT_VIEW_MODE_STORAGE_KEY = "recentViewMode";
 const BOOKMARK_FOLDER_STORAGE_KEY = "bookmarkFolderId";
@@ -71,9 +70,9 @@ const MAX_HISTORY_SITE_GROUPS = 9;
 const MAX_HISTORY_PAGES_PER_SITE = 4;
 const MAX_RECENT_FOLDER_ITEMS = 4;
 const MAX_TODAY_HISTORY_ITEMS_PER_PAGE = 12;
-const RECENT_HISTORY_LOOKBACK_MS = 24 * 60 * 60 * 1000;
-const MIN_RECENT_DOMAIN_VISITS = 2;
-const RECENT_OPEN_TAB_MIN_OPEN_MS = 2 * 60 * 60 * 1000;
+const MOST_VISITED_HISTORY_FALLBACK_LOOKBACK_MS = 30 * 24 * 60 * 60 * 1000;
+const MOST_VISITED_HISTORY_MAX_RESULTS = 480;
+const MIN_MOST_VISITED_HISTORY_VISITS = 2;
 const MAX_CUSTOM_PORTALS = 48;
 const MAX_FAVORITE_SITES = 5;
 const MAX_PORTAL_TITLE_LENGTH = 32;
@@ -778,19 +777,19 @@ const MESSAGES = {
     collapseSurface: "收起面板",
     back: "返回",
     chooseBookmarkFolderPrompt: "选择一个书签文件夹",
-    historyTitle: "最近浏览",
+    historyTitle: "最常访问",
     todayHistoryTitle: "今日历史记录",
     todayHistoryEmpty: "当前没任何的历史记录",
     recentViewToggleToToday: "切换到今日历史记录",
-    recentViewToggleToRecent: "切换到最近浏览",
+    recentViewToggleToRecent: "切换到最常访问",
     todayHistoryPrevious: "上一组今日历史记录",
     todayHistoryNext: "下一组今日历史记录",
     openPortalSurface: "打开导航中枢",
-    recentFoldersSwitch: "切换最近浏览卡片",
-    recentFoldersPrevious: "上一组最近浏览",
-    recentFoldersNext: "下一组最近浏览",
-    historyPreviousPage: "上一条最近浏览",
-    historyNextPage: "下一条最近浏览",
+    recentFoldersSwitch: "切换最常访问卡片",
+    recentFoldersPrevious: "上一组最常访问",
+    recentFoldersNext: "下一组最常访问",
+    historyPreviousPage: "上一条最常访问",
+    historyNextPage: "下一条最常访问",
     quickSearchPlaceholder: "搜索或输入网址",
     googleImageSearch: "使用 Google 以图搜索",
     aiAttachmentAdd: "添加附件到 {engine}",
@@ -909,8 +908,8 @@ const MESSAGES = {
     onboardingPrivacyBody: "输入关键词、网址或 /AI 指令，Wayleaf 会从这个主区域开始搜索与跳转。",
     onboardingPermissionTitle: "添加自定义喜好网站",
     onboardingPermissionBody: "搜索栏下方可添加最多 5 个常用网站，点击图标即可快速打开。",
-    onboardingSyncTitle: "查看最近浏览",
-    onboardingSyncBody: "下方会按网站整理最近访问内容，并保留同一网站的相关页面。",
+    onboardingSyncTitle: "查看最常访问",
+    onboardingSyncBody: "下方会按网站整理最常访问的网址，并保留同一网站的相关页面。",
     onboardingAiTitle: "打开导航中枢",
     onboardingAiBody: "左上角入口集中管理快捷网站与自选书签文件夹。",
     onboardingStartTitle: "进入设置中心",
@@ -1007,19 +1006,19 @@ const MESSAGES = {
     collapseSurface: "收起面板",
     back: "返回",
     chooseBookmarkFolderPrompt: "選擇一個書籤資料夾",
-    historyTitle: "最近瀏覽",
-    todayHistoryTitle: "今日歷史記錄",
+    historyTitle: "最常訪問",
+    todayHistoryTitle: "歷史記錄",
     todayHistoryEmpty: "當前沒任何的歷史記錄",
     recentViewToggleToToday: "切換到今日歷史記錄",
-    recentViewToggleToRecent: "切換到最近瀏覽",
+    recentViewToggleToRecent: "切換到最常訪問",
     todayHistoryPrevious: "上一組今日歷史記錄",
     todayHistoryNext: "下一組今日歷史記錄",
     openPortalSurface: "打開導航中樞",
-    recentFoldersSwitch: "切換最近瀏覽卡片",
-    recentFoldersPrevious: "上一組最近瀏覽",
-    recentFoldersNext: "下一組最近瀏覽",
-    historyPreviousPage: "上一條最近瀏覽",
-    historyNextPage: "下一條最近瀏覽",
+    recentFoldersSwitch: "切換最常訪問卡片",
+    recentFoldersPrevious: "上一組最常訪問",
+    recentFoldersNext: "下一組最常訪問",
+    historyPreviousPage: "上一條最常訪問",
+    historyNextPage: "下一條最常訪問",
     unnamedFolder: "未命名資料夾",
     bookmarkRoot: "書籤",
     bookmarkMeta: "{folder} · {count} 個網站",
@@ -1127,8 +1126,8 @@ const MESSAGES = {
     onboardingPrivacyBody: "輸入關鍵字、網址或 /AI 指令，Wayleaf 會從這個主要區域開始搜尋與跳轉。",
     onboardingPermissionTitle: "新增自訂喜好網站",
     onboardingPermissionBody: "搜尋列下方可新增最多 5 個常用網站，點擊圖示即可快速開啟。",
-    onboardingSyncTitle: "查看最近瀏覽",
-    onboardingSyncBody: "下方會依網站整理最近造訪內容，並保留同一網站的相關頁面。",
+    onboardingSyncTitle: "查看最常訪問",
+    onboardingSyncBody: "下方會依網站整理最常訪問的網址，並保留同一網站的相關頁面。",
     onboardingAiTitle: "開啟導航中樞",
     onboardingAiBody: "左上角入口集中管理快捷網站與自選書籤資料夾。",
     onboardingStartTitle: "進入設定中心",
@@ -1199,19 +1198,19 @@ const MESSAGES = {
     collapseSurface: "Collapse panel",
     back: "Back",
     chooseBookmarkFolderPrompt: "Choose a bookmark folder",
-    historyTitle: "Recent browsing",
+    historyTitle: "Most visited",
     todayHistoryTitle: "Today history",
     todayHistoryEmpty: "No browsing history today.",
     recentViewToggleToToday: "Show today's history",
-    recentViewToggleToRecent: "Show recent browsing",
+    recentViewToggleToRecent: "Show most visited",
     todayHistoryPrevious: "Previous today history rows",
     todayHistoryNext: "Next today history rows",
     openPortalSurface: "Open navigation hub",
-    recentFoldersSwitch: "Switch recent cards",
-    recentFoldersPrevious: "Previous recent cards",
-    recentFoldersNext: "Next recent cards",
-    historyPreviousPage: "Previous recent page",
-    historyNextPage: "Next recent page",
+    recentFoldersSwitch: "Switch most visited cards",
+    recentFoldersPrevious: "Previous most visited cards",
+    recentFoldersNext: "Next most visited cards",
+    historyPreviousPage: "Previous most visited page",
+    historyNextPage: "Next most visited page",
     quickSearchPlaceholder: "Search or enter URL",
     googleImageSearch: "Search by image with Google",
     aiAttachmentAdd: "Add files to {engine}",
@@ -1330,8 +1329,8 @@ const MESSAGES = {
     onboardingPrivacyBody: "Enter a keyword, URL, or /AI command here to search and jump directly to a destination.",
     onboardingPermissionTitle: "Add favorite websites",
     onboardingPermissionBody: "Add up to five favorite sites below the search bar, then open them with one click.",
-    onboardingSyncTitle: "Review recent browsing",
-    onboardingSyncBody: "Recent visits are grouped by website below, including related pages from the same site.",
+    onboardingSyncTitle: "Review most visited",
+    onboardingSyncBody: "Frequently visited URLs are grouped by website below, including related pages from the same site.",
     onboardingAiTitle: "Open the navigation hub",
     onboardingAiBody: "Use the top-left hub to manage shortcuts and selected bookmark folders.",
     onboardingStartTitle: "Open Settings",
@@ -1382,11 +1381,11 @@ const MESSAGES = {
     bookmarksTitle: "ブックマーク",
     back: "戻る",
     chooseBookmarkFolderPrompt: "ブックマークフォルダを選択",
-    historyTitle: "最近の閲覧",
+    historyTitle: "よく見るサイト",
     todayHistoryTitle: "今日の履歴",
     todayHistoryEmpty: "今日の履歴はありません。",
     recentViewToggleToToday: "今日の履歴に切り替え",
-    recentViewToggleToRecent: "最近の閲覧に切り替え",
+    recentViewToggleToRecent: "よく見るサイトに切り替え",
     todayHistoryPrevious: "前の今日の履歴",
     todayHistoryNext: "次の今日の履歴",
     unnamedFolder: "名称未設定のフォルダ",
@@ -1492,11 +1491,11 @@ const MESSAGES = {
     bookmarksTitle: "북마크",
     back: "뒤로",
     chooseBookmarkFolderPrompt: "북마크 폴더 선택",
-    historyTitle: "최근 방문",
+    historyTitle: "자주 방문",
     todayHistoryTitle: "오늘 기록",
     todayHistoryEmpty: "오늘 기록이 없습니다.",
     recentViewToggleToToday: "오늘 기록으로 전환",
-    recentViewToggleToRecent: "최근 방문으로 전환",
+    recentViewToggleToRecent: "자주 방문으로 전환",
     todayHistoryPrevious: "이전 오늘 기록",
     todayHistoryNext: "다음 오늘 기록",
     unnamedFolder: "이름 없는 폴더",
@@ -1602,11 +1601,11 @@ const MESSAGES = {
     bookmarksTitle: "Marcadores",
     back: "Volver",
     chooseBookmarkFolderPrompt: "Elige una carpeta de marcadores",
-    historyTitle: "Recientes",
+    historyTitle: "Más visitados",
     todayHistoryTitle: "Historial de hoy",
     todayHistoryEmpty: "No hay historial de hoy.",
     recentViewToggleToToday: "Cambiar al historial de hoy",
-    recentViewToggleToRecent: "Cambiar a recientes",
+    recentViewToggleToRecent: "Cambiar a más visitados",
     todayHistoryPrevious: "Historial de hoy anterior",
     todayHistoryNext: "Historial de hoy siguiente",
     unnamedFolder: "Carpeta sin título",
@@ -1712,11 +1711,11 @@ const MESSAGES = {
     bookmarksTitle: "Favoris",
     back: "Retour",
     chooseBookmarkFolderPrompt: "Choisir un dossier de favoris",
-    historyTitle: "Navigation récente",
+    historyTitle: "Les plus visités",
     todayHistoryTitle: "Historique du jour",
     todayHistoryEmpty: "Aucun historique aujourd'hui.",
     recentViewToggleToToday: "Afficher l'historique du jour",
-    recentViewToggleToRecent: "Afficher la navigation récente",
+    recentViewToggleToRecent: "Afficher les plus visités",
     todayHistoryPrevious: "Historique du jour précédent",
     todayHistoryNext: "Historique du jour suivant",
     unnamedFolder: "Dossier sans titre",
@@ -1822,11 +1821,11 @@ const MESSAGES = {
     bookmarksTitle: "Lesezeichen",
     back: "Zurück",
     chooseBookmarkFolderPrompt: "Lesezeichenordner auswählen",
-    historyTitle: "Zuletzt besucht",
+    historyTitle: "Meistbesucht",
     todayHistoryTitle: "Heutiger Verlauf",
     todayHistoryEmpty: "Heute gibt es keinen Verlauf.",
     recentViewToggleToToday: "Zum heutigen Verlauf wechseln",
-    recentViewToggleToRecent: "Zu zuletzt besucht wechseln",
+    recentViewToggleToRecent: "Zu meistbesucht wechseln",
     todayHistoryPrevious: "Vorheriger heutiger Verlauf",
     todayHistoryNext: "Nächster heutiger Verlauf",
     unnamedFolder: "Unbenannter Ordner",
@@ -1954,11 +1953,11 @@ const LOCALE_COMPLETIONS = {
     chooseBookmarkFolder: "ブックマークフォルダを選択",
     collapseSurface: "パネルを閉じる",
     openPortalSurface: "ナビゲーションハブを開く",
-    recentFoldersSwitch: "最近カードを切り替え",
-    recentFoldersPrevious: "前の最近カード",
-    recentFoldersNext: "次の最近カード",
-    historyPreviousPage: "前の最近ページ",
-    historyNextPage: "次の最近ページ",
+    recentFoldersSwitch: "よく見るサイトカードを切り替え",
+    recentFoldersPrevious: "前のよく見るサイトカード",
+    recentFoldersNext: "次のよく見るサイトカード",
+    historyPreviousPage: "前のよく見るページ",
+    historyNextPage: "次のよく見るページ",
     quickSearchPlaceholder: "検索または URL を入力",
     googleImageSearch: "Google で画像検索",
     quickSearch: "検索",
@@ -1993,8 +1992,8 @@ const LOCALE_COMPLETIONS = {
     onboardingPrivacyBody: "キーワード、URL、または /AI コマンドを入力して検索や移動を開始します。",
     onboardingPermissionTitle: "お気に入りサイトを追加",
     onboardingPermissionBody: "検索バーの下に最大 5 件のサイトを追加し、ワンクリックで開けます。",
-    onboardingSyncTitle: "最近の閲覧を確認",
-    onboardingSyncBody: "最近の訪問はサイトごとに整理され、同じサイトの関連ページも表示されます。",
+    onboardingSyncTitle: "よく見るサイトを確認",
+    onboardingSyncBody: "よく訪問する URL がサイトごとに整理され、同じサイトの関連ページも表示されます。",
     onboardingAiTitle: "ナビゲーションハブを開く",
     onboardingAiBody: "左上のハブでショートカットと選択したブックマークフォルダを管理します。",
     onboardingStartTitle: "設定を開く",
@@ -2057,11 +2056,11 @@ const LOCALE_COMPLETIONS = {
     chooseBookmarkFolder: "북마크 폴더 선택",
     collapseSurface: "패널 접기",
     openPortalSurface: "탐색 허브 열기",
-    recentFoldersSwitch: "최근 카드 전환",
-    recentFoldersPrevious: "이전 최근 카드",
-    recentFoldersNext: "다음 최근 카드",
-    historyPreviousPage: "이전 최근 페이지",
-    historyNextPage: "다음 최근 페이지",
+    recentFoldersSwitch: "자주 방문 카드 전환",
+    recentFoldersPrevious: "이전 자주 방문 카드",
+    recentFoldersNext: "다음 자주 방문 카드",
+    historyPreviousPage: "이전 자주 방문 페이지",
+    historyNextPage: "다음 자주 방문 페이지",
     quickSearchPlaceholder: "검색 또는 URL 입력",
     googleImageSearch: "Google로 이미지 검색",
     quickSearch: "검색",
@@ -2096,8 +2095,8 @@ const LOCALE_COMPLETIONS = {
     onboardingPrivacyBody: "키워드, URL 또는 /AI 명령을 입력해 검색하거나 바로 이동하세요.",
     onboardingPermissionTitle: "즐겨찾기 사이트 추가",
     onboardingPermissionBody: "검색창 아래에 사이트를 최대 5개 추가하고 한 번의 클릭으로 열 수 있습니다.",
-    onboardingSyncTitle: "최근 방문 확인",
-    onboardingSyncBody: "최근 방문은 사이트별로 정리되며 같은 사이트의 관련 페이지도 함께 표시됩니다.",
+    onboardingSyncTitle: "자주 방문 확인",
+    onboardingSyncBody: "자주 방문한 URL이 사이트별로 정리되며 같은 사이트의 관련 페이지도 함께 표시됩니다.",
     onboardingAiTitle: "탐색 허브 열기",
     onboardingAiBody: "왼쪽 위 허브에서 바로가기와 선택한 북마크 폴더를 관리하세요.",
     onboardingStartTitle: "설정 열기",
@@ -2160,11 +2159,11 @@ const LOCALE_COMPLETIONS = {
     chooseBookmarkFolder: "Elegir carpeta de marcadores",
     collapseSurface: "Contraer panel",
     openPortalSurface: "Abrir centro de navegación",
-    recentFoldersSwitch: "Cambiar tarjetas recientes",
-    recentFoldersPrevious: "Tarjetas recientes anteriores",
-    recentFoldersNext: "Tarjetas recientes siguientes",
-    historyPreviousPage: "Página reciente anterior",
-    historyNextPage: "Página reciente siguiente",
+    recentFoldersSwitch: "Cambiar tarjetas más visitadas",
+    recentFoldersPrevious: "Tarjetas más visitadas anteriores",
+    recentFoldersNext: "Tarjetas más visitadas siguientes",
+    historyPreviousPage: "Página más visitada anterior",
+    historyNextPage: "Página más visitada siguiente",
     quickSearchPlaceholder: "Buscar o escribir URL",
     googleImageSearch: "Buscar por imagen con Google",
     quickSearch: "Buscar",
@@ -2199,8 +2198,8 @@ const LOCALE_COMPLETIONS = {
     onboardingPrivacyBody: "Escribe una palabra, URL o comando /AI para buscar o abrir un destino directamente.",
     onboardingPermissionTitle: "Agrega sitios favoritos",
     onboardingPermissionBody: "Añade hasta cinco sitios debajo de la búsqueda y ábrelos con un clic.",
-    onboardingSyncTitle: "Revisa la navegación reciente",
-    onboardingSyncBody: "Las visitas recientes se agrupan por sitio e incluyen páginas relacionadas del mismo dominio.",
+    onboardingSyncTitle: "Revisa los más visitados",
+    onboardingSyncBody: "Las URL más visitadas se agrupan por sitio e incluyen páginas relacionadas del mismo dominio.",
     onboardingAiTitle: "Abre el centro de navegación",
     onboardingAiBody: "Usa el acceso superior izquierdo para gestionar atajos y carpetas de marcadores.",
     onboardingStartTitle: "Abre Configuración",
@@ -2263,11 +2262,11 @@ const LOCALE_COMPLETIONS = {
     chooseBookmarkFolder: "Choisir un dossier de favoris",
     collapseSurface: "Réduire le panneau",
     openPortalSurface: "Ouvrir le centre de navigation",
-    recentFoldersSwitch: "Changer les cartes récentes",
-    recentFoldersPrevious: "Cartes récentes précédentes",
-    recentFoldersNext: "Cartes récentes suivantes",
-    historyPreviousPage: "Page récente précédente",
-    historyNextPage: "Page récente suivante",
+    recentFoldersSwitch: "Changer les cartes les plus visitées",
+    recentFoldersPrevious: "Cartes les plus visitées précédentes",
+    recentFoldersNext: "Cartes les plus visitées suivantes",
+    historyPreviousPage: "Page la plus visitée précédente",
+    historyNextPage: "Page la plus visitée suivante",
     quickSearchPlaceholder: "Rechercher ou saisir une URL",
     googleImageSearch: "Rechercher par image avec Google",
     quickSearch: "Rechercher",
@@ -2302,8 +2301,8 @@ const LOCALE_COMPLETIONS = {
     onboardingPrivacyBody: "Saisissez un mot-clé, une URL ou une commande /AI pour rechercher ou ouvrir une destination.",
     onboardingPermissionTitle: "Ajoutez des sites favoris",
     onboardingPermissionBody: "Ajoutez jusqu'à cinq sites sous la recherche, puis ouvrez-les en un clic.",
-    onboardingSyncTitle: "Consultez la navigation récente",
-    onboardingSyncBody: "Les visites récentes sont regroupées par site avec les pages associées du même domaine.",
+    onboardingSyncTitle: "Consultez les plus visités",
+    onboardingSyncBody: "Les URL les plus visitées sont regroupées par site avec les pages associées du même domaine.",
     onboardingAiTitle: "Ouvrez le centre de navigation",
     onboardingAiBody: "Le bouton en haut à gauche gère les raccourcis et les dossiers de favoris sélectionnés.",
     onboardingStartTitle: "Ouvrez les paramètres",
@@ -2366,11 +2365,11 @@ const LOCALE_COMPLETIONS = {
     chooseBookmarkFolder: "Lesezeichenordner auswählen",
     collapseSurface: "Panel einklappen",
     openPortalSurface: "Navigationszentrale öffnen",
-    recentFoldersSwitch: "Aktuelle Karten wechseln",
-    recentFoldersPrevious: "Vorherige aktuelle Karten",
-    recentFoldersNext: "Nächste aktuelle Karten",
-    historyPreviousPage: "Vorherige aktuelle Seite",
-    historyNextPage: "Nächste aktuelle Seite",
+    recentFoldersSwitch: "Meistbesuchte Karten wechseln",
+    recentFoldersPrevious: "Vorherige meistbesuchte Karten",
+    recentFoldersNext: "Nächste meistbesuchte Karten",
+    historyPreviousPage: "Vorherige meistbesuchte Seite",
+    historyNextPage: "Nächste meistbesuchte Seite",
     quickSearchPlaceholder: "Suchen oder URL eingeben",
     googleImageSearch: "Mit Google per Bild suchen",
     quickSearch: "Suchen",
@@ -2405,8 +2404,8 @@ const LOCALE_COMPLETIONS = {
     onboardingPrivacyBody: "Gib ein Stichwort, eine URL oder einen /AI-Befehl ein, um zu suchen oder direkt zu öffnen.",
     onboardingPermissionTitle: "Lieblingswebsites hinzufügen",
     onboardingPermissionBody: "Füge unter der Suche bis zu fünf Websites hinzu und öffne sie mit einem Klick.",
-    onboardingSyncTitle: "Zuletzt besuchte Seiten ansehen",
-    onboardingSyncBody: "Letzte Besuche werden nach Website gruppiert und zeigen auch zugehörige Seiten derselben Domain.",
+    onboardingSyncTitle: "Meistbesuchte Seiten ansehen",
+    onboardingSyncBody: "Häufig besuchte URLs werden nach Website gruppiert und zeigen auch zugehörige Seiten derselben Domain.",
     onboardingAiTitle: "Navigationszentrale öffnen",
     onboardingAiBody: "Oben links verwaltest du Kurzbefehle und ausgewählte Lesezeichenordner.",
     onboardingStartTitle: "Einstellungen öffnen",
@@ -2748,11 +2747,12 @@ function renderFirstPaintCache() {
   const cache = readFirstPaintCache();
   const favoriteSites = normalizeCachedFavoriteSites(cache.favoriteSites);
   const recentGroups = normalizeCachedRecentGroups(cache.recentGroups);
+  const favoriteIconMap = favoriteSiteIconMap(favoriteSites);
   if (favoriteSites.length) {
     renderFavoriteSiteList(favoriteSites, { iconRenders: cache.iconRenders });
   }
   if (recentGroups.length) {
-    renderRecentFolders(recentGroups, { iconRenders: cache.iconRenders });
+    renderRecentFolders(recentGroups, { iconRenders: cache.iconRenders, favoriteIconMap });
   }
 }
 
@@ -2782,6 +2782,7 @@ function normalizeCachedRecentGroups(value) {
         .map((item) => ({
           title: normalizeText(item.title) || historyFallbackTitle(safeUrl(item.url)),
           url: item.url,
+          icon: historyItemIcon(item),
           lastVisitTime: Number(item.lastVisitTime || 0),
           visitCount: Number(item.visitCount || 0),
           typedCount: Number(item.typedCount || 0)
@@ -2800,6 +2801,10 @@ function normalizeCachedRecentGroups(value) {
       name: normalizeText(group.name) || siteDisplayName(firstUrl, pages[0].title),
       url: isDisplayableHistoryUrl(safeUrl(group.url)) ? group.url : pages[0].url,
       homeUrl: isDisplayableHistoryUrl(safeUrl(group.homeUrl)) ? group.homeUrl : siteHomeUrl(key, pages[0].url),
+      icon: historyItemIcon(group),
+      visitCount: Number(group.visitCount || 0),
+      typedCount: Number(group.typedCount || 0),
+      lastVisitTime: Number(group.lastVisitTime || 0),
       pages,
       deleteUrls: Array.isArray(group.deleteUrls) ? group.deleteUrls.filter(Boolean) : []
     };
@@ -2812,15 +2817,24 @@ function serializeRecentGroupsForFirstPaint(groups) {
     name: group.name,
     url: group.url,
     homeUrl: group.homeUrl,
+    icon: historyItemIcon(group),
+    visitCount: Number(group.visitCount || 0),
+    typedCount: Number(group.typedCount || 0),
+    lastVisitTime: Number(group.lastVisitTime || 0),
     deleteUrls: group.deleteUrls,
     pages: (group.pages || []).slice(0, MAX_HISTORY_PAGES_PER_SITE).map((item) => ({
       title: normalizeText(item.title),
       url: item.url,
+      icon: historyItemIcon(item),
       lastVisitTime: Number(item.lastVisitTime || 0),
       visitCount: Number(item.visitCount || 0),
       typedCount: Number(item.typedCount || 0)
     }))
   }));
+}
+
+function historyItemIcon(item) {
+  return normalizeStoredSiteIcon(item?.icon || item?.favIconUrl || "");
 }
 
 
@@ -3529,7 +3543,7 @@ function setActiveSurfacePanel(panelId) {
         });
         syncSurfaceChromeState();
       }
-    }, 340);
+    }, prefersReducedMotion() ? 0 : 220);
   }
 }
 
@@ -5013,7 +5027,7 @@ function closeSettingsPanel() {
       settingsTabsShell?.setAttribute("data-faded", "false");
       syncSurfaceChromeState();
     }
-  }, 340);
+  }, prefersReducedMotion() ? 0 : 220);
 }
 
 async function requestOnboardingGuide() {
@@ -5067,6 +5081,10 @@ function positionOnboardingStep() {
   const gap = 18;
   const targetRect = target.getBoundingClientRect();
   const cardRect = onboardingCard.getBoundingClientRect();
+  const flip = onboardingCard.style.left && onboardingCard.style.top && !prefersReducedMotion()
+    ? getGsapFlip()
+    : null;
+  const previousState = flip?.Flip.getState(onboardingCard);
   let placement = step.placement;
   if (placement === "bottom" && targetRect.bottom + gap + cardRect.height > window.innerHeight - viewportPadding) {
     placement = "top";
@@ -5099,6 +5117,17 @@ function positionOnboardingStep() {
     : targetRect.top + targetRect.height / 2 - top - 7;
   const arrowLimit = (placement === "top" || placement === "bottom" ? cardRect.width : cardRect.height) - 30;
   onboardingCard.style.setProperty("--onboarding-arrow-position", `${Math.min(Math.max(16, arrowPosition), arrowLimit)}px`);
+  if (flip && previousState) {
+    flip.Flip.from(previousState, {
+      duration: gsapDuration(260),
+      ease: "power3.out",
+      simple: true,
+      overwrite: true,
+      onComplete() {
+        flip.gsap.set(onboardingCard, { clearProps: "transform" });
+      }
+    });
+  }
 }
 
 async function advanceOnboardingGuide() {
@@ -8159,12 +8188,15 @@ function withTimeout(promise, duration, message) {
 
 async function refreshHistory() {
   try {
-    const stored = await getStoredValues({ [RECENT_HISTORY_STARTED_AT_STORAGE_KEY]: 0 });
+    const [stored, favoriteSites] = await Promise.all([
+      getStoredValues({ [RECENT_HISTORY_STARTED_AT_STORAGE_KEY]: 0 }),
+      loadFavoriteSites()
+    ]);
+    const favoriteIconMap = favoriteSiteIconMap(favoriteSites);
     const recentHistoryStartedAt = Number(stored[RECENT_HISTORY_STARTED_AT_STORAGE_KEY] || 0);
-    const recentStartTime = Math.max(
-      Date.now() - RECENT_HISTORY_LOOKBACK_MS,
-      Number.isFinite(recentHistoryStartedAt) ? recentHistoryStartedAt : 0
-    );
+    const frequentStartTime = Number.isFinite(recentHistoryStartedAt) && recentHistoryStartedAt > 0
+      ? recentHistoryStartedAt
+      : Date.now() - MOST_VISITED_HISTORY_FALLBACK_LOOKBACK_MS;
     const todayStartTime = startOfTodayTime();
     const todayHistoryReady = chrome.history.search({
         text: "",
@@ -8178,7 +8210,7 @@ async function refreshHistory() {
         latestTodayHistoryItems = todayHistoryItems(todayItems);
         todayHistoryHydrated = true;
         if (recentViewMode === "today") {
-          renderTodayHistory();
+          renderTodayHistory({ favoriteIconMap });
         } else {
           updateRecentFolderSwitchControls();
         }
@@ -8187,22 +8219,16 @@ async function refreshHistory() {
         latestTodayHistoryItems = [];
         todayHistoryHydrated = true;
         if (recentViewMode === "today") {
-          renderTodayHistory();
+          renderTodayHistory({ favoriteIconMap });
         }
       });
-    const [items, openTabItems] = await Promise.all([
-      chrome.history.search({
-        text: "",
-        startTime: recentStartTime,
-        maxResults: 80
-      }),
-      openTabHistoryItems()
-    ]);
-    const recentItems = mergeHistoryItems(
-      await repeatDomainHistoryItems(items, recentStartTime),
-      openTabItems
-    );
-    const recentGroups = groupHistoryBySite(recentItems, {
+    const items = await chrome.history.search({
+      text: "",
+      startTime: frequentStartTime,
+      maxResults: MOST_VISITED_HISTORY_MAX_RESULTS
+    });
+    const mostVisitedItems = await mostVisitedHistoryItems(items, frequentStartTime);
+    const recentGroups = groupHistoryBySite(mostVisitedItems, {
       maxPagesPerSite: MAX_HISTORY_PAGES_PER_SITE
     });
     if (onboardingPreviewActive) {
@@ -8210,7 +8236,7 @@ async function refreshHistory() {
     }
     void todayHistoryReady;
     writeFirstPaintCache({ recentGroups: serializeRecentGroupsForFirstPaint(recentGroups) });
-    renderRecentSurface(recentGroups);
+    renderRecentSurface(recentGroups, { favoriteIconMap });
   } catch (error) {
     latestTodayHistoryItems = [];
     todayHistoryHydrated = true;
@@ -8252,23 +8278,21 @@ function dedupeHistory(items) {
   return filtered;
 }
 
-async function repeatDomainHistoryItems(items, startTime) {
+async function mostVisitedHistoryItems(items, startTime) {
   const displayableItems = dedupeHistory(items);
-  const domainVisitCounts = new Map();
-
-  await Promise.all(displayableItems.map(async (item) => {
-    const siteKey = siteGroupKey(safeUrl(item.url));
-    if (!siteKey) {
-      return;
-    }
+  const itemsWithVisits = await Promise.all(displayableItems.map(async (item) => {
     const visits = await historyVisitsSince(item.url, startTime);
-    domainVisitCounts.set(siteKey, (domainVisitCounts.get(siteKey) || 0) + visits);
+    return {
+      ...item,
+      lastVisitTime: Number(item.lastVisitTime || 0),
+      visitCount: visits,
+      typedCount: Number(item.typedCount || 0)
+    };
   }));
 
-  return displayableItems.filter((item) => {
-    const siteKey = siteGroupKey(safeUrl(item.url));
-    return siteKey && (domainVisitCounts.get(siteKey) || 0) >= MIN_RECENT_DOMAIN_VISITS;
-  });
+  return itemsWithVisits
+    .filter((item) => Number(item.visitCount || 0) >= MIN_MOST_VISITED_HISTORY_VISITS)
+    .sort(compareHistoryItemsByFrequentVisit);
 }
 
 async function historyVisitsSince(url, startTime) {
@@ -8283,129 +8307,6 @@ async function historyVisitsSince(url, startTime) {
   } catch {
     return 1;
   }
-}
-
-async function openTabHistoryItems() {
-  if (!chrome.tabs?.query) {
-    return [];
-  }
-
-  try {
-    const tabs = await chrome.tabs.query({});
-    return updateOpenTabActivity(tabs);
-  } catch (error) {
-    console.warn("Failed to read open tabs", error);
-    return [];
-  }
-}
-
-async function updateOpenTabActivity(tabs) {
-  const now = Date.now();
-  const result = await getStoredValues({ [OPEN_TAB_ACTIVITY_STORAGE_KEY]: {} });
-  const previous = normalizeOpenTabActivity(result[OPEN_TAB_ACTIVITY_STORAGE_KEY], now);
-  const next = {};
-
-  for (const tab of tabs || []) {
-    const url = safeUrl(tab?.url);
-    const key = normalizeHistoryKey(tab?.url);
-    if (!key || !isDisplayableHistoryUrl(url)) {
-      continue;
-    }
-    if (next[key]) {
-      next[key] = {
-        ...next[key],
-        title: normalizeText(tab.title) || next[key].title,
-        lastAccessed: Math.max(normalizedTabLastAccessed(tab), Number(next[key].lastAccessed || 0)),
-        tabCount: next[key].tabCount + 1
-      };
-      continue;
-    }
-    const seen = previous[key] || {};
-    const firstSeenAt = Number.isFinite(Number(seen.firstSeenAt)) ? Number(seen.firstSeenAt) : now;
-    next[key] = {
-      url: url.href,
-      title: normalizeText(tab.title) || normalizeText(seen.title),
-      firstSeenAt,
-      lastAccessed: normalizedTabLastAccessed(tab) || Number(seen.lastAccessed || firstSeenAt),
-      tabCount: 1
-    };
-  }
-
-  await setStoredValues({ [OPEN_TAB_ACTIVITY_STORAGE_KEY]: next });
-  return Object.values(next)
-    .filter((entry) => now - Number(entry.firstSeenAt || 0) >= RECENT_OPEN_TAB_MIN_OPEN_MS)
-    .map((entry) => ({
-      title: normalizeText(entry.title) || historyFallbackTitle(safeUrl(entry.url)),
-      url: entry.url,
-      lastVisitTime: openTabHistoryTime(entry),
-      visitCount: Math.max(MIN_RECENT_DOMAIN_VISITS, Number(entry.tabCount || 0)),
-      typedCount: 0,
-      fromOpenTab: true
-    }));
-}
-
-function normalizedTabLastAccessed(tab) {
-  const value = Number(tab?.lastAccessed || 0);
-  return Number.isFinite(value) && value > 0 ? value : 0;
-}
-
-function openTabHistoryTime(entry) {
-  return Number(entry?.firstSeenAt || 0);
-}
-
-function normalizeOpenTabActivity(value, now = Date.now()) {
-  const entries = value && typeof value === "object" && !Array.isArray(value)
-    ? Object.entries(value)
-    : [];
-  const normalized = {};
-
-  for (const [key, entry] of entries) {
-    const url = safeUrl(entry?.url || key);
-    const normalizedKey = normalizeHistoryKey(url?.href || key);
-    const firstSeenAt = Number(entry?.firstSeenAt || 0);
-    if (!normalizedKey || !Number.isFinite(firstSeenAt) || firstSeenAt <= 0) {
-      continue;
-    }
-    normalized[normalizedKey] = {
-      url: url?.href || normalizedKey,
-      title: normalizeText(entry?.title),
-      firstSeenAt,
-      lastAccessed: Number(entry?.lastAccessed || firstSeenAt),
-      tabCount: Math.max(1, Number(entry?.tabCount || 1))
-    };
-  }
-
-  return normalized;
-}
-
-function mergeHistoryItems(...itemGroups) {
-  const merged = new Map();
-
-  for (const items of itemGroups) {
-    for (const item of items || []) {
-      const key = normalizeHistoryKey(item?.url);
-      if (!key) {
-        continue;
-      }
-      const existing = merged.get(key);
-      if (!existing) {
-        merged.set(key, item);
-        continue;
-      }
-      merged.set(key, {
-        ...existing,
-        ...item,
-        title: normalizeText(item.title) || normalizeText(existing.title),
-        lastVisitTime: Math.max(Number(existing.lastVisitTime || 0), Number(item.lastVisitTime || 0)),
-        visitCount: Math.max(Number(existing.visitCount || 0), Number(item.visitCount || 0)),
-        typedCount: Math.max(Number(existing.typedCount || 0), Number(item.typedCount || 0)),
-        fromOpenTab: Boolean(existing.fromOpenTab || item.fromOpenTab)
-      });
-    }
-  }
-
-  return [...merged.values()]
-    .sort((a, b) => Number(b.lastVisitTime || 0) - Number(a.lastVisitTime || 0));
 }
 
 function renderRecentFolders(groups, options = {}) {
@@ -8435,11 +8336,13 @@ function renderRecentFolders(groups, options = {}) {
   const previousKeys = options.previousKeys || pendingRecentPreviousKeys;
   const outgoingLayer = captureRecentFolderPageSwitchSnapshot(previousKeys, direction);
   pendingRecentPreviousKeys = null;
-  const iconRenders = options.iconRenders || readFirstPaintCache().iconRenders;
+  const firstPaintCache = readFirstPaintCache();
+  const iconRenders = options.iconRenders || firstPaintCache.iconRenders;
+  const favoriteIconMap = options.favoriteIconMap || favoriteSiteIconMap(normalizeCachedFavoriteSites(firstPaintCache.favoriteSites));
   const startIndex = recentFolderPageIndex * MAX_RECENT_FOLDER_ITEMS;
   const fragment = document.createDocumentFragment();
   latestRecentFolderGroups.slice(startIndex, startIndex + MAX_RECENT_FOLDER_ITEMS).forEach((group) => {
-    const card = createRecentFolderItem(group, { iconRenders });
+    const card = createRecentFolderItem(group, { iconRenders, favoriteIconMap });
     fragment.appendChild(card);
   });
   recentHistoryFolders.replaceChildren(fragment);
@@ -8539,9 +8442,11 @@ function renderTodayHistory(options = {}) {
   todayHistoryPageIndex = Math.min(Math.max(0, todayHistoryPageIndex), todayHistoryPageCount() - 1);
   const startIndex = todayHistoryPageIndex * MAX_TODAY_HISTORY_ITEMS_PER_PAGE;
   const visibleItems = latestTodayHistoryItems.slice(startIndex, startIndex + MAX_TODAY_HISTORY_ITEMS_PER_PAGE);
-  const iconRenders = options.iconRenders || readFirstPaintCache().iconRenders;
+  const firstPaintCache = readFirstPaintCache();
+  const iconRenders = options.iconRenders || firstPaintCache.iconRenders;
+  const favoriteIconMap = options.favoriteIconMap || favoriteSiteIconMap(normalizeCachedFavoriteSites(firstPaintCache.favoriteSites));
   const fragment = document.createDocumentFragment();
-  visibleItems.forEach((item) => fragment.append(createTodayHistoryItem(item, { ...options, iconRenders })));
+  visibleItems.forEach((item) => fragment.append(createTodayHistoryItem(item, { ...options, iconRenders, favoriteIconMap })));
   if (!fragment.childNodes.length) {
     fragment.append(createRecentEmptyState(t("todayHistoryEmpty")));
   }
@@ -8569,7 +8474,7 @@ function createTodayHistoryItem(item, options = {}) {
   link.setAttribute("aria-label", t("openPage", { title: item.title }));
   icon.className = "recent-folder-logo today-history-logo";
   icon.alt = "";
-  const iconSite = { title: item.title, url: item.url };
+  const iconSite = { title: item.title, url: item.url, icon: historyItemIcon(item) };
   renderHistorySiteIcon(icon, iconSite, options);
   title.className = "today-history-title";
   title.textContent = item.title;
@@ -8999,7 +8904,8 @@ function createRecentFolderItem(group, options = {}) {
   icon.className = "recent-folder-logo";
   const iconSite = {
     title,
-    url: group.homeUrl || group.url
+    url: group.homeUrl || group.url,
+    icon: historyItemIcon(group)
   };
   renderHistorySiteIcon(icon, iconSite, options);
   icon.alt = "";
@@ -9281,6 +9187,9 @@ function groupHistoryBySite(items, options = {}) {
         name: siteDisplayName(url, item.title),
         url: item.url,
         homeUrl: siteHomeUrl(key, item.url),
+        visitCount: 0,
+        typedCount: 0,
+        lastVisitTime: 0,
         pages: [],
         pageKeys: new Set(),
         deleteUrls: [],
@@ -9288,6 +9197,9 @@ function groupHistoryBySite(items, options = {}) {
       });
     }
     const group = groups.get(key);
+    group.visitCount += Number(item.visitCount || 0);
+    group.typedCount += Number(item.typedCount || 0);
+    group.lastVisitTime = Math.max(group.lastVisitTime, Number(item.lastVisitTime || 0));
     const deleteUrl = normalizeHistoryDeleteUrl(item.url);
     const deleteKey = deleteUrl;
     if (deleteKey && !group.deleteUrlKeys.has(deleteKey)) {
@@ -9313,18 +9225,48 @@ function orderedRecentHistoryGroups(groups, maxPagesPerSite = MAX_HISTORY_PAGES_
     .map((group) => ({
       ...group,
       pages: Array.isArray(group.pages)
-        ? [...group.pages].sort(compareHistoryItemsByRecentVisit).slice(0, maxPagesPerSite)
+        ? [...group.pages].sort(compareHistoryItemsByFrequentVisit).slice(0, maxPagesPerSite)
         : []
     }))
-    .sort(compareHistoryGroupsByRecentVisit);
+    .sort(compareHistoryGroupsByFrequentVisit);
 }
 
 function compareHistoryItemsByRecentVisit(a, b) {
   return Number(b.lastVisitTime || 0) - Number(a.lastVisitTime || 0);
 }
 
-function compareHistoryGroupsByRecentVisit(a, b) {
+function compareHistoryItemsByFrequentVisit(a, b) {
+  const visitDiff = Number(b.visitCount || 0) - Number(a.visitCount || 0);
+  if (visitDiff !== 0) {
+    return visitDiff;
+  }
+  const typedDiff = Number(b.typedCount || 0) - Number(a.typedCount || 0);
+  if (typedDiff !== 0) {
+    return typedDiff;
+  }
+  return compareHistoryItemsByRecentVisit(a, b);
+}
+
+function compareHistoryGroupsByFrequentVisit(a, b) {
+  const visitDiff = historyGroupVisitCount(b) - historyGroupVisitCount(a);
+  if (visitDiff !== 0) {
+    return visitDiff;
+  }
+  const typedDiff = Number(b.typedCount || 0) - Number(a.typedCount || 0);
+  if (typedDiff !== 0) {
+    return typedDiff;
+  }
   return historyGroupRecentVisitTime(b) - historyGroupRecentVisitTime(a);
+}
+
+function historyGroupVisitCount(group) {
+  const explicitCount = Number(group.visitCount || 0);
+  if (explicitCount > 0) {
+    return explicitCount;
+  }
+  return (group.pages || []).reduce((total, item) => (
+    total + Number(item.visitCount || 0)
+  ), 0);
 }
 
 function historyGroupRecentVisitTime(group) {

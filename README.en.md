@@ -6,7 +6,7 @@
 
 <p align="center">
   <strong>Turn Chrome's new tab page into a local-first workspace.</strong><br>
-  Search, shortcuts, selected bookmarks, recent browsing, and AI commands live on one screen.
+  Search, shortcuts, selected bookmarks, most visited sites, and AI commands live on one screen.
 </p>
 
 <p align="center">
@@ -38,7 +38,7 @@ Most new-tab sessions start with the same small set of actions: open a frequent 
 | --- | --- |
 | Search or open a site | The search box supports local history/bookmarks, full URLs, Google, Baidu, Bing, aggregate Google+Bing search, and immediate platform activators such as `*yt` or `*xhs`. |
 | Manage frequent destinations | Built-in categories cover search, social, shopping, developer, productivity, media, design, and AI sites; custom shortcuts are supported. |
-| Continue recent browsing | Recent pages are grouped by repeat visits per site. |
+| Organize most visited | Frequently visited URLs are grouped by site. |
 | Show a bookmark folder | Pick one Chrome bookmark folder; Wayleaf highlights sites added in the last 3 days and groups the rest by title initial. |
 | Collect high-frequency sites | Favorite sites are deduplicated, and sites from the active bookmark folder can be added directly to favorites. |
 | Send a prompt to AI | Use `/gpt`, `/claude`, `/gemini`, `/grok`, `/deepseek`, `/doubao`, `/kimi`, or `/glm` to open the matching AI site and try to fill the prompt. |
@@ -109,7 +109,7 @@ Search Settings shows the built-in AI engines, triggers, search links, and the p
 | Permission | Purpose |
 | --- | --- |
 | `bookmarks` | Read the bookmark folder you choose and support deleting those bookmarks from the extension. |
-| `history` | Read recent browsing history, detect repeated sites, and support deleting history entries. |
+| `history` | Read local history, rank most visited sites, and support deleting history entries. |
 | `favicon` | Show site icons through Chrome's favicon support. |
 | `storage` | Save theme, shortcuts, bookmark choice, sync state, and layout preferences. |
 | `alarms` | Trigger once-daily auto sync while the extension is enabled. |

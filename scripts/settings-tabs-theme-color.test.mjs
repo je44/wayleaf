@@ -160,6 +160,12 @@ assert.match(
   "Settings tab icons should be data-mapped so future settings sections can be added in code without rendering placeholder slots."
 );
 
+assert.match(
+  source,
+  /function closeSettingsPanel\(\) \{[\s\S]*\}, prefersReducedMotion\(\) \? 0 : 220\);/,
+  "Settings cleanup should match the 220ms close transition and finish immediately for reduced-motion users."
+);
+
 assert.doesNotMatch(
   settingsTabActiveBlock,
   /border/,

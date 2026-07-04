@@ -8,9 +8,9 @@ Wayleaf is a local-first Chrome new tab extension. It does not provide a backend
 
 Wayleaf uses browser extension APIs to show and manage the new tab workspace:
 
-- Browsing history: read locally to show recent browsing, repeated site groups, local search suggestions, and user-triggered history deletion.
+- Browsing history: read locally to show most visited site groups, local search suggestions, and user-triggered history deletion.
 - Bookmarks: read locally to show a selected bookmark folder and support user-triggered bookmark deletion.
-- Tabs: used to open search and AI pages, support multi-search, include long-open pages in recent browsing, and coordinate video Picture-in-Picture behavior.
+- Tabs: used to open search and AI pages, support multi-search, and coordinate video Picture-in-Picture behavior.
 - Storage: used to save theme, language, favorite sites, custom shortcuts, bookmark folder choice, search settings, sync metadata, icon cache, and short-lived AI prompt handoff data.
 - Host access for `http://*/*` and `https://*/*`: used to discover site icons and manifests for user-visible URLs, support AI page handoff on supported providers, and support video Picture-in-Picture on pages with standard HTML5 video.
 - Scripting: used to inject helper scripts for AI prompt handoff and video Picture-in-Picture behavior.

@@ -7,11 +7,11 @@ This document explains the current Manifest V3 permission surface. It does not r
 | Permission | Current use |
 | --- | --- |
 | `bookmarks` | Reads the user-selected bookmark folder, renders bookmark cards, watches bookmark changes, and removes a bookmark only when the user triggers deletion. |
-| `history` | Reads recent browser history, groups repeated site visits, reads visit counts, and deletes history URLs only when the user triggers deletion. |
+| `history` | Reads local browser history, ranks most visited site groups, reads visit counts, and deletes history URLs only when the user triggers deletion. |
 | `favicon` | Uses Chrome favicon URLs as one step in the site icon fallback chain. |
 | `storage` | Stores theme, language, favorite sites, custom portals, bookmark folder choice, search settings, sync metadata, icon cache, and short-lived AI prompt handoff data. |
 | `unlimitedStorage` | Provides storage headroom for local icon caches and short-lived AI attachment handoff payloads without sending that data to a Wayleaf backend. |
-| `tabs` | Opens multi-target searches, reads open tabs to include long-open pages in recent browsing, and coordinates video Picture-in-Picture state. |
+| `tabs` | Opens multi-target searches and coordinates video Picture-in-Picture state. |
 | `scripting` | Injects helper scripts for AI direct-submit handoff after navigation and video Picture-in-Picture support on video pages. |
 | `alarms` | Schedules daily automatic settings sync while the extension is enabled. |
 | `http://*/*`, `https://*/*` | Allows favicon/site icon discovery for arbitrary visited or saved web pages, AI handoff support on provider pages, and video Picture-in-Picture support on pages with standard HTML5 video. |
@@ -47,9 +47,9 @@ Short-lived AI prompt handoff uses `aiDirectPrompts` plus `_wayleaf_prompt`. Som
 
 Use the current implementation as the source of truth when filling the CWS privacy form:
 
-- Single purpose: new-tab productivity workspace with search, shortcuts, selected bookmarks, recent browsing, theming, sync, and AI page handoff.
+- Single purpose: new-tab productivity workspace with search, shortcuts, selected bookmarks, most visited sites, theming, sync, and AI page handoff.
 - Data collection: no off-browser backend collection by Wayleaf.
-- Browsing history: used locally to render recent browsing and local search suggestions.
+- Browsing history: used locally to render most visited sites and local search suggestions.
 - Bookmarks: used locally to render the selected folder and support deletion from the extension UI.
 - Website content / web activity: host access is used for icon discovery, AI provider handoff, and video Picture-in-Picture support on pages with standard HTML5 video.
 - User content: AI prompts are sent to the provider chosen by the user; provider policies apply after navigation.
@@ -59,7 +59,7 @@ Use the current implementation as the source of truth when filling the CWS priva
 
 If Chrome Web Store review asks about broad host permissions, use this concise explanation:
 
-> Wayleaf replaces the new tab page and renders user-selected bookmarks, recent browsing, custom shortcuts, and site icons for arbitrary web pages. Broad host access is used to discover site icons and manifests for those user-visible URLs and to support video Picture-in-Picture on pages with standard HTML5 video. AI helper behavior is limited to the supported AI provider pages declared in `content_scripts`.
+> Wayleaf replaces the new tab page and renders user-selected bookmarks, most visited sites, custom shortcuts, and site icons for arbitrary web pages. Broad host access is used to discover site icons and manifests for those user-visible URLs and to support video Picture-in-Picture on pages with standard HTML5 video. AI helper behavior is limited to the supported AI provider pages declared in `content_scripts`.
 
 ## Current Non-Goals
 

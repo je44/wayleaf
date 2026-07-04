@@ -518,13 +518,11 @@ body.surface-open .surface-launchers {
 
 body.surface-open .home-stage {
   opacity: 0.7;
-  filter: saturate(0.88) contrast(0.96);
-  transform: translate3d(-30px, 0, 0) scale(0.982);
+  transform: none;
 }
 
 body.surface-open .topbar {
   opacity: 0.7;
-  filter: saturate(0.88) contrast(0.96);
   transform: none;
   pointer-events: none;
 }
@@ -557,8 +555,8 @@ body.settings-page-open .topbar {
   opacity: 0;
   pointer-events: none;
   transition:
-    opacity 300ms cubic-bezier(0.5, 0, 0.75, 0),
-    visibility 0s linear 300ms;
+    opacity 220ms cubic-bezier(0.5, 0, 0.75, 0),
+    visibility 0s linear 220ms;
   visibility: hidden;
   will-change: opacity;
 }
@@ -575,7 +573,7 @@ body.surface-open .surface-backdrop {
   opacity: 1;
   pointer-events: auto;
   transition:
-    opacity 360ms cubic-bezier(0.16, 1, 0.3, 1),
+    opacity 260ms cubic-bezier(0.16, 1, 0.3, 1),
     visibility 0s linear;
   visibility: visible;
 }
@@ -587,7 +585,7 @@ body.surface-open .surface-backdrop {
 .search-workbench {
   --search-leading-icon-offset: 4px;
   --search-icon-size: 26.58px;
-  --search-active-panel-scale: 1.055;
+  --search-active-panel-scale: 1.02;
   --search-panel-scale: 1;
   --ai-engine-column-width: 52px;
   --ai-engine-pill-left: 14px;
@@ -1292,15 +1290,8 @@ body.surface-open .surface-backdrop {
 }
 
 .favorite-add-button[data-state="visible"] {
-  animation: favoriteAddEnter 220ms cubic-bezier(0.22, 1, 0.36, 1) both;
   pointer-events: auto;
   visibility: visible;
-}
-
-.favorite-add-button:not([data-hydrating="false"])[data-state="visible"] {
-  animation: none;
-  opacity: 0.72;
-  transform: translateY(0) scaleY(1);
 }
 
 .search-workbench.search-active .favorite-add-button[data-state="visible"],
@@ -1410,9 +1401,9 @@ body.surface-open .surface-backdrop {
 }
 
 .search-workbench.search-active .favorite-strip {
-  opacity: 0.58;
+  opacity: 0.72;
   pointer-events: none;
-  transform: translateY(12px) scale(0.86);
+  transform: translateY(4px);
   user-select: none;
 }
 
@@ -2067,10 +2058,6 @@ html.theme-transitioning[data-theme-transition="to-light"] .recent-card-inner {
   will-change: transform;
 }
 
-.search-workbench.search-active .favorite-site {
-  transform: translateY(calc(var(--favorite-index, 0) * 1px)) scale(0.94);
-}
-
 .favorite-link {
   display: grid;
   width: 72px;
@@ -2283,18 +2270,6 @@ html.theme-transitioning .search-workbench[data-ai-exiting] .favorite-icon {
 
   100% {
     transform: translateY(0) scale(1);
-  }
-}
-
-@keyframes favoriteAddEnter {
-  0% {
-    opacity: 0;
-    transform: translateY(-8px) scaleY(0.68);
-  }
-
-  100% {
-    opacity: 0.72;
-    transform: translateY(0) scaleY(1);
   }
 }
 
@@ -4024,9 +3999,6 @@ html.theme-transitioning .search-workbench[data-ai-exiting] .favorite-icon {
   border-radius: 12px;
   background: var(--panel);
   box-shadow: 0 18px 60px rgb(20 27 24 / 0.28);
-  transition:
-    left 260ms cubic-bezier(0.22, 1, 0.36, 1),
-    top 260ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .onboarding-card::after {
@@ -4133,8 +4105,8 @@ html.theme-transitioning .search-workbench[data-ai-exiting] .favorite-icon {
   visibility: hidden;
   transition:
     opacity 180ms ease,
-    transform 340ms cubic-bezier(0.16, 1, 0.3, 1),
-    visibility 0s linear 340ms;
+    transform 220ms cubic-bezier(0.5, 0, 0.75, 0),
+    visibility 0s linear 220ms;
   will-change: transform, opacity;
 }
 
@@ -4145,7 +4117,7 @@ html.theme-transitioning .search-workbench[data-ai-exiting] .favorite-icon {
   visibility: visible;
   transition:
     opacity 180ms ease,
-    transform 360ms cubic-bezier(0.16, 1, 0.3, 1),
+    transform 260ms cubic-bezier(0.16, 1, 0.3, 1),
     visibility 0s linear;
 }
 
@@ -4155,8 +4127,8 @@ html.theme-transitioning .search-workbench[data-ai-exiting] .favorite-icon {
   transform: translate3d(-100%, 0, 0);
   visibility: visible;
   transition:
-    opacity 180ms ease 80ms,
-    transform 300ms cubic-bezier(0.5, 0, 0.75, 0);
+    opacity 180ms ease,
+    transform 220ms cubic-bezier(0.5, 0, 0.75, 0);
 }
 
 .panel {
@@ -4170,43 +4142,11 @@ html.theme-transitioning .search-workbench[data-ai-exiting] .favorite-icon {
   background: var(--panel);
   box-shadow: none;
   overflow: visible;
-  opacity: 0;
-  transform: translateX(-10px);
 }
 
 .panel.surface-active,
 .panel.surface-closing {
   display: flex;
-}
-
-.panel.surface-active {
-  animation: surfacePanelEnter 360ms cubic-bezier(0.16, 1, 0.3, 1) both;
-}
-
-.panel.surface-closing {
-  animation: surfacePanelExit 260ms cubic-bezier(0.5, 0, 0.75, 0) both;
-}
-
-@keyframes surfacePanelEnter {
-  from {
-    opacity: 0;
-    transform: translateX(-12px);
-  }
-  to {
-    opacity: 1;
-    transform: translateX(0);
-  }
-}
-
-@keyframes surfacePanelExit {
-  from {
-    opacity: 1;
-    transform: translateX(0);
-  }
-  to {
-    opacity: 0;
-    transform: translateX(-10px);
-  }
 }
 
 .portal-panel {

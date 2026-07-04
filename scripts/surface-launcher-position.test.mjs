@@ -13,18 +13,36 @@ function cssBlock(selector) {
 const surfaceOpenHomeStageRule = cssBlock("body.surface-open .home-stage");
 const surfaceOpenTopbarRule = cssBlock("body.surface-open .topbar");
 const surfaceOpenLaunchersRule = cssBlock("body.surface-open .surface-launchers");
+const surfaceBackdropRule = cssBlock(".surface-backdrop");
+const surfaceOpenBackdropRule = cssBlock("body.surface-open .surface-backdrop");
+const surfaceShellRule = cssBlock(".shell");
+const surfaceOpenShellRule = cssBlock(".shell.surface-open");
+const surfaceClosingShellRule = cssBlock(".shell.surface-closing");
+const surfacePanelRule = cssBlock(".panel");
 
 assert.match(
   surfaceOpenHomeStageRule,
-  /transform:\s*translate3d\(-30px,\s*0,\s*0\) scale\(0\.982\);/,
-  "Opening a secondary surface should keep the page-content offset on the home stage."
+  /transform:\s*none;/,
+  "Opening a secondary surface should leave the home stage spatially fixed."
 );
+
+assert.doesNotMatch(surfaceOpenHomeStageRule, /filter:/, "Opening a secondary surface should only dim the home stage.");
 
 assert.match(
   surfaceOpenTopbarRule,
   /transform:\s*none;/,
   "Topbar controls must remain fixed while secondary surfaces animate in."
 );
+
+assert.doesNotMatch(surfaceOpenTopbarRule, /filter:/, "Opening a secondary surface should only dim the topbar.");
+
+assert.match(surfaceBackdropRule, /opacity 220ms[\s\S]*visibility 0s linear 220ms;/, "The navigation backdrop should close with the surface shell.");
+assert.match(surfaceOpenBackdropRule, /opacity 260ms/, "The navigation backdrop should open with the surface shell.");
+assert.match(surfaceShellRule, /transform 220ms[\s\S]*visibility 0s linear 220ms;/, "The navigation shell should use the shared close duration.");
+assert.match(surfaceOpenShellRule, /transform 260ms/, "The navigation shell should use the restrained open duration.");
+assert.match(surfaceClosingShellRule, /transform 220ms/, "The navigation shell should close without a delayed second movement.");
+assert.doesNotMatch(surfacePanelRule, /(?:opacity|transform):/, "The inner navigation panel should stay static while the shell moves.");
+assert.doesNotMatch(styles, /@keyframes surfacePanel(?:Enter|Exit)/, "The inner navigation panel should not run a second entrance or exit animation.");
 
 assert.doesNotMatch(
   surfaceOpenLaunchersRule,
@@ -48,6 +66,12 @@ assert.doesNotMatch(
   source,
   /surfaceBackdrop\.setAttribute\("aria-hidden"/,
   "The focusable navigation backdrop must not be hidden from accessibility while it can retain focus."
+);
+
+assert.match(
+  source,
+  /function setActiveSurfacePanel\(panelId\) \{[\s\S]*\}, prefersReducedMotion\(\) \? 0 : 220\);/,
+  "Navigation surface cleanup should match the 220ms close transition and finish immediately for reduced-motion users."
 );
 
 assert.match(

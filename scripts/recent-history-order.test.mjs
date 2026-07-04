@@ -7,11 +7,7 @@ const start = source.indexOf("function groupHistoryBySite(");
 const end = source.indexOf("function formatHistoryFullTime(", start);
 assert.ok(start >= 0 && end > start, "Recent history grouping functions should be extractable.");
 assert.equal(source.includes("pinnedHistory"), false, "Recent browsing must not keep the removed pinned-history storage path.");
-const tabTimeStart = source.indexOf("function normalizedTabLastAccessed(");
-const tabTimeEnd = source.indexOf("function normalizeOpenTabActivity(", tabTimeStart);
-assert.ok(tabTimeStart >= 0 && tabTimeEnd > tabTimeStart, "Open-tab timestamp helper should be extractable.");
 const testSource = `${source.slice(start, end)}
-${source.slice(tabTimeStart, tabTimeEnd)}
 globalThis.groupHistoryBySite = groupHistoryBySite;`;
 
 const sandbox = {
@@ -92,14 +88,20 @@ assert.deepEqual(
   "Screenshot-like recent cards should put the 10:30/10:20 history groups before the older 9:44 groups."
 );
 
-assert.equal(
-  sandbox.openTabHistoryTime({ firstSeenAt: 44, lastAccessed: 105 }),
-  44,
-  "Open tabs must sort by first-seen time so recently activated old tabs do not outrank newer history visits."
-);
+const frequentGroups = sandbox.groupHistoryBySite([
+  { title: "New Low", url: "https://low.test/latest", lastVisitTime: 500, visitCount: 2 },
+  { title: "Old High A", url: "https://high.test/a", lastVisitTime: 120, visitCount: 4 },
+  { title: "Old High B", url: "https://high.test/b", lastVisitTime: 100, visitCount: 3 },
+  { title: "Middle", url: "https://middle.test/home", lastVisitTime: 300, visitCount: 5 }
+]);
 
-assert.equal(
-  sandbox.normalizedTabLastAccessed({ lastAccessed: 105 }),
-  105,
-  "Open tabs may still store the browser lastAccessed timestamp for diagnostics."
+assert.deepEqual(
+  Array.from(frequentGroups, (group) => group.key),
+  ["high.test", "middle.test", "low.test"],
+  "Most-visited cards should rank sites by total visit count before recency."
+);
+assert.deepEqual(
+  Array.from(frequentGroups[0].pages, (page) => page.title),
+  ["Old High A", "Old High B"],
+  "Same-site pages should rank by visit count before recency."
 );
