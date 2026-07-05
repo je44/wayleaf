@@ -171,11 +171,12 @@ assert.match(source, /function discoverRemoteBrandIconDataUrl[\s\S]*localIconFor
 assert.match(source, /function refreshRemoteBrandIcon[\s\S]*localIconForUrl\(site\.url\)[\s\S]*return;/, "Async remote refresh must short-circuit for deployed local icons.");
 assert.match(source, /function localIconForUrl\(url\) \{[\s\S]*return siteIconSourceLooksLikeSvg\(iconPath\) \? iconPath : "";/, "Primary local routing must accept SVG sources only.");
 assert.match(source, /function resolvePrimarySiteIconRoute[\s\S]*discoverRemoteBrandIconDataUrl[\s\S]*startSecondaryFaviconRoute/, "Primary local and cloud SVG lookup must finish before the secondary favicon route starts.");
-assert.match(source, /const GENERIC_SITE_FALLBACK_ICON = `\$\{SITE_ICON_DIRECTORY\}\/fallback\.svg`;/, "No-site-ico fallback should use the full SVG asset instead of the old PNG tile.");
-assert.doesNotMatch(source, /generic-site-fallback\.png/, "Runtime fallback rendering must not use the legacy PNG asset.");
-assert.match(source, /function createSiteCard[\s\S]*renderSharedSiteIcon\(icon, site, options\);/, "Navigation hub site cards must render through the shared icon context.");
+assert.doesNotMatch(source, /fallback\.svg|GENERIC_SITE_FALLBACK_ICON|applyGenericFallbackSiteIcon|genericFallbackIcon|site-icon-generic-fallback/, "Deleted fallback.svg runtime references must not return.");
+assert.match(source, /function createSiteCard\(site, options = \{\}, renderIcon = renderSharedSiteIcon\)[\s\S]*renderIcon\(icon, site, options\);/, "Navigation hub site cards must default to the shared icon context.");
+assert.match(source, /function createBookmarkSiteCard[\s\S]*createSiteCard\(site, \{ \.\.\.options, allowFavorite: false \}, renderBookmarkSiteIcon\)/, "Bookmark cards must use the immediate native favicon display path.");
 assert.match(source, /function createPortalCategorySection[\s\S]*createSiteCard\(portal, \{[\s\S]*favoriteIconMap: group\.favoriteIconMap,[\s\S]*iconRenders: group\.iconRenders[\s\S]*\}\);/, "Navigation hub categories must pass the shared favorite and first-paint icon context.");
-assert.match(source, /function renderSelectedBookmarkFolder[\s\S]*const favoriteIconMap = favoriteSiteIconMap\(favoriteSites\);[\s\S]*const iconRenders = readFirstPaintCache\(\)\.iconRenders;[\s\S]*createBookmarkInitialSection\(group, \{ favoriteKeys, favoriteIconMap, iconRenders \}\)/, "Navigation hub bookmark view must use the same shared icon context as smart shortcuts.");
+assert.match(source, /function renderSelectedBookmarkFolder[\s\S]*const favoriteIconMap = favoriteSiteIconMap\(favoriteSites\);[\s\S]*const iconRenders = readFirstPaintCache\(\)\.iconRenders;[\s\S]*latestBookmarkRenderContext = \{ favoriteKeys, favoriteIconMap, iconRenders \};/, "Navigation hub bookmark loading must retain the shared icon context.");
+assert.match(source, /function renderVisibleBookmarkSites[\s\S]*const context = latestBookmarkRenderContext;[\s\S]*createBookmarkSection\(\{[\s\S]*\.\.\.context[\s\S]*\}\)/, "Navigation hub bookmark sections must render with the shared icon context.");
 assert.match(source, /function renderSharedSiteIcon[\s\S]*cachedFirstPaintIconRender\(options\.iconRenders, iconSite\)[\s\S]*restoreFirstPaintIconRender\(icon, iconSite, cachedIconRender\)[\s\S]*applySiteIcon\(icon, iconSite\);/, "Shared site cards must restore cached renders before falling back to the existing icon algorithm.");
 assert.match(source, /function warmFirstPaintLocalIconForSiteKey\(siteKey\)[\s\S]*SITE_ICON_FILE_BY_SITE_KEY\[siteKey\][\s\S]*siteIconRawSvgTextCache\.has\(iconPath\)/, "First-paint recovery must identify known local SVG routes before the icon index finishes loading.");
 assert.match(source, /function restoreFirstPaintIconRender\(icon, site, render\)[\s\S]*localIconForUrl\(site\.url\) \|\| warmFirstPaintLocalIconForUrl\(site\.url\)[\s\S]*firstPaintRenderStaleForLocalIcon\(icon\.dataset\.siteKey, localIcon, render\)[\s\S]*beginIconRouteRequest\(icon, "primary_hit"\)[\s\S]*renderPrimarySiteIcon\(icon, site, localIcon/, "Stale first-paint favicon renders for known local icons must sync directly to the primary Wayleaf SVG instead of flashing the old favicon.");
@@ -1415,7 +1416,6 @@ const FAVICON_EMBEDDED_TILE_FUSION_FEATHER_DISTANCE = 24;
 const FAVICON_READABLE_CARRIER_CONTRAST_MIN = 3;
 const FAVICON_READABLE_CARRIER_MAX_MIX = 0.72;
 const FAVICON_ADAPTIVE_CARRIER_VERSION = 12;
-const GENERIC_SITE_FALLBACK_TILE_COLOR = "#f04424";
 
 function rgbaSample(size, painter) {
   const data = new Uint8ClampedArray(size * size * 4);
@@ -2769,13 +2769,6 @@ function invertHexColor(color) {
   return rgbToHex(hexToRgb(color).map((channel) => 255 - channel));
 }
 
-function genericSiteFallbackTileColors() {
-  return {
-    light: GENERIC_SITE_FALLBACK_TILE_COLOR,
-    dark: GENERIC_SITE_FALLBACK_TILE_COLOR
-  };
-}
-
 function decodeSvgDataUrl(source) {
   const value = String(source || "");
   if (!/^data:image\/svg\+xml[,;]/i.test(value)) {
@@ -3609,14 +3602,12 @@ function firstPaintRenderStaleForAdaptiveFaviconForTest(localIcon, render) {
   return !localIcon
     && render.tile === "plain"
     && !render.local
-    && !render.generic
     && render.adaptiveCarrierVersion !== FAVICON_ADAPTIVE_CARRIER_VERSION;
 }
 
 function adaptiveFaviconCarrierCacheVersionForTest(icon) {
   return icon.dataset.iconTile === "plain"
     && !icon.classList.contains("site-icon-local")
-    && !icon.classList.contains("site-icon-generic-fallback")
     ? FAVICON_ADAPTIVE_CARRIER_VERSION
     : 0;
 }
@@ -3631,7 +3622,6 @@ function cachedFirstPaintIconRenderEntryForTest(icon, mode = "light") {
     tileLight,
     tileDark,
     local: icon.classList.contains("site-icon-local"),
-    generic: icon.classList.contains("site-icon-generic-fallback"),
     adaptiveCarrierVersion,
     updatedAt: 1
   };
@@ -3645,17 +3635,17 @@ function cachedFirstPaintIconRenderEntryForTest(icon, mode = "light") {
 }
 
 assert.equal(
-  firstPaintRenderStaleForAdaptiveFaviconForTest("", { tile: "plain", local: false, generic: false }),
+  firstPaintRenderStaleForAdaptiveFaviconForTest("", { tile: "plain", local: false }),
   true,
   "Legacy first-paint favicon renders must be invalidated so the adaptive carrier algorithm can resample."
 );
 assert.equal(
-  firstPaintRenderStaleForAdaptiveFaviconForTest("", { tile: "plain", local: false, generic: false, adaptiveCarrierVersion: FAVICON_ADAPTIVE_CARRIER_VERSION }),
+  firstPaintRenderStaleForAdaptiveFaviconForTest("", { tile: "plain", local: false, adaptiveCarrierVersion: FAVICON_ADAPTIVE_CARRIER_VERSION }),
   false,
   "Current adaptive favicon renders can still use the first-paint cache."
 );
 assert.equal(
-  firstPaintRenderStaleForAdaptiveFaviconForTest("icons/sites/example.svg", { tile: "plain", local: true, generic: false }),
+  firstPaintRenderStaleForAdaptiveFaviconForTest("icons/sites/example.svg", { tile: "plain", local: true }),
   false,
   "Local icon cache renders must stay outside favicon adaptive carrier invalidation."
 );
@@ -4644,7 +4634,6 @@ const faviconTileDecision = (sample) => {
   assert.equal(faviconShouldFuseEmbeddedTile(color, localBitmapTileColors.light), false, "Local bitmap resources do not enter the new low-contrast full-surface fusion rule.");
 }
 
-assert.deepEqual(genericSiteFallbackTileColors(), { light: "#f04424", dark: "#f04424" }, "No-site-ico fallback tile colors remain unchanged.");
 
 assert.deepEqual(extractSvgColorPalette('<svg><path fill="#abc"/><path stroke="#aabbcc"/></svg>'), ["#aabbcc"], "Equivalent short and long hex colors should dedupe.");
 assert.deepEqual(extractSvgColorPalette('<svg><path style="fill:#111;stroke:#222"/></svg>'), ["#111111", "#222222"], "Inline style colors must be included in the palette.");
@@ -5281,14 +5270,14 @@ assert.deepEqual(
   assert.deepEqual(
     firstPaintIconRenderWithCurrentTileForTest(
       { url: "https://remote-gradient.example/" },
-      { src: remoteGradient, source: remoteGradient, tile: "brand", tileLight: "#ffffff", tileDark: "#ffffff", local: false, generic: false }
+      { src: remoteGradient, source: remoteGradient, tile: "brand", tileLight: "#ffffff", tileDark: "#ffffff", local: false }
     ),
-    { src: remoteGradient, source: remoteGradient, tile: "brand", tileLight: "#111827", tileDark: "#111827", local: false, generic: false },
+    { src: remoteGradient, source: remoteGradient, tile: "brand", tileLight: "#111827", tileDark: "#111827", local: false },
     "First-paint cached remote SVGs should sync carrier colors before display instead of replaying a visible correction."
   );
 }
 {
-  const render = { src: "icons/sites/jimeng.svg", source: "icons/sites/jimeng.svg", tile: "brand", tileLight: "#ffffff", tileDark: "#ffffff", local: true, generic: false };
+  const render = { src: "icons/sites/jimeng.svg", source: "icons/sites/jimeng.svg", tile: "brand", tileLight: "#ffffff", tileDark: "#ffffff", local: true };
   const previousAnalysis = localSiteIconRenderModeCacheForTest.get("icons/sites/jimeng.svg");
   localSiteIconRenderModeCacheForTest.delete("icons/sites/jimeng.svg");
   assert.strictEqual(

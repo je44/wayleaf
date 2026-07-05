@@ -3,6 +3,9 @@
 const SITE_ICON_DIRECTORY = "icons/sites";
 const SITE_ICON_CACHE_STORAGE_KEY = "siteIconCache";
 const MAX_CACHED_SITE_ICONS = 80;
+const MAX_CACHED_SITE_ICON_MISSES = 320;
+const MAX_CACHED_RENDERED_SITE_ICONS = 320;
+const MAX_CACHED_RENDERED_SITE_ICON_TOTAL_BYTES = 3 * 1024 * 1024;
 const MAX_CACHED_SITE_ICON_BYTES = 96 * 1024;
 const SITE_ICON_RAW_SVG_CACHE_STORAGE_KEY = "__wayleaf_site_icon_svg__";
 const MAX_CACHED_SITE_ICON_SVG_BYTES = 256 * 1024;
@@ -53,8 +56,6 @@ const BRAND_ICON_DARK_MODE_CARRIER = "#f8fafc";
 const BRAND_ICON_LIGHT_MODE_DARK_CARRIER = "#102019";
 const BRAND_ICON_MULTICOLOR_PAPER_CARRIER = "#ffffff";
 const BRAND_ICON_MULTICOLOR_DARK_CARRIER = "#111827";
-const GENERIC_SITE_FALLBACK_ICON = `${SITE_ICON_DIRECTORY}/fallback.svg`;
-const GENERIC_SITE_FALLBACK_TILE_COLOR = "#f04424";
 const SITE_ICON_FILE_BY_SITE_KEY = Object.freeze({
   "1688.com": "1688.ico",
   "alipay.com": "alipay.svg",
@@ -246,6 +247,8 @@ let resolveSiteIconIndexReady = () => {};
 const siteIconIndexReadyPromise = new Promise((resolve) => {
   resolveSiteIconIndexReady = resolve;
 });
+let siteIconCacheSnapshot = null;
+let siteIconCacheLoadPromise = null;
 const whiteSvgIconDataUrlCache = new Map();
 const localSiteIconBrandColorCache = new Map();
 const localSiteIconRenderModeCache = new Map();
@@ -293,19 +296,22 @@ function cachedFirstPaintIconRender(iconRenders, site) {
   const entry = iconRenders?.[firstPaintIconCacheKey(site)];
   const value = entry?.[mode];
   const src = typeof value?.src === "string" && value.src.length <= MAX_CACHED_SITE_ICON_BYTES * 2 ? value.src : "";
+  const source = typeof entry?.source === "string" && entry.source.length <= MAX_CACHED_SITE_ICON_BYTES * 2 ? entry.source : "";
   const tileLight = typeof value?.tileLight === "string" && value.tileLight.length <= 128 ? value.tileLight : "";
   const tileDark = typeof value?.tileDark === "string" && value.tileDark.length <= 128 ? value.tileDark : "";
-  if (!src || !tileLight || !tileDark || Date.now() - Number(value.updatedAt || 0) > SITE_ICON_CACHE_TTL_MS) {
+  if (!src
+    || !tileLight
+    || !tileDark
+    || Date.now() - Number(value.updatedAt || 0) > SITE_ICON_CACHE_TTL_MS) {
     return null;
   }
   return {
     src,
-    source: typeof entry.source === "string" && entry.source.length <= MAX_CACHED_SITE_ICON_BYTES * 2 ? entry.source : "",
+    source,
     tile: value.tile === "brand" || value.tile === "generated" ? value.tile : "plain",
     tileLight,
     tileDark,
     local: Boolean(value.local),
-    generic: Boolean(value.generic),
     adaptiveCarrierVersion: Number(value.adaptiveCarrierVersion || 0)
   };
 }
@@ -314,10 +320,6 @@ function restoreFirstPaintIconRender(icon, site, render) {
   storeIconSiteContext(icon, site);
   icon.dataset.siteKey = firstPaintIconCacheKey(site);
   const localIcon = localIconForUrl(site.url) || warmFirstPaintLocalIconForUrl(site.url);
-  if (render.generic && (localIcon || normalizeStoredSiteIcon(site.icon || ""))) {
-    applySiteIcon(icon, site);
-    return;
-  }
   const localTile = localIcon ? syncLocalIconTile(site, localIcon) : null;
   const currentRender = firstPaintIconRenderWithCurrentTile(site, render);
   if (localIcon && firstPaintRenderStaleForLocalIcon(icon.dataset.siteKey, localIcon, render)) {
@@ -337,10 +339,6 @@ function restoreFirstPaintIconRender(icon, site, render) {
     icon.dataset.iconSource = currentRender.source;
     icon.dataset.iconCandidate = currentRender.source;
   }
-  if (currentRender.generic) {
-    setIconRouteState(icon, "fallback");
-  }
-  icon.classList.toggle("site-icon-generic-fallback", currentRender.generic);
   applyIconTile(icon, currentRender.tile, { light: currentRender.tileLight, dark: currentRender.tileDark }, currentRender.local);
   icon.dataset.iconCacheHydrated = "true";
   icon.addEventListener("error", () => {
@@ -363,7 +361,6 @@ function paintPendingLocalSvgIcon(icon, site, localIcon, requestToken) {
   icon.dataset.iconCandidate = localIcon;
   delete icon.dataset.iconDefaultRescue;
   delete icon.dataset.iconDefaultProbe;
-  icon.classList.remove("site-icon-generic-fallback");
   applyIconTile(icon, "brand", { light: BRAND_ICON_MULTICOLOR_PAPER_CARRIER, dark: BRAND_ICON_MULTICOLOR_PAPER_CARRIER }, true);
   icon.src = localIcon;
   icon.removeAttribute("srcset");
@@ -390,7 +387,6 @@ function paintCachedPrimaryLocalSvgIcon(icon, site, localIcon, requestToken) {
   icon.dataset.iconCandidate = localIcon;
   delete icon.dataset.iconDefaultRescue;
   delete icon.dataset.iconDefaultProbe;
-  icon.classList.remove("site-icon-generic-fallback");
   applyIconTile(icon, syncTile.tileMode, syncTile.tileColors, syncTile.isLocalIconSource);
   const displaySource = syncLocalIconFinalSrc(icon, localIcon);
   if (!displaySource) {
@@ -457,14 +453,12 @@ function firstPaintRenderStaleForAdaptiveFavicon(localIcon, render) {
   return !localIcon
     && render.tile === "plain"
     && !render.local
-    && !render.generic
     && render.adaptiveCarrierVersion !== FAVICON_ADAPTIVE_CARRIER_VERSION;
 }
 
 function adaptiveFaviconCarrierCacheVersion(icon) {
   return icon.dataset.iconTile === "plain"
     && !icon.classList.contains("site-icon-local")
-    && !icon.classList.contains("site-icon-generic-fallback")
     ? FAVICON_ADAPTIVE_CARRIER_VERSION
     : 0;
 }
@@ -486,7 +480,9 @@ function cacheRenderedSiteIcon(icon, site) {
   const key = firstPaintIconCacheKey(site);
   const src = icon.getAttribute("src") || "";
   const source = icon.dataset.iconSource || src;
-  if (String(source || "").startsWith(`${SITE_ICON_DIRECTORY}/`) && siteIconSourceLooksLikeSvg(source) && !localSiteIconRenderModeCache.has(source)) {
+  if (String(source || "").startsWith(`${SITE_ICON_DIRECTORY}/`)
+    && siteIconSourceLooksLikeSvg(source)
+    && !localSiteIconRenderModeCache.has(source)) {
     return;
   }
   const tileLight = icon.style.getPropertyValue("--site-icon-tile-light").trim();
@@ -504,7 +500,6 @@ function cacheRenderedSiteIcon(icon, site) {
     tileLight,
     tileDark,
     local: icon.classList.contains("site-icon-local"),
-    generic: icon.classList.contains("site-icon-generic-fallback"),
     adaptiveCarrierVersion,
     updatedAt: Date.now()
   };
@@ -519,11 +514,20 @@ function cacheRenderedSiteIcon(icon, site) {
   // Keep fixed first-paint surfaces out of transient history eviction.
   const protectedKeys = firstPaintProtectedIconKeys(cache);
   const renderRecency = (entry) => Math.max(Number(entry.light?.updatedAt || 0), Number(entry.dark?.updatedAt || 0));
+  let retainedCount = 0;
+  let retainedBytes = 0;
   Object.entries(iconRenders)
     .filter(([entryKey]) => !protectedKeys.has(entryKey))
     .sort(([, first], [, second]) => renderRecency(second) - renderRecency(first))
-    .slice(MAX_CACHED_SITE_ICONS)
-    .forEach(([staleKey]) => delete iconRenders[staleKey]);
+    .forEach(([entryKey, entry]) => {
+      const entryBytes = JSON.stringify(entry).length * 2;
+      retainedCount += 1;
+      retainedBytes += entryBytes;
+      if (retainedCount > MAX_CACHED_RENDERED_SITE_ICONS
+        || retainedBytes > MAX_CACHED_RENDERED_SITE_ICON_TOTAL_BYTES) {
+        delete iconRenders[entryKey];
+      }
+    });
   writeFirstPaintCache({ iconRenders });
 }
 
@@ -561,7 +565,11 @@ function cacheRenderedSiteIconFromContext(icon) {
 }
 
 function cacheRenderedSiteIconOnLoad(icon, site) {
-  icon.addEventListener("load", () => cacheRenderedSiteIcon(icon, site));
+  const cache = () => cacheRenderedSiteIcon(icon, site);
+  icon.addEventListener("load", cache);
+  if (icon.complete && icon.getAttribute("src")) {
+    queueMicrotask(cache);
+  }
 }
 
 // SECONDARY_FAVICON_ROUTE:START
@@ -575,8 +583,7 @@ const ICON_ROUTE_STATES = new Set([
   "primary_hit",
   "primary_miss",
   "secondary_pending",
-  "secondary_hit",
-  "fallback"
+  "secondary_hit"
 ]);
 
 function setIconRouteState(icon, state, requestToken = "") {
@@ -623,66 +630,35 @@ function secondaryFaviconDisplaySource(site) {
     return storedIcon;
   }
   try {
-    const faviconUrl = new URL(chrome.runtime.getURL("/_favicon/"));
-    faviconUrl.searchParams.set("pageUrl", parsedUrl.href);
-    faviconUrl.searchParams.set("size", String(SECONDARY_FAVICON_DISPLAY_SIZE));
-    return faviconUrl.toString();
+    return browserFaviconDisplaySource(parsedUrl.href);
   } catch {
     return "";
   }
 }
 
-function applySecondaryFaviconFallback(icon, site, siteKey, requestToken) {
+function browserFaviconDisplaySource(url) {
+  const faviconUrl = new URL(chrome.runtime.getURL("/_favicon/"));
+  faviconUrl.searchParams.set("pageUrl", url);
+  faviconUrl.searchParams.set("size", String(SECONDARY_FAVICON_DISPLAY_SIZE));
+  return faviconUrl.toString();
+}
+
+function finishSecondaryFaviconMiss(icon, siteKey, requestToken) {
   if (!secondaryFaviconRequestStillCurrent(icon, siteKey, requestToken)) {
     return;
   }
-  setIconRouteState(icon, "fallback", requestToken);
-  applyGenericFallbackSiteIcon(icon, safeUrl(site.url)?.hostname || site.title || "");
+  setIconRouteState(icon, "secondary_hit", requestToken);
+  markSiteIconMissing(icon);
 }
 
-function discoverSecondarySiteIcon(icon, site, siteKey, requestToken, currentSource = "") {
-  if (!secondaryFaviconRequestStillCurrent(icon, siteKey, requestToken)) {
-    return;
-  }
-  const parsedUrl = safeUrl(site.url);
-  if (!parsedUrl) {
-    applySecondaryFaviconFallback(icon, site, siteKey, requestToken);
-    return;
-  }
-  discoverSiteIconCandidateEntries(parsedUrl.href).then((candidates) => {
-    if (!secondaryFaviconRequestStillCurrent(icon, siteKey, requestToken)) {
-      return;
-    }
-    applySecondarySiteIconCandidates(
-      icon,
-      site,
-      siteKey,
-      requestToken,
-      candidates.filter((candidate) => candidate?.url && candidate.url !== currentSource)
-    );
-  }).catch(() => applySecondaryFaviconFallback(icon, site, siteKey, requestToken));
-}
-
-function applySecondarySiteIconCandidates(icon, site, siteKey, requestToken, candidates = []) {
-  const [candidate, ...remainingCandidates] = candidates.filter((entry) => entry?.url);
-  if (!candidate?.url) {
-    applySecondaryFaviconFallback(icon, site, siteKey, requestToken);
-    return;
-  }
-  fetchImageDataUrl(candidate.url).then((iconDataUrl) => {
-    if (!secondaryFaviconRequestStillCurrent(icon, siteKey, requestToken)) {
-      return;
-    }
-    if (!iconDataUrl) {
-      applySecondarySiteIconCandidates(icon, site, siteKey, requestToken, remainingCandidates);
-      return;
-    }
-    paintSecondaryFaviconSource(icon, site, siteKey, iconDataUrl, requestToken);
-  }).catch(() => {
-    if (secondaryFaviconRequestStillCurrent(icon, siteKey, requestToken)) {
-      applySecondarySiteIconCandidates(icon, site, siteKey, requestToken, remainingCandidates);
-    }
-  });
+function markSiteIconMissing(icon) {
+  icon.removeAttribute("srcset");
+  icon.removeAttribute("src");
+  icon.dataset.iconMissing = "true";
+  delete icon.dataset.iconCandidate;
+  delete icon.dataset.iconSource;
+  delete icon.dataset.iconDefaultProbe;
+  icon.classList.remove("site-icon-loading");
 }
 
 function secondaryFaviconSourceIsDirect(source) {
@@ -704,16 +680,12 @@ function paintSecondaryFaviconSource(icon, site, siteKey, source, requestToken) 
   delete icon.dataset.iconDefaultRescue;
   delete icon.dataset.iconDefaultRescueCandidate;
   delete icon.dataset.iconDefaultProbe;
-  icon.classList.remove("site-icon-generic-fallback");
+  icon.classList.remove("site-icon-loading");
   applyIconTile(icon, "plain", SECONDARY_FAVICON_TILE_COLORS, false);
 
   icon.addEventListener("load", () => {
     if (secondaryFaviconRequestStillCurrent(icon, siteKey, requestToken)
       && icon.dataset.iconCandidate === source) {
-      if (faviconCandidateIsChromeFavicon(source) && faviconElementLooksLikeBrowserDefault(icon)) {
-        discoverSecondarySiteIcon(icon, site, siteKey, requestToken, source);
-        return;
-      }
       setIconRouteState(icon, "secondary_hit", requestToken);
       cacheRenderedSiteIcon(icon, site);
     }
@@ -721,11 +693,11 @@ function paintSecondaryFaviconSource(icon, site, siteKey, source, requestToken) 
   icon.addEventListener("error", () => {
     if (secondaryFaviconRequestStillCurrent(icon, siteKey, requestToken)
       && icon.dataset.iconCandidate === source) {
-      if (faviconCandidateIsChromeFavicon(source)) {
-        discoverSecondarySiteIcon(icon, site, siteKey, requestToken, source);
-      } else {
-        applySecondaryFaviconFallback(icon, site, siteKey, requestToken);
+      if (!faviconCandidateIsChromeFavicon(source)) {
+        paintSecondaryFaviconSource(icon, site, siteKey, browserFaviconDisplaySource(site.url), requestToken);
+        return;
       }
+      finishSecondaryFaviconMiss(icon, siteKey, requestToken);
     }
   }, { once: true });
   icon.src = source;
@@ -737,12 +709,12 @@ function startSecondaryFaviconRoute(icon, site, requestToken = icon.dataset.icon
   }
   const siteKey = siteGroupKey(safeUrl(site.url));
   if (!siteKey) {
-    applySecondaryFaviconFallback(icon, site, siteKey, requestToken);
+    finishSecondaryFaviconMiss(icon, siteKey, requestToken);
     return;
   }
   const source = secondaryFaviconDisplaySource(site);
   if (!source) {
-    applySecondaryFaviconFallback(icon, site, siteKey, requestToken);
+    finishSecondaryFaviconMiss(icon, siteKey, requestToken);
     return;
   }
   paintSecondaryFaviconSource(icon, site, siteKey, source, requestToken);
@@ -776,7 +748,6 @@ function paintPendingSiteIcon(icon) {
   icon.dataset.iconCandidate = pendingIcon;
   icon.dataset.iconSource = pendingIcon;
   delete icon.dataset.iconFusedTile;
-  icon.classList.remove("site-icon-generic-fallback");
   icon.classList.add("site-icon-loading");
   applyIconTile(icon, "plain", { light: "var(--light-icon-tile)", dark: "var(--dark-icon-tile)" }, false);
   icon.src = pendingIcon;
@@ -797,6 +768,67 @@ function applySiteIcon(icon, site, options = {}) {
   return waitForSiteIconIndex().then(() => resolvePrimarySiteIconRoute(icon, site, options, requestToken));
 }
 
+function applyBookmarkSiteIcon(icon, site) {
+  storeIconSiteContext(icon, site);
+  const siteKey = siteGroupKey(safeUrl(site.url)) || "";
+  icon.dataset.siteKey = siteKey;
+  delete icon.dataset.iconCacheHydrated;
+  const requestToken = beginIconRouteRequest(icon, "primary_pending");
+  const localIcon = warmFirstPaintLocalIconForUrl(site.url)
+    || (siteIconIndexState === "ready" ? localIconForUrl(site.url) : "");
+  if (localIcon) {
+    setIconRouteState(icon, "primary_hit", requestToken);
+    return renderPrimarySiteIcon(icon, site, localIcon, {}, requestToken);
+  }
+
+  setIconRouteState(icon, "primary_miss", requestToken);
+  startSecondaryFaviconRoute(icon, site, requestToken);
+  resolveBookmarkPrimarySiteIconRoute(icon, site, siteKey, requestToken).catch(() => {});
+  return undefined;
+}
+
+async function resolveBookmarkPrimarySiteIconRoute(icon, site, siteKey, requestToken) {
+  const cachedEntry = await loadCachedSiteIconEntry(siteKey);
+  if (!iconRouteRequestStillCurrent(icon, siteKey, requestToken)) {
+    return;
+  }
+  const cachedIcon = siteIconCacheEntryIsFresh(cachedEntry)
+    && cachedSiteIconEntryIsRemoteBrand(cachedEntry)
+    ? normalizeStoredSiteIcon(cachedEntry.icon)
+    : "";
+  if (cachedIcon) {
+    setIconRouteState(icon, "primary_hit", requestToken);
+    renderPrimarySiteIcon(icon, site, cachedIcon, {}, requestToken);
+    return;
+  }
+  if (remoteBrandIconMissCacheIsFresh(cachedEntry)) {
+    return;
+  }
+
+  await waitForSiteIconIndex();
+  if (!iconRouteRequestStillCurrent(icon, siteKey, requestToken)) {
+    return;
+  }
+  const localIcon = siteIconIndexState === "ready" ? localIconForUrl(site.url) : "";
+  if (localIcon) {
+    setIconRouteState(icon, "primary_hit", requestToken);
+    renderPrimarySiteIcon(icon, site, localIcon, {}, requestToken);
+    return;
+  }
+  if (siteIconIndexState !== "ready") {
+    return;
+  }
+
+  const remoteBrandIcon = await discoverRemoteBrandIconDataUrl(site.url, { requireStableMiss: true });
+  if (!iconRouteRequestStillCurrent(icon, siteKey, requestToken)) {
+    return;
+  }
+  if (remoteBrandIcon) {
+    setIconRouteState(icon, "primary_hit", requestToken);
+    renderPrimarySiteIcon(icon, site, remoteBrandIcon, {}, requestToken);
+  }
+}
+
 async function resolvePrimarySiteIconRoute(icon, site, options, requestToken) {
   const parsedUrl = safeUrl(site.url);
   const siteKey = siteGroupKey(parsedUrl) || "";
@@ -804,8 +836,8 @@ async function resolvePrimarySiteIconRoute(icon, site, options, requestToken) {
     return;
   }
   if (siteIconIndexState !== "ready") {
-    setIconRouteState(icon, "fallback", requestToken);
-    applyGenericFallbackSiteIcon(icon, parsedUrl?.hostname || site.title || "");
+    setIconRouteState(icon, "primary_miss", requestToken);
+    startSecondaryFaviconRoute(icon, site, requestToken);
     return;
   }
   const localIcon = localIconForUrl(site.url);
@@ -821,8 +853,8 @@ async function resolvePrimarySiteIconRoute(icon, site, options, requestToken) {
     remoteBrandIcon = await discoverRemoteBrandIconDataUrl(site.url, { requireStableMiss: true });
   } catch {
     if (iconRouteRequestStillCurrent(icon, siteKey, requestToken)) {
-      setIconRouteState(icon, "fallback", requestToken);
-      applyGenericFallbackSiteIcon(icon, parsedUrl?.hostname || site.title || "");
+      setIconRouteState(icon, "primary_miss", requestToken);
+      startSecondaryFaviconRoute(icon, site, requestToken);
     }
     return;
   }
@@ -863,7 +895,6 @@ function renderPrimarySiteIcon(icon, site, iconSource, options = {}, requestToke
     icon.dataset.iconCandidate = render.iconSource;
     delete icon.dataset.iconDefaultRescue;
     delete icon.dataset.iconDefaultProbe;
-    icon.classList.remove("site-icon-generic-fallback");
     if (render.canUseBitmapTileFusion) {
       icon.addEventListener("load", () => {
         if (iconStillRenderingCandidate(icon, render.iconSource)) {
@@ -925,7 +956,6 @@ function applyExplicitSiteIcon(icon, site, iconSource) {
   icon.dataset.explicitAiIcon = "true";
   delete icon.dataset.iconDefaultRescue;
   delete icon.dataset.iconDefaultProbe;
-  icon.classList.remove("site-icon-generic-fallback");
   icon.src = iconSource;
   icon.removeAttribute("srcset");
 }
@@ -992,7 +1022,6 @@ function applyRemoteBrandIcon(icon, site, iconDataUrl) {
   delete icon.dataset.iconDefaultRescue;
   delete icon.dataset.iconDefaultRescueCandidate;
   delete icon.dataset.iconDefaultProbe;
-  icon.classList.remove("site-icon-generic-fallback");
   applySiteIconTile(icon, site, iconDataUrl);
   const displayIcon = displayIconSource(icon, iconDataUrl);
   if (displayIcon instanceof Promise) {
@@ -1045,36 +1074,6 @@ function applyHistoryIcon(icon, site) {
   applySiteIcon(icon, site);
 }
 
-// FALLBACK_SITE_ICON_ROUTE:START
-function applyGeneratedSiteIcon(icon, site = {}) {
-  const parsedUrl = safeUrl(site.url);
-  const seed = parsedUrl?.hostname || site.url || site.title || "";
-  storeIconSiteContext(icon, site);
-  applyGenericFallbackSiteIcon(icon, seed);
-}
-
-function applyGenericFallbackSiteIcon(icon, seed = "") {
-  icon.removeAttribute("srcset");
-  icon.dataset.iconMissing = "false";
-  icon.dataset.iconCandidate = GENERIC_SITE_FALLBACK_ICON;
-  icon.dataset.iconSource = GENERIC_SITE_FALLBACK_ICON;
-  delete icon.dataset.iconDefaultRescue;
-  delete icon.dataset.iconDefaultRescueCandidate;
-  delete icon.dataset.iconDefaultProbe;
-  icon.classList.remove("site-icon-loading");
-  icon.classList.add("site-icon-generic-fallback");
-  const tileColors = genericSiteFallbackTileColors();
-  applyIconTile(icon, "generated", tileColors, false);
-  icon.src = GENERIC_SITE_FALLBACK_ICON;
-}
-
-function genericSiteFallbackTileColors() {
-  return {
-    light: GENERIC_SITE_FALLBACK_TILE_COLOR,
-    dark: GENERIC_SITE_FALLBACK_TILE_COLOR
-  };
-}
-// FALLBACK_SITE_ICON_ROUTE:END
 async function initSiteIconIndex() {
   siteIconIndexLoaded = false;
   siteIconIndexState = "pending";
@@ -1278,6 +1277,7 @@ async function cacheRemoteBrandIconMiss(siteKey) {
     missing: true,
     source: "remote-brand",
     providerVersion: REMOTE_BRAND_ICON_PROVIDER_VERSION,
+    extensionVersion: firstPaintExtensionVersion(),
     updatedAt: Date.now()
   };
   await saveSiteIconCache(cache);
@@ -1286,15 +1286,32 @@ async function cacheRemoteBrandIconMiss(siteKey) {
 async function saveSiteIconCache(cache) {
   const entries = Object.entries(cache)
     .filter(([, entry]) => normalizeStoredSiteIcon(entry?.icon) || entry?.missing)
-    .sort(([, a], [, b]) => Number(b.updatedAt || 0) - Number(a.updatedAt || 0))
-    .slice(0, MAX_CACHED_SITE_ICONS);
-  await setStoredValues({ [SITE_ICON_CACHE_STORAGE_KEY]: Object.fromEntries(entries) });
+    .sort(([, a], [, b]) => Number(b.updatedAt || 0) - Number(a.updatedAt || 0));
+  const retainedEntries = [
+    ...entries.filter(([, entry]) => !entry?.missing).slice(0, MAX_CACHED_SITE_ICONS),
+    ...entries.filter(([, entry]) => entry?.missing).slice(0, MAX_CACHED_SITE_ICON_MISSES)
+  ];
+  const nextCache = Object.fromEntries(retainedEntries);
+  Object.keys(cache).forEach((key) => delete cache[key]);
+  Object.assign(cache, nextCache);
+  siteIconCacheSnapshot = cache;
+  await setStoredValues({ [SITE_ICON_CACHE_STORAGE_KEY]: nextCache });
 }
 
 async function loadSiteIconCache() {
-  const result = await getStoredValues({ [SITE_ICON_CACHE_STORAGE_KEY]: {} });
-  const cache = result[SITE_ICON_CACHE_STORAGE_KEY];
-  return cache && typeof cache === "object" && !Array.isArray(cache) ? cache : {};
+  if (siteIconCacheSnapshot) {
+    return siteIconCacheSnapshot;
+  }
+  if (!siteIconCacheLoadPromise) {
+    siteIconCacheLoadPromise = getStoredValues({ [SITE_ICON_CACHE_STORAGE_KEY]: {} }).then((result) => {
+      const cache = result[SITE_ICON_CACHE_STORAGE_KEY];
+      siteIconCacheSnapshot = cache && typeof cache === "object" && !Array.isArray(cache) ? cache : {};
+      return siteIconCacheSnapshot;
+    }).finally(() => {
+      siteIconCacheLoadPromise = null;
+    });
+  }
+  return siteIconCacheLoadPromise;
 }
 
 async function discoverSiteIconDataUrl(url, options = {}) {
@@ -1408,6 +1425,7 @@ function remoteBrandIconMissCacheIsFresh(entry) {
   return Boolean(entry?.missing
     && entry?.source === "remote-brand"
     && entry?.providerVersion === REMOTE_BRAND_ICON_PROVIDER_VERSION
+    && entry?.extensionVersion === firstPaintExtensionVersion()
     && siteIconCacheEntryIsFresh(entry, REMOTE_BRAND_ICON_MISSING_TTL_MS));
 }
 
@@ -4195,14 +4213,14 @@ async function decodedFaviconSample(icon) {
 function resolveUnreadableFaviconCandidate(icon, options = {}) {
   // The favicon could not be read even via the fetch path. Reproduce the old probe's terminal
   // decisions: trusted declared icons keep what they have; a Chrome default globe is replaced by a
-  // discovered declared icon or the generic tile.
+  // discovered declared icon or an explicit missing state.
   if (options.trustSiteIcon
     || !faviconCandidateIsChromeFavicon(icon.dataset.iconCandidate || icon.currentSrc || icon.src)) {
     return;
   }
   icon.dataset.iconDefaultProbe = "unreadable";
   if (options.skipDefaultFaviconDiscovery) {
-    applyGenericFallbackSiteIcon(icon);
+    markSiteIconMissing(icon);
     return;
   }
   rescueDefaultFaviconWithDeclaredIcon(icon);
@@ -4217,12 +4235,12 @@ function applyFaviconSampleDecision(icon, sample, options = {}) {
         applySampledFaviconTile(icon, sample, color, tileColors, options);
         cacheRenderedSiteIconFromContext(icon);
       } else if (options.adaptiveFaviconCarrier) {
-        applyGenericFallbackSiteIcon(icon);
+        markSiteIconMissing(icon);
       }
       return;
     }
     if (options.skipDefaultFaviconDiscovery) {
-      applyGenericFallbackSiteIcon(icon);
+      markSiteIconMissing(icon);
     } else {
       rescueDefaultFaviconWithDeclaredIcon(icon);
     }
@@ -4235,7 +4253,7 @@ function applyFaviconSampleDecision(icon, sample, options = {}) {
   const tileColors = faviconMatchedTileColors(color, options);
   if (!tileColors) {
     if (options.adaptiveFaviconCarrier) {
-      applyGenericFallbackSiteIcon(icon);
+      markSiteIconMissing(icon);
     }
     return;
   }
@@ -4269,7 +4287,6 @@ function broadcastFaviconSiteTile(sourceIcon, entry) {
   document.querySelectorAll("img[data-site-url]").forEach((sibling) => {
     if (sibling === sourceIcon
       || sibling.classList.contains("site-icon-local")
-      || sibling.classList.contains("site-icon-generic-fallback")
       || (sibling.dataset.iconTile !== "plain" && sibling.dataset.iconTile !== "brand")) {
       return;
     }
@@ -4327,7 +4344,7 @@ function rescueDefaultFaviconWithDeclaredIcon(icon) {
   const siteUrl = icon.dataset.siteUrl || "";
   const parsedUrl = safeUrl(siteUrl);
   if (!parsedUrl) {
-    applyGenericFallbackSiteIcon(icon);
+    markSiteIconMissing(icon);
     return;
   }
   const candidateToken = icon.dataset.iconCandidate || icon.currentSrc || icon.src || "";
@@ -4339,7 +4356,7 @@ function rescueDefaultFaviconWithDeclaredIcon(icon) {
     if (!iconStillRenderingCandidate(icon, candidateToken)) {
       return;
     }
-    applyGenericFallbackSiteIcon(icon, parsedUrl.hostname);
+    markSiteIconMissing(icon);
     icon.dataset.iconDefaultRescue = "timed-out";
     icon.dataset.iconDefaultRescueCandidate = candidateToken;
   }, SITE_ICON_DEFAULT_RESCUE_TIMEOUT_MS);
@@ -4350,7 +4367,7 @@ function rescueDefaultFaviconWithDeclaredIcon(icon) {
     }
     const usableCandidates = candidates.filter((candidate) => candidate?.url && candidate.url !== candidateToken);
     if (!usableCandidates.length) {
-      applyGenericFallbackSiteIcon(icon, parsedUrl.hostname);
+      markSiteIconMissing(icon);
       return;
     }
     applyDiscoveredSiteFaviconCandidates(icon, usableCandidates, parsedUrl.hostname, candidateToken);
@@ -4359,7 +4376,7 @@ function rescueDefaultFaviconWithDeclaredIcon(icon) {
     if (!iconRescueCanStillApply(icon, candidateToken)) {
       return;
     }
-    applyGenericFallbackSiteIcon(icon, parsedUrl.hostname);
+    markSiteIconMissing(icon);
   });
 }
 
@@ -4367,7 +4384,7 @@ function applyDiscoveredSiteFaviconCandidates(icon, candidates = [], seed = "", 
   const [candidate, ...remainingCandidates] = candidates.filter((entry) => entry?.url);
   const candidateUrl = candidate?.url || "";
   if (!candidateUrl) {
-    applyGenericFallbackSiteIcon(icon, seed);
+    markSiteIconMissing(icon);
     return;
   }
   fetchImageDataUrl(candidateUrl).then((iconDataUrl) => {
@@ -4395,7 +4412,7 @@ function iconRescueCanStillApply(icon, candidateToken) {
     return true;
   }
   return icon.isConnected
-    && (icon.dataset.iconCandidate || "") === GENERIC_SITE_FALLBACK_ICON
+    && icon.dataset.iconMissing === "true"
     && (icon.dataset.iconDefaultRescueCandidate || "") === candidateToken;
 }
 
@@ -4407,7 +4424,6 @@ function applyDiscoveredSiteFavicon(icon, iconDataUrl, seed = "", options = {}) 
   icon.dataset.iconDefaultRescue = "resolved";
   delete icon.dataset.iconDefaultRescueCandidate;
   delete icon.dataset.iconDefaultProbe;
-  icon.classList.remove("site-icon-generic-fallback");
   applyIconTile(icon, "plain", genericIconTileColors(seed), false);
   icon.addEventListener("load", () => {
     if (iconStillRenderingCandidate(icon, iconDataUrl)) {
@@ -6418,13 +6434,12 @@ const WayleafIcon = Object.freeze({
   cacheRenderedSiteIcon,
   cacheRenderedSiteIconOnLoad,
   applySiteIcon,
+  applyBookmarkSiteIcon,
   applyExplicitSiteIcon,
-  applyGeneratedSiteIcon,
   applyHistoryIcon,
   refreshAdaptiveSiteIcons,
   refreshRenderedSiteIcons,
-  siteIconDirectory: SITE_ICON_DIRECTORY,
-  genericFallbackIcon: GENERIC_SITE_FALLBACK_ICON
+  siteIconDirectory: SITE_ICON_DIRECTORY
 });
 
 window.WayleafIcon = WayleafIcon;

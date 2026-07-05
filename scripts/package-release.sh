@@ -19,7 +19,6 @@ runtime_items=(
   assets
   ai-submit.js
   background.js
-  data
   icons
   manifest.json
   newtab.css

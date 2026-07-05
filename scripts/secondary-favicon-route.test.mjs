@@ -10,8 +10,6 @@ const primaryStartMarker = "// PRIMARY_SITE_ICON_ROUTE:START";
 const primaryEndMarker = "// PRIMARY_SITE_ICON_ROUTE:END";
 const startMarker = "// SECONDARY_FAVICON_ROUTE:START";
 const endMarker = "// SECONDARY_FAVICON_ROUTE:END";
-const fallbackStartMarker = "// FALLBACK_SITE_ICON_ROUTE:START";
-const fallbackEndMarker = "// FALLBACK_SITE_ICON_ROUTE:END";
 
 function sourceBetween(startText, endText, label) {
   const start = source.indexOf(startText);
@@ -26,21 +24,18 @@ function markerCount(marker) {
 
 const primaryRouteSource = sourceBetween(primaryStartMarker, primaryEndMarker, "The primary icon route");
 const routeSource = sourceBetween(startMarker, endMarker, "The secondary favicon route");
-const fallbackRouteSource = sourceBetween(fallbackStartMarker, fallbackEndMarker, "The fallback icon route");
 const cacheRenderedSiteIconSource = source.match(/function cacheRenderedSiteIcon\(icon, site\) \{[\s\S]*?\n\}\n\nfunction firstPaintRenderIsThemeInvariant/)?.[0] || "";
+const cacheRenderedSiteIconOnLoadSource = source.match(/function cacheRenderedSiteIconOnLoad\(icon, site\) \{[\s\S]*?\n\}/)?.[0] || "";
 
 for (const marker of [
   primaryStartMarker,
   primaryEndMarker,
   startMarker,
-  endMarker,
-  fallbackStartMarker,
-  fallbackEndMarker
+  endMarker
 ]) {
   assert.equal(markerCount(marker), 1, `${marker} must appear exactly once.`);
 }
 
-const fallbackCalls = [];
 const cachedIcons = [];
 const discoveredUrls = [];
 const fetchedUrls = [];
@@ -92,10 +87,6 @@ const context = {
     icon.dataset.tileLight = colors.light;
     icon.dataset.tileDark = colors.dark;
   },
-  applyGenericFallbackSiteIcon: (icon, seed) => {
-    fallbackCalls.push(seed);
-    icon.dataset.fallback = "true";
-  },
   cacheRenderedSiteIcon: (icon, site) => {
     cachedIcons.push({ state: icon.dataset.iconRouteState, source: icon.dataset.iconSource, url: site.url });
   },
@@ -113,6 +104,38 @@ vm.runInNewContext(`${routeSource}
 };`, context);
 
 const api = context.__secondaryRouteTestApi;
+
+const cacheOnLoadCalls = [];
+const cacheOnLoadTasks = [];
+const cacheOnLoadContext = {
+  cacheRenderedSiteIcon: (icon, site) => {
+    cacheOnLoadCalls.push({ source: icon.getAttribute("src"), url: site.url });
+  },
+  queueMicrotask: (task) => cacheOnLoadTasks.push(task),
+  globalThis: null
+};
+cacheOnLoadContext.globalThis = cacheOnLoadContext;
+vm.runInNewContext(`${cacheRenderedSiteIconOnLoadSource}
+;globalThis.__cacheRenderedSiteIconOnLoad = cacheRenderedSiteIconOnLoad;`, cacheOnLoadContext);
+
+let cacheOnLoadListenerType = "";
+const completeFaviconIcon = {
+  complete: true,
+  addEventListener(type) {
+    cacheOnLoadListenerType = type;
+  },
+  getAttribute(name) {
+    return name === "src" ? "data:image/png;base64,AAAA" : "";
+  }
+};
+cacheOnLoadContext.__cacheRenderedSiteIconOnLoad(completeFaviconIcon, { url: "https://example.com/" });
+assert.equal(cacheOnLoadListenerType, "load", "Icon cache helper must still listen for future load events.");
+assert.equal(cacheOnLoadTasks.length, 1, "Already-complete favicons must queue a first-paint cache write.");
+cacheOnLoadTasks[0]();
+assert.deepEqual(cacheOnLoadCalls, [{
+  source: "data:image/png;base64,AAAA",
+  url: "https://example.com/"
+}], "Queued favicon cache write must preserve the loaded icon source and site context.");
 
 function createIcon(siteKey = "example.com", state = "primary_miss", requestToken = "1") {
   const listeners = new Map();
@@ -203,13 +226,10 @@ const defaultIcon = createIcon("default.example");
 api.startSecondaryFaviconRoute(defaultIcon, { title: "Default", url: "https://default.example/path" }, "1");
 defaultIcon.dataset.browserDefault = "true";
 defaultIcon.dispatch("load");
-await Promise.resolve();
-await Promise.resolve();
-assert.equal(defaultIcon.dataset.iconRouteState, "secondary_hit", "Chrome's loaded default globe must be replaced by the site's extracted icon.");
-assert.equal(defaultIcon.src, "data:image/avif;base64,AAAA");
-assert.deepEqual(discoveredUrls, ["https://default.example/path"]);
-assert.deepEqual(fetchedUrls, ["https://default.example/site-icon"]);
-assert.deepEqual(fallbackCalls, []);
+assert.equal(defaultIcon.dataset.iconRouteState, "secondary_hit", "Chrome's loaded default globe must settle without another site-icon request.");
+assert.match(defaultIcon.src, /\/_favicon\/\?/);
+assert.deepEqual(discoveredUrls, []);
+assert.deepEqual(fetchedUrls, []);
 
 const storedIcon = createIcon("stored.example");
 api.startSecondaryFaviconRoute(storedIcon, {
@@ -224,28 +244,25 @@ assert.equal(storedIcon.src, "data:image/png;base64,AAAA");
 const broken = createIcon("broken.example");
 api.startSecondaryFaviconRoute(broken, { title: "Broken", url: "https://broken.example" }, "1");
 broken.dispatch("error");
-await Promise.resolve();
-await Promise.resolve();
 assert.equal(broken.dataset.iconRouteState, "secondary_hit");
-assert.equal(broken.src, "data:image/avif;base64,AAAA");
-assert.deepEqual(discoveredUrls, ["https://default.example/path", "https://broken.example/"]);
-assert.deepEqual(fetchedUrls, ["https://default.example/site-icon", "https://broken.example/site-icon"]);
-assert.deepEqual(fallbackCalls, []);
+assert.equal(broken.dataset.iconMissing, "true");
+assert.deepEqual(discoveredUrls, []);
+assert.deepEqual(fetchedUrls, []);
 
 const empty = createIcon("empty.example");
 api.startSecondaryFaviconRoute(empty, { title: "Empty", url: "https://empty.example/path" }, "1");
 empty.dispatch("error");
-await Promise.resolve();
-assert.equal(empty.dataset.iconRouteState, "fallback");
-assert.equal(empty.dataset.fallback, "true");
-assert.deepEqual(fallbackCalls, ["empty.example"]);
+assert.equal(empty.dataset.iconRouteState, "secondary_hit");
+assert.equal(empty.dataset.iconMissing, "true");
 
 const brokenDirect = createIcon("local.example");
 api.startSecondaryFaviconRoute(brokenDirect, { title: "Local", url: "https://local.example/path" }, "1");
 brokenDirect.dispatch("error");
-assert.equal(brokenDirect.dataset.iconRouteState, "fallback");
-assert.equal(brokenDirect.dataset.fallback, "true");
-assert.deepEqual(fallbackCalls, ["empty.example", "local.example"]);
+assert.equal(brokenDirect.dataset.iconRouteState, "secondary_pending");
+assert.match(brokenDirect.src, /\/_favicon\/\?/);
+brokenDirect.dispatch("error");
+assert.equal(brokenDirect.dataset.iconRouteState, "secondary_hit");
+assert.equal(brokenDirect.dataset.iconMissing, "true");
 
 const stale = createIcon();
 api.beginIconRouteRequest(stale, "primary_hit");
@@ -271,10 +288,10 @@ assert.doesNotMatch(
   /document\.documentElement\.dataset\.theme|data-theme|themeMode|resolvedTheme/,
   "The fixed secondary tile must not depend on theme state."
 );
-assert.match(
+assert.doesNotMatch(
   routeSource,
-  /discoverSiteIconCandidateEntries[\s\S]*fetchImageDataUrl[\s\S]*paintSecondaryFaviconSource/,
-  "Secondary routing must extract declared/root site icons without format filtering before the final fallback route."
+  /discoverSiteIconCandidateEntries|fetchImageDataUrl/,
+  "Secondary routing must accept Chrome's favicon result without document discovery."
 );
 assert.match(
   routeSource,
@@ -284,18 +301,19 @@ assert.match(
 assert.match(
   cacheRenderedSiteIconSource,
   /"primary_pending"[\s\S]*"primary_miss"[\s\S]*"secondary_pending"/,
-  "First-paint cache must skip pending route states without excluding settled secondary favicons or the final generic fallback."
+  "First-paint cache must skip pending route states without excluding settled secondary favicons."
 );
-assert.doesNotMatch(cacheRenderedSiteIconSource, /"fallback"/, "Settled fallback.svg renders must remain cacheable for first paint.");
 assert.match(
-  fallbackRouteSource,
-  /GENERIC_SITE_FALLBACK_ICON[\s\S]*site-icon-generic-fallback[\s\S]*icon\.src = GENERIC_SITE_FALLBACK_ICON/,
-  "fallback.svg must remain isolated in the fallback route."
+  cacheRenderedSiteIconOnLoadSource,
+  /const cache = \(\) => cacheRenderedSiteIcon\(icon, site\);[\s\S]*icon\.addEventListener\("load", cache\);[\s\S]*icon\.complete[\s\S]*icon\.getAttribute\("src"\)[\s\S]*queueMicrotask\(cache\)/,
+  "Icon load caching must also write already-complete favicon renders for the next Wayleaf tab."
 );
-assert.doesNotMatch(routeSource, /GENERIC_SITE_FALLBACK_ICON|fallback\.svg/);
+assert.doesNotMatch(source, /GENERIC_SITE_FALLBACK_ICON|fallback\.svg|applyGenericFallbackSiteIcon|site-icon-generic-fallback/);
 assert.doesNotMatch(cssSource, /\.site-icon-loading\s*\{/);
 assert.match(newtabSource, /function createFavoriteSite[\s\S]*WayleafIcon\.applySiteIcon\(icon, site/);
 assert.match(newtabSource, /function renderHistorySiteIcon[\s\S]*renderSharedSiteIcon\(icon, site, options\)/);
-assert.match(newtabSource, /function createSiteCard[\s\S]*renderSharedSiteIcon\(icon, site, options\)/);
+assert.match(newtabSource, /function renderBookmarkSiteIcon[\s\S]*WayleafIcon\.applyBookmarkSiteIcon\(icon, iconSite\)/);
+assert.match(newtabSource, /function createSiteCard\(site, options = \{\}, renderIcon = renderSharedSiteIcon\)[\s\S]*renderIcon\(icon, site, options\)/);
+assert.match(newtabSource, /function createBookmarkSiteCard[\s\S]*createSiteCard\(site, \{ \.\.\.options, allowFavorite: false \}, renderBookmarkSiteIcon\)/);
 
 console.log("secondary favicon route fixtures passed");

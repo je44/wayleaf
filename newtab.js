@@ -95,6 +95,7 @@ const MAX_BOOKMARK_PORTAL_ITEMS = 120;
 const MAX_BOOKMARK_HISTORY_ITEMS = 180;
 const BOOKMARK_HISTORY_LOOKBACK_DAYS = 45;
 const RECENT_BOOKMARK_LOOKBACK_MS = 3 * 24 * 60 * 60 * 1000;
+const BOOKMARK_FOLDER_VIEW_CACHE_LIMIT = 8;
 const BOOKMARK_ICON_RENDER_QUIET_MS = 120;
 const BOOKMARK_ICON_RENDER_SETTLE_TIMEOUT_MS = 2200;
 const ISSUE_FEEDBACK_URL = "https://github.com/je44/wayleaf/issues";
@@ -744,11 +745,17 @@ const MESSAGES = {
     topbarLabel: "顶部功能区",
     shellLabel: "Wayleaf 控制台",
     portalTitle: "导航中枢",
-    mobilePortalTab: "快捷",
+    mobilePortalTab: "书签",
     mobileMediaTab: "信息",
     mobileHistoryTab: "历史",
     smartPortalTab: "网站推荐",
-    bookmarkPortalTab: "自选书签",
+    bookmarkPortalTab: "书签",
+    bookmarkSearchPlaceholder: "搜索当前文件夹",
+    bookmarkFolders: "书签文件夹",
+    bookmarkSortLabel: "书签排序",
+    bookmarkSortRecent: "最近加入",
+    bookmarkSortTitle: "A–Z",
+    bookmarkSearchEmpty: "没有找到匹配的书签。",
     portalCategoryFeatured: "常用入口",
     portalCategoryCustom: "自定义",
     portalCategoryShopping: "购物",
@@ -926,7 +933,7 @@ const MESSAGES = {
     savePortalFailed: "保存入口失败，请减少数量或缩短内容后重试。",
     loadCustomPortalsFailed: "读取自定义入口失败，请刷新后重试。",
     deletePortalFailed: "删除入口失败，请刷新后重试。",
-    bookmarkNoFolder: "还没有选择书签文件夹。点击右上角 + 后选择一个文件夹。",
+    bookmarkNoFolder: "还没有选择书签文件夹。请从文件夹列表选择一个。",
     bookmarkFolderMissing: "已选文件夹不存在，请重新选择。",
     unnamedFolder: "未命名文件夹",
     bookmarkMeta: "{folder} · {count} 个网站",
@@ -954,10 +961,16 @@ const MESSAGES = {
     topbarLabel: "頂部功能區",
     shellLabel: "Wayleaf 控制台",
     portalTitle: "導航中樞",
-    mobilePortalTab: "快捷",
+    mobilePortalTab: "書籤",
     mobileMediaTab: "資訊",
     smartPortalTab: "網站推薦",
-    bookmarkPortalTab: "自選書籤",
+    bookmarkPortalTab: "書籤",
+    bookmarkSearchPlaceholder: "搜尋目前資料夾",
+    bookmarkFolders: "書籤資料夾",
+    bookmarkSortLabel: "書籤排序",
+    bookmarkSortRecent: "最近加入",
+    bookmarkSortTitle: "A–Z",
+    bookmarkSearchEmpty: "找不到符合的書籤。",
     mobileHistoryTab: "歷史",
     portalCategoryCustom: "自訂",
     portalCategoryShopping: "購物",
@@ -1144,7 +1157,7 @@ const MESSAGES = {
     savePortalFailed: "儲存入口失敗，請減少數量或縮短內容後重試。",
     loadCustomPortalsFailed: "讀取自訂入口失敗，請刷新後重試。",
     deletePortalFailed: "刪除入口失敗，請刷新後重試。",
-    bookmarkNoFolder: "尚未選擇書籤資料夾。點擊右上角 + 後選擇一個資料夾。",
+    bookmarkNoFolder: "尚未選擇書籤資料夾。請從資料夾列表選擇一個。",
     bookmarkFolderMissing: "已選資料夾不存在，請重新選擇。",
     bookmarkEmpty: "這個資料夾裡沒有可顯示的網站書籤。",
     bookmarkReadFailed: "無法讀取書籤，請確認擴充功能已獲得 bookmarks 權限。",
@@ -1165,11 +1178,17 @@ const MESSAGES = {
     topbarLabel: "Top bar",
     shellLabel: "Wayleaf dashboard",
     portalTitle: "Navigation hub",
-    mobilePortalTab: "Shortcuts",
+    mobilePortalTab: "Bookmarks",
     mobileMediaTab: "Media",
     mobileHistoryTab: "History",
     smartPortalTab: "Recommended",
     bookmarkPortalTab: "Bookmarks",
+    bookmarkSearchPlaceholder: "Search current folder",
+    bookmarkFolders: "Bookmark folders",
+    bookmarkSortLabel: "Sort bookmarks",
+    bookmarkSortRecent: "Recently added",
+    bookmarkSortTitle: "A–Z",
+    bookmarkSearchEmpty: "No matching bookmarks.",
     portalCategoryFeatured: "Frequent shortcuts",
     portalCategoryCustom: "Custom",
     portalCategoryShopping: "Shopping",
@@ -1194,7 +1213,6 @@ const MESSAGES = {
     cancel: "Cancel",
     add: "Add",
     refreshBookmarkFolder: "Refresh current bookmark folder",
-    chooseBookmarkFolder: "Choose bookmark folder",
     collapseSurface: "Collapse panel",
     back: "Back",
     chooseBookmarkFolderPrompt: "Choose a bookmark folder",
@@ -1347,7 +1365,7 @@ const MESSAGES = {
     savePortalFailed: "Could not save this portal. Try fewer or shorter entries.",
     loadCustomPortalsFailed: "Could not load custom portals. Refresh and try again.",
     deletePortalFailed: "Could not remove this portal. Refresh and try again.",
-    bookmarkNoFolder: "No bookmark folder selected. Use + in the top right to choose one.",
+    bookmarkNoFolder: "No bookmark folder selected. Choose one from the folder list.",
     bookmarkFolderMissing: "The selected folder no longer exists. Choose another folder.",
     unnamedFolder: "Untitled folder",
     bookmarkMeta: "{folder} · {count} sites",
@@ -1926,11 +1944,17 @@ const LOCALE_COMPLETIONS = {
   ja: {
     topbarLabel: "トップバー",
     shellLabel: "Wayleaf ダッシュボード",
-    mobilePortalTab: "ショートカット",
+    mobilePortalTab: "ブックマーク",
     mobileMediaTab: "メディア",
     mobileHistoryTab: "履歴",
     smartPortalTab: "おすすめ",
     bookmarkPortalTab: "ブックマーク",
+    bookmarkSearchPlaceholder: "ブックマークを検索",
+    bookmarkFolders: "ブックマークフォルダ",
+    bookmarkSortLabel: "並び順",
+    bookmarkSortRecent: "新しい順",
+    bookmarkSortTitle: "名前順",
+    bookmarkSearchEmpty: "一致するブックマークはありません。",
     portalCategoryFeatured: "よく使うショートカット",
     portalCategoryCustom: "カスタム",
     portalCategoryShopping: "ショッピング",
@@ -2010,7 +2034,7 @@ const LOCALE_COMPLETIONS = {
     savePortalFailed: "このポータルを保存できませんでした。件数を減らすか短くしてください。",
     loadCustomPortalsFailed: "カスタムポータルを読み込めませんでした。更新して再試行してください。",
     deletePortalFailed: "このポータルを削除できませんでした。更新して再試行してください。",
-    bookmarkNoFolder: "ブックマークフォルダが選択されていません。右上の + から選択してください。",
+    bookmarkNoFolder: "ブックマークフォルダが選択されていません。フォルダ一覧から選択してください。",
     bookmarkFolderMissing: "選択したフォルダは存在しません。別のフォルダを選んでください。",
     bookmarkEmpty: "このフォルダには表示できる Web ブックマークがありません。",
     bookmarkReadFailed: "ブックマークを読み込めません。拡張機能に bookmarks 権限があるか確認してください。",
@@ -2029,11 +2053,17 @@ const LOCALE_COMPLETIONS = {
   ko: {
     topbarLabel: "상단 바",
     shellLabel: "Wayleaf 대시보드",
-    mobilePortalTab: "바로가기",
+    mobilePortalTab: "북마크",
     mobileMediaTab: "미디어",
     mobileHistoryTab: "기록",
     smartPortalTab: "추천 사이트",
     bookmarkPortalTab: "북마크",
+    bookmarkSearchPlaceholder: "북마크 검색",
+    bookmarkFolders: "북마크 폴더",
+    bookmarkSortLabel: "정렬",
+    bookmarkSortRecent: "최근 추가순",
+    bookmarkSortTitle: "이름순",
+    bookmarkSearchEmpty: "일치하는 북마크가 없습니다.",
     portalCategoryFeatured: "자주 쓰는 바로가기",
     portalCategoryCustom: "사용자 지정",
     portalCategoryShopping: "쇼핑",
@@ -2113,7 +2143,7 @@ const LOCALE_COMPLETIONS = {
     savePortalFailed: "이 포털을 저장할 수 없습니다. 항목을 줄이거나 짧게 해보세요.",
     loadCustomPortalsFailed: "사용자 지정 포털을 불러올 수 없습니다. 새로고침 후 다시 시도하세요.",
     deletePortalFailed: "이 포털을 삭제할 수 없습니다. 새로고침 후 다시 시도하세요.",
-    bookmarkNoFolder: "선택된 북마크 폴더가 없습니다. 오른쪽 위 +로 선택하세요.",
+    bookmarkNoFolder: "선택된 북마크 폴더가 없습니다. 폴더 목록에서 선택하세요.",
     bookmarkFolderMissing: "선택한 폴더가 더 이상 없습니다. 다른 폴더를 선택하세요.",
     bookmarkEmpty: "이 폴더에는 표시할 웹사이트 북마크가 없습니다.",
     bookmarkReadFailed: "북마크를 읽을 수 없습니다. 확장 프로그램에 bookmarks 권한이 있는지 확인하세요.",
@@ -2132,11 +2162,17 @@ const LOCALE_COMPLETIONS = {
   es: {
     topbarLabel: "Barra superior",
     shellLabel: "Panel de Wayleaf",
-    mobilePortalTab: "Accesos",
+    mobilePortalTab: "Marcadores",
     mobileMediaTab: "Medios",
     mobileHistoryTab: "Historial",
     smartPortalTab: "Recomendados",
     bookmarkPortalTab: "Marcadores",
+    bookmarkSearchPlaceholder: "Buscar marcadores",
+    bookmarkFolders: "Carpetas de marcadores",
+    bookmarkSortLabel: "Ordenar",
+    bookmarkSortRecent: "Más recientes",
+    bookmarkSortTitle: "Por nombre",
+    bookmarkSearchEmpty: "No hay marcadores coincidentes.",
     portalCategoryFeatured: "Accesos frecuentes",
     portalCategoryCustom: "Personalizado",
     portalCategoryShopping: "Compras",
@@ -2216,7 +2252,7 @@ const LOCALE_COMPLETIONS = {
     savePortalFailed: "No se pudo guardar este portal. Prueba con menos o más corto.",
     loadCustomPortalsFailed: "No se pudieron cargar portales personalizados. Actualiza e inténtalo de nuevo.",
     deletePortalFailed: "No se pudo eliminar este portal. Actualiza e inténtalo de nuevo.",
-    bookmarkNoFolder: "No hay carpeta de marcadores seleccionada. Usa + arriba a la derecha para elegir una.",
+    bookmarkNoFolder: "No hay carpeta de marcadores seleccionada. Elige una en la lista de carpetas.",
     bookmarkFolderMissing: "La carpeta seleccionada ya no existe. Elige otra.",
     bookmarkEmpty: "Esta carpeta no tiene marcadores web para mostrar.",
     bookmarkReadFailed: "No se pudieron leer los marcadores. Comprueba el permiso bookmarks.",
@@ -2235,11 +2271,17 @@ const LOCALE_COMPLETIONS = {
   fr: {
     topbarLabel: "Barre supérieure",
     shellLabel: "Tableau de bord Wayleaf",
-    mobilePortalTab: "Raccourcis",
+    mobilePortalTab: "Favoris",
     mobileMediaTab: "Médias",
     mobileHistoryTab: "Historique",
     smartPortalTab: "Recommandés",
     bookmarkPortalTab: "Favoris",
+    bookmarkSearchPlaceholder: "Rechercher dans les favoris",
+    bookmarkFolders: "Dossiers de favoris",
+    bookmarkSortLabel: "Trier",
+    bookmarkSortRecent: "Ajoutés récemment",
+    bookmarkSortTitle: "Par nom",
+    bookmarkSearchEmpty: "Aucun favori correspondant.",
     portalCategoryFeatured: "Raccourcis fréquents",
     portalCategoryCustom: "Personnalisé",
     portalCategoryShopping: "Achats",
@@ -2319,7 +2361,7 @@ const LOCALE_COMPLETIONS = {
     savePortalFailed: "Impossible d'enregistrer ce portail. Essayez avec moins ou plus court.",
     loadCustomPortalsFailed: "Impossible de charger les portails personnalisés. Actualisez et réessayez.",
     deletePortalFailed: "Impossible de supprimer ce portail. Actualisez et réessayez.",
-    bookmarkNoFolder: "Aucun dossier de favoris sélectionné. Utilisez + en haut à droite pour en choisir un.",
+    bookmarkNoFolder: "Aucun dossier de favoris sélectionné. Choisissez-en un dans la liste des dossiers.",
     bookmarkFolderMissing: "Le dossier sélectionné n'existe plus. Choisissez un autre dossier.",
     bookmarkEmpty: "Ce dossier n'a aucun favori Web à afficher.",
     bookmarkReadFailed: "Impossible de lire les favoris. Vérifiez l'autorisation bookmarks.",
@@ -2338,11 +2380,17 @@ const LOCALE_COMPLETIONS = {
   de: {
     topbarLabel: "Obere Leiste",
     shellLabel: "Wayleaf-Dashboard",
-    mobilePortalTab: "Kurzbefehle",
+    mobilePortalTab: "Lesezeichen",
     mobileMediaTab: "Medien",
     mobileHistoryTab: "Verlauf",
     smartPortalTab: "Empfohlen",
     bookmarkPortalTab: "Lesezeichen",
+    bookmarkSearchPlaceholder: "Lesezeichen durchsuchen",
+    bookmarkFolders: "Lesezeichenordner",
+    bookmarkSortLabel: "Sortieren",
+    bookmarkSortRecent: "Zuletzt hinzugefügt",
+    bookmarkSortTitle: "Nach Name",
+    bookmarkSearchEmpty: "Keine passenden Lesezeichen.",
     portalCategoryFeatured: "Häufige Kurzbefehle",
     portalCategoryCustom: "Benutzerdefiniert",
     portalCategoryShopping: "Shopping",
@@ -2422,7 +2470,7 @@ const LOCALE_COMPLETIONS = {
     savePortalFailed: "Dieses Portal konnte nicht gespeichert werden. Weniger oder kürzere Einträge versuchen.",
     loadCustomPortalsFailed: "Benutzerdefinierte Portale konnten nicht geladen werden. Aktualisieren und erneut versuchen.",
     deletePortalFailed: "Dieses Portal konnte nicht entfernt werden. Aktualisieren und erneut versuchen.",
-    bookmarkNoFolder: "Kein Lesezeichenordner ausgewählt. Mit + oben rechts einen auswählen.",
+    bookmarkNoFolder: "Kein Lesezeichenordner ausgewählt. Wähle einen aus der Ordnerliste.",
     bookmarkFolderMissing: "Der ausgewählte Ordner existiert nicht mehr. Wähle einen anderen.",
     bookmarkEmpty: "Dieser Ordner enthält keine anzeigbaren Website-Lesezeichen.",
     bookmarkReadFailed: "Lesezeichen konnten nicht gelesen werden. Prüfe die bookmarks-Berechtigung.",
@@ -2455,11 +2503,17 @@ const portalModeTabs = [...document.querySelectorAll("[data-portal-view]")];
 const portalViews = [...document.querySelectorAll(".portal-view")];
 const bookmarkGrid = document.querySelector("#bookmarkGrid");
 const bookmarkMainView = document.querySelector("#bookmarkMainView");
+const bookmarkMainToolbar = document.querySelector("#bookmarkMainToolbar");
 const bookmarkFolderMeta = document.querySelector("#bookmarkFolderMeta");
+const bookmarkSearch = document.querySelector(".bookmark-search");
+const bookmarkSearchInput = document.querySelector("#bookmarkSearchInput");
+const bookmarkSearchLabel = document.querySelector("#bookmarkSearchLabel");
+const bookmarkFolderLane = document.querySelector("#bookmarkFolderLane");
+const bookmarkSortSelect = document.querySelector("#bookmarkSortSelect");
+const bookmarkSortLabel = document.querySelector("#bookmarkSortLabel");
 const bookmarkPicker = document.querySelector("#bookmarkPicker");
 const bookmarkPickerToolbar = document.querySelector("#bookmarkPickerToolbar");
 const bookmarkFolderList = document.querySelector("#bookmarkFolderList");
-const chooseBookmarkFolderButton = document.querySelector("#chooseBookmarkFolderButton");
 const refreshBookmarkFolderButton = document.querySelector("#refreshBookmarkFolderButton");
 const bookmarkFavoriteAddButton = document.querySelector("#bookmarkFavoriteAddButton");
 const closeBookmarkPickerButton = document.querySelector("#closeBookmarkPickerButton");
@@ -2537,6 +2591,11 @@ const cancelPortalButton = document.querySelector("#cancelPortalButton");
 const mobileSectionTabs = [...document.querySelectorAll(".mobile-section-tab")];
 let bookmarkRefreshTimer = 0;
 let recentBookmarkExpiryTimer = 0;
+let bookmarkRenderRequestId = 0;
+let latestBookmarkFolder = null;
+let latestBookmarkSites = [];
+let latestBookmarkRenderContext = null;
+const bookmarkFolderViewCache = new Map();
 let activeBookmarkDeleteCard = null;
 let activeFavoriteDeleteCard = null;
 let localSearchRequestId = 0;
@@ -2552,7 +2611,7 @@ let googleAiModeExitTimer = 0;
 let googleAiModeActiveStartedAt = 0;
 let aiModeExitTimer = 0;
 let portalCategoryState = {};
-let activePortalView = "smart";
+let activePortalView = "bookmarks";
 let activeThemeMode = DEFAULT_THEME_MODE;
 let activeLanguagePreference = "system";
 let activeResolvedTheme = "";
@@ -2940,20 +2999,23 @@ function applyLocale() {
   setButtonLabel(surfaceBackdrop, t("collapseSurface"));
   updateRecentHeaderState();
   document.querySelector(".recent-folder-switch-controls")?.setAttribute("aria-label", t("recentFoldersSwitch"));
-  document.querySelector("#portal-title").textContent = t("portalTitle");
-  document.querySelector("#smartPortalTab").textContent = t("smartPortalTab");
-  document.querySelector("#bookmarkPortalTab").textContent = t("bookmarkPortalTab");
+  document.querySelector("#portal-title").textContent = t("bookmarkPortalTab");
   setMobileTabLabel("portalPanel", t("mobilePortalTab"));
 
-  setButtonLabel(togglePortalFormButton, t("addPortal"));
   setButtonLabel(refreshBookmarkFolderButton, t("refreshBookmarkFolder"));
   setButtonLabel(bookmarkFavoriteAddButton, t("addFavoriteSite"));
-  setButtonLabel(chooseBookmarkFolderButton, t("chooseBookmarkFolder"));
   setButtonLabel(settingsButton, t("openSettings"));
   setButtonLabel(closeSettingsButton, t("settingsBackHome"));
   settingsShell?.setAttribute("aria-label", t("settingsTitle"));
   setButtonLabel(favoriteAddButton, t("addFavoriteSite"));
   setStaticButtonIcons();
+  bookmarkSearchInput.placeholder = t("bookmarkSearchPlaceholder");
+  bookmarkSearchInput.setAttribute("aria-label", t("bookmarkSearchPlaceholder"));
+  bookmarkSearchLabel.textContent = t("bookmarkSearchPlaceholder");
+  bookmarkFolderLane.setAttribute("aria-label", t("bookmarkFolders"));
+  bookmarkSortLabel.textContent = t("bookmarkSortLabel");
+  bookmarkSortSelect.options[0].textContent = t("bookmarkSortRecent");
+  bookmarkSortSelect.options[1].textContent = t("bookmarkSortTitle");
   applySettingsLocale();
   quickSearchInput.placeholder = t("quickSearchPlaceholder");
   quickSearchInput.setAttribute("aria-label", t("quickSearchPlaceholder"));
@@ -2971,23 +3033,6 @@ function applyLocale() {
   });
   updateQuickSearchModeUi();
 
-  const portalTitleLabel = portalTitleInput.closest("label")?.querySelector("span");
-  const portalUrlLabel = portalUrlInput.closest("label")?.querySelector("span");
-  const portalCategoryLabel = document.querySelector("#portalCategoryLabel");
-  if (portalTitleLabel) {
-    portalTitleLabel.textContent = t("portalName");
-  }
-  if (portalUrlLabel) {
-    portalUrlLabel.textContent = t("portalUrl");
-  }
-  if (portalCategoryLabel) {
-    portalCategoryLabel.textContent = t("portalCategory");
-  }
-  populatePortalCategoryOptions();
-  portalTitleInput.placeholder = t("portalNamePlaceholder");
-  portalUrlInput.placeholder = t("portalUrlPlaceholder");
-  cancelPortalButton.textContent = t("cancel");
-  portalForm.querySelector('button[type="submit"]').textContent = t("add");
   favoriteUrlInput.closest("label").querySelector("span").textContent = t("portalUrl");
   favoriteUrlInput.placeholder = t("portalUrlPlaceholder");
   cancelFavoriteButton.textContent = t("cancel");
@@ -3037,11 +3082,9 @@ function setStaticButtonIcons() {
   surfaceBackButtons.forEach((button) => {
     button.querySelector(".button-icon").innerHTML = arrowLeftIcon();
   });
-  togglePortalFormButton.querySelector(".button-icon").innerHTML = plusIcon();
-  document.querySelector(".portal-category-trigger-icon").innerHTML = chevronDownIcon();
+  document.querySelector(".bookmark-search-icon").innerHTML = searchEngineSearchIcon();
   refreshBookmarkFolderButton.querySelector(".button-icon").innerHTML = refreshIcon();
   bookmarkFavoriteAddButton.querySelector(".button-icon").innerHTML = plusIcon();
-  chooseBookmarkFolderButton.querySelector(".button-icon").innerHTML = pageTabFilledIcon();
   closeBookmarkPickerButton.querySelector(".button-icon").innerHTML = arrowLeftIcon();
   const recentViewToggleIcon = recentViewToggleButton?.querySelector(".button-icon");
   if (recentViewToggleIcon) {
@@ -3312,8 +3355,8 @@ async function setLanguagePreference(preference) {
   applyLocale();
   renderThemePalettePresets();
   updateThemeSettingsUi();
-  void renderPortals();
   void renderFavoriteSites();
+  void renderSelectedBookmarkFolder();
   void refreshHistory();
   try {
     await setStoredValues({ [LANGUAGE_STORAGE_KEY]: activeLanguagePreference });
@@ -3346,16 +3389,16 @@ async function init() {
   const videoPipSettingReady = initVideoPipGlobalSetting();
   await initQuickSearchEngine();
   renderFavoriteSites();
-  renderPortals();
   renderSelectedBookmarkFolder();
   refreshHistory();
   void searchSettingsReady;
   void themeModeReady;
   void videoPipSettingReady;
 
-  chooseBookmarkFolderButton.addEventListener("click", openBookmarkPicker);
   refreshBookmarkFolderButton.addEventListener("click", renderSelectedBookmarkFolder);
   bookmarkFavoriteAddButton?.addEventListener("click", toggleFavoriteForm);
+  bookmarkSearchInput.addEventListener("input", () => void renderVisibleBookmarkSites());
+  bookmarkSortSelect.addEventListener("change", () => void renderVisibleBookmarkSites());
   closeBookmarkPickerButton.addEventListener("click", closeBookmarkPicker);
   recentFoldersPreviousButton?.addEventListener("click", (event) => {
     showRecentFolderPage(recentFolderPageIndex - 1, "previous");
@@ -3392,15 +3435,6 @@ async function init() {
   aiAttachmentButton?.addEventListener("click", handleAiAttachmentButtonClick);
   aiAttachmentInput?.addEventListener("change", handleAiAttachmentInputChange);
   aiAttachmentPill?.addEventListener("click", handleAiAttachmentPillClick);
-  portalModeTabs.forEach((tab) => {
-    tab.addEventListener("click", () => activatePortalView(tab.dataset.portalView));
-  });
-  togglePortalFormButton.addEventListener("click", showPortalForm);
-  portalCategoryTrigger?.addEventListener("click", togglePortalCategoryPicker);
-  portalCategoryList?.addEventListener("click", handlePortalCategoryOptionClick);
-  portalCategoryList?.addEventListener("keydown", handlePortalCategoryListKeydown);
-  cancelPortalButton.addEventListener("click", hidePortalForm);
-  portalForm.addEventListener("submit", handlePortalSubmit);
   favoriteAddButton.addEventListener("click", toggleFavoriteForm);
   cancelFavoriteButton.addEventListener("click", hideFavoriteForm);
   favoriteForm.addEventListener("submit", handleFavoriteSubmit);
@@ -3926,7 +3960,7 @@ function createSettingsEngineIcon(engine) {
   const explicitIcon = (engine.id === "kimi" || engine.id === "zhihu")
     ? `${WayleafIcon.siteIconDirectory}/${engine.id}.svg`
     : explicitAiIconUrl(engine);
-  const iconSource = explicitIcon || WayleafIcon.localIconForUrl(engineUrl) || WayleafIcon.genericFallbackIcon;
+  const iconSource = explicitIcon || WayleafIcon.localIconForUrl(engineUrl);
   const style = SETTINGS_ENGINE_ICON_STYLES[engine.id] || {};
   const label = searchEngineLabel(engine);
   const shell = document.createElement("span");
@@ -3938,6 +3972,10 @@ function createSettingsEngineIcon(engine) {
   shell.dataset.iconCandidate = iconSource;
   shell.style.setProperty("--settings-engine-icon-tile", style.tile || "#ffffff");
   shell.style.setProperty("--settings-engine-icon-glyph", style.glyph || "#1f2924");
+
+  if (!iconSource) {
+    return shell;
+  }
 
   if (style.mode === "mask") {
     const glyph = document.createElement("span");
@@ -7043,14 +7081,25 @@ function renderHistorySiteIcon(icon, site, options = {}) {
   WayleafIcon.cacheRenderedSiteIconOnLoad(icon, site);
 }
 
-function createSiteCard(site, options = {}) {
+function renderBookmarkSiteIcon(icon, site, options = {}) {
+  const iconSite = siteWithFavoriteIcon(site, options.favoriteIconMap);
+  const cachedIconRender = WayleafIcon.cachedFirstPaintIconRender(options.iconRenders, iconSite);
+  if (cachedIconRender) {
+    WayleafIcon.restoreFirstPaintIconRender(icon, iconSite, cachedIconRender);
+  } else {
+    WayleafIcon.applyBookmarkSiteIcon(icon, iconSite);
+  }
+  WayleafIcon.cacheRenderedSiteIconOnLoad(icon, iconSite);
+}
+
+function createSiteCard(site, options = {}, renderIcon = renderSharedSiteIcon) {
   const node = siteCardTemplate.content.firstElementChild.cloneNode(true);
   const link = node.querySelector(".site-link");
   const icon = node.querySelector(".site-icon");
   const domain = node.querySelector(".site-domain");
   const removeButton = node.querySelector(".site-remove");
   link.href = site.url;
-  renderSharedSiteIcon(icon, site, options);
+  renderIcon(icon, site, options);
   icon.alt = "";
   node.querySelector(".site-title").textContent = site.title;
   domain.textContent = compactSiteDomain(site.url);
@@ -7062,7 +7111,9 @@ function createSiteCard(site, options = {}) {
   } else {
     removeButton.remove();
   }
-  appendFavoriteTargetButton(node, site, options.favoriteKeys);
+  if (options.allowFavorite !== false) {
+    appendFavoriteTargetButton(node, site, options.favoriteKeys);
+  }
   return node;
 }
 
@@ -7119,7 +7170,7 @@ async function renderFavoriteSiteList(favorites, options = {}) {
 
 async function renderFavoriteDependentSurfaces(options = {}) {
   await renderFavoriteSites();
-  await renderPortals();
+  clearBookmarkFolderViewCache();
   if (bookmarkPicker?.hidden) {
     if (options.preserveBookmarkScroll) {
       await rerenderBookmarkGridPreservingScroll();
@@ -7479,24 +7530,50 @@ async function removeCustomPortal(id) {
   }
 }
 
-async function renderSelectedBookmarkFolder() {
+async function renderSelectedBookmarkFolder(selectedFolderId) {
+  const renderRequestId = ++bookmarkRenderRequestId;
   try {
     clearBookmarkDeleteMode();
     clearRecentBookmarkExpiryTimer();
-    const folderId = await loadSelectedBookmarkFolderId();
+    const folderId = typeof selectedFolderId === "undefined"
+      ? await loadSelectedBookmarkFolderId()
+      : selectedFolderId;
+    if (renderRequestId !== bookmarkRenderRequestId) {
+      return;
+    }
+    activateCachedBookmarkFolderView(folderId);
+    await renderBookmarkFolderLane(folderId, renderRequestId);
+    if (renderRequestId !== bookmarkRenderRequestId) {
+      return;
+    }
     if (!folderId) {
+      latestBookmarkFolder = null;
+      latestBookmarkSites = [];
+      latestBookmarkRenderContext = null;
+      bookmarkSearchInput.disabled = true;
       renderBookmarkEmptyState(t("bookmarkNoFolder"));
       return;
     }
 
     const folder = await loadBookmarkFolder(folderId);
+    if (renderRequestId !== bookmarkRenderRequestId) {
+      return;
+    }
     if (!folder) {
       await saveSelectedBookmarkFolderId("");
+      latestBookmarkFolder = null;
+      latestBookmarkSites = [];
+      latestBookmarkRenderContext = null;
+      bookmarkSearchInput.disabled = true;
+      await renderBookmarkFolderLane("", renderRequestId);
       renderBookmarkEmptyState(t("bookmarkFolderMissing"));
       return;
     }
 
     const children = await chrome.bookmarks.getChildren(folder.id);
+    if (renderRequestId !== bookmarkRenderRequestId) {
+      return;
+    }
     const sites = children
       .filter((item) => item.url && isWebUrl(item.url))
       .map((item) => ({
@@ -7506,33 +7583,191 @@ async function renderSelectedBookmarkFolder() {
         dateAdded: Number(item.dateAdded || 0)
       }));
     const favoriteSites = await loadFavoriteSites();
+    if (renderRequestId !== bookmarkRenderRequestId) {
+      return;
+    }
     const favoriteKeys = favoriteSiteKeySet(favoriteSites);
     const favoriteIconMap = favoriteSiteIconMap(favoriteSites);
     const iconRenders = readFirstPaintCache().iconRenders;
 
-    bookmarkFolderMeta.textContent = t("bookmarkMeta", {
-      folder: folder.title || t("unnamedFolder"),
-      count: sites.length
-    });
-    if (!sites.length) {
-      bookmarkGrid.innerHTML = emptyState(t("bookmarkEmpty"));
+    latestBookmarkFolder = folder;
+    latestBookmarkSites = sites;
+    latestBookmarkRenderContext = { favoriteKeys, favoriteIconMap, iconRenders };
+    bookmarkSearchInput.disabled = false;
+    await renderVisibleBookmarkSites(renderRequestId);
+  } catch (error) {
+    if (renderRequestId !== bookmarkRenderRequestId) {
       return;
     }
-
-    const { recentSites, groupedSites } = partitionRecentBookmarkSites(sites);
-    const fragment = document.createDocumentFragment();
-    if (recentSites.length) {
-      fragment.appendChild(createRecentBookmarkSection(recentSites, { favoriteKeys, favoriteIconMap, iconRenders }));
-      scheduleRecentBookmarkExpiry(recentSites);
-    }
-    groupBookmarkSitesByInitial(groupedSites).forEach((group) => {
-      fragment.appendChild(createBookmarkInitialSection(group, { favoriteKeys, favoriteIconMap, iconRenders }));
-    });
-    bookmarkGrid.replaceChildren(await prepareBookmarkRouteFragment(fragment));
-  } catch (error) {
     console.warn("Failed to load bookmarks", error);
     renderBookmarkEmptyState(t("bookmarkReadFailed"));
   }
+}
+
+async function renderBookmarkFolderLane(selectedId, renderRequestId = 0) {
+  try {
+    const folders = flattenBookmarkFolders(await chrome.bookmarks.getTree())
+      .filter((folder) => folder.bookmarkCount > 0)
+      .slice(0, MAX_BOOKMARK_FOLDER_OPTIONS);
+    if (renderRequestId && renderRequestId !== bookmarkRenderRequestId) {
+      return;
+    }
+    const fragment = document.createDocumentFragment();
+    let activeButton = null;
+    folders.forEach((folder) => {
+      const button = document.createElement("button");
+      button.className = "bookmark-folder-chip";
+      button.classList.toggle("active", folder.id === selectedId);
+      button.type = "button";
+      button.setAttribute("aria-pressed", String(folder.id === selectedId));
+      button.title = `${folder.path} · ${t("bookmarkCount", { count: folder.bookmarkCount })}`;
+      button.textContent = folder.title || t("unnamedFolder");
+      button.addEventListener("click", () => selectBookmarkFolder(folder.id));
+      if (folder.id === selectedId) {
+        activeButton = button;
+      }
+      fragment.appendChild(button);
+    });
+    bookmarkFolderLane.replaceChildren(fragment);
+    activeButton?.scrollIntoView({ block: "nearest", inline: "nearest" });
+  } catch (error) {
+    if (renderRequestId && renderRequestId !== bookmarkRenderRequestId) {
+      return;
+    }
+    console.warn("Failed to load bookmark folder lane", error);
+    bookmarkFolderLane.replaceChildren();
+  }
+}
+
+async function renderVisibleBookmarkSites(renderRequestId = ++bookmarkRenderRequestId) {
+  const folder = latestBookmarkFolder;
+  const context = latestBookmarkRenderContext;
+  if (!folder || !context) {
+    return;
+  }
+  clearBookmarkDeleteMode();
+  clearRecentBookmarkExpiryTimer();
+  const query = normalizeText(bookmarkSearchInput.value).toLocaleLowerCase(LOCALE);
+  const filteredSites = latestBookmarkSites.filter((site) => {
+    if (!query) {
+      return true;
+    }
+    return `${site.title} ${compactSiteDomain(site.url)}`.toLocaleLowerCase(LOCALE).includes(query);
+  });
+  bookmarkFolderMeta.textContent = t("bookmarkMeta", {
+    folder: folder.title || t("unnamedFolder"),
+    count: filteredSites.length
+  });
+  if (!filteredSites.length) {
+    const view = createBookmarkFolderView(emptyState(query ? t("bookmarkSearchEmpty") : t("bookmarkEmpty")));
+    activateBookmarkFolderView(view);
+    return;
+  }
+
+  const viewCacheKey = bookmarkFolderViewCacheKey(folder, query);
+  const cachedView = bookmarkFolderViewCache.get(viewCacheKey);
+  if (cachedView) {
+    bookmarkFolderViewCache.delete(viewCacheKey);
+    bookmarkFolderViewCache.set(viewCacheKey, cachedView);
+    bookmarkFolderMeta.textContent = cachedView.meta;
+    latestBookmarkRenderContext = { ...context, iconRenders: readFirstPaintCache().iconRenders };
+    activateBookmarkFolderView(cachedView.node);
+    return;
+  }
+
+  const visibleSites = filteredSites.slice().sort(bookmarkSortSelect.value === "title"
+    ? compareBookmarkSites
+    : compareRecentBookmarkSites);
+  const { recentSites } = partitionRecentBookmarkSites(filteredSites);
+  const fragment = document.createDocumentFragment();
+  if (!query && recentSites.length) {
+    fragment.appendChild(createRecentBookmarkSection(recentSites.slice(0, 3), context));
+    scheduleRecentBookmarkExpiry(recentSites);
+  }
+  fragment.appendChild(createBookmarkSection({
+    className: "bookmark-main-section",
+    title: folder.title || t("unnamedFolder"),
+    meta: t("bookmarkCount", { count: filteredSites.length }),
+    items: visibleSites,
+    ...context
+  }));
+  const prepared = await prepareBookmarkRouteFragment(fragment);
+  if (renderRequestId === bookmarkRenderRequestId) {
+    latestBookmarkRenderContext = { ...context, iconRenders: readFirstPaintCache().iconRenders };
+    const view = createBookmarkFolderView(prepared, viewCacheKey);
+    activateBookmarkFolderView(view);
+    rememberBookmarkFolderView(viewCacheKey, view);
+  }
+}
+
+function bookmarkFolderViewCacheKey(folder, query) {
+  return query ? "" : `${folder.id || ""}:${bookmarkSortSelect.value}:${LOCALE}`;
+}
+
+function activateCachedBookmarkFolderView(folderId) {
+  if (!folderId || normalizeText(bookmarkSearchInput.value)) {
+    return false;
+  }
+  const key = `${folderId}:${bookmarkSortSelect.value}:${LOCALE}`;
+  const cachedView = bookmarkFolderViewCache.get(key);
+  if (!cachedView) {
+    return false;
+  }
+  bookmarkFolderViewCache.delete(key);
+  bookmarkFolderViewCache.set(key, cachedView);
+  bookmarkFolderMeta.textContent = cachedView.meta;
+  activateBookmarkFolderView(cachedView.node);
+  return true;
+}
+
+function createBookmarkFolderView(content, key = "") {
+  const view = document.createElement("div");
+  view.className = "bookmark-folder-view";
+  view.dataset.bookmarkFolderView = key || "transient";
+  if (typeof content === "string") {
+    view.innerHTML = content;
+  } else {
+    view.appendChild(content);
+  }
+  return view;
+}
+
+function activateBookmarkFolderView(view) {
+  bookmarkGrid.querySelectorAll(":scope > .bookmark-folder-view").forEach((cachedView) => {
+    if (cachedView === view) {
+      return;
+    }
+    if (cachedView.dataset.bookmarkFolderView === "transient") {
+      cachedView.remove();
+      return;
+    }
+    cachedView.hidden = true;
+  });
+  if (view.parentElement !== bookmarkGrid) {
+    bookmarkGrid.appendChild(view);
+  }
+  view.hidden = false;
+}
+
+function rememberBookmarkFolderView(key, view) {
+  if (!key) {
+    return;
+  }
+  bookmarkFolderViewCache.delete(key);
+  bookmarkFolderViewCache.set(key, {
+    meta: bookmarkFolderMeta.textContent,
+    node: view
+  });
+  while (bookmarkFolderViewCache.size > BOOKMARK_FOLDER_VIEW_CACHE_LIMIT) {
+    const oldestKey = bookmarkFolderViewCache.keys().next().value;
+    bookmarkFolderViewCache.get(oldestKey)?.node.remove();
+    bookmarkFolderViewCache.delete(oldestKey);
+  }
+}
+
+function clearBookmarkFolderViewCache() {
+  bookmarkFolderViewCache.forEach((view) => view.node.remove());
+  bookmarkFolderViewCache.clear();
 }
 
 async function prepareBookmarkRouteFragment(fragment, iconSelector = ".bookmark-site-card img.site-icon") {
@@ -7548,7 +7783,7 @@ async function prepareBookmarkRouteFragment(fragment, iconSelector = ".bookmark-
   staging.appendChild(fragment);
   document.body.appendChild(staging);
   try {
-    await waitForBookmarkRouteIcons(staging, iconSelector);
+    trackBookmarkRouteIconCache(staging, iconSelector);
     const ready = document.createDocumentFragment();
     ready.append(...staging.childNodes);
     return ready;
@@ -7557,72 +7792,86 @@ async function prepareBookmarkRouteFragment(fragment, iconSelector = ".bookmark-
   }
 }
 
-async function waitForBookmarkRouteIcons(root, iconSelector = ".bookmark-site-card img.site-icon") {
-  await Promise.allSettled([...root.querySelectorAll(iconSelector)]
-    .map(waitForBookmarkRouteIcon));
+function trackBookmarkRouteIconCache(root, iconSelector) {
+  root.querySelectorAll(iconSelector).forEach((icon) => {
+    cacheBookmarkRouteIconWhenSettled(icon);
+  });
 }
 
-function waitForBookmarkRouteIcon(icon) {
-  return new Promise((resolve) => {
-    let observer = null;
-    let quietTimer = 0;
-    let timeoutTimer = 0;
-    let finished = false;
-    const done = () => {
-      if (finished) {
-        return;
-      }
-      finished = true;
-      window.clearTimeout(quietTimer);
-      window.clearTimeout(timeoutTimer);
-      observer?.disconnect();
-      icon.removeEventListener("load", check);
-      icon.removeEventListener("error", check);
-      resolve();
-    };
-    const ready = () => {
-      if (!icon.isConnected) {
-        return true;
-      }
-      if (icon.dataset.iconDefaultProbe === "pending" || icon.dataset.iconDefaultRescue === "pending") {
-        return false;
-      }
-      return Boolean(icon.getAttribute("src")) && (icon.complete || icon.dataset.iconMissing === "true");
-    };
-    const check = () => {
-      window.clearTimeout(quietTimer);
-      if (ready()) {
-        quietTimer = window.setTimeout(done, BOOKMARK_ICON_RENDER_QUIET_MS);
-      }
-    };
-    observer = new MutationObserver(check);
-    observer.observe(icon, {
-      attributes: true,
-      attributeFilter: [
-        "src",
-        "class",
-        "style",
-        "data-icon-candidate",
-        "data-icon-source",
-        "data-icon-tile",
-        "data-icon-default-probe",
-        "data-icon-default-rescue",
-        "data-icon-fused-tile",
-        "data-icon-missing",
-        "data-remote-brand-icon-request"
-      ]
+function bookmarkRouteIconSettled(icon) {
+  if (!icon.isConnected) {
+    return false;
+  }
+  if (icon.dataset.iconDefaultProbe === "pending" || icon.dataset.iconDefaultRescue === "pending") {
+    return false;
+  }
+  if (["primary_pending", "primary_miss", "secondary_pending"].includes(icon.dataset.iconRouteState || "")) {
+    return false;
+  }
+  return Boolean(icon.getAttribute("src")) && (icon.complete || icon.dataset.iconMissing === "true");
+}
+
+function cacheBookmarkRouteIconWhenSettled(icon) {
+  let observer = null;
+  let quietTimer = 0;
+  let timeoutTimer = 0;
+  let finished = false;
+  const cleanup = () => {
+    window.clearTimeout(quietTimer);
+    window.clearTimeout(timeoutTimer);
+    observer?.disconnect();
+    icon.removeEventListener("load", check);
+    icon.removeEventListener("error", check);
+  };
+  const cache = () => {
+    if (finished) {
+      return;
+    }
+    finished = true;
+    cleanup();
+    WayleafIcon.cacheRenderedSiteIcon(icon, {
+      title: icon.dataset.siteTitle || icon.alt || "",
+      url: icon.dataset.siteUrl || ""
     });
-    icon.addEventListener("load", check);
-    icon.addEventListener("error", check);
-    timeoutTimer = window.setTimeout(done, BOOKMARK_ICON_RENDER_SETTLE_TIMEOUT_MS);
-    check();
+    if (latestBookmarkRenderContext) {
+      latestBookmarkRenderContext = { ...latestBookmarkRenderContext, iconRenders: readFirstPaintCache().iconRenders };
+    }
+  };
+  const check = () => {
+    window.clearTimeout(quietTimer);
+    if (bookmarkRouteIconSettled(icon)) {
+      quietTimer = window.setTimeout(cache, BOOKMARK_ICON_RENDER_QUIET_MS);
+    }
+  };
+  observer = new MutationObserver(check);
+  observer.observe(icon, {
+    attributes: true,
+    attributeFilter: [
+      "src",
+      "class",
+      "style",
+      "data-icon-candidate",
+      "data-icon-source",
+      "data-icon-tile",
+      "data-icon-route-state",
+      "data-icon-default-probe",
+      "data-icon-default-rescue",
+      "data-icon-fused-tile",
+      "data-icon-missing",
+      "data-remote-brand-icon-request"
+    ]
   });
+  icon.addEventListener("load", check);
+  icon.addEventListener("error", check);
+  timeoutTimer = window.setTimeout(cleanup, BOOKMARK_ICON_RENDER_SETTLE_TIMEOUT_MS);
+  check();
 }
 
 function renderBookmarkEmptyState(message) {
   clearRecentBookmarkExpiryTimer();
   bookmarkFolderMeta.textContent = "";
-  bookmarkGrid.innerHTML = emptyState(message);
+  const view = createBookmarkFolderView(emptyState(message));
+  activateBookmarkFolderView(view);
 }
 
 function partitionRecentBookmarkSites(sites) {
@@ -7826,7 +8075,7 @@ function createBookmarkSection({
 }
 
 function createBookmarkSiteCard(site, options = {}) {
-  const node = createSiteCard(site, options);
+  const node = createSiteCard(site, { ...options, allowFavorite: false }, renderBookmarkSiteIcon);
   const deleteButton = document.createElement("button");
 
   node.classList.add("bookmark-site-card");
@@ -8025,6 +8274,7 @@ async function removeBookmarkSite(site) {
   }
   try {
     await chrome.bookmarks.remove(site.bookmarkId);
+    clearBookmarkFolderViewCache();
     await renderSelectedBookmarkFolder();
   } catch (error) {
     console.warn("Failed to remove bookmark", error);
@@ -8047,9 +8297,9 @@ function bindBookmarkChangeEvents() {
 }
 
 function requestBookmarkRefresh() {
+  clearBookmarkFolderViewCache();
   clearTimeout(bookmarkRefreshTimer);
   bookmarkRefreshTimer = window.setTimeout(() => {
-    renderPortals();
     if (bookmarkPicker.hidden) {
       renderSelectedBookmarkFolder();
       return;
@@ -8075,16 +8325,19 @@ async function openBookmarkPicker() {
   }
 }
 
-async function closeBookmarkPicker() {
+async function closeBookmarkPicker(requestedFolderId) {
   bookmarkPicker.hidden = true;
   bookmarkMainView.hidden = false;
   setBookmarkPickerMode(false);
-  await renderSelectedBookmarkFolder();
+  const folderId = typeof requestedFolderId === "string" ? requestedFolderId : undefined;
+  await renderSelectedBookmarkFolder(folderId);
 }
 
 function setBookmarkPickerMode(isPicking) {
   bookmarkPickerToolbar.hidden = !isPicking;
-  bookmarkFolderMeta.closest(".bookmark-toolbar").hidden = isPicking;
+  bookmarkMainToolbar.hidden = isPicking;
+  bookmarkSearch.hidden = isPicking;
+  bookmarkFolderLane.hidden = isPicking;
   closeBookmarkPickerButton.hidden = !isPicking;
 }
 
@@ -8120,9 +8373,10 @@ function renderBookmarkFolderOptions(folders, selectedId) {
 }
 
 async function selectBookmarkFolder(folderId) {
-  await saveSelectedBookmarkFolderId(folderId);
-  closeBookmarkPicker();
-  renderSelectedBookmarkFolder();
+  bookmarkSearchInput.value = "";
+  const saveSelection = saveSelectedBookmarkFolderId(folderId);
+  await closeBookmarkPicker(folderId);
+  await saveSelection;
 }
 
 function flattenBookmarkFolders(nodes, parents = []) {
@@ -9407,10 +9661,6 @@ function aiAttachmentIcon() {
 
 function githubIcon() {
   return '<svg class="brand-icon github-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path fill="currentColor" d="M12 .297c-6.63 0-12 5.373-12 12c0 5.303 3.438 9.8 8.205 11.385c.6.113.82-.258.82-.577c0-.285-.01-1.04-.015-2.04c-3.338.724-4.042-1.61-4.042-1.61c-.546-1.385-1.335-1.755-1.335-1.755c-1.087-.744.084-.729.084-.729c1.205.084 1.838 1.236 1.838 1.236c1.07 1.835 2.809 1.305 3.495.998c.108-.776.417-1.305.76-1.605c-2.665-.3-5.466-1.332-5.466-5.93c0-1.31.465-2.38 1.235-3.22c-.135-.303-.54-1.523.105-3.176c0 0 1.005-.322 3.3 1.23c.96-.267 1.98-.399 3-.405c1.02.006 2.04.138 3 .405c2.28-1.552 3.285-1.23 3.285-1.23c.645 1.653.24 2.873.12 3.176c.765.84 1.23 1.91 1.23 3.22c0 4.61-2.805 5.625-5.475 5.92c.42.36.81 1.096.81 2.22c0 1.606-.015 2.896-.015 3.286c0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12Z"/></svg>';
-}
-
-function pageTabFilledIcon() {
-  return tdesignIcon("page-tab-filled");
 }
 
 function arrowLeftIcon() {

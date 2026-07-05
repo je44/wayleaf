@@ -159,8 +159,14 @@ assert.match(
 
 assert.match(
   source,
-  /const protectedKeys = firstPaintProtectedIconKeys\(cache\);[\s\S]*\.filter\(\(\[entryKey\]\) => !protectedKeys\.has\(entryKey\)\)[\s\S]*\.slice\(MAX_CACHED_SITE_ICONS\)[\s\S]*delete iconRenders\[staleKey\]/,
-  "First-paint icon output must stay bounded (transient renders capped at MAX_CACHED_SITE_ICONS) while the always-present favorites/recent renders are protected from eviction."
+  /const MAX_CACHED_RENDERED_SITE_ICONS = 320;[\s\S]*const MAX_CACHED_RENDERED_SITE_ICON_TOTAL_BYTES = 3 \* 1024 \* 1024;/,
+  "Rendered icon cache should cover the visible bookmark folders while retaining a strict storage budget."
+);
+
+assert.match(
+  source,
+  /const protectedKeys = firstPaintProtectedIconKeys\(cache\);[\s\S]*retainedCount > MAX_CACHED_RENDERED_SITE_ICONS[\s\S]*retainedBytes > MAX_CACHED_RENDERED_SITE_ICON_TOTAL_BYTES[\s\S]*delete iconRenders\[entryKey\]/,
+  "First-paint icon output must stay bounded by both entry count and serialized size while fixed surfaces remain protected."
 );
 
 assert.match(
@@ -183,14 +189,20 @@ assert.match(
 
 assert.match(
   source,
-  /function renderSelectedBookmarkFolder\(\)[\s\S]*bookmarkGrid\.replaceChildren\(await prepareBookmarkRouteFragment\(fragment\)\);/,
-  "Bookmark route content should be staged until its icons have settled instead of showing favicon rendering in place."
+  /function renderVisibleBookmarkSites\([^)]*\)[\s\S]*const prepared = await prepareBookmarkRouteFragment\(fragment\);[\s\S]*activateBookmarkFolderView\(view\);/,
+  "Bookmark route content should swap as soon as rows are built while icon cache tracking continues in place."
 );
 
 assert.match(
   source,
-  /function waitForBookmarkRouteIcons\(root, iconSelector = "\.bookmark-site-card img\.site-icon"\) \{[\s\S]*root\.querySelectorAll\(iconSelector\)/,
-  "Bookmark icon staging must default to second-level bookmark route cards."
+  /function trackBookmarkRouteIconCache\(root, iconSelector\) \{[\s\S]*root\.querySelectorAll\(iconSelector\)/,
+  "Bookmark icon cache tracking must default to second-level bookmark route cards."
+);
+
+assert.doesNotMatch(
+  source,
+  /await waitForBookmarkRouteIcons/,
+  "Bookmark folder switches must not block on favicon route settling."
 );
 
 assert.doesNotMatch(
@@ -215,6 +227,61 @@ assert.doesNotMatch(
   createBookmarkSiteCardBody,
   /cacheRenderedSiteIconOnLoad/,
   "Bookmark route staging must not write second-level icon output into the shared first-paint icon cache."
+);
+
+assert.match(
+  source,
+  /function renderBookmarkSiteIcon\(icon, site, options = \{\}\)[\s\S]*cachedFirstPaintIconRender[\s\S]*restoreFirstPaintIconRender[\s\S]*applyBookmarkSiteIcon/,
+  "Bookmark cards must restore final cached output or enter the immediate browser favicon route."
+);
+
+assert.match(
+  source,
+  /function applyBookmarkSiteIcon\(icon, site\)[\s\S]*setIconRouteState\(icon, "primary_miss"[\s\S]*startSecondaryFaviconRoute/,
+  "A bookmark cache miss must enter the native favicon route without painting the loading spinner."
+);
+
+assert.doesNotMatch(
+  source.match(/function applyBookmarkSiteIcon\(icon, site\)[\s\S]*?\n\}/)?.[0] || "",
+  /paintPendingSiteIcon|discoverRemoteBrandIconDataUrl/,
+  "Bookmark first paint must not wait on a spinner or cloud discovery."
+);
+
+const bookmarkPrimaryResolver = source.match(/async function resolveBookmarkPrimarySiteIconRoute\(icon, site, siteKey, requestToken\) \{[\s\S]*?\n\}/)?.[0] || "";
+assert.ok(bookmarkPrimaryResolver, "Bookmark primary-route decisions must remain isolated and testable.");
+assert.ok(
+  bookmarkPrimaryResolver.indexOf("remoteBrandIconMissCacheIsFresh(cachedEntry)")
+    < bookmarkPrimaryResolver.indexOf("await waitForSiteIconIndex()"),
+  "A persisted primary miss must bypass the icon index and primary discovery algorithm."
+);
+assert.match(
+  bookmarkPrimaryResolver,
+  /discoverRemoteBrandIconDataUrl\(site\.url, \{ requireStableMiss: true \}\)/,
+  "Only an uncached bookmark URL should run the primary remote-brand lookup."
+);
+
+assert.match(
+  source,
+  /async function cacheRemoteBrandIconMiss\(siteKey\)[\s\S]*extensionVersion: firstPaintExtensionVersion\(\)[\s\S]*async function saveSiteIconCache/,
+  "Confirmed primary misses must persist for the current extension version."
+);
+
+assert.match(
+  source,
+  /const MAX_CACHED_SITE_ICON_MISSES = 320;[\s\S]*entries\.filter\(\(\[, entry\]\) => !entry\?\.missing\)\.slice\(0, MAX_CACHED_SITE_ICONS\)[\s\S]*entries\.filter\(\(\[, entry\]\) => entry\?\.missing\)\.slice\(0, MAX_CACHED_SITE_ICON_MISSES\)/,
+  "Small primary-miss decisions must cover the bookmark folders without expanding the icon payload budget."
+);
+
+assert.match(
+  source,
+  /let siteIconCacheSnapshot = null;[\s\S]*let siteIconCacheLoadPromise = null;[\s\S]*async function loadSiteIconCache\(\)[\s\S]*if \(siteIconCacheSnapshot\)[\s\S]*if \(!siteIconCacheLoadPromise\)[\s\S]*siteIconCacheLoadPromise = getStoredValues/,
+  "Bookmark cards in one tab must share one persisted route-decision cache read."
+);
+
+assert.doesNotMatch(
+  source,
+  /fallback\.svg|GENERIC_SITE_FALLBACK_ICON|applyGenericFallbackSiteIcon|genericFallbackIcon|site-icon-generic-fallback/,
+  "Deleted fallback.svg runtime references must not return."
 );
 
 assert.match(

@@ -67,7 +67,6 @@ assert.match(styles, /\.recent-card-page-dot\s*\{[\s\S]*background:\s*color-mix\
 assert.match(styles, /\.recent-card-page-dot\.active\s*\{[\s\S]*background:\s*#f2c94c;/, "The active indicator must be yellow.");
 assert.match(styles, /\.recent-card-bottom-bar\s*\{[\s\S]*align-items:\s*center;[\s\S]*justify-content:\s*space-between;/, "Drawer content should align indicators and switch controls on one horizontal row.");
 assert.match(styles, /\.recent-folder-page-title-snapshot\s*\{[\s\S]*z-index:\s*3;[\s\S]*pointer-events:\s*none;/, "Outgoing recent page title snapshots need their own layer above the incoming title.");
-assert.match(styles, /\.recent-folder-logo\.site-icon-generic-fallback,[\s\S]*padding:\s*0;[\s\S]*object-fit:\s*cover;/, "Recent generic fallback icons must render the complete fallback SVG without an extra padded tile.");
 const adaptiveIconRefresh = source.match(/function refreshAdaptiveSiteIcons\(\) \{[\s\S]*?\n\}/)?.[0] || "";
 assert.match(
   adaptiveIconRefresh,
@@ -86,7 +85,6 @@ assert.match(source, /recentViewToggleButton\?\.addEventListener\("click", \(eve
 // The toggle only adds a surface; it must reuse the SAME icon pipeline as recent cards (cache hit ->
 // restore captured render, cache miss -> the original applySiteIcon). No bespoke icon path.
 assert.match(source, /function renderHistorySiteIcon\(icon, site, options = \{\}\) \{\s*renderSharedSiteIcon\(icon, site, options\);\s*WayleafIcon\.cacheRenderedSiteIconOnLoad\(icon, site\);\s*\}/, "History icons (recent + today) must go through the shared render + first-paint cache path, not a new algorithm.");
-assert.match(iconSource, /function restoreFirstPaintIconRender\(icon, site, render\) \{[\s\S]*if \(render\.generic && \(localIcon \|\| normalizeStoredSiteIcon\(site\.icon \|\| ""\)\)\) \{[\s\S]*applySiteIcon\(icon, site\);[\s\S]*setIconRouteState\(icon, "fallback"\);/, "Generic fallback cache should replay only when no current local or stored site icon can supersede it.");
 assert.match(source, /function renderFirstPaintCache\(\) \{[\s\S]*const favoriteIconMap = favoriteSiteIconMap\(favoriteSites\);[\s\S]*renderRecentFolders\(recentGroups, \{ iconRenders: cache\.iconRenders, favoriteIconMap \}\);/, "First-paint recent cards must reuse cached favorite site icons instead of forcing favicon loading.");
 assert.match(source, /async function refreshHistory\(\) \{[\s\S]*const favoriteIconMap = favoriteSiteIconMap\(favoriteSites\);[\s\S]*renderRecentSurface\(recentGroups, \{ favoriteIconMap \}\);/, "Live recent cards must pass stored favorite icons into the shared history icon path.");
 assert.match(source, /function historyItemIcon\(item\) \{[\s\S]*normalizeStoredSiteIcon\(item\?\.icon \|\| item\?\.favIconUrl \|\| ""\)/, "History item data icons must stay available to the secondary direct-display route.");

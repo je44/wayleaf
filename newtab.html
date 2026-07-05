@@ -125,63 +125,34 @@
           <div>
             <h1 id="portal-title" tabindex="-1">Navigation hub</h1>
           </div>
-        </header>
-
-        <div class="portal-mode-tabs" role="tablist" aria-label="Navigation hub" data-active-view="smart">
-          <button class="portal-mode-tab active" id="smartPortalTab" type="button" role="tab" aria-selected="true" aria-controls="smartPortalView" data-portal-view="smart">Smart</button>
-          <button class="portal-mode-tab" id="bookmarkPortalTab" type="button" role="tab" aria-selected="false" aria-controls="bookmarkPortalView" data-portal-view="bookmarks">Bookmarks</button>
-        </div>
-
-        <div class="portal-workspace">
-          <div class="portal-view active" id="smartPortalView" role="tabpanel" aria-labelledby="smartPortalTab">
-          <div class="portal-view-toolbar">
-            <button class="icon-button subtle-action" id="togglePortalFormButton" type="button" aria-label="Add shortcut">
+          <div class="header-actions bookmark-header-actions">
+            <button class="icon-button subtle-action" id="refreshBookmarkFolderButton" type="button" aria-label="Refresh current bookmark folder">
               <span class="button-icon" aria-hidden="true"></span>
             </button>
           </div>
-          <form class="portal-form" id="portalForm" hidden>
-            <label>
-              <span>Name</span>
-              <input id="portalTitleInput" name="title" autocomplete="off" placeholder="Example: Notion">
-            </label>
-            <label>
-              <span>URL</span>
-              <input id="portalUrlInput" name="url" autocomplete="off" inputmode="url" placeholder="https://www.notion.so">
-            </label>
-            <div class="portal-form-field portal-category-field">
-              <label id="portalCategoryLabel" for="portalCategorySelect">Category</label>
-              <select class="portal-category-native" id="portalCategorySelect" name="category" tabindex="-1" aria-hidden="true"></select>
-              <div class="portal-category-picker" id="portalCategoryPicker">
-                <button class="portal-category-trigger" id="portalCategoryTrigger" type="button" aria-haspopup="listbox" aria-expanded="false" aria-controls="portalCategoryList" aria-labelledby="portalCategoryLabel portalCategoryCurrent">
-                  <span id="portalCategoryCurrent">Custom</span>
-                  <span class="button-icon portal-category-trigger-icon" aria-hidden="true"></span>
-                </button>
-                <div class="portal-category-list" id="portalCategoryList" role="listbox" aria-labelledby="portalCategoryLabel" hidden></div>
-              </div>
-            </div>
-            <div class="form-actions">
-              <button class="text-button" type="button" id="cancelPortalButton">Cancel</button>
-              <button class="text-button primary" type="submit">Add</button>
-            </div>
-            <p class="form-error" id="portalFormError" role="alert"></p>
-          </form>
+        </header>
 
-          <div class="portal-grid" id="portalGrid"></div>
-          </div>
-
-          <div class="portal-view" id="bookmarkPortalView" role="tabpanel" aria-labelledby="bookmarkPortalTab" hidden>
-          <div class="bookmark-toolbar">
+        <div class="portal-workspace">
+          <div class="portal-view active bookmark-portal-view" id="bookmarkPortalView">
+          <label class="bookmark-search" for="bookmarkSearchInput">
+            <span class="button-icon bookmark-search-icon" aria-hidden="true"></span>
+            <span class="visually-hidden" id="bookmarkSearchLabel">Search current bookmark folder</span>
+            <input id="bookmarkSearchInput" type="search" autocomplete="off" spellcheck="false" placeholder="Search current folder">
+          </label>
+          <div class="bookmark-folder-lane" id="bookmarkFolderLane" role="group" aria-label="Bookmark folders"></div>
+          <div class="bookmark-toolbar" id="bookmarkMainToolbar">
             <div class="bookmark-folder-meta" id="bookmarkFolderMeta"></div>
             <div class="header-actions">
-              <button class="icon-button subtle-action" id="refreshBookmarkFolderButton" type="button" aria-label="Refresh current bookmark folder">
-                <span class="button-icon" aria-hidden="true"></span>
-              </button>
               <button class="icon-button subtle-action" id="bookmarkFavoriteAddButton" type="button" aria-label="Add favorite site" aria-hidden="true" hidden>
                 <span class="button-icon" aria-hidden="true"></span>
               </button>
-              <button class="icon-button subtle-action" id="chooseBookmarkFolderButton" type="button" aria-label="Choose bookmark folder">
-                <span class="button-icon" aria-hidden="true"></span>
-              </button>
+              <label class="bookmark-sort" for="bookmarkSortSelect">
+                <span class="visually-hidden" id="bookmarkSortLabel">Sort bookmarks</span>
+                <select id="bookmarkSortSelect" aria-labelledby="bookmarkSortLabel">
+                  <option value="recent">Recently added</option>
+                  <option value="title">A–Z</option>
+                </select>
+              </label>
             </div>
           </div>
           <div class="bookmark-toolbar bookmark-picker-toolbar" id="bookmarkPickerToolbar" hidden>
@@ -479,7 +450,6 @@
 
     <script src="vendor/gsap/gsap.min.js"></script>
     <script src="vendor/gsap/Flip.min.js"></script>
-    <script src="data/recommendedSites.js"></script>
     <script src="wayleaf-icon.js"></script>
     <script src="newtab.js"></script>
   </body>

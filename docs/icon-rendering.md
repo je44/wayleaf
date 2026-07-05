@@ -1,6 +1,6 @@
 # Wayleaf Icon Rendering
 
-This document records the current icon path. It is not a request to change icon priority, tile styling, masks, rounded corners, colors, or fallback order.
+This document records the current icon path. It is not a request to change icon priority, tile styling, masks, rounded corners, colors, or missing-icon behavior.
 
 ## Current Priority
 
@@ -10,7 +10,7 @@ This document records the current icon path. It is not a request to change icon 
 4. Try remote brand SVG providers only when the local icon index has loaded and no local file matches.
 5. Try declared site icons from the page root, HTML `<link>` tags, web manifest icons, and Chrome favicon.
 6. Detect unreadable/default browser favicon output and rescue with declared site icons.
-7. Fall back to `icons/sites/fallback.svg` through `applyGenericFallbackSiteIcon()`.
+7. Mark the icon missing when no usable source remains.
 
 Local assets intentionally outrank remote/provider icons. Do not change that without a rendered regression pass.
 
@@ -27,7 +27,7 @@ The runtime groups related URLs before icon lookup:
 
 Remote discovery uses `credentials: "omit"` and bounded timeouts. The current provider priority is theSVG default SVGs, then LobeHub static SVG. Provider SVGs must pass the runtime quality gate before being cached: no embedded external image/object content, no event handlers, valid geometry, and reasonable shape count.
 
-Site icon discovery fetches the site root HTML, extracts icon and manifest candidates, caps HTML bytes, caps candidates, and falls back when a candidate fails. Failed remote-brand lookups are cached briefly as misses so a missing provider icon does not refetch forever.
+Site icon discovery fetches the site root HTML, extracts icon and manifest candidates, caps HTML bytes, caps candidates, and tries the next candidate when one fails. Failed remote-brand lookups are cached briefly as misses so a missing provider icon does not refetch forever.
 
 ## Cache Boundaries
 
@@ -43,7 +43,7 @@ Keep bulky and transient icon state out of `chrome.storage.sync`. If a cached re
 Do not change these without visual proof on favorites, recent history, bookmark cards, and settings/search surfaces:
 
 - local icon priority over remote/provider icons
-- `fallback.svg` order
+- missing-icon terminal state
 - default-browser-favicon detection
 - SVG recoloring and tile fusion rules
 - `icons/sites/index.json` hydration behavior

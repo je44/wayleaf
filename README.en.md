@@ -68,7 +68,7 @@ Current version: `1.0.0`
 | Type a complete `*` platform abbreviation or name, such as `*yt` or `*youtube` | Switch immediately without entering a space or query first, then type the query and press Enter. After the first or second letter, an inline hint shows an activator you can complete. |
 | Choose the default engine in Settings | Change the search provider used for regular keyword searches. |
 | Pick a local search result | Open a matching history item or bookmark. |
-| Add an item in the navigation hub | Save a titled `http` or `https` shortcut in a category. |
+| Find a bookmark in the navigation hub | Switch folders, search the current folder, or sort by recent additions and title. |
 | Click `+` in Bookmarks | Select a Chrome folder that contains website bookmarks. |
 
 AI command examples:
