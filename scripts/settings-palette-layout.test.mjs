@@ -177,6 +177,7 @@ for (const mode of ["system", "light", "dark"]) {
   );
 }
 assert.ok(packageSource.split(/\s+/).includes("assets"), "Release packages should include appearance preview assets.");
+assert.doesNotMatch(html + styles, /theme-mode-legacy-icon|generated-fallback/, "Historical generated/legacy presentation classes should not return.");
 
 assert.match(
   styles,

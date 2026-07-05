@@ -7227,11 +7227,6 @@ async function createFavoriteSite(site, index, options = {}) {
     removeFavoriteSite(site.id, node);
   });
   installFavoriteLongPress(node);
-  icon.addEventListener("load", () => {
-    if (icon.src.startsWith("data:image/svg+xml")) {
-      node.classList.add("generated-fallback");
-    }
-  });
   node.style.setProperty("--favorite-index", String(index));
   return node;
 }
