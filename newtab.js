@@ -3395,7 +3395,10 @@ async function init() {
   void themeModeReady;
   void videoPipSettingReady;
 
-  refreshBookmarkFolderButton.addEventListener("click", renderSelectedBookmarkFolder);
+  refreshBookmarkFolderButton.addEventListener("click", () => {
+    clearBookmarkFolderViewCache();
+    void renderSelectedBookmarkFolder();
+  });
   bookmarkFavoriteAddButton?.addEventListener("click", toggleFavoriteForm);
   bookmarkSearchInput.addEventListener("input", () => void renderVisibleBookmarkSites());
   bookmarkSortSelect.addEventListener("change", () => void renderVisibleBookmarkSites());
