@@ -5878,9 +5878,9 @@ async function renderLocalSearchSuggestions(query, options = {}) {
   localSearchResults = results;
   const fragment = document.createDocumentFragment();
   const engineSuggestion = createSearchEngineSuggestion(query);
-  fragment.appendChild(createSearchSuggestionItem(engineSuggestion));
+  fragment.appendChild(createSearchSuggestionItem(engineSuggestion, query));
   results.forEach((item) => {
-    fragment.appendChild(createSearchSuggestionItem(item));
+    fragment.appendChild(createSearchSuggestionItem(item, query));
   });
   if (!results.length && options.forceEmpty) {
     fragment.appendChild(createSearchEmptyState());
@@ -6328,11 +6328,15 @@ function shouldAllowLooseLocalSearch(query) {
 }
 
 function fuzzyMatchesHistoryItem(item, query) {
-  return fuzzyIncludes(`${item.title || ""} ${item.url || ""}`, query);
+  return fuzzyIncludes(localSearchVisibleText(item), query);
 }
 
 function fuzzyMatchesBookmarkEntry(entry, query) {
-  return fuzzyIncludes(`${entry.title || ""} ${entry.url || ""} ${entry.path || ""}`, query);
+  return fuzzyIncludes(localSearchVisibleText(entry), query);
+}
+
+function localSearchVisibleText(item) {
+  return `${item?.title || ""} ${compactSiteDomain(item?.url || "")}`;
 }
 
 function fuzzyIncludes(value, query) {
@@ -6354,7 +6358,7 @@ function fuzzyIncludes(value, query) {
   return true;
 }
 
-function createSearchSuggestionItem(item) {
+function createSearchSuggestionItem(item, query = "") {
   const actionableSuggestion = item.type === "engine-search" || Boolean(item?.selectedAiEngineId);
   const link = actionableSuggestion ? document.createElement("div") : document.createElement("a");
   const icon = item.type === "engine-search" ? document.createElement("span") : document.createElement("img");
@@ -6392,7 +6396,11 @@ function createSearchSuggestionItem(item) {
     icon.alt = "";
   }
   copy.className = "search-suggestion-copy";
-  title.textContent = item.title;
+  if (item.type === "engine-search") {
+    title.textContent = item.title;
+  } else {
+    appendSearchSuggestionMarkedText(title, item.title, query);
+  }
   const metaText = item.meta || (item.type === "history"
     ? `${formatHistoryTimestamp(item.lastVisitTime)} · ${compactSiteDomain(item.url)}`
     : item.type === "bookmark"
@@ -6412,6 +6420,56 @@ function createSearchSuggestionItem(item) {
   }
   link.append(icon, copy, trailing);
   return link;
+}
+
+function appendSearchSuggestionMarkedText(node, text, query) {
+  const value = String(text || "");
+  const matches = searchSuggestionTextMatches(value, query);
+  if (!matches.length) {
+    node.textContent = value;
+    return;
+  }
+  let cursor = 0;
+  matches.forEach((match) => {
+    if (match.index > cursor) {
+      node.append(document.createTextNode(value.slice(cursor, match.index)));
+    }
+    node.append(searchSuggestionMatchNode(value.slice(match.index, match.index + match.length)));
+    cursor = match.index + match.length;
+  });
+  if (cursor < value.length) {
+    node.append(document.createTextNode(value.slice(cursor)));
+  }
+}
+
+function searchSuggestionTextMatches(text, query) {
+  const value = String(text || "");
+  const normalizedValue = value.toLowerCase();
+  const terms = normalizeText(query)
+    .toLowerCase()
+    .split(/[^a-z0-9\u4e00-\u9fff]+/i)
+    .filter(Boolean)
+    .sort((a, b) => b.length - a.length);
+  const matches = [];
+  for (const term of terms) {
+    let index = normalizedValue.indexOf(term);
+    while (index >= 0) {
+      const length = term.length;
+      const overlaps = matches.some((match) => index < match.index + match.length && index + length > match.index);
+      if (!overlaps) {
+        matches.push({ index, length });
+      }
+      index = normalizedValue.indexOf(term, index + length);
+    }
+  }
+  return matches.sort((a, b) => a.index - b.index);
+}
+
+function searchSuggestionMatchNode(text) {
+  const mark = document.createElement("mark");
+  mark.className = "search-suggestion-match";
+  mark.textContent = text;
+  return mark;
 }
 
 function submitSelectedSuggestionSearch(item) {

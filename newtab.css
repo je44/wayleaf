@@ -2400,6 +2400,13 @@ html.theme-transitioning .search-workbench[data-ai-exiting] .favorite-icon {
   font-size: 13px;
 }
 
+.search-suggestion-match {
+  padding: 0 2px;
+  border-radius: 0;
+  background: color-mix(in srgb, var(--accent-strong) 28%, transparent);
+  color: inherit;
+}
+
 .search-suggestion-copy span,
 .search-suggestion-badge,
 .search-suggestion-engine-label,
