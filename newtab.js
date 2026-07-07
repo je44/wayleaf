@@ -119,7 +119,6 @@ const RECENT_CARD_ENTER_MS = 150;
 const RECENT_FOLDER_PAGE_SWITCH_MS = 330;
 const RECENT_FOLDER_PAGE_SWITCH_EXIT_MS = 240;
 const RECENT_FOLDER_PAGE_SWITCH_STAGGER_MS = 28;
-const RECENT_CARD_DRAWER_CLOSE_DELAY_MS = 180;
 const REDUCED_MOTION_QUERY = "(prefers-reduced-motion: reduce)";
 const DEFAULT_FAVICON_MIN_COVERAGE = 0.12;
 const DEFAULT_FAVICON_MAX_COVERAGE = 0.46;
@@ -9180,41 +9179,26 @@ function animateRecentFolderPageSwitch(outgoingLayer, nextKeys, previousKeys, di
 
 function createRecentFolderItem(group, options = {}) {
   const homeUrl = group.homeUrl || siteHomeUrl(group.key, group.url);
-  const homeKey = normalizeHistoryKey(homeUrl);
-  const pages = [
-    { title: compactHistoryUrl(safeUrl(homeUrl)) || group.name, url: homeUrl },
-    ...group.pages.filter((page) => normalizeHistoryKey(page.url) !== homeKey)
-  ].slice(0, MAX_HISTORY_PAGES_PER_SITE);
-  const item = pages[0];
-  const title = normalizeText(group.name) || historyFallbackTitle(safeUrl(item?.url || group.url));
+  const title = normalizeText(group.name) || historyFallbackTitle(safeUrl(homeUrl || group.url));
   const card = document.createElement("article");
   const inner = document.createElement("div");
   const face = document.createElement("a");
   const icon = document.createElement("img");
   const copy = document.createElement("span");
   const name = document.createElement("strong");
-  const pageTitle = document.createElement("span");
   const domain = document.createElement("span");
   const deleteButton = document.createElement("button");
-  const controls = document.createElement("div");
-  const previousButton = document.createElement("button");
-  const nextButton = document.createElement("button");
-  const pageIndicator = document.createElement("div");
-  const bottomBar = document.createElement("span");
-  const hasPageDrawer = pages.length > 1;
 
   card.className = "recent-folder-item recent-card";
-  card.classList.toggle("has-page-drawer", hasPageDrawer);
-  card.dataset.pageIndex = "0";
   card.dataset.siteKey = group.key || "";
   inner.className = "recent-card-inner";
   face.className = "recent-folder-face";
-  face.href = item?.url || group.url;
+  face.href = homeUrl || group.url;
   face.setAttribute("aria-label", t("openPage", { title }));
   icon.className = "recent-folder-logo";
   const iconSite = {
     title,
-    url: group.homeUrl || group.url,
+    url: homeUrl || group.url,
     icon: historyItemIcon(group)
   };
   renderHistorySiteIcon(icon, iconSite, options);
@@ -9222,220 +9206,13 @@ function createRecentFolderItem(group, options = {}) {
   copy.className = "recent-folder-copy";
   name.className = "recent-folder-name";
   name.textContent = title;
-  pageTitle.className = "recent-folder-page-title";
   domain.className = "recent-folder-domain";
-  domain.textContent = compactHistoryUrl(safeUrl(group.homeUrl || group.url));
+  domain.textContent = compactHistoryUrl(safeUrl(homeUrl || group.url));
   deleteButton.className = "recent-card-delete";
   deleteButton.type = "button";
   deleteButton.innerHTML = trashIcon();
   deleteButton.setAttribute("aria-label", t("deleteHistory", { title }));
-  controls.className = "recent-card-controls";
-  previousButton.className = "recent-card-arrow previous";
-  previousButton.type = "button";
-  previousButton.innerHTML = chevronLeftIcon();
-  previousButton.setAttribute("aria-label", t("historyPreviousPage"));
-  nextButton.className = "recent-card-arrow next";
-  nextButton.type = "button";
-  nextButton.innerHTML = chevronRightIcon();
-  nextButton.setAttribute("aria-label", t("historyNextPage"));
-  pageIndicator.className = "recent-card-page-indicator";
-  pageIndicator.setAttribute("aria-hidden", "true");
-  bottomBar.className = "recent-card-bottom-bar";
 
-  let activePageAnimation = null;
-  let hoverCloseTimer = 0;
-
-  const clearDrawerCloseTimer = () => {
-    if (!hoverCloseTimer) {
-      return;
-    }
-    window.clearTimeout(hoverCloseTimer);
-    hoverCloseTimer = 0;
-  };
-
-  const openDrawerHoverState = () => {
-    if (!hasPageDrawer) {
-      return;
-    }
-    clearDrawerCloseTimer();
-    card.classList.add("drawer-hover");
-  };
-
-  const scheduleDrawerClose = () => {
-    if (!hasPageDrawer) {
-      return;
-    }
-    clearDrawerCloseTimer();
-    hoverCloseTimer = window.setTimeout(() => {
-      card.classList.remove("drawer-hover");
-      hoverCloseTimer = 0;
-    }, RECENT_CARD_DRAWER_CLOSE_DELAY_MS);
-  };
-
-  const clearActivePageTurn = () => {
-    if (activePageAnimation) {
-      if (typeof activePageAnimation.kill === "function") {
-        activePageAnimation.kill();
-      } else {
-        activePageAnimation.cancel();
-      }
-      activePageAnimation = null;
-    }
-    inner.querySelectorAll(".recent-folder-face-snapshot, .recent-folder-page-title-snapshot")
-      .forEach((node) => node.remove());
-    face.style.opacity = "";
-    face.style.visibility = "";
-    face.style.transform = "";
-    face.style.filter = "";
-    face.style.transition = "";
-    pageTitle.style.opacity = "";
-    pageTitle.style.visibility = "";
-    pageTitle.style.transform = "";
-    pageTitle.style.transition = "";
-    pageTitle.classList.remove("is-turning");
-  };
-
-  const capturePageTurnSnapshot = (direction) => {
-    if (!direction || pages.length < 2 || prefersReducedMotion()) {
-      return null;
-    }
-
-    clearActivePageTurn();
-
-    const snapshot = pageTitle.cloneNode(true);
-    snapshot.removeAttribute("id");
-    snapshot.classList.add("recent-folder-page-title-snapshot");
-    snapshot.setAttribute("aria-hidden", "true");
-    snapshot.style.transition = "none";
-    pageTitle.style.transition = "none";
-    pageTitle.classList.add("is-turning");
-    face.append(snapshot);
-    return snapshot;
-  };
-
-  const animatePageTurn = (direction, snapshot) => {
-    if (!direction || pages.length < 2 || !snapshot) {
-      snapshot?.remove();
-      return;
-    }
-
-    const vector = direction === "next" ? 1 : -1;
-    const incomingOffset = 34;
-    const outgoingOffset = 38;
-    const pageTurnDuration = 300;
-    const easing = "cubic-bezier(0.16, 1, 0.3, 1)";
-    const gsap = getGsap();
-    if (gsap) {
-      const cleanUp = () => {
-        snapshot.remove();
-        gsap.set(pageTitle, { clearProps: "opacity,visibility,transform" });
-        pageTitle.style.transition = "";
-        pageTitle.classList.remove("is-turning");
-        if (activePageAnimation === timeline) {
-          activePageAnimation = null;
-        }
-      };
-      const timeline = gsap.timeline({
-        defaults: { ease: "power3.out" },
-        onComplete: cleanUp
-      });
-      timeline
-        .fromTo(pageTitle,
-          { autoAlpha: 0, x: vector * incomingOffset },
-          { autoAlpha: 1, x: 0, duration: gsapDuration(pageTurnDuration) },
-          0)
-        .fromTo(snapshot,
-          { autoAlpha: 1, x: 0 },
-          { autoAlpha: 0, x: -vector * outgoingOffset, duration: gsapDuration(pageTurnDuration * 0.78) },
-          0);
-      activePageAnimation = timeline;
-      return;
-    }
-    const incoming = pageTitle.animate(
-      [
-        {
-          opacity: 0,
-          transform: `translate3d(${vector * incomingOffset}px, 0, 0)`
-        },
-        {
-          opacity: 1,
-          transform: "translate3d(0, 0, 0)"
-        }
-      ],
-      { duration: pageTurnDuration, easing, fill: "both" }
-    );
-    const outgoing = snapshot.animate(
-      [
-        {
-          opacity: 1,
-          transform: "translate3d(0, 0, 0)"
-        },
-        {
-          opacity: 0,
-          transform: `translate3d(${-vector * outgoingOffset}px, 0, 0)`
-        }
-      ],
-      { duration: pageTurnDuration * 0.78, easing, fill: "both" }
-    );
-
-    let cleanupTimer = 0;
-    let cleanedUp = false;
-    let pageTurnAnimation = null;
-    const cleanUp = () => {
-      if (cleanedUp) {
-        return;
-      }
-      cleanedUp = true;
-      window.clearTimeout(cleanupTimer);
-      incoming.cancel();
-      outgoing.cancel();
-      snapshot.remove();
-      pageTitle.style.transition = "";
-      pageTitle.classList.remove("is-turning");
-      if (activePageAnimation === pageTurnAnimation) {
-        activePageAnimation = null;
-      }
-    };
-    pageTurnAnimation = { cancel: cleanUp };
-    activePageAnimation = pageTurnAnimation;
-    incoming.addEventListener("finish", cleanUp, { once: true });
-    cleanupTimer = window.setTimeout(cleanUp, pageTurnDuration + 80);
-  };
-
-  const setActivePage = (nextIndex, direction = "") => {
-    const pageCount = pages.length || 1;
-    const index = ((nextIndex % pageCount) + pageCount) % pageCount;
-    const activePage = pages[index] || item;
-    const activeTitle = normalizeText(activePage?.title) || historyFallbackTitle(safeUrl(activePage?.url || group.url));
-    const pageTurnSnapshot = capturePageTurnSnapshot(direction);
-    card.dataset.pageIndex = String(index);
-    face.href = activePage?.url || group.url;
-    face.setAttribute("aria-label", t("openPage", { title: activeTitle }));
-    pageTitle.textContent = index === 0 ? "" : activeTitle;
-    previousButton.disabled = pageCount < 2;
-    nextButton.disabled = pageCount < 2;
-    pageIndicator.querySelectorAll(".recent-card-page-dot").forEach((dot, dotIndex) => {
-      dot.classList.toggle("active", dotIndex === index);
-    });
-    animatePageTurn(direction, pageTurnSnapshot);
-  };
-
-  previousButton.addEventListener("click", (event) => {
-    event.preventDefault();
-    event.stopPropagation();
-    setActivePage(Number(card.dataset.pageIndex || 0) - 1, "previous");
-    if (event.detail > 0) {
-      previousButton.blur();
-    }
-  });
-  nextButton.addEventListener("click", (event) => {
-    event.preventDefault();
-    event.stopPropagation();
-    setActivePage(Number(card.dataset.pageIndex || 0) + 1, "next");
-    if (event.detail > 0) {
-      nextButton.blur();
-    }
-  });
   deleteButton.addEventListener("click", (event) => {
     event.preventDefault();
     event.stopPropagation();
@@ -9450,33 +9227,10 @@ function createRecentFolderItem(group, options = {}) {
     window.setTimeout(() => deleteHistoryGroup(group), RECENT_CARD_DELETE_EXIT_MS);
   });
 
-  if (hasPageDrawer) {
-    card.addEventListener("pointerenter", openDrawerHoverState);
-    card.addEventListener("pointerleave", scheduleDrawerClose);
-    card.addEventListener("focusin", openDrawerHoverState);
-    card.addEventListener("focusout", () => {
-      window.setTimeout(() => {
-        if (card.contains(document.activeElement)) {
-          return;
-        }
-        scheduleDrawerClose();
-      }, 0);
-    });
-  }
-
-  copy.append(name, pageTitle, domain);
+  copy.append(name, domain);
   face.append(icon, copy);
-  pages.forEach((_, pageIndex) => {
-    const dot = document.createElement("span");
-    dot.className = "recent-card-page-dot";
-    dot.dataset.pageIndex = String(pageIndex);
-    pageIndicator.append(dot);
-  });
-  controls.append(previousButton, nextButton);
   inner.append(face, deleteButton);
-  bottomBar.append(pageIndicator, controls);
-  card.append(inner, bottomBar);
-  setActivePage(0);
+  card.append(inner);
   return card;
 }
 

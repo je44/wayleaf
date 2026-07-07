@@ -4,6 +4,10 @@ import { readFileSync } from "node:fs";
 const newtabSource = readFileSync(new URL("../newtab.js", import.meta.url), "utf8");
 const iconSource = readFileSync(new URL("../wayleaf-icon.js", import.meta.url), "utf8");
 const source = `${iconSource}\n${newtabSource}`;
+const createRecentFolderItemSource = source.slice(
+  source.indexOf("function createRecentFolderItem"),
+  source.indexOf("function groupHistoryBySite")
+);
 const styles = readFileSync(new URL("../newtab.css", import.meta.url), "utf8");
 const html = readFileSync(new URL("../newtab.html", import.meta.url), "utf8");
 const background = readFileSync(new URL("../background.js", import.meta.url), "utf8");
@@ -22,8 +26,9 @@ assert.doesNotMatch(html, /id="historyPanel"/, "The unreachable legacy recent-br
 assert.doesNotMatch(source, /pinnedHistory|history-page-pin|pinHistoryItem|unpinHistoryItem/, "Recent browsing cards must not expose the removed pinning path.");
 assert.match(styles, /\.recent-folders\[hidden\]\s*\{\s*display:\s*none;/, "The recent-browsing layout must respect its hidden state.");
 assert.match(source, /recentHistoryFolders\.closest\("\.recent-folders"\)\.hidden = !latestRecentFolderGroups\.length;/, "The whole recent-browsing module must only be visible when it has real groups.");
-assert.match(source, /const homeUrl = group\.homeUrl \|\| siteHomeUrl\(group\.key, group\.url\);[\s\S]*const pages = \[[\s\S]*url: homeUrl[\s\S]*group\.pages\.filter[\s\S]*\.slice\(0, MAX_HISTORY_PAGES_PER_SITE\);/, "Every recent card must keep its site home as page one while preserving the strict four-page cap.");
-assert.match(source, /setActivePage\(0\);\s*return card;/, "Recent cards must open on their site-home page by default.");
+assert.match(createRecentFolderItemSource, /const homeUrl = group\.homeUrl \|\| siteHomeUrl\(group\.key, group\.url\);[\s\S]*face\.href = homeUrl \|\| group\.url;/, "Most-visited cards must render one site-home URL, not same-site child pages.");
+assert.doesNotMatch(createRecentFolderItemSource, /group\.pages\.filter/, "Most-visited card faces must not include same-site child page content.");
+assert.match(createRecentFolderItemSource, /face\.href = homeUrl \|\| group\.url;/, "Most-visited cards must open on their site-home page by default.");
 assert.match(html, /class="recent-folder-switch-controls"[\s\S]*id="recentFoldersPreviousButton"[\s\S]*id="recentFoldersNextButton"/, "Recent browsing header needs previous/next buttons to switch the whole card body.");
 assert.match(source, /const recentFoldersPreviousButton = document\.querySelector\("#recentFoldersPreviousButton"\);/, "Recent card body switch previous button must be wired.");
 assert.match(source, /const recentFoldersNextButton = document\.querySelector\("#recentFoldersNextButton"\);/, "Recent card body switch next button must be wired.");
@@ -45,28 +50,19 @@ assert.match(source, /timeline\.to\(outgoingCards,[\s\S]*x: -vector \* outgoingO
 assert.match(source, /const animationHandle = \{[\s\S]*activeRecentFolderPageSwitchAnimation = animationHandle;[\s\S]*animationHandle\.cancel = \(\) => \{[\s\S]*timeline\.kill\(\);[\s\S]*cleanUp\(\);/, "Recent card body switches must be cancelable during fast repeated clicks.");
 assert.match(source, /outgoingCards\.forEach\(\(card, index\) => \{[\s\S]*card\.animate\(\[[\s\S]*translate3d\(\$\{-vector \* outgoingOffset\}px/, "Recent card body switches must keep a directional WAAPI fallback for outgoing snapshots.");
 assert.match(source, /enterCards\.forEach\(\(card, index\) => \{[\s\S]*card\.animate\(\[[\s\S]*translate3d\(\$\{vector \* incomingOffset\}px/, "Recent card body switches must keep a directional WAAPI fallback for incoming cards.");
-assert.match(source, /pageIndicator\.className = "recent-card-page-indicator";/, "Recent card drawer needs a page indicator container.");
-assert.doesNotMatch(source, /bottomBar\.setAttribute\("aria-hidden",\s*"true"\)/, "Recent card drawer controls must not live inside an aria-hidden container.");
-assert.match(source, /pages\.forEach\(\(_, pageIndex\) => \{[\s\S]*dot\.className = "recent-card-page-dot";[\s\S]*pageIndicator\.append\(dot\);[\s\S]*\}\);/, "Recent card drawer must render one indicator dot per same-site page.");
-assert.match(source, /pageIndicator\.querySelectorAll\("\.recent-card-page-dot"\)\.forEach\(\(dot, dotIndex\) => \{[\s\S]*dot\.classList\.toggle\("active", dotIndex === index\);[\s\S]*\}\);/, "Recent card switching must update the active page indicator.");
-assert.match(source, /bottomBar\.append\(pageIndicator,\s*controls\);/, "Recent card drawer should place indicators before the existing right-side controls.");
-assert.match(source, /const capturePageTurnSnapshot = \(direction\) => \{[\s\S]*prefersReducedMotion\(\)[\s\S]*const snapshot = pageTitle\.cloneNode\(true\);[\s\S]*face\.append\(snapshot\);[\s\S]*return snapshot;/, "Recent card page turns must capture the outgoing page title before content changes and skip complex motion for reduced-motion users.");
-assert.match(source, /const pageTurnSnapshot = capturePageTurnSnapshot\(direction\);\s*card\.dataset\.pageIndex = String\(index\);[\s\S]*face\.href = activePage\?\.url \|\| group\.url;[\s\S]*animatePageTurn\(direction, pageTurnSnapshot\);/, "Recent card switching must update content only after capturing the outgoing page snapshot.");
-assert.match(source, /pageTitle\.textContent = index === 0 \? "" : activeTitle;/, "Recent cards must hide the site-home domain title on their default first page.");
-assert.match(source, /snapshot\.style\.transition = "none";\s*pageTitle\.style\.transition = "none";/, "Recent card page turns must temporarily disable CSS transform transitions while JS owns the title animation.");
-assert.match(source, /const vector = direction === "next" \? 1 : -1;\s*const incomingOffset = 34;\s*const outgoingOffset = 38;\s*const pageTurnDuration = 300;[\s\S]*x: vector \* incomingOffset[\s\S]*x: -vector \* outgoingOffset[\s\S]*translate3d\(\$\{vector \* incomingOffset\}px[\s\S]*translate3d\(\$\{-vector \* outgoingOffset\}px/, "Recent card page turns must use short directional title offsets for a natural transition.");
+assert.doesNotMatch(createRecentFolderItemSource, /hasPageDrawer|recent-card-page|recent-card-bottom|setActivePage|pageTitle/, "Most-visited website cards must not construct a same-site child-page drawer.");
+assert.match(createRecentFolderItemSource, /copy\.append\(name,\s*domain\);/, "Most-visited card faces must contain only the site identity copy.");
+assert.match(createRecentFolderItemSource, /inner\.append\(face, deleteButton\);\s*card\.append\(inner\);/, "Most-visited cards must keep drawer markup out of the DOM.");
 
-assert.match(styles, /\.recent-card-page-indicator\s*\{[\s\S]*display:\s*flex;[\s\S]*align-items:\s*center;[\s\S]*min-height:\s*28px;/, "Indicator rail should horizontally align with the right-side switch buttons.");
 assert.match(styles, /\.recent-folder-switch-controls\s*\{[\s\S]*display:\s*flex;[\s\S]*align-items:\s*center;/, "Recent browsing header switch controls should sit to the right of the title.");
 assert.match(styles, /\.recent-folder-switch-button\s*\{[\s\S]*width:\s*28px;[\s\S]*height:\s*28px;/, "Recent browsing header switch buttons need stable icon-button dimensions.");
+assert.match(styles, /\.recent-folder-item\s*\{[\s\S]*transform-origin:\s*center center;[\s\S]*transform 300ms cubic-bezier\(0\.34,\s*1\.56,\s*0\.64,\s*1\);/, "Most-visited cards should scale from the center with a springy hover transition.");
+assert.match(styles, /\.recent-folder-item:hover,\s*\.recent-folder-item:focus-within,\s*\.recent-folder-item\.drawer-hover\s*\{[\s\S]*transform:\s*scale\(1\.035\);/, "Most-visited cards should enlarge on hover/focus.");
+assert.match(styles, /\.recent-folder-grid\s*\{[\s\S]*--recent-card-hover-bleed:\s*16px;[\s\S]*margin-inline:\s*calc\(-1 \* var\(--recent-card-hover-bleed\)\);[\s\S]*padding-inline:\s*var\(--recent-card-hover-bleed\);/, "Most-visited card rail should expand its paint area without moving existing cards.");
 assert.match(styles, /\.recent-folder-grid\s*\{[\s\S]*position:\s*relative;[\s\S]*overflow-x:\s*clip;[\s\S]*contain:\s*layout style;/, "Recent card body switch motion should stay clipped to the carousel rail and limit layout work.");
-assert.match(styles, /\.recent-folder-switch-layer\s*\{[\s\S]*position:\s*absolute;[\s\S]*grid-template-columns:\s*repeat\(4,\s*minmax\(232px,\s*1fr\)\);[\s\S]*pointer-events:\s*none;[\s\S]*contain:\s*layout paint style;/, "Outgoing recent card snapshots must overlay the same desktop grid without taking events or triggering page layout.");
+assert.match(styles, /\.recent-folder-switch-layer\s*\{[\s\S]*position:\s*absolute;[\s\S]*grid-template-columns:\s*repeat\(4,\s*minmax\(232px,\s*1fr\)\);[\s\S]*padding-inline:\s*var\(--recent-card-hover-bleed\);[\s\S]*pointer-events:\s*none;[\s\S]*contain:\s*layout paint style;/, "Outgoing recent card snapshots must overlay the expanded card rail without taking events or triggering page layout.");
 assert.match(styles, /\.recent-folder-switch-snapshot\s*\{[\s\S]*pointer-events:\s*none;[\s\S]*will-change:\s*opacity,\s*transform;/, "Outgoing recent card snapshots should be compositor-friendly.");
 assert.match(styles, /@media \(max-width: 900px\)[\s\S]*\.recent-folder-switch-layer\s*\{[\s\S]*grid-template-columns:\s*repeat\(2,\s*minmax\(0,\s*1fr\)\);/, "Outgoing recent card snapshots must match the mobile two-column card rail.");
-assert.match(styles, /\.recent-card-page-dot\s*\{[\s\S]*background:\s*color-mix\(in srgb, var\(--muted\) 58%, transparent\);/, "Inactive indicators should use the existing muted gray tone.");
-assert.match(styles, /\.recent-card-page-dot\.active\s*\{[\s\S]*background:\s*#f2c94c;/, "The active indicator must be yellow.");
-assert.match(styles, /\.recent-card-bottom-bar\s*\{[\s\S]*align-items:\s*center;[\s\S]*justify-content:\s*space-between;/, "Drawer content should align indicators and switch controls on one horizontal row.");
-assert.match(styles, /\.recent-folder-page-title-snapshot\s*\{[\s\S]*z-index:\s*3;[\s\S]*pointer-events:\s*none;/, "Outgoing recent page title snapshots need their own layer above the incoming title.");
 const adaptiveIconRefresh = source.match(/function refreshAdaptiveSiteIcons\(\) \{[\s\S]*?\n\}/)?.[0] || "";
 assert.match(
   adaptiveIconRefresh,
@@ -88,7 +84,7 @@ assert.match(source, /function renderHistorySiteIcon\(icon, site, options = \{\}
 assert.match(source, /function renderFirstPaintCache\(\) \{[\s\S]*const favoriteIconMap = favoriteSiteIconMap\(favoriteSites\);[\s\S]*renderRecentFolders\(recentGroups, \{ iconRenders: cache\.iconRenders, favoriteIconMap \}\);/, "First-paint recent cards must reuse cached favorite site icons instead of forcing favicon loading.");
 assert.match(source, /async function refreshHistory\(\) \{[\s\S]*const favoriteIconMap = favoriteSiteIconMap\(favoriteSites\);[\s\S]*renderRecentSurface\(recentGroups, \{ favoriteIconMap \}\);/, "Live recent cards must pass stored favorite icons into the shared history icon path.");
 assert.match(source, /function historyItemIcon\(item\) \{[\s\S]*normalizeStoredSiteIcon\(item\?\.icon \|\| item\?\.favIconUrl \|\| ""\)/, "History item data icons must stay available to the secondary direct-display route.");
-assert.match(source, /function createRecentFolderItem\(group, options = \{\}\) \{[\s\S]*const iconSite = \{\s*title,\s*url: group\.homeUrl \|\| group\.url,\s*icon: historyItemIcon\(group\)\s*\};[\s\S]*renderHistorySiteIcon\(icon, iconSite, options\);/, "Recent cards must pass any existing site-provided icon instead of rebuilding the favicon route.");
+assert.match(createRecentFolderItemSource, /const iconSite = \{\s*title,\s*url: homeUrl \|\| group\.url,\s*icon: historyItemIcon\(group\)\s*\};[\s\S]*renderHistorySiteIcon\(icon, iconSite, options\);/, "Recent cards must pass any existing site-provided icon instead of rebuilding the favicon route.");
 assert.match(source, /function createTodayHistoryItem\(item, options = \{\}\) \{[\s\S]*const iconSite = \{ title: item\.title, url: item\.url, icon: historyItemIcon\(item\) \};[\s\S]*renderHistorySiteIcon\(icon, iconSite, options\);/, "Today-history rows must pass any existing site-provided icon instead of rebuilding the favicon route.");
 assert.match(source, /function createTodayHistoryItem\(item, options = \{\}\) \{[\s\S]*renderHistorySiteIcon\(icon, iconSite, options\);/, "Today-history rows must render their icon through the shared history icon path.");
 assert.match(source, /function renderTodayHistory\(options = \{\}\) \{[\s\S]*todayHistoryPageCount\(\)[\s\S]*createTodayHistoryItem\(item, \{ \.\.\.options, iconRenders, favoriteIconMap \}\)/, "Today history must render bounded, paged rows with the shared icon render context.");
