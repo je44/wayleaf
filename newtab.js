@@ -440,8 +440,8 @@ const THEME_PALETTES = [
     }
   }
 ];
-const DEFAULT_LOCAL_SEARCH_ENGINE = "browser";
-const EDITABLE_LOCAL_SEARCH_ENGINE_IDS = ["browser"];
+const DEFAULT_LOCAL_SEARCH_ENGINE = "google";
+const EDITABLE_LOCAL_SEARCH_ENGINE_IDS = ["google", "baidu", "bing"];
 const EDITABLE_AI_ENGINE_IDS = ["chatgpt", "claude", "gemini", "grok", "deepseek", "doubao", "kimi", "glm", "qwen", "jimeng"];
 const GOOGLE_AI_MODE_SEARCH_URL = "https://www.google.com/ai";
 const SETTINGS_ENGINE_ICON_STYLES = Object.freeze({
@@ -462,7 +462,6 @@ const SETTINGS_ENGINE_ICON_STYLES = Object.freeze({
 });
 const DEFAULT_SEARCH_ENGINES = [
   { id: "local", label: "Aggregate search", labelKey: "quickSearchAggregate", local: true },
-  { id: "browser", label: "Chrome default", labelKey: "browserDefaultSearch", chromeDefault: true },
   { id: "google", label: "Google", searchUrl: "https://www.google.com/search", queryParam: "q", aggregateDefault: true },
   { id: "baidu", label: "Baidu", labelKey: "brandBaidu", searchUrl: "https://www.baidu.com/s", queryParam: "wd" },
   { id: "bing", label: "Bing", searchUrl: "https://www.bing.com/search", queryParam: "q", aggregateDefault: true },
@@ -884,7 +883,6 @@ const MESSAGES = {
     syncSettingsImportFailedDetail: "请选择 Wayleaf .wy 配置文件。",
     syncSettingsActionsLabel: "同步方式",
     brandBaidu: "百度",
-    browserDefaultSearch: "Chrome 默认搜索",
     brandDoubao: "豆包",
     brandQwen: "千问",
     brandJimeng: "即梦",
@@ -892,8 +890,8 @@ const MESSAGES = {
     brandDouyin: "抖音",
     brandZhihu: "知乎",
     searchSettingsDefaultTitle: "基本搜索",
-    searchSettingsDefaultDescription: "普通关键词使用 Chrome 当前的默认搜索引擎",
-    searchSettingsDefaultHint: "Wayleaf 会遵循你已在 Chrome 中选择的搜索引擎。",
+    searchSettingsDefaultDescription: "设置普通关键词默认使用的搜索入口",
+    searchSettingsDefaultHint: "输入普通关键词时，Wayleaf 会优先使用标记为默认的基本搜索。",
     searchSettingsAiTitle: "AI 搜索引擎",
     searchSettingsAiDescription: "修改内建 AI 引擎的名称、触发词和搜索链接",
     searchSettingsAiHint: "触发词用空格或逗号分隔，例如 /gpt /chatgpt。需要登录的平台请先完成首次登录再使用。",
@@ -1104,7 +1102,6 @@ const MESSAGES = {
     syncSettingsImportFailedDetail: "請選擇 Wayleaf .wy 設定檔。",
     syncSettingsActionsLabel: "同步方式",
     brandBaidu: "百度",
-    browserDefaultSearch: "Chrome 預設搜尋",
     brandDoubao: "豆包",
     brandQwen: "千問",
     brandJimeng: "即夢",
@@ -1112,8 +1109,8 @@ const MESSAGES = {
     brandDouyin: "抖音",
     brandZhihu: "知乎",
     searchSettingsDefaultTitle: "基本搜尋",
-    searchSettingsDefaultDescription: "普通關鍵字使用 Chrome 目前的預設搜尋引擎",
-    searchSettingsDefaultHint: "Wayleaf 會遵循你已在 Chrome 中選擇的搜尋引擎。",
+    searchSettingsDefaultDescription: "設定普通關鍵字預設使用的搜尋入口",
+    searchSettingsDefaultHint: "輸入普通關鍵字時，Wayleaf 會優先使用標記為預設的基本搜尋。",
     searchSettingsAiTitle: "AI 搜尋引擎",
     searchSettingsAiDescription: "修改內建 AI 引擎的名稱、觸發詞和搜尋連結",
     searchSettingsAiHint: "觸發詞用空格或逗號分隔，例如 /gpt /chatgpt。需要登入的平台請先完成首次登入再使用。",
@@ -1308,7 +1305,6 @@ const MESSAGES = {
     syncSettingsImportFailedDetail: "Choose a Wayleaf .wy config file.",
     syncSettingsActionsLabel: "Sync method",
     brandBaidu: "Baidu",
-    browserDefaultSearch: "Chrome default search",
     brandDoubao: "Doubao",
     brandQwen: "Qwen",
     brandJimeng: "Jimeng",
@@ -1316,8 +1312,8 @@ const MESSAGES = {
     brandDouyin: "Douyin",
     brandZhihu: "Zhihu",
     searchSettingsDefaultTitle: "Basic search",
-    searchSettingsDefaultDescription: "Regular queries use Chrome's current default search provider",
-    searchSettingsDefaultHint: "Wayleaf respects the search provider already selected in Chrome.",
+    searchSettingsDefaultDescription: "Configure the search entry used for regular queries",
+    searchSettingsDefaultHint: "Wayleaf uses the basic search marked as default for regular keywords.",
     searchSettingsAiTitle: "AI search engines",
     searchSettingsAiDescription: "Edit built-in AI engine names, triggers, and search links",
     searchSettingsAiHint: "Separate triggers with spaces or commas, for example /gpt /chatgpt. Sign in to platforms that require login before first use.",
@@ -1462,7 +1458,6 @@ const MESSAGES = {
     syncSettingsImportFailedDetail: "Wayleaf .wy 設定ファイルを選択してください。",
     syncSettingsActionsLabel: "同期方法",
     brandBaidu: "Baidu",
-    browserDefaultSearch: "Chrome の既定の検索",
     brandDoubao: "Doubao",
     brandQwen: "Qwen",
     brandJimeng: "Jimeng",
@@ -1470,8 +1465,8 @@ const MESSAGES = {
     brandDouyin: "Douyin",
     brandZhihu: "Zhihu",
     searchSettingsDefaultTitle: "基本検索",
-    searchSettingsDefaultDescription: "通常の検索には Chrome の現在の既定の検索エンジンを使用",
-    searchSettingsDefaultHint: "Wayleaf は Chrome で選択済みの検索エンジンを尊重します。",
+    searchSettingsDefaultDescription: "通常のキーワードで使う検索先を設定",
+    searchSettingsDefaultHint: "通常のキーワードでは、既定に設定した基本検索を優先して使います。",
     searchSettingsAiTitle: "AI 検索エンジン",
     searchSettingsAiDescription: "内蔵 AI エンジンの名前、トリガー、検索リンクを編集",
     searchSettingsAiHint: "トリガーはスペースまたはカンマで区切ります。例: /gpt /chatgpt。ログインが必要なプラットフォームは初回利用前にログインしてください。",
@@ -1568,7 +1563,6 @@ const MESSAGES = {
     syncSettingsImportFailedDetail: "Wayleaf .wy 설정 파일을 선택하세요.",
     syncSettingsActionsLabel: "동기화 방식",
     brandBaidu: "Baidu",
-    browserDefaultSearch: "Chrome 기본 검색",
     brandDoubao: "Doubao",
     brandQwen: "Qwen",
     brandJimeng: "Jimeng",
@@ -1576,8 +1570,8 @@ const MESSAGES = {
     brandDouyin: "Douyin",
     brandZhihu: "Zhihu",
     searchSettingsDefaultTitle: "기본 검색",
-    searchSettingsDefaultDescription: "일반 검색은 Chrome의 현재 기본 검색엔진 사용",
-    searchSettingsDefaultHint: "Wayleaf는 Chrome에서 선택한 검색엔진을 따릅니다.",
+    searchSettingsDefaultDescription: "일반 키워드에 사용할 기본 검색 항목 설정",
+    searchSettingsDefaultHint: "일반 키워드에는 기본으로 표시된 기본 검색을 우선 사용합니다.",
     searchSettingsAiTitle: "AI 검색 엔진",
     searchSettingsAiDescription: "내장 AI 엔진의 이름, 트리거, 검색 링크 편집",
     searchSettingsAiHint: "트리거는 공백 또는 쉼표로 구분하세요. 예: /gpt /chatgpt. 로그인이 필요한 플랫폼은 먼저 로그인하세요.",
@@ -1674,7 +1668,6 @@ const MESSAGES = {
     syncSettingsImportFailedDetail: "Elige un archivo .wy de Wayleaf.",
     syncSettingsActionsLabel: "Método de sincronización",
     brandBaidu: "Baidu",
-    browserDefaultSearch: "Búsqueda predeterminada de Chrome",
     brandDoubao: "Doubao",
     brandQwen: "Qwen",
     brandJimeng: "Jimeng",
@@ -1682,8 +1675,8 @@ const MESSAGES = {
     brandDouyin: "Douyin",
     brandZhihu: "Zhihu",
     searchSettingsDefaultTitle: "Búsqueda básica",
-    searchSettingsDefaultDescription: "Las consultas normales usan el buscador predeterminado de Chrome",
-    searchSettingsDefaultHint: "Wayleaf respeta el buscador que ya elegiste en Chrome.",
+    searchSettingsDefaultDescription: "Configura el buscador para consultas normales",
+    searchSettingsDefaultHint: "Wayleaf usa el buscador básico marcado como predeterminado para palabras clave normales.",
     searchSettingsAiTitle: "Motores de búsqueda de IA",
     searchSettingsAiDescription: "Edita nombres, activadores y enlaces de búsqueda de los motores de IA integrados",
     searchSettingsAiHint: "Separa los activadores con espacios o comas, por ejemplo /gpt /chatgpt. Inicia sesión antes en las plataformas que lo requieran.",
@@ -1780,7 +1773,6 @@ const MESSAGES = {
     syncSettingsImportFailedDetail: "Choisissez un fichier Wayleaf .wy.",
     syncSettingsActionsLabel: "Méthode de synchronisation",
     brandBaidu: "Baidu",
-    browserDefaultSearch: "Recherche par défaut de Chrome",
     brandDoubao: "Doubao",
     brandQwen: "Qwen",
     brandJimeng: "Jimeng",
@@ -1788,8 +1780,8 @@ const MESSAGES = {
     brandDouyin: "Douyin",
     brandZhihu: "Zhihu",
     searchSettingsDefaultTitle: "Recherche de base",
-    searchSettingsDefaultDescription: "Les requêtes normales utilisent le moteur par défaut de Chrome",
-    searchSettingsDefaultHint: "Wayleaf respecte le moteur déjà choisi dans Chrome.",
+    searchSettingsDefaultDescription: "Configurer le moteur utilisé pour les requêtes normales",
+    searchSettingsDefaultHint: "Wayleaf utilise le moteur de base marqué par défaut pour les mots-clés normaux.",
     searchSettingsAiTitle: "Moteurs de recherche IA",
     searchSettingsAiDescription: "Modifier les noms, déclencheurs et liens de recherche des moteurs IA intégrés",
     searchSettingsAiHint: "Séparez les déclencheurs par des espaces ou des virgules, par exemple /gpt /chatgpt. Connectez-vous d'abord aux plateformes qui l'exigent.",
@@ -1886,7 +1878,6 @@ const MESSAGES = {
     syncSettingsImportFailedDetail: "Wähle eine Wayleaf-.wy-Datei.",
     syncSettingsActionsLabel: "Synchronisierungsart",
     brandBaidu: "Baidu",
-    browserDefaultSearch: "Chrome-Standardsuche",
     brandDoubao: "Doubao",
     brandQwen: "Qwen",
     brandJimeng: "Jimeng",
@@ -1894,8 +1885,8 @@ const MESSAGES = {
     brandDouyin: "Douyin",
     brandZhihu: "Zhihu",
     searchSettingsDefaultTitle: "Basissuche",
-    searchSettingsDefaultDescription: "Normale Suchanfragen verwenden Chromes aktuelle Standardsuche",
-    searchSettingsDefaultHint: "Wayleaf respektiert die bereits in Chrome gewählte Suchmaschine.",
+    searchSettingsDefaultDescription: "Suchziel für normale Suchanfragen konfigurieren",
+    searchSettingsDefaultHint: "Wayleaf verwendet für normale Suchbegriffe die als Standard markierte Basissuche.",
     searchSettingsAiTitle: "KI-Suchmaschinen",
     searchSettingsAiDescription: "Namen, Auslöser und Suchlinks der integrierten KI-Engines bearbeiten",
     searchSettingsAiHint: "Auslöser mit Leerzeichen oder Kommas trennen, z. B. /gpt /chatgpt. Melde dich bei Plattformen mit Loginpflicht vor der ersten Nutzung an.",
@@ -3945,9 +3936,7 @@ function createSettingsEngineIcon(engine) {
   const explicitIcon = (engine.id === "kimi" || engine.id === "zhihu")
     ? `${WayleafIcon.siteIconDirectory}/${engine.id}.svg`
     : explicitAiIconUrl(engine);
-  const iconSource = engine.chromeDefault
-    ? "icons/wayleaf-flat-128.png"
-    : explicitIcon || WayleafIcon.localIconForUrl(engineUrl);
+  const iconSource = explicitIcon || WayleafIcon.localIconForUrl(engineUrl);
   const style = SETTINGS_ENGINE_ICON_STYLES[engine.id] || {};
   const label = searchEngineLabel(engine);
   const shell = document.createElement("span");
@@ -4007,9 +3996,6 @@ function createSearchSettingsInput({ label, field, name, value, wide = false, at
 }
 
 function engineSearchConfigLabel(engine) {
-  if (engine?.chromeDefault) {
-    return t("searchSettingsDefaultHint");
-  }
   const url = engine?.searchUrl || engine?.directUrl || "";
   if (!url) {
     return "";
@@ -5759,17 +5745,6 @@ function submitEngineQuickSearch(engine, query) {
   const directUrl = looksLikeUrl(query) ? normalizePortalUrl(query) : "";
   if (directUrl) {
     window.location.assign(directUrl);
-    return;
-  }
-  if (engine?.chromeDefault && chrome.search?.query) {
-    const result = chrome.search.query({ text: query, disposition: "CURRENT_TAB" });
-    result?.catch?.((error) => {
-      console.warn("Chrome default search failed", error);
-      const fallbackEngine = searchEngineById("google", { strict: true });
-      if (fallbackEngine) {
-        window.location.assign(engineSearchDestination(fallbackEngine, query));
-      }
-    });
     return;
   }
   const fallbackEngine = searchEngineById("google", { strict: true });

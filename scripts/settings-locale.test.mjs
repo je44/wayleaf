@@ -97,7 +97,6 @@ assert.doesNotMatch(
 const settingsLocaleKeys = [
   "quickSearchAggregate",
   "brandBaidu",
-  "browserDefaultSearch",
   "brandDoubao",
   "brandQwen",
   "brandJimeng",

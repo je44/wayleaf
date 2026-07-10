@@ -9,7 +9,6 @@ This document explains the current Manifest V3 permission surface. It does not r
 | `bookmarks` | Reads the user-selected bookmark folder, renders bookmark cards, watches bookmark changes, and removes a bookmark only when the user triggers deletion. |
 | `history` | Reads local browser history, ranks most visited site groups, reads visit counts, and deletes history URLs only when the user triggers deletion. |
 | `favicon` | Uses Chrome favicon URLs as one step in the site icon fallback chain. |
-| `search` | Sends regular keyword searches through the search provider already selected by the user in Chrome. |
 | `storage` | Stores theme, language, favorite sites, custom portals, bookmark folder choice, search settings, sync metadata, icon cache, and short-lived AI prompt handoff data. |
 | `unlimitedStorage` | Provides storage headroom for local icon caches and short-lived AI attachment handoff payloads without sending that data to a Wayleaf backend. |
 | `tabs` | Opens multi-target searches and coordinates video Picture-in-Picture state. |

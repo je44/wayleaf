@@ -36,7 +36,7 @@ Most new-tab sessions start with the same small set of actions: open a frequent 
 
 | What you want to do | How Wayleaf handles it |
 | --- | --- |
-| Search or open a site | The search box supports local history/bookmarks and full URLs. Regular keywords use Chrome's current default search provider; platform activators such as `*yt` or `*xhs` remain explicit. |
+| Search or open a site | The search box supports local history/bookmarks, full URLs, Google, Baidu, Bing, aggregate Google+Bing search, and immediate platform activators such as `*yt` or `*xhs`. |
 | Manage frequent destinations | Built-in categories cover search, social, shopping, developer, productivity, media, design, and AI sites; custom shortcuts are supported. |
 | Organize most visited | Frequently visited URLs are grouped by site. |
 | Show a bookmark folder | Pick one Chrome bookmark folder; Wayleaf highlights sites added in the last 3 days and groups the rest by title initial. |
@@ -111,7 +111,6 @@ Search Settings shows the built-in AI engines, triggers, search links, and the p
 | `bookmarks` | Read the bookmark folder you choose and support deleting those bookmarks from the extension. |
 | `history` | Read local history, rank most visited sites, and support deleting history entries. |
 | `favicon` | Show site icons through Chrome's favicon support. |
-| `search` | Use Chrome's current default search provider for regular keyword searches. |
 | `storage` | Save theme, shortcuts, bookmark choice, sync state, and layout preferences. |
 | `alarms` | Trigger once-daily auto sync while the extension is enabled. |
 | `tabs` | Open search results, AI pages, and multiple search targets, and coordinate video Picture-in-Picture state. |
