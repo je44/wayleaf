@@ -18,6 +18,7 @@
   --light-accent: #0d6d59;
   --light-accent-strong: #074b3e;
   --light-accent-rgb: 13 109 89;
+  --light-search-match: #006b5f;
   --light-focus: #2f82c4;
   --light-focus-rgb: 47 130 196;
   --light-paper: #f7f8f3;
@@ -38,6 +39,7 @@
   --dark-accent: #78a18f;
   --dark-accent-strong: #9ab9ac;
   --dark-accent-rgb: 120 161 143;
+  --dark-search-match: #00c49c;
   --dark-focus: #829fb8;
   --dark-focus-rgb: 130 159 184;
   --dark-paper: #202624;
@@ -81,6 +83,7 @@
   --accent-wash-soft: rgb(var(--accent-rgb) / 0.055);
   --accent-wash-strong: rgb(var(--accent-rgb) / 0.16);
   --accent-ring: rgb(var(--accent-rgb) / 0.12);
+  --search-match-color: var(--light-search-match);
   --theme-mode-control-bg: color-mix(in srgb, var(--panel-soft) 86%, var(--paper));
   --theme-mode-active-bg: color-mix(in srgb, var(--panel) 92%, var(--panel-soft));
   --theme-mode-active-shadow: 0 1px 2px rgb(19 25 21 / 0.06), 0 8px 18px rgb(19 25 21 / 0.045);
@@ -201,6 +204,7 @@
   --accent: var(--dark-accent);
   --accent-strong: var(--dark-accent-strong);
   --accent-rgb: var(--dark-accent-rgb);
+  --search-match-color: var(--dark-search-match);
   --theme-mode-control-bg: color-mix(in srgb, var(--panel-soft) 42%, transparent);
   --theme-mode-active-bg: color-mix(in srgb, var(--panel-soft) 66%, transparent);
   --theme-mode-active-shadow: none;
@@ -487,7 +491,8 @@ html.refresh-enter .home-stage {
     visibility 0s linear;
 }
 
-body.surface-open .surface-launchers {
+body.surface-open .surface-launchers,
+body.favorite-form-open .surface-launchers {
   opacity: 0;
   pointer-events: none;
   visibility: hidden;
@@ -525,6 +530,25 @@ body.surface-open .topbar {
   opacity: 0.7;
   transform: none;
   pointer-events: none;
+}
+
+body.favorite-form-open .topbar {
+  opacity: 0.7;
+  transform: none;
+  pointer-events: none;
+}
+
+body.favorite-form-open .home-stage {
+  z-index: auto;
+}
+
+body.favorite-form-open .recent-folders {
+  pointer-events: none;
+}
+
+body.favorite-form-open .favorite-strip {
+  pointer-events: none;
+  user-select: none;
 }
 
 body.settings-page-open .home-stage {
@@ -569,7 +593,8 @@ body.settings-page-open .topbar {
   }
 }
 
-body.surface-open .surface-backdrop {
+body.surface-open .surface-backdrop,
+body.favorite-form-open .surface-backdrop {
   opacity: 1;
   pointer-events: auto;
   transition:
@@ -1158,6 +1183,44 @@ body.surface-open .surface-backdrop {
     linear-gradient(var(--line-strong), var(--line-strong)) border-box;
 }
 
+.search-workbench[data-favorite-form-active] {
+  --search-panel-scale: 1.02;
+}
+
+.search-workbench[data-favorite-form-restoring] {
+  --search-panel-scale: var(--search-active-panel-scale);
+}
+
+.search-workbench[data-favorite-form-closing] {
+  --search-panel-scale: var(--search-active-panel-scale);
+}
+
+.search-workbench[data-favorite-form-active] .search-panel {
+  z-index: 180;
+  background:
+    linear-gradient(var(--input-bg), var(--input-bg)) padding-box,
+    linear-gradient(var(--line-strong), var(--line-strong)) border-box;
+}
+
+.search-workbench[data-favorite-form-restoring] .search-panel {
+  z-index: 180;
+}
+
+.search-workbench[data-favorite-form-closing] .search-panel {
+  z-index: 180;
+}
+
+.search-workbench[data-favorite-form-active] .topbar-search {
+  pointer-events: none;
+}
+
+.search-workbench[data-favorite-form-active] .search-engine-search-icon,
+.search-workbench[data-favorite-form-active] .quick-search-entry,
+.search-workbench[data-favorite-form-active] .search-suggestions {
+  opacity: 0;
+  pointer-events: none;
+}
+
 .search-engine-search-icon svg,
 .quick-search-settings svg,
 .portal-category-toggle-icon svg,
@@ -1266,6 +1329,7 @@ body.surface-open .surface-backdrop {
   visibility: hidden;
 }
 
+.search-workbench[data-favorite-form-active] .favorite-add-button,
 .search-workbench[data-ai-active] .favorite-add-button,
 .search-workbench[data-ai-exiting] .favorite-add-button,
 .search-workbench[data-platform-active] .favorite-add-button,
@@ -1295,6 +1359,7 @@ body.surface-open .surface-backdrop {
 }
 
 .search-workbench.search-active .favorite-add-button[data-state="visible"],
+.search-workbench[data-favorite-form-active] .favorite-add-button[data-state="visible"],
 .search-workbench[data-ai-active] .favorite-add-button[data-state="visible"],
 .search-workbench[data-ai-exiting] .favorite-add-button[data-state="visible"] {
   animation: none;
@@ -1333,41 +1398,80 @@ body.surface-open .surface-backdrop {
 
 .favorite-form {
   position: absolute;
-  top: calc(100% + 8px);
-  left: 50%;
-  z-index: 30;
+  inset: 0 0 auto;
+  z-index: 6;
   display: grid;
-  width: min(460px, 86%);
+  grid-template-columns: 56px minmax(0, 1fr) auto;
+  grid-template-rows: 64px;
+  align-items: center;
   gap: 8px;
-  padding: 10px;
-  border: 1px solid var(--line);
-  border-radius: 10px;
-  background: var(--favorite-form-bg);
-  box-shadow: none;
-  transform: translateX(-50%);
+  width: 100%;
+  height: 64px;
+  padding: 0 12px 0 0;
+  border: 0;
+  background: transparent;
+  opacity: 1;
+  transform: translateY(0) scale(1);
+  transform-origin: center top;
+  transition:
+    opacity 160ms cubic-bezier(0.4, 0, 1, 1),
+    transform 180ms cubic-bezier(0.4, 0, 1, 1);
 }
 
 .favorite-form[hidden] {
   display: none;
 }
 
-.favorite-form label {
+.search-workbench[data-favorite-form-closing] .favorite-form {
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(-2px) scale(0.985);
+}
+
+.favorite-form-icon {
   display: grid;
-  gap: 5px;
-  color: var(--muted);
-  font-size: 12px;
+  place-items: center;
+  width: 100%;
+  height: 100%;
+  color: var(--faint);
+  line-height: 0;
+}
+
+.favorite-form-icon svg {
+  display: block;
+  width: var(--search-icon-size);
+  height: var(--search-icon-size);
+}
+
+.favorite-form label {
+  display: flex;
+  grid-column: 2;
+  align-items: center;
+  min-width: 0;
+  height: 100%;
+}
+
+.favorite-form label span {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
 }
 
 .favorite-form input {
   appearance: none;
   -webkit-appearance: none;
-  min-height: 36px;
-  padding: 0 10px;
-  border: 1px solid var(--favorite-form-input-border);
-  border-radius: 7px;
-  background: var(--favorite-form-input-bg);
-  background-clip: padding-box;
+  width: 100%;
+  min-width: 0;
+  height: 100%;
+  padding: 0 4px;
+  border: 0;
+  background: transparent;
   color: var(--ink);
+  font-size: 19px;
+  line-height: 1;
   outline: 0;
   transition: background 160ms ease, border-color 160ms ease, color 160ms ease;
 }
@@ -1378,9 +1482,51 @@ body.surface-open .surface-backdrop {
 
 .favorite-form input:focus,
 .favorite-form input:focus-visible {
-  border-color: var(--focus-border-strong);
-  background: var(--input-bg);
   outline: 0;
+}
+
+.favorite-form .form-actions {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.favorite-form .text-button {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  min-height: 28px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--faint);
+  white-space: nowrap;
+}
+
+.favorite-form .text-button svg {
+  display: block;
+  width: 20px;
+  height: 20px;
+  transform: scale(1);
+  transform-origin: center;
+  transition: transform 160ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.favorite-form .text-button:hover svg,
+.favorite-form .text-button:focus-visible svg {
+  transform: scale(1.05);
+}
+
+.favorite-form .text-button.primary {
+  border-color: transparent;
+  background: transparent;
+}
+
+.favorite-form .form-error {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 56px;
+  margin: 0;
 }
 
 .favorite-strip {
@@ -2408,10 +2554,11 @@ html.theme-transitioning .search-workbench[data-ai-exiting] .favorite-icon {
 }
 
 .search-suggestion-match {
-  padding: 0 2px;
-  border-radius: 0;
-  background: color-mix(in srgb, var(--accent-strong) 28%, transparent);
-  color: inherit;
+  padding: 0;
+  background: transparent;
+  color: var(--search-match-color);
+  font-weight: 900;
+  text-decoration: none;
 }
 
 .search-suggestion-copy span,
@@ -4547,6 +4694,20 @@ select:focus-visible {
   border-color: var(--accent-border);
   background: var(--accent);
   color: var(--on-accent);
+}
+
+.favorite-form .text-button,
+.favorite-form .text-button.primary,
+.favorite-form .text-button:hover,
+.favorite-form .text-button.primary:hover,
+.favorite-form .text-button:focus-visible,
+.favorite-form .text-button.primary:focus-visible {
+  color: var(--faint);
+}
+
+.favorite-form .text-button:active,
+.favorite-form .text-button.primary:active {
+  color: var(--focus);
 }
 
 .form-error {

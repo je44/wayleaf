@@ -222,6 +222,7 @@ const THEME_PALETTES = [
       light: {
         accent: "#26766d",
         accentStrong: "#1f5d56",
+        searchMatch: "#006b5f",
         focus: "#b85f58",
         paper: "#eceee9",
         panel: "#f1f2ed",
@@ -236,6 +237,7 @@ const THEME_PALETTES = [
       dark: {
         accent: "#6cb6a9",
         accentStrong: "#9bcfc5",
+        searchMatch: "#00c49c",
         focus: "#df8b83",
         paper: "#202625",
         panel: "#2a302e",
@@ -258,6 +260,7 @@ const THEME_PALETTES = [
       light: {
         accent: "#0f5b4d",
         accentStrong: "#073d34",
+        searchMatch: "#005f50",
         focus: "#4b7d68",
         paper: "#f7f8f3",
         panel: "#fffefa",
@@ -271,6 +274,7 @@ const THEME_PALETTES = [
       dark: {
         accent: "#8db6a6",
         accentStrong: "#bad9cc",
+        searchMatch: "#28c797",
         focus: "#99c3df",
         paper: "#101512",
         panel: "#171d1a",
@@ -293,6 +297,7 @@ const THEME_PALETTES = [
       light: {
         accent: "#8a6515",
         accentStrong: "#674b0d",
+        searchMatch: "#7a4600",
         focus: "#3a6f96",
         paper: "#f1ede3",
         panel: "#f3efe5",
@@ -307,6 +312,7 @@ const THEME_PALETTES = [
       dark: {
         accent: "#dbc06a",
         accentStrong: "#efd58a",
+        searchMatch: "#e4a100",
         focus: "#76afd2",
         paper: "#25241f",
         panel: "#2d2b25",
@@ -329,6 +335,7 @@ const THEME_PALETTES = [
       light: {
         accent: "#3a6f96",
         accentStrong: "#285473",
+        searchMatch: "#005f99",
         focus: "#a45e2d",
         paper: "#e9edf0",
         panel: "#eef1f3",
@@ -343,6 +350,7 @@ const THEME_PALETTES = [
       dark: {
         accent: "#76afd2",
         accentStrong: "#a5cae1",
+        searchMatch: "#00aaf2",
         focus: "#d59963",
         paper: "#20252a",
         panel: "#2a3036",
@@ -365,6 +373,7 @@ const THEME_PALETTES = [
       light: {
         accent: "#a95643",
         accentStrong: "#843f31",
+        searchMatch: "#a8321e",
         focus: "#26766d",
         paper: "#f1ebe8",
         panel: "#f4eeeb",
@@ -379,6 +388,7 @@ const THEME_PALETTES = [
       dark: {
         accent: "#de8b75",
         accentStrong: "#f0ad9b",
+        searchMatch: "#ff725b",
         focus: "#70b5aa",
         paper: "#282422",
         panel: "#302a28",
@@ -401,6 +411,7 @@ const THEME_PALETTES = [
       light: {
         accent: "#585b56",
         accentStrong: "#373a35",
+        searchMatch: "#4b554e",
         focus: "#5f7e9a",
         paper: "#f8f8f3",
         panel: "#fffefa",
@@ -414,6 +425,7 @@ const THEME_PALETTES = [
       dark: {
         accent: "#aaada7",
         accentStrong: "#d2d4ce",
+        searchMatch: "#d0d9d1",
         focus: "#9bbdd7",
         paper: "#111310",
         panel: "#1a1d18",
@@ -2522,13 +2534,13 @@ const platformActivationHint = document.querySelector("#platformActivationHint")
 const aiEnginePill = document.querySelector("#aiEnginePill");
 const searchSuggestions = document.querySelector("#searchSuggestions");
 const searchWorkbench = document.querySelector(".search-workbench");
+const recentFoldersSection = document.querySelector(".recent-folders");
 const favoriteStrip = document.querySelector("#favoriteStrip");
 const favoriteSiteTemplate = document.querySelector("#favoriteSiteTemplate");
 const favoriteAddButton = document.querySelector("#favoriteAddButton");
 const favoriteForm = document.querySelector("#favoriteForm");
 const favoriteUrlInput = document.querySelector("#favoriteUrlInput");
 const favoriteFormError = document.querySelector("#favoriteFormError");
-const cancelFavoriteButton = document.querySelector("#cancelFavoriteButton");
 const onboardingGuide = document.querySelector("#onboardingGuide");
 const onboardingCard = document.querySelector("#onboardingCard");
 const onboardingCloseButton = document.querySelector("#onboardingCloseButton");
@@ -2589,6 +2601,7 @@ let latestTodayHistoryItems = [];
 let todayHistoryPageIndex = 0;
 let todayHistoryHydrated = false;
 let favoriteSitesHydrated = false;
+let favoriteFormCloseTimer = 0;
 let onboardingStepIndex = 0;
 let onboardingPreviewActive = false;
 let videoPipEnabled = true;
@@ -2993,8 +3006,8 @@ function applyLocale() {
 
   favoriteUrlInput.closest("label").querySelector("span").textContent = t("portalUrl");
   favoriteUrlInput.placeholder = t("portalUrlPlaceholder");
-  cancelFavoriteButton.textContent = t("cancel");
-  favoriteForm.querySelector('button[type="submit"]').textContent = t("add");
+  syncFavoriteFormSearchState();
+  renderFavoriteFormControls();
   applyOnboardingLocale();
   setButtonLabel(closeBookmarkPickerButton, t("back"));
   bookmarkPickerTitle.textContent = t("chooseBookmarkFolderPrompt");
@@ -3067,6 +3080,14 @@ function setStaticButtonIcons() {
   }
   document.querySelector(".settings-page-help .button-icon").innerHTML = githubIcon();
   favoriteAddButton.querySelector(".button-icon").innerHTML = plusIcon();
+}
+
+function renderFavoriteFormControls() {
+  const submitButton = favoriteForm.querySelector('button[type="submit"]');
+  favoriteForm.querySelector(".favorite-form-icon").innerHTML = tdesignIcon("bookmark-add");
+  setButtonLabel(submitButton, t("add"));
+  submitButton.title = t("add");
+  submitButton.innerHTML = plusIcon();
 }
 
 function applySettingsLocale() {
@@ -3366,7 +3387,13 @@ async function init() {
   surfaceBackButtons.forEach((button) => {
     button.addEventListener("click", () => setActiveSurfacePanel(""));
   });
-  surfaceBackdrop?.addEventListener("click", () => setActiveSurfacePanel(""));
+  surfaceBackdrop?.addEventListener("click", () => {
+    if (isFavoriteFormActive()) {
+      hideFavoriteForm();
+      return;
+    }
+    setActiveSurfacePanel("");
+  });
   quickSearchForm.addEventListener("submit", handleQuickSearchSubmit);
   quickSearchLeadingIcon?.addEventListener("pointerdown", handleQuickSearchLeadingIconPointerDown);
   quickSearchLeadingIcon?.addEventListener("click", handleQuickSearchLeadingIconClick);
@@ -3380,7 +3407,6 @@ async function init() {
   aiAttachmentInput?.addEventListener("change", handleAiAttachmentInputChange);
   aiAttachmentPill?.addEventListener("click", handleAiAttachmentPillClick);
   favoriteAddButton.addEventListener("click", toggleFavoriteForm);
-  cancelFavoriteButton.addEventListener("click", hideFavoriteForm);
   favoriteForm.addEventListener("submit", handleFavoriteSubmit);
   onboardingCloseButton?.addEventListener("click", dismissOnboardingGuide);
   onboardingDoneButton?.addEventListener("click", advanceOnboardingGuide);
@@ -4604,6 +4630,7 @@ function setModeThemeVariables(rootStyle, mode, colors) {
   setColorVariable(rootStyle, `${prefix}-accent`, colors.accent);
   setColorVariable(rootStyle, `${prefix}-focus`, colors.focus);
   rootStyle.setProperty(`${prefix}-accent-strong`, colors.accentStrong);
+  rootStyle.setProperty(`${prefix}-search-match`, colors.searchMatch || colors.accentStrong);
   rootStyle.setProperty(`${prefix}-on-accent`, colors.onAccent || readableTextColor(colors.accent));
   rootStyle.setProperty(`${prefix}-paper`, colors.paper);
   rootStyle.setProperty(`${prefix}-panel`, colors.panel);
@@ -5148,10 +5175,17 @@ function handleSettingsPanelDismiss(event) {
 
 function handleQuickSearchSubmit(event) {
   event.preventDefault();
+  if (isFavoriteFormActive()) {
+    return;
+  }
   submitQuickSearch();
 }
 
 function handleQuickSearchInputKeydown(event) {
+  if (isFavoriteFormActive()) {
+    event.preventDefault();
+    return;
+  }
   if (event.key === "Escape" && !event.isComposing && googleAiSearchModeActive) {
     event.preventDefault();
     event.stopPropagation();
@@ -5228,6 +5262,9 @@ function exitPlatformQuickSearchMode() {
 }
 
 function handleQuickSearchLeadingIconClick() {
+  if (isFavoriteFormActive()) {
+    return;
+  }
   if (!canActivateGoogleAiSearchMode()) {
     return;
   }
@@ -5251,6 +5288,9 @@ function handleQuickSearchLeadingIconClick() {
 }
 
 function handleQuickSearchLeadingIconPointerDown(event) {
+  if (isFavoriteFormActive()) {
+    return;
+  }
   if (!canActivateGoogleAiSearchMode() || !isQuickSearchActive()) {
     return;
   }
@@ -5299,6 +5339,9 @@ function isQuickSearchActive() {
 }
 
 function handleQuickSearchInput() {
+  if (isFavoriteFormActive()) {
+    return;
+  }
   if (googleAiSearchModeActive) {
     renderLocalSearchSuggestions(normalizeText(quickSearchInput.value));
     return;
@@ -5343,6 +5386,9 @@ function setPlatformQuickSearchTarget(platformId) {
 }
 
 function handleQuickSearchFocus() {
+  if (isFavoriteFormActive()) {
+    return;
+  }
   setQuickSearchActive(true);
   handleQuickSearchInput();
 }
@@ -5591,6 +5637,9 @@ function platformSearchTargetById(platformId) {
 }
 
 function handleQuickSearchBlur() {
+  if (isFavoriteFormActive()) {
+    return;
+  }
   window.setTimeout(() => {
     const activeElement = document.activeElement;
     const themeModeControl = document.querySelector("#themeModeControl");
@@ -5607,13 +5656,20 @@ function handleQuickSearchBlur() {
 }
 
 function setQuickSearchActive(isActive) {
+  if (isFavoriteFormActive() && isActive) {
+    return;
+  }
   searchWorkbench?.classList.toggle("search-active", isActive);
   updateQuickSearchLeadingIcon();
   updateGoogleImageSearchButton();
   updateAiAttachmentUi();
-  favoriteStrip?.setAttribute("aria-disabled", String(isActive));
+  setFavoriteStripInteractivity(isActive || isFavoriteFormActive());
+}
+
+function setFavoriteStripInteractivity(disabled) {
+  favoriteStrip?.setAttribute("aria-disabled", String(disabled));
   favoriteStrip?.querySelectorAll(".favorite-link, .favorite-remove").forEach((control) => {
-    if (isActive) {
+    if (disabled) {
       control.tabIndex = -1;
     } else {
       control.removeAttribute("tabindex");
@@ -5622,6 +5678,9 @@ function setQuickSearchActive(isActive) {
 }
 
 function submitQuickSearch() {
+  if (isFavoriteFormActive()) {
+    return;
+  }
   const query = normalizeText(quickSearchInput.value);
   if (!query) {
     quickSearchInput.focus();
@@ -7156,6 +7215,7 @@ async function renderFavoriteSiteList(favorites, options = {}) {
   })));
   favoriteNodes.forEach((node) => fragment.appendChild(node));
   favoriteStrip.replaceChildren(fragment);
+  syncFavoriteFormSearchState();
   updateFavoriteAddButtonState(favorites.length);
   if (!favoriteSitesHydrated) {
     favoriteSitesHydrated = true;
@@ -7353,17 +7413,110 @@ function showFavoriteForm() {
   if (favoriteAddButton.disabled) {
     return;
   }
+  clearFavoriteDeleteMode();
+  window.clearTimeout(favoriteFormCloseTimer);
+  favoriteFormCloseTimer = 0;
+  searchWorkbench?.removeAttribute("data-favorite-form-closing");
+  searchWorkbench?.removeAttribute("data-favorite-form-restoring");
+  exitDirectQuickSearchMode();
+  hideSearchSuggestions();
+  setQuickSearchActive(false);
   favoriteForm.hidden = false;
+  favoriteForm.reset();
   favoriteAddButton.setAttribute("aria-expanded", "true");
   favoriteFormError.textContent = "";
+  syncFavoriteFormSearchState();
   favoriteUrlInput.focus();
 }
 
 function hideFavoriteForm() {
-  favoriteForm.hidden = true;
+  const wasActive = isFavoriteFormActive();
+  if (!wasActive) {
+    return;
+  }
+  searchWorkbench?.toggleAttribute("data-favorite-form-closing", true);
   favoriteAddButton.setAttribute("aria-expanded", "false");
-  favoriteForm.reset();
-  favoriteFormError.textContent = "";
+  syncFavoriteFormSearchState();
+  restoreFavoriteFormSearchScale();
+  window.clearTimeout(favoriteFormCloseTimer);
+  favoriteFormCloseTimer = window.setTimeout(() => {
+    if (isFavoriteFormActive()) {
+      return;
+    }
+    favoriteForm.hidden = true;
+    favoriteForm.reset();
+    favoriteFormError.textContent = "";
+    searchWorkbench?.removeAttribute("data-favorite-form-closing");
+    favoriteFormCloseTimer = 0;
+  }, prefersReducedMotion() ? 0 : 180);
+}
+
+function isFavoriteFormActive() {
+  return !favoriteForm.hidden && !searchWorkbench?.hasAttribute("data-favorite-form-closing");
+}
+
+function syncFavoriteFormSearchState() {
+  const active = isFavoriteFormActive();
+  searchWorkbench?.toggleAttribute("data-favorite-form-active", active);
+  syncFavoriteFormSurfaceState(active);
+  quickSearchInput.disabled = active;
+  quickSearchInput.placeholder = active ? t("addFavoriteSite") : t("quickSearchPlaceholder");
+  quickSearchInput.setAttribute("aria-label", active ? t("addFavoriteSite") : t("quickSearchPlaceholder"));
+  setFavoriteStripInteractivity(active);
+}
+
+function restoreFavoriteFormSearchScale() {
+  if (!searchWorkbench || isFavoriteFormActive()) {
+    return;
+  }
+  searchWorkbench.toggleAttribute("data-favorite-form-restoring", true);
+  searchWorkbench.getBoundingClientRect();
+  window.requestAnimationFrame(() => {
+    if (!isFavoriteFormActive()) {
+      searchWorkbench.removeAttribute("data-favorite-form-restoring");
+    }
+  });
+}
+
+function syncFavoriteFormSurfaceState(active) {
+  document.body.classList.toggle("favorite-form-open", active);
+  setFavoriteFormSurfaceIsolation(active);
+  if (!surfaceBackdrop) {
+    return;
+  }
+  if (active) {
+    surfaceBackdrop.hidden = false;
+    surfaceBackdrop.removeAttribute("tabindex");
+    surfaceBackdrop.getBoundingClientRect();
+    return;
+  }
+  if (activeSurfacePanelId) {
+    return;
+  }
+  if (surfaceBackdrop.contains(document.activeElement)) {
+    surfaceBackdrop.blur();
+  }
+  surfaceBackdrop.tabIndex = -1;
+  window.setTimeout(() => {
+    if (!isFavoriteFormActive() && !activeSurfacePanelId) {
+      surfaceBackdrop.hidden = true;
+    }
+  }, prefersReducedMotion() ? 0 : 220);
+}
+
+function setFavoriteFormSurfaceIsolation(active) {
+  [topbar, recentFoldersSection].forEach((node) => {
+    if (!(node instanceof HTMLElement)) {
+      return;
+    }
+    if (active) {
+      node.setAttribute("aria-hidden", "true");
+      node.inert = true;
+      return;
+    }
+    node.removeAttribute("aria-hidden");
+    node.inert = false;
+  });
 }
 
 async function handleFavoriteSubmit(event) {
@@ -9340,6 +9493,7 @@ const TDESIGN_ICON_MARKUP = Object.freeze({
   add: '<path fill="none" stroke="currentColor" stroke-linecap="square" stroke-width="2" d="M12 5v14m7-7H5"/>',
   app: '<g fill="none"><path d="M3 3h7v7H3zm11 11h7v7h-7zM3 14h7v7H3zm18.5-7.5a4 4 0 1 1-8 0a4 4 0 0 1 8 0"/><path stroke="currentColor" stroke-width="2" d="M3 3h7v7H3zm11 11h7v7h-7zM3 14h7v7H3zm18.5-7.5a4 4 0 1 1-8 0a4 4 0 0 1 8 0Z"/></g>',
   "arrow-left": '<path fill="none" stroke="currentColor" stroke-linecap="square" stroke-width="2" d="M11 6.5L5.5 12l5.5 5.5M6.75 12h13"/>',
+  "bookmark-add": '<path fill="none" stroke="currentColor" stroke-linecap="square" stroke-width="2" d="M12 4H5v17l7-5l7 5V11m-3-7h3m0 0h3m-3 0v3m0-3V1"/>',
   "bookmark-double-filled": '<path fill="currentColor" d="M23.003 18.419L23 0L10.001.002v2H21v14.413z"/><path fill="currentColor" d="M19 4H3v19.943l8-5.714l8 5.714z"/>',
   "ai-search": '<g fill="none" stroke="currentColor" stroke-width="2"><path d="m16.75 2.5l.52 1.23l1.23.52l-1.23.52L16.75 6l-.52-1.23L15 4.25l1.23-.52z"/><path stroke-linecap="square" d="m15.803 15.804l5.303 5.303m-5.303-5.303A7.5 7.5 0 1 1 10 3.017m5.803 12.787A7.47 7.47 0 0 0 17.983 11"/></g>',
   "ai-search-filled": '<path fill="currentColor" d="M10.648 2.072a6.5 6.5 0 0 0 8.348 8.348a8.56 8.56 0 0 1-1.822 5.41l5.346 5.346l-1.414 1.414l-5.346-5.347a8.48 8.48 0 0 1-5.26 1.826c-4.635 0-8.5-3.87-8.5-8.5c0-4.238 3.335-7.993 7.584-8.45a8 8 0 0 1 1.064-.047"/><path fill="currentColor" d="M18.032 3.036L21.07 4.32l-3.037 1.283l-1.282 3.037l-1.283-3.037l-3.036-1.283l3.036-1.283L16.75 0z"/>',
