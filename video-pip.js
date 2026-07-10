@@ -56,12 +56,12 @@
   }
 
   const controller = {
-    async toggleSelection() {
+    async startSelection() {
       if (disposed || extensionContextInvalid) {
         return false;
       }
       languagePreference = await readLanguagePreference();
-      return toggleVideoSelection();
+      return startVideoSelection();
     },
     dispose({ clearControllerKey = true } = {}) {
       disposed = true;
@@ -227,6 +227,8 @@
   function supportsPictureInPicture(video) {
     try {
       return video instanceof HTMLVideoElement &&
+        video.paused === false &&
+        video.ended !== true &&
         typeof video.requestPictureInPicture === "function" &&
         Boolean(visibleVideoRect(video));
     } catch (error) {
@@ -293,7 +295,8 @@
     overlay.style.border = `3px dashed ${SELECT_HIGHLIGHT_COLOR}`;
     overlay.style.borderRadius = "8px";
     overlay.style.background = "rgb(0 184 217 / 10%)";
-    overlay.style.pointerEvents = "none";
+    overlay.style.boxShadow = "0 4px 7px rgb(0 0 0 / 20%)";
+    overlay.style.pointerEvents = "auto";
     overlay.style.userSelect = "none";
     (document.body || document.documentElement)?.append(overlay);
     selectionOverlay = overlay;
@@ -357,10 +360,9 @@
     safeSendStatus(type);
   }
 
-  function toggleVideoSelection() {
+  function startVideoSelection() {
     if (selectionActive) {
-      stopVideoSelection("cancelled");
-      return false;
+      return true;
     }
     const video = pickLargestSelectableVideo();
     if (!video) {

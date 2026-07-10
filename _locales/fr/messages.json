@@ -4,5 +4,23 @@
   },
   "extDescription": {
     "message": "Transforme le nouvel onglet Chrome en espace local pour recherche, raccourcis, favoris, historique récent et commandes IA."
+  },
+  "popupVideoPipLabel": {
+    "message": "Mini-lecteur vidéo"
+  },
+  "popupVideoPipDisabled": {
+    "message": "Activez d’abord le mini-lecteur vidéo dans le Laboratoire."
+  },
+  "popupVideoPipUnavailable": {
+    "message": "Indisponible sur cette page."
+  },
+  "popupVideoPipStarting": {
+    "message": "Démarrage de la sélection vidéo…"
+  },
+  "popupVideoPipNoVideo": {
+    "message": "Aucune vidéo compatible n’a été trouvée sur cette page."
+  },
+  "popupVideoPipFailed": {
+    "message": "Impossible de démarrer la sélection vidéo."
   }
 }

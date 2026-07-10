@@ -140,7 +140,7 @@ git clone https://github.com/je44/wayleaf.git
 cd wayleaf
 ```
 
-开发时修改 `manifest.json`、`background.js`、`newtab.html`、`newtab.css`、`newtab.js` 或 `ai-submit.js`，然后在 `chrome://extensions/` 的 `Wayleaf` 卡片上点击刷新，再新建标签页检查效果。
+开发时修改 `manifest.json`、`background.js`、`newtab.html`、`newtab.css`、`newtab.js`、`popup.html`、`popup.css`、`popup.js` 或 `ai-submit.js`，然后在 `chrome://extensions/` 的 `Wayleaf` 卡片上点击刷新，再检查新标签页和工具栏菜单。
 
 如果需要检查真实安装体积，先生成干净的可加载目录，再在 Chrome 中选择 `dist/wayleaf-v1.0.0/`：
 
@@ -164,6 +164,7 @@ python3 -m http.server 8080
 jq empty manifest.json
 node --check background.js
 node --check newtab.js
+node --check popup.js
 node --check ai-submit.js
 ```
 
@@ -177,6 +178,9 @@ node --check ai-submit.js
 ├── newtab.html          # 新标签页页面结构
 ├── newtab.css           # 布局、主题、响应式规则和动效
 ├── newtab.js            # Chrome API 读取、状态保存、渲染和交互
+├── popup.html           # 工具栏功能列表结构
+├── popup.css            # 工具栏功能列表样式
+├── popup.js             # 工具栏功能选择与后台启动交互
 ├── ai-submit.js         # AI 页面直达后的输入辅助脚本
 ├── icons/               # 扩展图标和常用网站图标
 ├── vendor/              # 前端运行时依赖

@@ -24,6 +24,9 @@ runtime_items=(
   newtab.css
   newtab.html
   newtab.js
+  popup.css
+  popup.html
+  popup.js
   theme-preload.js
   wayleaf-icon.js
   vendor

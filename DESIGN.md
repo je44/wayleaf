@@ -3,8 +3,8 @@
 ## Source of truth
 - Status: Active
 - Last refreshed: 2026-07-02
-- Primary product surfaces: new tab, settings, navigation hub
-- Evidence reviewed: `newtab.js`, `newtab.css`, user screenshots
+- Primary product surfaces: new tab, settings, navigation hub, toolbar feature menu
+- Evidence reviewed: `newtab.js`, `newtab.css`, `popup.html`, `popup.css`, user screenshots
 
 ## Brand
 - Personality: calm, practical, young without neon styling
@@ -22,8 +22,8 @@
 - Key contexts of use: repeated daily use in varied ambient light
 
 ## Information architecture
-- Primary navigation: new tab, settings, navigation hub
-- Core routes/screens: `newtab.html`
+- Primary navigation: new tab, settings, navigation hub, toolbar feature launcher
+- Core routes/screens: `newtab.html`, `popup.html`
 - Content hierarchy: search first, shortcuts and recent content second, configuration last
 
 ## Design principles
@@ -41,7 +41,7 @@
 
 ## Components
 - Existing components to reuse: search panel, recent cards, settings groups, portal panel
-- New/changed components: none
+- New/changed components: compact toolbar feature list with feature icon and name only, using the same quiet surfaces, typography, and focus treatment
 - Variants and states: light and dark for Wayleaf, Yuzu, Papaya, Denim
 - Token/component ownership: palette tokens in `newtab.js`; component consumption in `newtab.css`
 

@@ -19,6 +19,7 @@ const AI_DIRECT_PROMPT_TEXT_PARAM = "_wayleaf_text";
 const AI_DIRECT_MAX_PROMPT_LENGTH = 12000;
 const AI_DIRECT_ATTACHMENT_MAX_COUNT = 2;
 const GEMINI_ATTACHMENT_UPLOAD_ACTION = "wayleaf:gemini-attachment-upload";
+const VIDEO_PIP_ACTIVATE_ACTION = "wayleaf:video-pip-activate";
 const VIDEO_PIP_SELECT_STATUS_ACTION = "wayleaf:video-pip-select-status";
 const VIDEO_PIP_ENABLED_STORAGE_KEY = "videoPipEnabled";
 const LEGACY_VIDEO_PIP_GLOBAL_ENABLED_STORAGE_KEY = "videoPipGlobalEnabled";
@@ -163,12 +164,12 @@ async function invokeVideoPipSelection(tabId) {
     target: { tabId, allFrames: true },
     func: async () => {
       const controller = window.__wayleafVideoPipController;
-      if (typeof controller?.toggleSelection !== "function") {
+      if (typeof controller?.startSelection !== "function") {
         return { ready: false, selectionActive: false };
       }
       return {
         ready: true,
-        selectionActive: await controller.toggleSelection()
+        selectionActive: await controller.startSelection()
       };
     }
   });
@@ -209,18 +210,18 @@ async function setVideoPipActionState(tabId, state, title = "Wayleaf") {
 
 async function handleVideoPipAction(tab) {
   if (!Number.isInteger(tab?.id)) {
-    return;
+    return { ok: false, reason: "missing-tab" };
   }
   if (!supportsVideoPip(tab.url || "")) {
     await chrome.action.setBadgeText({ tabId: tab.id, text: "" });
     await chrome.action.setTitle({ tabId: tab.id, title: "Wayleaf · Video mini-player is unavailable on this page" });
-    return;
+    return { ok: false, reason: "unsupported" };
   }
   try {
     if (!await migrateVideoPipSetting()) {
       await chrome.action.setBadgeText({ tabId: tab.id, text: "" });
       await chrome.action.setTitle({ tabId: tab.id, title: "Wayleaf · Video mini-player disabled in Laboratory" });
-      return;
+      return { ok: false, reason: "disabled" };
     }
     const result = await startVideoPipSelection(tab.id);
     await setVideoPipActionState(
@@ -230,9 +231,18 @@ async function handleVideoPipAction(tab) {
         ? "Wayleaf · Select a video to open in Picture-in-Picture"
         : "Wayleaf · No compatible video found"
     );
+    return result?.selectionActive
+      ? { ok: true, selectionActive: true }
+      : { ok: false, reason: "no-video", selectionActive: false };
   } catch (error) {
     console.warn("Wayleaf video mini-player failed", { tabId: tab.id, url: tab.url || "", error });
+    return { ok: false, reason: "failed" };
   }
+}
+
+async function handleVideoPipMenuAction() {
+  const [tab] = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
+  return handleVideoPipAction(tab);
 }
 
 async function handleVideoPipSelectStatus(message, sender) {
@@ -766,10 +776,6 @@ chrome.alarms?.onAlarm?.addListener((alarm) => {
 
 migrateVideoPipSetting().catch(reportBackgroundError);
 
-chrome.action?.onClicked?.addListener((tab) => {
-  handleVideoPipAction(tab).catch(reportBackgroundError);
-});
-
 chrome.runtime?.onMessage?.addListener((message, sender, sendResponse) => {
   if (message?.action === GEMINI_ATTACHMENT_UPLOAD_ACTION) {
     handleGeminiAttachmentUpload(message, sender)
@@ -777,6 +783,15 @@ chrome.runtime?.onMessage?.addListener((message, sender, sendResponse) => {
       .catch((error) => {
         console.warn("Wayleaf Gemini attachment upload failed", error);
         sendResponse({ ok: false });
+      });
+    return true;
+  }
+  if (message?.action === VIDEO_PIP_ACTIVATE_ACTION) {
+    handleVideoPipMenuAction()
+      .then(sendResponse)
+      .catch((error) => {
+        console.warn("Wayleaf toolbar video mini-player request failed", { error });
+        sendResponse({ ok: false, reason: "failed" });
       });
     return true;
   }

@@ -10,8 +10,9 @@ Run this before any release or broad review:
 jq empty manifest.json
 node --check background.js
 node --check newtab.js
+node --check popup.js
 node --check ai-submit.js
-git diff --check -- manifest.json background.js newtab.html newtab.css newtab.js ai-submit.js theme-preload.js docs scripts
+git diff --check -- manifest.json background.js newtab.html newtab.css newtab.js popup.html popup.css popup.js ai-submit.js theme-preload.js docs scripts
 ```
 
 ## Node Regression Scripts
@@ -83,6 +84,9 @@ The zip should contain runtime files only:
 - `newtab.css`
 - `newtab.html`
 - `newtab.js`
+- `popup.css`
+- `popup.html`
+- `popup.js`
 - `theme-preload.js`
 - `vendor/`
 

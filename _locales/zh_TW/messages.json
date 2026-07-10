@@ -4,5 +4,23 @@
   },
   "extDescription": {
     "message": "將 Chrome 新分頁變成本機優先的工作台，整合搜尋、快捷入口、書籤、最常訪問和 AI 指令。"
+  },
+  "popupVideoPipLabel": {
+    "message": "視頻小窗"
+  },
+  "popupVideoPipDisabled": {
+    "message": "請先在實驗室啟用視頻小窗。"
+  },
+  "popupVideoPipUnavailable": {
+    "message": "此頁面無法使用視頻小窗。"
+  },
+  "popupVideoPipStarting": {
+    "message": "正在啟動影片選取…"
+  },
+  "popupVideoPipNoVideo": {
+    "message": "此頁面找不到相容的影片。"
+  },
+  "popupVideoPipFailed": {
+    "message": "無法啟動影片選取。"
   }
 }

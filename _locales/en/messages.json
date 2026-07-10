@@ -4,5 +4,23 @@
   },
   "extDescription": {
     "message": "Turn Chrome's new tab page into a local-first workspace for search, shortcuts, bookmarks, most visited sites, and AI commands."
+  },
+  "popupVideoPipLabel": {
+    "message": "Video mini-player"
+  },
+  "popupVideoPipDisabled": {
+    "message": "Enable Video mini-player in Laboratory first."
+  },
+  "popupVideoPipUnavailable": {
+    "message": "Unavailable on this page."
+  },
+  "popupVideoPipStarting": {
+    "message": "Starting video selection…"
+  },
+  "popupVideoPipNoVideo": {
+    "message": "No compatible video was found on this page."
+  },
+  "popupVideoPipFailed": {
+    "message": "Could not start video selection."
   }
 }

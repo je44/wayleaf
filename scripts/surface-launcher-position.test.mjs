@@ -16,7 +16,7 @@ const surfaceOpenHomeStageRule = cssBlock("body.surface-open .home-stage");
 const surfaceOpenTopbarRule = cssBlock("body.surface-open .topbar");
 const surfaceOpenLaunchersRule = cssBlock("body.surface-open .surface-launchers");
 const surfaceBackdropRule = cssBlock(".surface-backdrop");
-const surfaceOpenBackdropRule = cssBlock("body.surface-open .surface-backdrop");
+const surfaceOpenBackdropRule = cssBlock("body.surface-open .surface-backdrop,\nbody.favorite-form-open .surface-backdrop");
 const surfaceShellRule = cssBlock(".shell");
 const surfaceOpenShellRule = cssBlock(".shell.surface-open");
 const surfaceClosingShellRule = cssBlock(".shell.surface-closing");
@@ -39,7 +39,7 @@ assert.match(
 assert.doesNotMatch(surfaceOpenTopbarRule, /filter:/, "Opening a secondary surface should only dim the topbar.");
 
 assert.match(surfaceBackdropRule, /opacity 220ms[\s\S]*visibility 0s linear 220ms;/, "The navigation backdrop should close with the surface shell.");
-assert.match(surfaceOpenBackdropRule, /opacity 260ms/, "The navigation backdrop should open with the surface shell.");
+assert.match(surfaceOpenBackdropRule, /opacity 260ms/, "The shared navigation and favorite-form backdrop should open with the surface shell.");
 assert.match(surfaceShellRule, /transform 220ms[\s\S]*visibility 0s linear 220ms;/, "The navigation shell should use the shared close duration.");
 assert.match(surfaceOpenShellRule, /transform 260ms/, "The navigation shell should use the restrained open duration.");
 assert.match(surfaceClosingShellRule, /transform 220ms/, "The navigation shell should close without a delayed second movement.");

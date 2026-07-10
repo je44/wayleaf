@@ -4,5 +4,23 @@
   },
   "extDescription": {
     "message": "Macht die neue Chrome-Tabseite zu einem lokalen Arbeitsbereich für Suche, Verknüpfungen, Lesezeichen, letzte Besuche und KI-Befehle."
+  },
+  "popupVideoPipLabel": {
+    "message": "Video-Miniplayer"
+  },
+  "popupVideoPipDisabled": {
+    "message": "Aktiviere zuerst den Video-Miniplayer im Labor."
+  },
+  "popupVideoPipUnavailable": {
+    "message": "Auf dieser Seite nicht verfügbar."
+  },
+  "popupVideoPipStarting": {
+    "message": "Videoauswahl wird gestartet…"
+  },
+  "popupVideoPipNoVideo": {
+    "message": "Auf dieser Seite wurde kein kompatibles Video gefunden."
+  },
+  "popupVideoPipFailed": {
+    "message": "Die Videoauswahl konnte nicht gestartet werden."
   }
 }

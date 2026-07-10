@@ -4,5 +4,23 @@
   },
   "extDescription": {
     "message": "Chrome の新しいタブを、検索、ショートカット、ブックマーク、よく見るサイト、AI コマンドのためのローカル優先ワークスペースにします。"
+  },
+  "popupVideoPipLabel": {
+    "message": "動画ミニプレーヤー"
+  },
+  "popupVideoPipDisabled": {
+    "message": "先にラボで動画ミニプレーヤーを有効にしてください。"
+  },
+  "popupVideoPipUnavailable": {
+    "message": "このページでは利用できません。"
+  },
+  "popupVideoPipStarting": {
+    "message": "動画選択を開始しています…"
+  },
+  "popupVideoPipNoVideo": {
+    "message": "対応する動画がこのページに見つかりません。"
+  },
+  "popupVideoPipFailed": {
+    "message": "動画選択を開始できませんでした。"
   }
 }

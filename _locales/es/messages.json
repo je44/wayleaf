@@ -4,5 +4,23 @@
   },
   "extDescription": {
     "message": "Convierte la nueva pestaña de Chrome en un espacio local para búsquedas, accesos, marcadores, navegación reciente y comandos de IA."
+  },
+  "popupVideoPipLabel": {
+    "message": "Mini reproductor de vídeo"
+  },
+  "popupVideoPipDisabled": {
+    "message": "Activa primero el mini reproductor de vídeo en Laboratorio."
+  },
+  "popupVideoPipUnavailable": {
+    "message": "No disponible en esta página."
+  },
+  "popupVideoPipStarting": {
+    "message": "Iniciando la selección de vídeo…"
+  },
+  "popupVideoPipNoVideo": {
+    "message": "No se encontró ningún vídeo compatible en esta página."
+  },
+  "popupVideoPipFailed": {
+    "message": "No se pudo iniciar la selección de vídeo."
   }
 }

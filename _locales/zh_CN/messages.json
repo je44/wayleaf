@@ -4,5 +4,23 @@
   },
   "extDescription": {
     "message": "将 Chrome 新标签页变成本地优先的工作台，整合搜索、快捷入口、书签、最常访问和 AI 指令。"
+  },
+  "popupVideoPipLabel": {
+    "message": "视频小窗"
+  },
+  "popupVideoPipDisabled": {
+    "message": "请先在实验室中启用视频小窗。"
+  },
+  "popupVideoPipUnavailable": {
+    "message": "此页面无法使用视频小窗。"
+  },
+  "popupVideoPipStarting": {
+    "message": "正在启动视频选择…"
+  },
+  "popupVideoPipNoVideo": {
+    "message": "此页面未找到兼容的视频。"
+  },
+  "popupVideoPipFailed": {
+    "message": "无法启动视频选择。"
   }
 }
