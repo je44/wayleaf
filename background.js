@@ -1,7 +1,5 @@
 "use strict";
 
-importScripts("video-pip-coordinator.js");
-
 const AUTO_SYNC_ALARM_NAME = "wayleaf-daily-auto-sync";
 const AUTO_SYNC_PERIOD_MINUTES = 24 * 60;
 const CUSTOM_PORTALS_STORAGE_KEY = "customPortals";
@@ -21,21 +19,10 @@ const AI_DIRECT_PROMPT_TEXT_PARAM = "_wayleaf_text";
 const AI_DIRECT_MAX_PROMPT_LENGTH = 12000;
 const AI_DIRECT_ATTACHMENT_MAX_COUNT = 2;
 const GEMINI_ATTACHMENT_UPLOAD_ACTION = "wayleaf:gemini-attachment-upload";
-const VIDEO_PIP_REQUEST_ACTION = "wayleaf:video-pip-request";
-const VIDEO_PIP_COMMAND_ACTION = "wayleaf:video-pip-command";
-const SOCIAL_VIDEO_EXTRACT_START_ACTION = "wayleaf:social-video-extract-start";
-const SOCIAL_VIDEO_EXTRACT_STATUS_ACTION = "wayleaf:social-video-extract-status";
-const VIDEO_PIP_OWNER_STORAGE_KEY = "videoPipOwner";
-const VIDEO_PIP_GLOBAL_ENABLED_STORAGE_KEY = "videoPipGlobalEnabled";
-const SOCIAL_VIDEO_EXTRACTOR_ENABLED_STORAGE_KEY = "socialVideoExtractorEnabled";
-const SOCIAL_VIDEO_EXTRACT_HOSTS = new Set([
-  "x.com",
-  "www.x.com",
-  "twitter.com",
-  "www.twitter.com",
-  "xiaohongshu.com",
-  "www.xiaohongshu.com"
-]);
+const VIDEO_PIP_SELECT_STATUS_ACTION = "wayleaf:video-pip-select-status";
+const VIDEO_PIP_ENABLED_STORAGE_KEY = "videoPipEnabled";
+const LEGACY_VIDEO_PIP_GLOBAL_ENABLED_STORAGE_KEY = "videoPipGlobalEnabled";
+const LEGACY_SOCIAL_VIDEO_EXTRACTOR_ENABLED_STORAGE_KEY = "socialVideoExtractorEnabled";
 const AI_DIRECT_PROVIDER_HOSTS = new Set([
   "chatgpt.com",
   "claude.ai",
@@ -128,47 +115,6 @@ function supportsVideoPip(url) {
   }
 }
 
-function supportsSocialVideoExtraction(url) {
-  try {
-    const host = new URL(url).hostname.replace(/^www\./, "");
-    return SOCIAL_VIDEO_EXTRACT_HOSTS.has(host) || SOCIAL_VIDEO_EXTRACT_HOSTS.has(`www.${host}`);
-  } catch {
-    return false;
-  }
-}
-
-let fallbackVideoPipOwner = null;
-
-async function loadVideoPipOwner() {
-  if (!chrome.storage?.session) {
-    return fallbackVideoPipOwner;
-  }
-  const stored = await chrome.storage.session.get({ [VIDEO_PIP_OWNER_STORAGE_KEY]: null });
-  return stored[VIDEO_PIP_OWNER_STORAGE_KEY] || null;
-}
-
-async function saveVideoPipOwner(owner) {
-  fallbackVideoPipOwner = owner;
-  if (chrome.storage?.session) {
-    await chrome.storage.session.set({ [VIDEO_PIP_OWNER_STORAGE_KEY]: owner });
-  }
-}
-
-function videoPipMessageTarget(target) {
-  if (target.documentId) {
-    return { documentId: target.documentId };
-  }
-  return { frameId: Number.isInteger(target.frameId) ? target.frameId : 0 };
-}
-
-async function sendVideoPipCommand(target, command) {
-  return chrome.tabs.sendMessage(
-    target.tabId,
-    { action: VIDEO_PIP_COMMAND_ACTION, command },
-    videoPipMessageTarget(target)
-  );
-}
-
 async function injectVideoPipController(tabId) {
   if (!Number.isInteger(tabId) || !chrome.scripting?.executeScript) {
     return false;
@@ -179,104 +125,83 @@ async function injectVideoPipController(tabId) {
       files: ["video-pip.js"]
     });
     return true;
-  } catch {
+  } catch (error) {
+    console.warn("Wayleaf video mini-player injection failed", { tabId, error });
     return false;
   }
 }
 
-async function refreshVideoPipControllersInOpenTabs() {
-  if (!chrome.tabs?.query || !chrome.scripting?.executeScript) {
-    return;
-  }
-  const tabs = await chrome.tabs.query({});
-  await Promise.all(tabs
-    .filter((tab) => Number.isInteger(tab.id) && supportsVideoPip(tab.url || ""))
-    .map((tab) => injectVideoPipController(tab.id)));
-}
-
-async function refreshVideoPipControllersWhenGlobalEnabled() {
-  if (!chrome.storage?.local?.get) {
-    return;
-  }
-  const stored = await chrome.storage.local.get({ [VIDEO_PIP_GLOBAL_ENABLED_STORAGE_KEY]: false });
-  if (stored[VIDEO_PIP_GLOBAL_ENABLED_STORAGE_KEY] === true) {
-    await refreshVideoPipControllersInOpenTabs();
-  }
-}
-
-async function injectVideoPipControllerWhenGlobalEnabled(tabId, url) {
-  if (!Number.isInteger(tabId) || !supportsVideoPip(url || "")) {
-    return;
-  }
-  const stored = await chrome.storage.local.get({ [VIDEO_PIP_GLOBAL_ENABLED_STORAGE_KEY]: false });
-  if (stored[VIDEO_PIP_GLOBAL_ENABLED_STORAGE_KEY] === true) {
-    await injectVideoPipController(tabId);
-  }
-}
-
-const videoPipCoordinator = globalThis.WayleafVideoPipCoordinator.create({
-  command: sendVideoPipCommand,
-  loadOwner: loadVideoPipOwner,
-  saveOwner: saveVideoPipOwner
-});
-
-function videoPipSourceTabId(owner) {
-  return Number.isInteger(owner?.sourceTabId) ? owner.sourceTabId : owner?.tabId;
-}
-
-async function handleVideoPipTabUpdated(tabId, changeInfo, tab) {
-  if (!changeInfo?.url && changeInfo?.status !== "loading") {
-    return;
-  }
-  const owner = await loadVideoPipOwner();
-  if (videoPipSourceTabId(owner) !== tabId) {
-    return;
-  }
-  await videoPipCoordinator.handle(
-    { type: "source-lost", sourceUrl: changeInfo.url || tab?.url || owner?.sourceUrl || "" },
-    { tabId }
-  );
-}
-
-async function handleVideoPipTabRemoved(tabId) {
-  const owner = await loadVideoPipOwner();
-  if (videoPipSourceTabId(owner) !== tabId) {
-    return;
-  }
-  await videoPipCoordinator.handle({ type: "removed" }, { tabId });
-}
-
-function videoPipTargetFromSender(sender, score = 0) {
-  if (!Number.isInteger(sender?.tab?.id)) {
-    return null;
-  }
-  return {
-    tabId: sender.tab.id,
-    frameId: Number.isInteger(sender.frameId) ? sender.frameId : 0,
-    documentId: typeof sender.documentId === "string" ? sender.documentId : "",
-    score: Math.max(0, Number(score || 0))
-  };
-}
-
-async function socialVideoExtractorEnabled() {
+async function migrateVideoPipSetting() {
   const storage = chrome.storage?.local || chrome.storage?.sync;
   if (!storage?.get) {
     return true;
   }
-  const stored = await storage.get({ [SOCIAL_VIDEO_EXTRACTOR_ENABLED_STORAGE_KEY]: true });
-  return stored[SOCIAL_VIDEO_EXTRACTOR_ENABLED_STORAGE_KEY] !== false;
-}
-
-async function startSocialVideoExtraction(tabId) {
-  try {
-    return await chrome.tabs.sendMessage(tabId, { action: SOCIAL_VIDEO_EXTRACT_START_ACTION });
-  } catch {
-    await injectVideoPipController(tabId);
-    return chrome.tabs.sendMessage(tabId, { action: SOCIAL_VIDEO_EXTRACT_START_ACTION });
+  const stored = await storage.get({
+    [VIDEO_PIP_ENABLED_STORAGE_KEY]: null,
+    [LEGACY_VIDEO_PIP_GLOBAL_ENABLED_STORAGE_KEY]: false,
+    [LEGACY_SOCIAL_VIDEO_EXTRACTOR_ENABLED_STORAGE_KEY]: true
+  });
+  const enabled = typeof stored[VIDEO_PIP_ENABLED_STORAGE_KEY] === "boolean"
+    ? stored[VIDEO_PIP_ENABLED_STORAGE_KEY]
+    : stored[LEGACY_VIDEO_PIP_GLOBAL_ENABLED_STORAGE_KEY] === true ||
+      stored[LEGACY_SOCIAL_VIDEO_EXTRACTOR_ENABLED_STORAGE_KEY] !== false;
+  const migration = {};
+  if (typeof stored[VIDEO_PIP_ENABLED_STORAGE_KEY] !== "boolean") {
+    migration[VIDEO_PIP_ENABLED_STORAGE_KEY] = enabled;
   }
+  if (stored[LEGACY_VIDEO_PIP_GLOBAL_ENABLED_STORAGE_KEY] !== false) {
+    migration[LEGACY_VIDEO_PIP_GLOBAL_ENABLED_STORAGE_KEY] = false;
+  }
+  if (Object.keys(migration).length) {
+    await storage.set(migration);
+  }
+  return enabled;
 }
 
-async function setSocialVideoExtractActionState(tabId, state, title = "Wayleaf") {
+async function invokeVideoPipSelection(tabId) {
+  return chrome.scripting.executeScript({
+    target: { tabId, allFrames: true },
+    func: async () => {
+      const controller = window.__wayleafVideoPipController;
+      if (typeof controller?.toggleSelection !== "function") {
+        return { ready: false, selectionActive: false };
+      }
+      return {
+        ready: true,
+        selectionActive: await controller.toggleSelection()
+      };
+    }
+  });
+}
+
+async function startVideoPipSelection(tabId) {
+  let results = await invokeVideoPipSelection(tabId);
+  if (results.some((entry) => entry.result?.ready)) {
+    return {
+      ok: true,
+      selectionActive: results.some((entry) => entry.result?.selectionActive)
+    };
+  }
+  const injected = await injectVideoPipController(tabId);
+  if (!injected) {
+    throw new Error(`Unable to inject the video mini-player controller into tab ${tabId}.`);
+  }
+  try {
+    results = await invokeVideoPipSelection(tabId);
+  } catch (error) {
+    console.warn("Wayleaf video mini-player activation failed", { tabId, error });
+    throw error;
+  }
+  if (!results.some((entry) => entry.result?.ready)) {
+    throw new Error(`Injected video mini-player controller did not initialize in tab ${tabId}.`);
+  }
+  return {
+    ok: true,
+    selectionActive: results.some((entry) => entry.result?.selectionActive)
+  };
+}
+
+async function setVideoPipActionState(tabId, state, title = "Wayleaf") {
   await chrome.action.setBadgeBackgroundColor({ tabId, color: "#00b8d9" });
   await chrome.action.setBadgeText({ tabId, text: state === "active" ? "VID" : "" });
   await chrome.action.setTitle({ tabId, title });
@@ -286,40 +211,45 @@ async function handleVideoPipAction(tab) {
   if (!Number.isInteger(tab?.id)) {
     return;
   }
-  if (!supportsVideoPip(tab.url || "") || !supportsSocialVideoExtraction(tab.url || "")) {
+  if (!supportsVideoPip(tab.url || "")) {
     await chrome.action.setBadgeText({ tabId: tab.id, text: "" });
-    await chrome.action.setTitle({ tabId: tab.id, title: "Wayleaf · Social video mini-player supports Xiaohongshu and X" });
+    await chrome.action.setTitle({ tabId: tab.id, title: "Wayleaf · Video mini-player is unavailable on this page" });
     return;
   }
   try {
-    if (!await socialVideoExtractorEnabled()) {
+    if (!await migrateVideoPipSetting()) {
       await chrome.action.setBadgeText({ tabId: tab.id, text: "" });
-      await chrome.action.setTitle({ tabId: tab.id, title: "Wayleaf · Social video mini-player disabled in Laboratory" });
+      await chrome.action.setTitle({ tabId: tab.id, title: "Wayleaf · Video mini-player disabled in Laboratory" });
       return;
     }
-    const result = await startSocialVideoExtraction(tab.id);
-    await setSocialVideoExtractActionState(
+    const result = await startVideoPipSelection(tab.id);
+    await setVideoPipActionState(
       tab.id,
-      result?.extractorActive ? "active" : "idle",
-      result?.extractorActive
-        ? "Wayleaf · Move over the social video, then click to extract"
-        : "Wayleaf · No compatible social video found"
+      result?.selectionActive ? "active" : "idle",
+      result?.selectionActive
+        ? "Wayleaf · Select a video to open in Picture-in-Picture"
+        : "Wayleaf · No compatible video found"
     );
   } catch (error) {
-    console.warn("Wayleaf social video mini-player failed", error);
+    console.warn("Wayleaf video mini-player failed", { tabId: tab.id, url: tab.url || "", error });
   }
 }
 
-async function handleSocialVideoExtractStatus(message, sender) {
+async function handleVideoPipSelectStatus(message, sender) {
   const tabId = sender?.tab?.id;
   if (!Number.isInteger(tabId)) {
     return;
   }
   if (message.type === "started") {
-    await setSocialVideoExtractActionState(tabId, "active", "Wayleaf · Move over the social video, then click to extract");
+    await setVideoPipActionState(tabId, "active", "Wayleaf · Select a video to open in Picture-in-Picture");
     return;
   }
-  await setSocialVideoExtractActionState(tabId, "idle", message.type === "entered" ? "Wayleaf · Social video extracted" : "Wayleaf");
+  const title = message.type === "entered"
+    ? "Wayleaf · Video opened in Picture-in-Picture"
+    : message.type === "failed"
+      ? "Wayleaf · Picture-in-Picture request failed"
+      : "Wayleaf";
+  await setVideoPipActionState(tabId, "idle", title);
 }
 
 function aiDirectPromptRequest(url) {
@@ -820,12 +750,12 @@ chrome.runtime?.onInstalled?.addListener((details) => {
       .catch(reportBackgroundError);
   }
   ensureDailyAutoSyncAlarm().catch(reportBackgroundError);
-  refreshVideoPipControllersWhenGlobalEnabled().catch(reportBackgroundError);
+  migrateVideoPipSetting().catch(reportBackgroundError);
 });
 
 chrome.runtime?.onStartup?.addListener(() => {
   ensureDailyAutoSyncAlarm().catch(reportBackgroundError);
-  refreshVideoPipControllersWhenGlobalEnabled().catch(reportBackgroundError);
+  migrateVideoPipSetting().catch(reportBackgroundError);
 });
 
 chrome.alarms?.onAlarm?.addListener((alarm) => {
@@ -834,13 +764,7 @@ chrome.alarms?.onAlarm?.addListener((alarm) => {
   }
 });
 
-chrome.storage?.onChanged?.addListener((changes, areaName) => {
-  if (areaName === "local" && changes[VIDEO_PIP_GLOBAL_ENABLED_STORAGE_KEY]?.newValue === true) {
-    refreshVideoPipControllersInOpenTabs().catch(reportBackgroundError);
-  }
-});
-
-refreshVideoPipControllersWhenGlobalEnabled().catch(reportBackgroundError);
+migrateVideoPipSetting().catch(reportBackgroundError);
 
 chrome.action?.onClicked?.addListener((tab) => {
   handleVideoPipAction(tab).catch(reportBackgroundError);
@@ -856,30 +780,14 @@ chrome.runtime?.onMessage?.addListener((message, sender, sendResponse) => {
       });
     return true;
   }
-  if (message?.action === SOCIAL_VIDEO_EXTRACT_STATUS_ACTION) {
-    handleSocialVideoExtractStatus(message, sender).catch(reportBackgroundError);
+  if (message?.action === VIDEO_PIP_SELECT_STATUS_ACTION) {
+    handleVideoPipSelectStatus(message, sender).catch(reportBackgroundError);
     sendResponse({ ok: true });
     return;
   }
-  if (message?.action !== VIDEO_PIP_REQUEST_ACTION) {
-    return;
-  }
-  const target = videoPipTargetFromSender(sender, message.score);
-  if (!target) {
-    sendResponse({ ok: false });
-    return;
-  }
-  videoPipCoordinator.handle(message, target)
-    .then(sendResponse)
-    .catch((error) => {
-      console.warn("Wayleaf video PiP coordination failed", error);
-      sendResponse({ ok: false });
-    });
-  return true;
 });
 
 chrome.tabs?.onUpdated?.addListener((tabId, changeInfo, tab) => {
-  handleVideoPipTabUpdated(tabId, changeInfo, tab).catch(reportBackgroundError);
   if (changeInfo.url) {
     chrome.action?.setBadgeText({ tabId, text: "" }).catch(reportBackgroundError);
     chrome.action?.setTitle({ tabId, title: "Wayleaf" }).catch(reportBackgroundError);
@@ -891,9 +799,6 @@ chrome.tabs?.onUpdated?.addListener((tabId, changeInfo, tab) => {
   }
   if (changeInfo.status && changeInfo.status !== "complete") {
     return;
-  }
-  if (changeInfo.status === "complete") {
-    injectVideoPipControllerWhenGlobalEnabled(tabId, url).catch(reportBackgroundError);
   }
   const pendingRequest = request || (
     aiDirectRequestMatchesUrl(pendingAiDirectRequests.get(tabId), url)
@@ -908,7 +813,6 @@ chrome.tabs?.onUpdated?.addListener((tabId, changeInfo, tab) => {
 
 chrome.tabs?.onRemoved?.addListener((tabId) => {
   pendingAiDirectRequests.delete(tabId);
-  handleVideoPipTabRemoved(tabId).catch(reportBackgroundError);
 });
 
 ensureDailyAutoSyncAlarm().catch(reportBackgroundError);

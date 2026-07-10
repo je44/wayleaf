@@ -71,9 +71,7 @@ for (const [locale, completion] of Object.entries(completions)) {
 
 const baselineLocaleKeys = Object.keys(messages.en);
 function isIntentionallyEmptyLocaleKey(locale, key) {
-  return key === "syncSettingsReadyDetail" ||
-    key === "socialVideoExtractorDescription" ||
-    (locale === "zh-TW" && key === "videoPipLabDescription");
+  return key === "syncSettingsReadyDetail";
 }
 for (const locale of supportedLocales) {
   const missingKeys = baselineLocaleKeys.filter((key) => (
@@ -115,13 +113,8 @@ const settingsLocaleKeys = [
   "settingsLaboratoryTab",
   "videoPipLabTitle",
   "videoPipLabDescription",
-  "videoPipGlobalLabel",
-  "videoPipGlobalHint",
-  "socialVideoExtractorTitle",
-  "socialVideoExtractorDescription",
-  "socialVideoExtractorLabel",
-  "socialVideoExtractorHint",
-  "socialVideoExtractorSupport",
+  "videoPipLabel",
+  "videoPipHint",
   "languageSettingsTitle",
   "appearanceModeTitle",
   "themeModeSystem",

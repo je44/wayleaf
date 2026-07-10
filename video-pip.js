@@ -2,46 +2,91 @@
 
 (() => {
   const CONTROLLER_KEY = "__wayleafVideoPipController";
-  const GLOBAL_ENABLED_STORAGE_KEY = "videoPipGlobalEnabled";
   const LANGUAGE_STORAGE_KEY = "languagePreference";
-  const EXTRACT_START_ACTION = "wayleaf:social-video-extract-start";
-  const EXTRACT_STATUS_ACTION = "wayleaf:social-video-extract-status";
-  const REQUEST_ACTION = "wayleaf:video-pip-request";
-  const COMMAND_ACTION = "wayleaf:video-pip-command";
-  const EXTRACT_HIGHLIGHT_COLOR = "#00b8d9";
-  const MIN_EXTRACT_VIDEO_AREA = 12000;
-  const SOCIAL_VIDEO_EXTRACT_HOSTS = new Set(["x.com", "twitter.com", "xiaohongshu.com"]);
-  const EXTRACT_PROMPT_BY_LOCALE = {
+  const SELECT_STATUS_ACTION = "wayleaf:video-pip-select-status";
+  const SELECT_HIGHLIGHT_COLOR = "#00b8d9";
+  const MIN_SELECTABLE_VIDEO_AREA = 12000;
+  const SELECT_PROMPT_BY_LOCALE = {
     "zh-CN": "选择需要小窗播放的视频",
     "zh-TW": "選擇要以小視窗播放的影片",
     en: "Select a video to open in Picture-in-Picture",
     ja: "ピクチャーインピクチャーで開く動画を選択",
     ko: "PIP로 열 동영상을 선택하세요",
     es: "Selecciona un vídeo para abrirlo en imagen en imagen",
-    fr: "Sélectionnez une vidéo à ouvrir en image dans l’image",
+    fr: "Sélectionnez une vidéo à ouvrir en mode image dans l’image",
     de: "Wähle ein Video für Bild-in-Bild aus"
   };
-  let globalEnabled = false;
-  let languagePreference = "system";
-  let entering = false;
-  let extractEntering = false;
-  let extractorActive = false;
-  let exiting = false;
-  let managedPipNeedsCleanup = false;
-  let managedPipVideo = null;
-  let extractTargetVideo = null;
-  let extractOverlay = null;
-  let extractPrompt = null;
-  let extensionContextInvalid = false;
-  let pendingVideoScan = false;
+
   let disposed = false;
-  let mutationObserver = null;
-  let storageChangeListener = null;
-  let runtimeMessageListener = null;
+  let extensionContextInvalid = false;
+  let languagePreference = "system";
+  let selectionActive = false;
+  let selectionEntering = false;
+  let selectionTargetVideo = null;
+  let selectionOverlay = null;
+  let selectionPrompt = null;
   const documentListeners = [];
+
   function isExtensionContextError(error) {
     return String(error?.message || error).includes("Extension context invalidated");
   }
+
+  function noteExtensionContextError(error) {
+    if (!isExtensionContextError(error)) {
+      return false;
+    }
+    extensionContextInvalid = true;
+    controller.dispose({ clearControllerKey: false });
+    return true;
+  }
+
+  function reportControllerError(message, error, details = {}) {
+    if (!noteExtensionContextError(error)) {
+      console.warn(message, { ...details, error });
+    }
+  }
+
+  function clearSelectionUi() {
+    selectionActive = false;
+    selectionTargetVideo = null;
+    selectionOverlay?.remove();
+    selectionOverlay = null;
+    selectionPrompt?.remove();
+    selectionPrompt = null;
+  }
+
+  const controller = {
+    async toggleSelection() {
+      if (disposed || extensionContextInvalid) {
+        return false;
+      }
+      languagePreference = await readLanguagePreference();
+      return toggleVideoSelection();
+    },
+    dispose({ clearControllerKey = true } = {}) {
+      disposed = true;
+      clearSelectionUi();
+      for (const [type, listener, options] of documentListeners.splice(0)) {
+        try {
+          document.removeEventListener(type, listener, options);
+        } catch (error) {
+          if (!isExtensionContextError(error)) {
+            console.warn("Wayleaf video mini-player listener cleanup failed", { type, error });
+          }
+        }
+      }
+      try {
+        if (clearControllerKey && window[CONTROLLER_KEY] === controller) {
+          delete window[CONTROLLER_KEY];
+        }
+      } catch (error) {
+        if (!isExtensionContextError(error)) {
+          console.warn("Wayleaf video mini-player controller cleanup failed", error);
+        }
+      }
+    }
+  };
+
   let previousController = null;
   try {
     previousController = window[CONTROLLER_KEY];
@@ -50,58 +95,9 @@
       throw error;
     }
   }
-  const controller = {
-    dispose({ clearControllerKey = true } = {}) {
-      disposed = true;
-      pendingVideoScan = false;
-      extractorActive = false;
-      updateAutomaticPictureInPictureBinding();
-      try {
-        extractOverlay?.remove();
-      } catch {}
-      extractOverlay = null;
-      try {
-        extractPrompt?.remove();
-      } catch {}
-      extractPrompt = null;
-      for (const [type, listener, options] of documentListeners.splice(0)) {
-        try {
-          document.removeEventListener(type, listener, options);
-        } catch {}
-      }
-      try {
-        mutationObserver?.disconnect();
-      } catch {}
-      mutationObserver = null;
-      try {
-        if (typeof chrome !== "undefined" && storageChangeListener) {
-          chrome.storage?.onChanged?.removeListener?.(storageChangeListener);
-        }
-      } catch {}
-      try {
-        if (typeof chrome !== "undefined" && runtimeMessageListener) {
-          chrome.runtime?.onMessage?.removeListener?.(runtimeMessageListener);
-        }
-      } catch {}
-      try {
-        if (clearControllerKey && window[CONTROLLER_KEY] === controller) {
-          delete window[CONTROLLER_KEY];
-        }
-      } catch {}
-    }
-  };
-
-  let previousDispose = null;
-  try {
-    previousDispose = previousController?.dispose;
-  } catch (error) {
-    if (!isExtensionContextError(error)) {
-      throw error;
-    }
-  }
-  if (typeof previousDispose === "function") {
+  if (typeof previousController?.dispose === "function") {
     try {
-      previousDispose.call(previousController);
+      previousController.dispose();
     } catch (error) {
       if (!isExtensionContextError(error)) {
         throw error;
@@ -119,43 +115,6 @@
     return;
   }
 
-  function noteExtensionContextError(error) {
-    if (isExtensionContextError(error)) {
-      extensionContextInvalid = true;
-      controller.dispose({ clearControllerKey: false });
-      return true;
-    }
-    return false;
-  }
-
-  function guardExtensionContext(callback, fallback) {
-    if (disposed) {
-      return fallback;
-    }
-    try {
-      return callback();
-    } catch (error) {
-      if (noteExtensionContextError(error)) {
-        return fallback;
-      }
-      throw error;
-    }
-  }
-
-  async function guardExtensionContextAsync(callback, fallback) {
-    if (disposed) {
-      return fallback;
-    }
-    try {
-      return await callback();
-    } catch (error) {
-      if (noteExtensionContextError(error)) {
-        return fallback;
-      }
-      throw error;
-    }
-  }
-
   function hasExtensionContext() {
     if (disposed || extensionContextInvalid || typeof chrome === "undefined") {
       return false;
@@ -168,55 +127,39 @@
     }
   }
 
-  function safeSendMessage(message) {
-    if (disposed || !hasExtensionContext()) {
+  function safeSendStatus(type) {
+    if (!hasExtensionContext()) {
       return;
     }
     try {
-      chrome.runtime.sendMessage(message).catch(noteExtensionContextError);
+      chrome.runtime.sendMessage({ action: SELECT_STATUS_ACTION, type }).catch((error) => {
+        reportControllerError("Wayleaf video mini-player status update failed", error, { type });
+      });
     } catch (error) {
-      noteExtensionContextError(error);
+      reportControllerError("Wayleaf video mini-player status update failed", error, { type });
     }
   }
 
-  function enabled() {
-    return !disposed && globalEnabled && !requiresManualSocialExtraction();
-  }
-
-  function coordinatorEnabled() {
-    return enabled();
-  }
-
-  function requiresManualSocialExtraction() {
-    try {
-      const host = String(window.location?.hostname || "").replace(/^www\./, "");
-      return SOCIAL_VIDEO_EXTRACT_HOSTS.has(host);
-    } catch {
-      return false;
+  function readLanguagePreference() {
+    if (!hasExtensionContext() || !chrome.storage?.local?.get) {
+      return Promise.resolve("system");
     }
-  }
-
-  function isPlaying(video) {
-    try {
-      return video instanceof HTMLVideoElement &&
-        !video.paused &&
-        !video.ended &&
-        Number(video.readyState || 0) >= 2;
-    } catch (error) {
-      noteExtensionContextError(error);
-      return false;
-    }
-  }
-
-  function isPictureInPictureCandidate(video) {
-    try {
-      return video instanceof HTMLVideoElement &&
-        supportsPictureInPicture(video) &&
-        Number(video.readyState || 0) !== 0;
-    } catch (error) {
-      noteExtensionContextError(error);
-      return false;
-    }
+    return new Promise((resolve) => {
+      try {
+        chrome.storage.local.get({ [LANGUAGE_STORAGE_KEY]: "system" }, (result) => {
+          const error = chrome.runtime?.lastError;
+          if (error) {
+            console.warn("Wayleaf video mini-player language read failed", error);
+            resolve("system");
+            return;
+          }
+          resolve(result?.[LANGUAGE_STORAGE_KEY] || "system");
+        });
+      } catch (error) {
+        reportControllerError("Wayleaf video mini-player language read failed", error);
+        resolve("system");
+      }
+    });
   }
 
   function videoArea(video) {
@@ -225,14 +168,9 @@
       const renderedArea = Math.max(0, Number(rect?.width || 0)) * Math.max(0, Number(rect?.height || 0));
       return renderedArea || (Number(video.videoWidth || 0) * Number(video.videoHeight || 0));
     } catch (error) {
-      noteExtensionContextError(error);
+      reportControllerError("Wayleaf video mini-player could not measure a video", error);
       return 0;
     }
-  }
-
-  function hasUsableVideoSurface(video) {
-    return videoArea(video) >= MIN_EXTRACT_VIDEO_AREA ||
-      (Number(video?.videoWidth || 0) > 0 && Number(video?.videoHeight || 0) > 0);
   }
 
   function visibleVideoRect(video) {
@@ -245,7 +183,7 @@
       const right = Number.isFinite(Number(rect?.right)) ? Number(rect.right) : left + width;
       const bottom = Number.isFinite(Number(rect?.bottom)) ? Number(rect.bottom) : top + height;
       if (
-        width * height < MIN_EXTRACT_VIDEO_AREA ||
+        width * height < MIN_SELECTABLE_VIDEO_AREA ||
         right <= 0 ||
         bottom <= 0 ||
         left >= Number(window.innerWidth || right) ||
@@ -255,93 +193,44 @@
       }
       return { left, top, width, height };
     } catch (error) {
-      noteExtensionContextError(error);
+      reportControllerError("Wayleaf video mini-player could not locate a video", error);
       return null;
     }
   }
 
   function queryVideos(root = document, seen = new Set()) {
-    if (disposed || extensionContextInvalid || seen.has(root)) {
+    if (disposed || extensionContextInvalid || seen.has(root) || !root?.querySelectorAll) {
       return [];
     }
+    seen.add(root);
     let videos = [];
     let nodes = [];
     try {
-      if (!root?.querySelectorAll) {
-        return [];
-      }
-      seen.add(root);
       videos = [...root.querySelectorAll("video")];
       nodes = [...root.querySelectorAll("*")];
     } catch (error) {
-      noteExtensionContextError(error);
+      reportControllerError("Wayleaf video mini-player video scan failed", error);
       return [];
     }
     for (const node of nodes) {
-      let shadowRoot = null;
       try {
-        shadowRoot = node.shadowRoot;
+        if (node.shadowRoot) {
+          videos.push(...queryVideos(node.shadowRoot, seen));
+        }
       } catch (error) {
-        noteExtensionContextError(error);
-      }
-      if (shadowRoot) {
-        videos.push(...queryVideos(shadowRoot, seen));
+        reportControllerError("Wayleaf video mini-player shadow-root scan failed", error);
       }
     }
     return videos;
   }
 
-  function nodeContainsVideo(node, seen = new Set()) {
-    if (!node || seen.has(node)) {
-      return false;
-    }
-    seen.add(node);
-    try {
-      if (node instanceof HTMLVideoElement) {
-        return true;
-      }
-      if (typeof node.querySelector === "function" && node.querySelector("video")) {
-        return true;
-      }
-      const shadowRoot = node.shadowRoot;
-      return Boolean(shadowRoot && nodeContainsVideo(shadowRoot, seen));
-    } catch (error) {
-      noteExtensionContextError(error);
-      return false;
-    }
-  }
-
-  function scheduleVideoScan() {
-    if (disposed || pendingVideoScan) {
-      return;
-    }
-    pendingVideoScan = true;
-    Promise.resolve().then(() => {
-      pendingVideoScan = false;
-      if (disposed) {
-        return;
-      }
-      notifyCoordinator("enter");
-    });
-  }
-
-  function handleDomMutation(mutations) {
-    guardExtensionContext(() => {
-      if (!enabled() || document.visibilityState !== "hidden") {
-        return;
-      }
-      if (mutations.some((mutation) => [...mutation.addedNodes || []].some((node) => nodeContainsVideo(node)))) {
-        scheduleVideoScan();
-      }
-    });
-  }
-
   function supportsPictureInPicture(video) {
     try {
-      return hasUsableVideoSurface(video) &&
-        typeof video.requestPictureInPicture === "function";
+      return video instanceof HTMLVideoElement &&
+        typeof video.requestPictureInPicture === "function" &&
+        Boolean(visibleVideoRect(video));
     } catch (error) {
-      noteExtensionContextError(error);
+      reportControllerError("Wayleaf video mini-player eligibility check failed", error);
       return false;
     }
   }
@@ -354,29 +243,15 @@
       video.disablePictureInPicture = false;
       video.removeAttribute?.("disablepictureinpicture");
       return !video.disablePictureInPicture;
-    } catch {
+    } catch (error) {
+      reportControllerError("Wayleaf video mini-player could not enable Picture-in-Picture", error);
       return false;
     }
   }
 
-  function pickPlayingVideo() {
+  function pickLargestSelectableVideo() {
     return queryVideos()
-      .filter((video) => (
-        isPlaying(video) &&
-        supportsPictureInPicture(video)
-      ))
-      .sort((left, right) => videoArea(right) - videoArea(left))[0] || null;
-  }
-
-  function pickPictureInPictureCandidateVideo() {
-    return queryVideos()
-      .filter(isPictureInPictureCandidate)
-      .sort((left, right) => videoArea(right) - videoArea(left))[0] || null;
-  }
-
-  function pickLargestExtractableVideo() {
-    return queryVideos()
-      .filter((video) => supportsPictureInPicture(video) && visibleVideoRect(video))
+      .filter(supportsPictureInPicture)
       .sort((left, right) => videoArea(right) - videoArea(left))[0] || null;
   }
 
@@ -384,7 +259,7 @@
     return x >= rect.left && x <= rect.left + rect.width && y >= rect.top && y <= rect.top + rect.height;
   }
 
-  function pickExtractableVideoAtPoint(x, y) {
+  function pickSelectableVideoAtPoint(x, y) {
     return queryVideos()
       .filter((video) => {
         const rect = visibleVideoRect(video);
@@ -393,9 +268,20 @@
       .sort((left, right) => videoArea(right) - videoArea(left))[0] || null;
   }
 
-  function ensureExtractOverlay() {
-    if (extractOverlay?.isConnected) {
-      return extractOverlay;
+  function selectionPromptText() {
+    const language = languagePreference === "system"
+      ? (chrome.i18n?.getUILanguage?.() || navigator.language || "en")
+      : languagePreference;
+    const normalized = String(language).replace("_", "-");
+    const locale = /^zh(?:-|$)/i.test(normalized)
+      ? (/(?:tw|hk|mo|hant)/i.test(normalized) ? "zh-TW" : "zh-CN")
+      : normalized.split("-")[0].toLowerCase();
+    return SELECT_PROMPT_BY_LOCALE[locale] || SELECT_PROMPT_BY_LOCALE.en;
+  }
+
+  function ensureSelectionOverlay() {
+    if (selectionOverlay?.isConnected) {
+      return selectionOverlay;
     }
     const overlay = document.createElement("div");
     overlay.setAttribute("aria-hidden", "true");
@@ -404,30 +290,35 @@
     overlay.style.zIndex = "2147483647";
     overlay.style.boxSizing = "border-box";
     overlay.style.display = "none";
-    overlay.style.border = `3px dashed ${EXTRACT_HIGHLIGHT_COLOR}`;
+    overlay.style.border = `3px dashed ${SELECT_HIGHLIGHT_COLOR}`;
     overlay.style.borderRadius = "8px";
     overlay.style.background = "rgb(0 184 217 / 10%)";
     overlay.style.pointerEvents = "none";
     overlay.style.userSelect = "none";
     (document.body || document.documentElement)?.append(overlay);
-    extractOverlay = overlay;
+    selectionOverlay = overlay;
     return overlay;
   }
 
-  function ensureExtractPrompt() {
-    if (extractPrompt?.isConnected) {
-      return extractPrompt;
+  function ensureSelectionPrompt() {
+    if (selectionPrompt?.isConnected) {
+      return selectionPrompt;
     }
     const prompt = document.createElement("div");
-    prompt.textContent = extractPromptText();
+    prompt.textContent = selectionPromptText();
     prompt.style.setProperty("all", "initial");
     prompt.style.position = "fixed";
-    prompt.style.left = "50%";
+    prompt.style.left = "16px";
+    prompt.style.right = "16px";
     prompt.style.bottom = "28px";
-    prompt.style.transform = "translateX(-50%)";
     prompt.style.zIndex = "2147483647";
     prompt.style.boxSizing = "border-box";
+    prompt.style.display = "flex";
+    prompt.style.alignItems = "center";
+    prompt.style.justifyContent = "center";
+    prompt.style.width = "fit-content";
     prompt.style.maxWidth = "calc(100vw - 32px)";
+    prompt.style.margin = "0 auto";
     prompt.style.padding = "10px 18px";
     prompt.style.borderRadius = "999px";
     prompt.style.background = "rgb(0 0 0 / 80%)";
@@ -442,30 +333,14 @@
     prompt.style.pointerEvents = "none";
     prompt.style.userSelect = "none";
     (document.body || document.documentElement)?.append(prompt);
-    extractPrompt = prompt;
+    selectionPrompt = prompt;
     return prompt;
   }
 
-  function extractPromptText() {
-    const language = languagePreference === "system"
-      ? (guardExtensionContext(() => chrome.i18n?.getUILanguage?.(), "") || navigator.language || "en")
-      : languagePreference;
-    const normalized = String(language).replace("_", "-");
-    const locale = /^zh(?:-|$)/i.test(normalized)
-      ? (/(?:tw|hk|mo|hant)/i.test(normalized) ? "zh-TW" : "zh-CN")
-      : normalized.split("-")[0].toLowerCase();
-    return EXTRACT_PROMPT_BY_LOCALE[locale] || EXTRACT_PROMPT_BY_LOCALE.en;
-  }
-
-  function removeExtractPrompt() {
-    extractPrompt?.remove();
-    extractPrompt = null;
-  }
-
-  function updateExtractOverlay(video) {
-    const overlay = ensureExtractOverlay();
+  function updateSelectionOverlay(video) {
+    const overlay = ensureSelectionOverlay();
     const rect = video ? visibleVideoRect(video) : null;
-    extractTargetVideo = rect ? video : null;
+    selectionTargetVideo = rect ? video : null;
     if (!rect) {
       overlay.style.display = "none";
       return;
@@ -477,285 +352,84 @@
     overlay.style.display = "grid";
   }
 
-  function stopVideoExtractor(type = "cancelled") {
-    extractorActive = false;
-    extractTargetVideo = null;
-    extractOverlay?.remove();
-    extractOverlay = null;
-    removeExtractPrompt();
-    safeSendMessage({ action: EXTRACT_STATUS_ACTION, type });
+  function stopVideoSelection(type = "cancelled") {
+    clearSelectionUi();
+    safeSendStatus(type);
   }
 
-  function startVideoExtractor() {
-    if (extractorActive) {
-      stopVideoExtractor("cancelled");
+  function toggleVideoSelection() {
+    if (selectionActive) {
+      stopVideoSelection("cancelled");
       return false;
     }
-    const video = pickLargestExtractableVideo();
+    const video = pickLargestSelectableVideo();
     if (!video) {
       return false;
     }
-    extractorActive = true;
-    ensureExtractPrompt();
-    updateExtractOverlay(video);
-    safeSendMessage({ action: EXTRACT_STATUS_ACTION, type: "started" });
+    selectionActive = true;
+    ensureSelectionPrompt();
+    updateSelectionOverlay(video);
+    safeSendStatus("started");
     return true;
   }
 
-  async function enterExtractedPictureInPicture(video) {
-    if (extractEntering || !video || !supportsPictureInPicture(video) || document.pictureInPictureEnabled !== true) {
+  async function enterSelectedPictureInPicture(video) {
+    if (selectionEntering || !video || !supportsPictureInPicture(video) || document.pictureInPictureEnabled !== true) {
       return false;
     }
     if (!allowPictureInPicture(video)) {
       return false;
     }
-    extractEntering = true;
+    selectionEntering = true;
     try {
       await video.requestPictureInPicture();
       return true;
-    } catch {
+    } catch (error) {
+      reportControllerError("Wayleaf video mini-player Picture-in-Picture request failed", error, {
+        sourceUrl: String(window.location?.href || ""),
+        videoArea: videoArea(video)
+      });
       return false;
     } finally {
-      extractEntering = false;
+      selectionEntering = false;
     }
   }
 
-  async function requestPictureInPictureForVideo(video) {
-    if (!video || !supportsPictureInPicture(video) || document.pictureInPictureEnabled !== true) {
-      return false;
-    }
-    if (document.pictureInPictureElement) {
-      return document.pictureInPictureElement === video;
-    }
-    if (!allowPictureInPicture(video)) {
-      return false;
-    }
-    entering = true;
-    try {
-      await video.requestPictureInPicture();
-      managedPipNeedsCleanup = true;
-      managedPipVideo = video;
-      return true;
-    } catch {
-      return false;
-    } finally {
-      entering = false;
+  function handleSelectionPointerMove(event) {
+    if (selectionActive) {
+      updateSelectionOverlay(pickSelectableVideoAtPoint(event.clientX, event.clientY));
     }
   }
 
-  function handleExtractorPointerMove(event) {
-    if (!extractorActive) {
+  function handleSelectionClick(event) {
+    if (!selectionActive) {
       return;
     }
-    updateExtractOverlay(pickExtractableVideoAtPoint(event.clientX, event.clientY));
-  }
-
-  function handleExtractorClick(event) {
-    if (!extractorActive) {
-      return;
-    }
-    const video = pickExtractableVideoAtPoint(event.clientX, event.clientY) || extractTargetVideo;
+    const video = pickSelectableVideoAtPoint(event.clientX, event.clientY) || selectionTargetVideo;
     event.preventDefault();
     event.stopImmediatePropagation();
     if (!video) {
-      stopVideoExtractor("cancelled");
+      stopVideoSelection("cancelled");
       return;
     }
-    extractorActive = false;
-    removeExtractPrompt();
-    extractOverlay?.remove();
-    extractOverlay = null;
-    enterExtractedPictureInPicture(video).then((entered) => {
-      stopVideoExtractor(entered ? "entered" : "failed");
+    clearSelectionUi();
+    enterSelectedPictureInPicture(video).then((entered) => {
+      safeSendStatus(entered ? "entered" : "failed");
     });
   }
 
-  function handleExtractorKeydown(event) {
-    if (extractorActive && event.key === "Escape") {
+  function handleSelectionKeydown(event) {
+    if (selectionActive && event.key === "Escape") {
       event.preventDefault();
       event.stopImmediatePropagation();
-      stopVideoExtractor("cancelled");
+      stopVideoSelection("cancelled");
     }
   }
 
-  function handleExtractorViewportChange() {
-    if (extractorActive) {
-      updateExtractOverlay(extractTargetVideo);
+  function handleSelectionViewportChange() {
+    if (selectionActive) {
+      updateSelectionOverlay(selectionTargetVideo);
     }
-  }
-
-  function videoPipSessionState(video) {
-    return {
-      sourceUrl: String(window.location?.href || ""),
-      playing: isPlaying(video),
-      paused: video?.paused === true,
-      currentTime: Math.max(0, Number(video?.currentTime || 0)),
-      volume: Math.min(1, Math.max(0, Number(video?.volume ?? 1))),
-      muted: video?.muted === true
-    };
-  }
-
-  function notifyCoordinator(type, video = null) {
-    guardExtensionContext(() => {
-      if (type === "enter") {
-        if (!coordinatorEnabled() || document.visibilityState !== "hidden") {
-          return;
-        }
-        video = video || pickPlayingVideo();
-        if (!video || document.pictureInPictureEnabled !== true) {
-          return;
-        }
-        safeSendMessage({ action: REQUEST_ACTION, type, score: videoArea(video), ...videoPipSessionState(video) });
-        return;
-      }
-      safeSendMessage({ action: REQUEST_ACTION, type, ...(video ? videoPipSessionState(video) : { sourceUrl: String(window.location?.href || "") }) });
-    });
-  }
-
-  async function enterPictureInPicture() {
-    return guardExtensionContextAsync(async () => {
-      if (!enabled() || document.visibilityState !== "hidden" || entering || exiting || document.pictureInPictureElement) {
-        return false;
-      }
-      const video = pickPlayingVideo() || pickPictureInPictureCandidateVideo();
-      return requestPictureInPictureForVideo(video);
-    }, false);
-  }
-
-  async function exitManagedPictureInPicture() {
-    return guardExtensionContextAsync(async () => {
-      if (!managedPipNeedsCleanup || exiting || entering) {
-        return false;
-      }
-      if (!document.pictureInPictureElement) {
-        managedPipNeedsCleanup = false;
-        managedPipVideo = null;
-        return false;
-      }
-      if (document.pictureInPictureElement !== managedPipVideo) {
-        managedPipNeedsCleanup = false;
-        managedPipVideo = null;
-        return false;
-      }
-      exiting = true;
-      try {
-        await document.exitPictureInPicture();
-        managedPipNeedsCleanup = false;
-        managedPipVideo = null;
-        return true;
-      } catch {
-        return false;
-      } finally {
-        exiting = false;
-      }
-    }, false);
-  }
-
-  async function handleAutomaticPictureInPicture() {
-    if (!enabled()) {
-      return false;
-    }
-    const video = pickPlayingVideo() || pickPictureInPictureCandidateVideo();
-    const entered = await requestPictureInPictureForVideo(video);
-    if (entered) {
-      safeSendMessage({ action: REQUEST_ACTION, type: "entered", score: videoArea(video), ...videoPipSessionState(video) });
-    }
-    return entered;
-  }
-
-  function updateAutomaticPictureInPictureBinding() {
-    if (!navigator.mediaSession?.setActionHandler) {
-      return;
-    }
-    try {
-      navigator.mediaSession.setActionHandler("enterpictureinpicture", enabled() ? handleAutomaticPictureInPicture : null);
-    } catch {
-      // Older Chromium builds may not expose this media session action.
-    }
-  }
-
-  function updateGlobalEnabled(value) {
-    globalEnabled = value === true;
-    updateAutomaticPictureInPictureBinding();
-    if (!enabled()) {
-      notifyCoordinator("exit");
-    }
-  }
-
-  function handleVisibilityChange() {
-    guardExtensionContext(() => {
-      if (document.visibilityState === "hidden") {
-        notifyCoordinator("enter");
-      }
-    });
-  }
-
-  function handleVideoPlayback(event) {
-    guardExtensionContext(() => {
-      if (!(event.target instanceof HTMLVideoElement) || !isPlaying(event.target)) {
-        return;
-      }
-      updateAutomaticPictureInPictureBinding();
-      notifyCoordinator("enter");
-    });
-  }
-
-  function hasRequiredChromeApis() {
-    return guardExtensionContext(() => Boolean(
-      chrome.storage?.local?.get &&
-      chrome.storage?.onChanged?.addListener &&
-      chrome.runtime?.onMessage?.addListener
-    ), false);
-  }
-
-  if (!hasExtensionContext() || !hasRequiredChromeApis()) {
-    controller.dispose();
-    return;
-  }
-
-  try {
-    chrome.storage.local.get({
-      [GLOBAL_ENABLED_STORAGE_KEY]: false,
-      [LANGUAGE_STORAGE_KEY]: "system"
-    }, (result) => {
-      updateGlobalEnabled(result?.[GLOBAL_ENABLED_STORAGE_KEY]);
-      languagePreference = result?.[LANGUAGE_STORAGE_KEY] || "system";
-    });
-    storageChangeListener = (changes, areaName) => {
-      if (areaName === "local" && changes[GLOBAL_ENABLED_STORAGE_KEY]) {
-        updateGlobalEnabled(changes[GLOBAL_ENABLED_STORAGE_KEY].newValue);
-      }
-      if (areaName === "local" && changes[LANGUAGE_STORAGE_KEY]) {
-        languagePreference = changes[LANGUAGE_STORAGE_KEY].newValue || "system";
-      }
-    };
-    chrome.storage.onChanged.addListener(storageChangeListener);
-    runtimeMessageListener = (message, _sender, sendResponse) => {
-      if (message?.action === EXTRACT_START_ACTION) {
-        sendResponse({ ok: true, extractorActive: startVideoExtractor() });
-        return;
-      }
-      if (message?.action !== COMMAND_ACTION) {
-        return;
-      }
-      (async () => {
-        if (message.command === "enter") {
-          sendResponse({ entered: await enterPictureInPicture() });
-          return;
-        }
-        if (message.command === "exit") {
-          sendResponse({ exited: await exitManagedPictureInPicture() });
-          return;
-        }
-        sendResponse({ ok: false });
-      })();
-      return true;
-    };
-    chrome.runtime.onMessage.addListener(runtimeMessageListener);
-  } catch {
-    extensionContextInvalid = true;
-    controller.dispose();
-    return;
   }
 
   function addDocumentListener(type, listener, options) {
@@ -763,41 +437,18 @@
     documentListeners.push([type, listener, options]);
   }
 
-  function handleLeavePictureInPicture(event) {
-    guardExtensionContext(() => {
-      managedPipNeedsCleanup = false;
-      managedPipVideo = null;
-      notifyCoordinator("left", event.target instanceof HTMLVideoElement ? event.target : null);
-    });
+  if (!hasExtensionContext() || !chrome.runtime?.sendMessage || !chrome.storage?.local?.get) {
+    controller.dispose();
+    return;
   }
 
-  function handlePageHide() {
-    guardExtensionContext(() => {
-      managedPipNeedsCleanup = false;
-      managedPipVideo = null;
-      notifyCoordinator("left");
-    });
-  }
-
-  addDocumentListener("visibilitychange", handleVisibilityChange, true);
-  addDocumentListener("pagehide", handlePageHide, true);
-  addDocumentListener("pointermove", handleExtractorPointerMove, true);
-  addDocumentListener("click", handleExtractorClick, true);
-  addDocumentListener("keydown", handleExtractorKeydown, true);
-  addDocumentListener("scroll", handleExtractorViewportChange, true);
-  addDocumentListener("play", handleVideoPlayback, true);
-  addDocumentListener("playing", handleVideoPlayback, true);
-  addDocumentListener("loadedmetadata", handleVideoPlayback, true);
-  if (typeof MutationObserver === "function") {
-    try {
-      mutationObserver = new MutationObserver(handleDomMutation);
-      mutationObserver.observe(document.documentElement || document, {
-        childList: true,
-        subtree: true
-      });
-    } catch {
-      // DOM observation is only a retry path; media events still drive normal PiP.
+  addDocumentListener("pointermove", handleSelectionPointerMove, true);
+  addDocumentListener("click", handleSelectionClick, true);
+  addDocumentListener("keydown", handleSelectionKeydown, true);
+  addDocumentListener("scroll", handleSelectionViewportChange, true);
+  addDocumentListener("pagehide", () => {
+    if (selectionActive) {
+      stopVideoSelection("cancelled");
     }
-  }
-  addDocumentListener("leavepictureinpicture", handleLeavePictureInPicture, true);
+  }, true);
 })();
