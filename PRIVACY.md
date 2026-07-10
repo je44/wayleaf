@@ -10,6 +10,7 @@ Wayleaf uses browser extension APIs to show and manage the new tab workspace:
 
 - Browsing history: read locally to show most visited site groups, local search suggestions, and user-triggered history deletion.
 - Bookmarks: read locally to show a selected bookmark folder and support user-triggered bookmark deletion.
+- Search: sends regular keyword searches through Chrome's current default search provider.
 - Tabs: used to open search and AI pages, support multi-search, and coordinate video Picture-in-Picture behavior.
 - Storage: used to save theme, language, favorite sites, custom shortcuts, bookmark folder choice, search settings, sync metadata, icon cache, and short-lived AI prompt handoff data.
 - Host access for `http://*/*` and `https://*/*`: used to discover site icons and manifests for user-visible URLs, support AI page handoff on supported providers, and support video Picture-in-Picture on pages with standard HTML5 video.
