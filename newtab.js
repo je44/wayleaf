@@ -935,7 +935,7 @@ const MESSAGES = {
     onboardingDone: "完成",
     closeOnboarding: "关闭指引",
     portalNameRequired: "请填写入口名称。",
-    portalUrlRequired: "请输入 http 或 https 开头的网址。",
+    portalUrlRequired: "请输入有效的网址或域名。",
     customPortalLimit: "自定义入口最多 {count} 个。",
     savePortalFailed: "保存入口失败，请减少数量或缩短内容后重试。",
     loadCustomPortalsFailed: "读取自定义入口失败，请刷新后重试。",
@@ -1154,7 +1154,7 @@ const MESSAGES = {
     onboardingDone: "完成",
     closeOnboarding: "關閉指引",
     portalNameRequired: "請填寫入口名稱。",
-    portalUrlRequired: "請輸入 http 或 https 開頭的網址。",
+    portalUrlRequired: "請輸入有效的網址或域名。",
     customPortalLimit: "自訂入口最多 {count} 個。",
     savePortalFailed: "儲存入口失敗，請減少數量或縮短內容後重試。",
     loadCustomPortalsFailed: "讀取自訂入口失敗，請刷新後重試。",
@@ -1357,7 +1357,7 @@ const MESSAGES = {
     onboardingDone: "Finish",
     closeOnboarding: "Close guide",
     portalNameRequired: "Enter a portal name.",
-    portalUrlRequired: "Enter an http or https URL.",
+    portalUrlRequired: "Enter a valid website URL or domain.",
     customPortalLimit: "You can add up to {count} custom portals.",
     savePortalFailed: "Could not save this portal. Try fewer or shorter entries.",
     loadCustomPortalsFailed: "Could not load custom portals. Refresh and try again.",
@@ -2001,7 +2001,7 @@ const LOCALE_COMPLETIONS = {
     onboardingDone: "完了",
     closeOnboarding: "ガイドを閉じる",
     portalNameRequired: "ポータル名を入力してください。",
-    portalUrlRequired: "http または https の URL を入力してください。",
+    portalUrlRequired: "有効なウェブサイトの URL またはドメインを入力してください。",
     customPortalLimit: "カスタムポータルは最大 {count} 件まで追加できます。",
     savePortalFailed: "このポータルを保存できませんでした。件数を減らすか短くしてください。",
     loadCustomPortalsFailed: "カスタムポータルを読み込めませんでした。更新して再試行してください。",
@@ -2110,7 +2110,7 @@ const LOCALE_COMPLETIONS = {
     onboardingDone: "완료",
     closeOnboarding: "가이드 닫기",
     portalNameRequired: "포털 이름을 입력하세요.",
-    portalUrlRequired: "http 또는 https URL을 입력하세요.",
+    portalUrlRequired: "올바른 웹사이트 URL 또는 도메인을 입력하세요.",
     customPortalLimit: "사용자 지정 포털은 최대 {count}개까지 추가할 수 있습니다.",
     savePortalFailed: "이 포털을 저장할 수 없습니다. 항목을 줄이거나 짧게 해보세요.",
     loadCustomPortalsFailed: "사용자 지정 포털을 불러올 수 없습니다. 새로고침 후 다시 시도하세요.",
@@ -2219,7 +2219,7 @@ const LOCALE_COMPLETIONS = {
     onboardingDone: "Finalizar",
     closeOnboarding: "Cerrar guía",
     portalNameRequired: "Introduce un nombre de portal.",
-    portalUrlRequired: "Introduce una URL http o https.",
+    portalUrlRequired: "Introduce una URL o un dominio de sitio web válido.",
     customPortalLimit: "Puedes agregar hasta {count} portales personalizados.",
     savePortalFailed: "No se pudo guardar este portal. Prueba con menos o más corto.",
     loadCustomPortalsFailed: "No se pudieron cargar portales personalizados. Actualiza e inténtalo de nuevo.",
@@ -2328,7 +2328,7 @@ const LOCALE_COMPLETIONS = {
     onboardingDone: "Terminer",
     closeOnboarding: "Fermer le guide",
     portalNameRequired: "Saisissez un nom de portail.",
-    portalUrlRequired: "Saisissez une URL http ou https.",
+    portalUrlRequired: "Saisissez une URL ou un domaine de site web valide.",
     customPortalLimit: "Vous pouvez ajouter jusqu'à {count} portails personnalisés.",
     savePortalFailed: "Impossible d'enregistrer ce portail. Essayez avec moins ou plus court.",
     loadCustomPortalsFailed: "Impossible de charger les portails personnalisés. Actualisez et réessayez.",
@@ -2437,7 +2437,7 @@ const LOCALE_COMPLETIONS = {
     onboardingDone: "Fertig",
     closeOnboarding: "Anleitung schließen",
     portalNameRequired: "Gib einen Portalnamen ein.",
-    portalUrlRequired: "Gib eine http- oder https-URL ein.",
+    portalUrlRequired: "Gib eine gültige Website-URL oder Domain ein.",
     customPortalLimit: "Du kannst bis zu {count} benutzerdefinierte Portale hinzufügen.",
     savePortalFailed: "Dieses Portal konnte nicht gespeichert werden. Weniger oder kürzere Einträge versuchen.",
     loadCustomPortalsFailed: "Benutzerdefinierte Portale konnten nicht geladen werden. Aktualisieren und erneut versuchen.",
@@ -2539,6 +2539,7 @@ const favoriteStrip = document.querySelector("#favoriteStrip");
 const favoriteSiteTemplate = document.querySelector("#favoriteSiteTemplate");
 const favoriteAddButton = document.querySelector("#favoriteAddButton");
 const favoriteForm = document.querySelector("#favoriteForm");
+const favoriteReturnButton = document.querySelector("#favoriteReturnButton");
 const favoriteUrlInput = document.querySelector("#favoriteUrlInput");
 const favoriteFormError = document.querySelector("#favoriteFormError");
 const onboardingGuide = document.querySelector("#onboardingGuide");
@@ -2602,6 +2603,7 @@ let todayHistoryPageIndex = 0;
 let todayHistoryHydrated = false;
 let favoriteSitesHydrated = false;
 let favoriteFormCloseTimer = 0;
+let favoriteFormErrorTimer = 0;
 let onboardingStepIndex = 0;
 let onboardingPreviewActive = false;
 let videoPipEnabled = true;
@@ -3084,10 +3086,13 @@ function setStaticButtonIcons() {
 
 function renderFavoriteFormControls() {
   const submitButton = favoriteForm.querySelector('button[type="submit"]');
-  favoriteForm.querySelector(".favorite-form-icon").innerHTML = tdesignIcon("bookmark-add");
+  favoriteForm.querySelector(".favorite-confirm-icon-outline").innerHTML = tdesignIcon("bookmark-add");
+  favoriteForm.querySelector(".favorite-confirm-icon-filled").innerHTML = tdesignIcon("bookmark-add-filled");
   setButtonLabel(submitButton, t("add"));
   submitButton.title = t("add");
-  submitButton.innerHTML = plusIcon();
+  setButtonLabel(favoriteReturnButton, t("back"));
+  favoriteReturnButton.title = t("back");
+  favoriteReturnButton.innerHTML = tdesignIcon("rollback");
 }
 
 function applySettingsLocale() {
@@ -3407,6 +3412,8 @@ async function init() {
   aiAttachmentInput?.addEventListener("change", handleAiAttachmentInputChange);
   aiAttachmentPill?.addEventListener("click", handleAiAttachmentPillClick);
   favoriteAddButton.addEventListener("click", toggleFavoriteForm);
+  favoriteReturnButton.addEventListener("click", hideFavoriteForm);
+  favoriteUrlInput.addEventListener("input", clearFavoriteFormErrorFeedback);
   favoriteForm.addEventListener("submit", handleFavoriteSubmit);
   onboardingCloseButton?.addEventListener("click", dismissOnboardingGuide);
   onboardingDoneButton?.addEventListener("click", advanceOnboardingGuide);
@@ -7423,6 +7430,8 @@ function showFavoriteForm() {
   setQuickSearchActive(false);
   favoriteForm.hidden = false;
   favoriteForm.reset();
+  clearFavoriteFormErrorFeedback();
+  favoriteForm.querySelector('button[type="submit"]')?.removeAttribute("data-confirming");
   favoriteAddButton.setAttribute("aria-expanded", "true");
   favoriteFormError.textContent = "";
   syncFavoriteFormSearchState();
@@ -7434,7 +7443,9 @@ function hideFavoriteForm() {
   if (!wasActive) {
     return;
   }
+  clearFavoriteFormErrorFeedback();
   searchWorkbench?.toggleAttribute("data-favorite-form-closing", true);
+  favoriteForm.querySelector('button[type="submit"]')?.removeAttribute("data-confirming");
   favoriteAddButton.setAttribute("aria-expanded", "false");
   syncFavoriteFormSearchState();
   restoreFavoriteFormSearchScale();
@@ -7526,6 +7537,7 @@ async function handleFavoriteSubmit(event) {
   if (!url) {
     favoriteFormError.textContent = t("portalUrlRequired");
     favoriteUrlInput.focus();
+    playFavoriteFormErrorFeedback();
     return;
   }
   const favorites = await loadFavoriteSites();
@@ -7533,6 +7545,7 @@ async function handleFavoriteSubmit(event) {
   if (!favoriteKey) {
     favoriteFormError.textContent = t("portalUrlRequired");
     favoriteUrlInput.focus();
+    playFavoriteFormErrorFeedback();
     return;
   }
   if (favoriteSiteKeySet(favorites).has(favoriteKey)) {
@@ -7544,6 +7557,7 @@ async function handleFavoriteSubmit(event) {
     favoriteFormError.textContent = t("favoriteSiteLimit", { count: MAX_FAVORITE_SITES });
     return;
   }
+  const confirmFeedback = playFavoriteConfirmFeedback();
   favorites.push({
     id: String(Date.now()),
     title: favoriteSiteTitleFromUrl(url),
@@ -7551,8 +7565,45 @@ async function handleFavoriteSubmit(event) {
     icon: await WayleafIcon.discoverFavoriteSiteIcon(favoriteKey)
   });
   await saveFavoriteSites(favorites);
+  await confirmFeedback;
   hideFavoriteForm();
   await renderFavoriteDependentSurfaces();
+}
+
+function playFavoriteFormErrorFeedback() {
+  if (!searchWorkbench || !isFavoriteFormActive()) {
+    return;
+  }
+  window.clearTimeout(favoriteFormErrorTimer);
+  searchWorkbench.removeAttribute("data-favorite-form-error");
+  favoriteUrlInput.setAttribute("aria-invalid", "true");
+  searchWorkbench.getBoundingClientRect();
+  searchWorkbench.toggleAttribute("data-favorite-form-error", true);
+  favoriteFormErrorTimer = window.setTimeout(() => {
+    searchWorkbench.removeAttribute("data-favorite-form-error");
+    favoriteFormErrorTimer = 0;
+  }, prefersReducedMotion() ? 0 : 420);
+}
+
+function clearFavoriteFormErrorFeedback() {
+  window.clearTimeout(favoriteFormErrorTimer);
+  favoriteFormErrorTimer = 0;
+  searchWorkbench?.removeAttribute("data-favorite-form-error");
+  favoriteUrlInput.removeAttribute("aria-invalid");
+  favoriteFormError.textContent = "";
+}
+
+function playFavoriteConfirmFeedback() {
+  const submitButton = favoriteForm.querySelector('button[type="submit"]');
+  if (!submitButton) {
+    return Promise.resolve();
+  }
+  submitButton.removeAttribute("data-confirming");
+  submitButton.getBoundingClientRect();
+  submitButton.toggleAttribute("data-confirming", true);
+  return new Promise((resolve) => {
+    window.setTimeout(resolve, prefersReducedMotion() ? 0 : 240);
+  });
 }
 
 async function loadFavoriteSites() {
@@ -9494,6 +9545,7 @@ const TDESIGN_ICON_MARKUP = Object.freeze({
   app: '<g fill="none"><path d="M3 3h7v7H3zm11 11h7v7h-7zM3 14h7v7H3zm18.5-7.5a4 4 0 1 1-8 0a4 4 0 0 1 8 0"/><path stroke="currentColor" stroke-width="2" d="M3 3h7v7H3zm11 11h7v7h-7zM3 14h7v7H3zm18.5-7.5a4 4 0 1 1-8 0a4 4 0 0 1 8 0Z"/></g>',
   "arrow-left": '<path fill="none" stroke="currentColor" stroke-linecap="square" stroke-width="2" d="M11 6.5L5.5 12l5.5 5.5M6.75 12h13"/>',
   "bookmark-add": '<path fill="none" stroke="currentColor" stroke-linecap="square" stroke-width="2" d="M12 4H5v17l7-5l7 5V11m-3-7h3m0 0h3m-3 0v3m0-3V1"/>',
+  "bookmark-add-filled": '<path fill="currentColor" d="M20 3V0h-2v3h-3v2h3v3h2V5h3V3z"/><path fill="currentColor" d="M13.5 4q0-.513.09-1H4v19.943l8-5.714l8 5.714V9.41q-.487.09-1 .091A5.5 5.5 0 0 1 13.5 4"/>',
   "bookmark-double-filled": '<path fill="currentColor" d="M23.003 18.419L23 0L10.001.002v2H21v14.413z"/><path fill="currentColor" d="M19 4H3v19.943l8-5.714l8 5.714z"/>',
   "ai-search": '<g fill="none" stroke="currentColor" stroke-width="2"><path d="m16.75 2.5l.52 1.23l1.23.52l-1.23.52L16.75 6l-.52-1.23L15 4.25l1.23-.52z"/><path stroke-linecap="square" d="m15.803 15.804l5.303 5.303m-5.303-5.303A7.5 7.5 0 1 1 10 3.017m5.803 12.787A7.47 7.47 0 0 0 17.983 11"/></g>',
   "ai-search-filled": '<path fill="currentColor" d="M10.648 2.072a6.5 6.5 0 0 0 8.348 8.348a8.56 8.56 0 0 1-1.822 5.41l5.346 5.346l-1.414 1.414l-5.346-5.347a8.48 8.48 0 0 1-5.26 1.826c-4.635 0-8.5-3.87-8.5-8.5c0-4.238 3.335-7.993 7.584-8.45a8 8 0 0 1 1.064-.047"/><path fill="currentColor" d="M18.032 3.036L21.07 4.32l-3.037 1.283l-1.282 3.037l-1.283-3.037l-3.036-1.283l3.036-1.283L16.75 0z"/>',
@@ -9518,6 +9570,7 @@ const TDESIGN_ICON_MARKUP = Object.freeze({
   desktop: '<g fill="none"><path d="M2 4h20v13H2z"/><path stroke="currentColor" stroke-linecap="square" stroke-width="2" d="M12 17v4m-4 0h8M2 4h20v13H2z"/></g>',
   "sunny-filled": '<path fill="currentColor" d="M13 1v3h-2V1zm7.485 3.928L18.364 7.05L16.95 5.636l2.121-2.122zM4.93 3.514l2.12 2.122L5.636 7.05L3.515 4.929zM6 12a6 6 0 1 1 12 0a6 6 0 0 1-12 0m-5-1h3v2H1zm19 0h3v2h-3zM7.05 18.363l-2.12 2.123l-1.415-1.416l2.121-2.122zm11.314-1.414l2.121 2.122l-1.414 1.414l-2.121-2.121zM13 20v3h-2v-3z"/>',
   "moon-filled": '<path fill="currentColor" d="M2 12C2 6.477 6.477 2 12 2h1.734l-.868 1.5C12.287 4.5 12 5.689 12 7a7 7 0 0 0 8.348 6.87l1.682-.327l-.543 1.626C20.162 19.137 16.417 22 12 22C6.477 22 2 17.523 2 12"/>',
+  rollback: '<path fill="none" stroke="currentColor" stroke-linecap="square" stroke-width="2" d="M5.75 7H14a6 6 0 0 1 0 12H6.5M8 10.5L4.5 7L8 3.5"/>',
   "page-tab-filled": '<path fill="currentColor" d="m9.48 2.5l.301.375l2.9 3.625H23V21H1V2.5z"/><path fill="currentColor" d="M23 2.5v2H13v-2z"/>',
   refresh: '<path fill="none" stroke="currentColor" stroke-linecap="square" stroke-width="2" d="M21.448 13c-.5 4.777-4.539 8.5-9.448 8.5A9.5 9.5 0 0 1 3.38 16m-.88 4.5v-5h3M2.552 11C3.052 6.223 7.09 2.5 12 2.5A9.5 9.5 0 0 1 20.62 8m.88-4.5v5h-3"/>',
   search: '<g fill="none"><path d="M15.803 15.803A7.5 7.5 0 1 1 5.197 5.197a7.5 7.5 0 0 1 10.606 10.606"/><path stroke="currentColor" stroke-linecap="square" stroke-width="2" d="m15.803 15.804l5.303 5.303m-5.303-5.304A7.5 7.5 0 1 1 5.197 5.197a7.5 7.5 0 0 1 10.606 10.606Z"/></g>',
@@ -9902,6 +9955,48 @@ function isWebUrl(value) {
   return Boolean(url && (url.protocol === "http:" || url.protocol === "https:"));
 }
 
+function portalUrlRawHostname(value) {
+  const authority = String(value || "").match(/^[a-z][a-z\d+.-]*:\/\/([^/?#]*)/i)?.[1] || "";
+  if (!authority || authority.includes("@")) {
+    return "";
+  }
+  if (authority.startsWith("[")) {
+    const closingBracket = authority.indexOf("]");
+    return closingBracket > 0 ? authority.slice(0, closingBracket + 1) : "";
+  }
+  return authority.split(":", 1)[0];
+}
+
+function isValidPortalHostname(value, url) {
+  const rawHostname = portalUrlRawHostname(value);
+  const hostname = String(url?.hostname || "")
+    .replace(/^\[|\]$/g, "")
+    .replace(/\.$/, "")
+    .toLowerCase();
+  if (!rawHostname || !hostname) {
+    return false;
+  }
+  if (rawHostname.startsWith("[") && rawHostname.endsWith("]")) {
+    return hostname.includes(":");
+  }
+  if (/^\d+(?:\.\d+){3}$/.test(rawHostname)) {
+    return rawHostname.split(".").every((part) => /^\d{1,3}$/.test(part) && Number(part) <= 255);
+  }
+  if (/^[\d.]+$/.test(rawHostname)) {
+    return false;
+  }
+
+  const labels = hostname.split(".");
+  if (hostname.length > 253 || labels.length < 2) {
+    return false;
+  }
+  if (!labels.every((label) => label.length <= 63 && /^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/i.test(label))) {
+    return false;
+  }
+  const topLevelDomain = labels.at(-1);
+  return topLevelDomain.length >= 2 && /[a-z]/i.test(topLevelDomain);
+}
+
 function normalizePortalUrl(value) {
   const trimmed = normalizeText(value);
   if (!trimmed || trimmed.length > MAX_PORTAL_URL_LENGTH) {
@@ -9910,7 +10005,7 @@ function normalizePortalUrl(value) {
 
   const withProtocol = /^[a-z][a-z\d+.-]*:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
   const url = safeUrl(withProtocol);
-  if (!url || !isWebUrl(url.href) || url.username || url.password) {
+  if (!url || !isWebUrl(url.href) || url.username || url.password || !isValidPortalHostname(withProtocol, url)) {
     return "";
   }
   return url.href;

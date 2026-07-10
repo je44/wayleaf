@@ -74,13 +74,16 @@
           <input id="aiAttachmentInput" type="file" multiple hidden>
           <div class="search-suggestions" id="searchSuggestions" role="listbox" aria-label="Search suggestions" hidden></div>
           <form class="favorite-form" id="favoriteForm" hidden>
-            <span class="favorite-form-icon" aria-hidden="true"></span>
+            <button class="favorite-form-icon favorite-confirm-button" type="submit">
+              <span class="favorite-confirm-icon favorite-confirm-icon-outline" aria-hidden="true"></span>
+              <span class="favorite-confirm-icon favorite-confirm-icon-filled" aria-hidden="true"></span>
+            </button>
             <label>
               <span>URL</span>
               <input id="favoriteUrlInput" name="url" autocomplete="off" inputmode="url" placeholder="https://www.notion.so">
             </label>
             <div class="form-actions">
-              <button class="text-button primary" type="submit">Add</button>
+              <button class="text-button favorite-return-button" id="favoriteReturnButton" type="button"></button>
             </div>
             <p class="form-error" id="favoriteFormError" role="alert"></p>
           </form>
