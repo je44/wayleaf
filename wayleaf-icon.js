@@ -23,7 +23,7 @@ const SITE_ICON_DISCOVERY_MEMORY_CACHE_LIMIT = 96;
 const SITE_ICON_CACHE_TTL_MS = 30 * 24 * 60 * 60 * 1000;
 const REMOTE_BRAND_ICON_MISSING_TTL_MS = 30 * 24 * 60 * 60 * 1000;
 const REMOTE_BRAND_ICON_INDEX_TTL_MS = 24 * 60 * 60 * 1000;
-const REMOTE_BRAND_ICON_PROVIDER_VERSION = 3;
+const REMOTE_BRAND_ICON_PROVIDER_VERSION = 4;
 const FAVICON_BACKGROUND_SAMPLE_SIZE = 32;
 const FAVICON_BACKGROUND_ALPHA_MIN = 0.35;
 const FAVICON_BACKGROUND_COLOR_DISTANCE = 58;
@@ -264,7 +264,22 @@ const siteIconRawSvgRevalidatedPaths = new Set();
 
 function firstPaintIconCacheKey(site) {
   const url = safeUrl(site?.url);
-  return siteGroupKey(url) || url?.hostname || "";
+  return siteIconRouteKey(url) || url?.hostname || "";
+}
+
+function siteIconRouteKey(url) {
+  const parsedUrl = url instanceof URL ? url : safeUrl(url);
+  const groupedKey = siteGroupKey(parsedUrl);
+  if (!parsedUrl || !groupedKey) {
+    return "";
+  }
+  const host = normalizeHostname(parsedUrl.hostname).replace(/^(www|m|mobile)\./, "");
+  if (host === groupedKey) {
+    return groupedKey;
+  }
+  return registrableDomain(host) === groupedKey && host.endsWith(`.${groupedKey}`)
+    ? host
+    : groupedKey;
 }
 
 function siteIconFileNameForSiteKey(siteKey) {
@@ -288,7 +303,7 @@ function warmFirstPaintLocalIconForSiteKey(siteKey) {
 }
 
 function warmFirstPaintLocalIconForUrl(url) {
-  return warmFirstPaintLocalIconForSiteKey(siteGroupKey(safeUrl(url)));
+  return warmFirstPaintLocalIconForSiteKey(siteIconRouteKey(url));
 }
 
 function cachedFirstPaintIconRender(iconRenders, site) {
@@ -707,7 +722,7 @@ function startSecondaryFaviconRoute(icon, site, requestToken = icon.dataset.icon
   if (!secondaryFaviconRouteCanStart(icon.dataset.iconRouteState)) {
     return;
   }
-  const siteKey = siteGroupKey(safeUrl(site.url));
+  const siteKey = siteIconRouteKey(site.url);
   if (!siteKey) {
     finishSecondaryFaviconMiss(icon, siteKey, requestToken);
     return;
@@ -755,7 +770,7 @@ function paintPendingSiteIcon(icon) {
 
 function applySiteIcon(icon, site, options = {}) {
   storeIconSiteContext(icon, site);
-  const siteKey = siteGroupKey(safeUrl(site.url)) || "";
+  const siteKey = siteIconRouteKey(site.url) || "";
   icon.dataset.siteKey = siteKey;
   delete icon.dataset.iconCacheHydrated;
   const requestToken = beginIconRouteRequest(icon, "primary_pending");
@@ -770,7 +785,7 @@ function applySiteIcon(icon, site, options = {}) {
 
 function applyBookmarkSiteIcon(icon, site) {
   storeIconSiteContext(icon, site);
-  const siteKey = siteGroupKey(safeUrl(site.url)) || "";
+  const siteKey = siteIconRouteKey(site.url) || "";
   icon.dataset.siteKey = siteKey;
   delete icon.dataset.iconCacheHydrated;
   const requestToken = beginIconRouteRequest(icon, "primary_pending");
@@ -831,7 +846,7 @@ async function resolveBookmarkPrimarySiteIconRoute(icon, site, siteKey, requestT
 
 async function resolvePrimarySiteIconRoute(icon, site, options, requestToken) {
   const parsedUrl = safeUrl(site.url);
-  const siteKey = siteGroupKey(parsedUrl) || "";
+  const siteKey = siteIconRouteKey(parsedUrl) || "";
   if (!iconRouteRequestStillCurrent(icon, siteKey, requestToken)) {
     return;
   }
@@ -922,7 +937,7 @@ function primarySiteIconRenderDescriptor(site, iconSource) {
   const localIconSource = localIcon || (source.startsWith(`${SITE_ICON_DIRECTORY}/`) ? source : "");
   const siteIconIsRemoteBrand = Boolean(remoteBrandSvgDescriptorFromSource(source));
   const tileIconSource = localIconSource || (siteIconIsRemoteBrand ? source : "");
-  const siteKey = siteGroupKey(safeUrl(site.url)) || "";
+  const siteKey = siteIconRouteKey(site.url) || "";
   const pendingLocalSvgAnalysis = Boolean(localIconSource
     && siteIconSourceLooksLikeSvg(localIconSource)
     && !syncLocalIconTile(site, localIconSource)
@@ -962,7 +977,7 @@ function applyExplicitSiteIcon(icon, site, iconSource) {
 
 function refreshRemoteBrandIcon(icon, site) {
   const parsedUrl = safeUrl(site.url);
-  const siteKey = siteGroupKey(parsedUrl);
+  const siteKey = siteIconRouteKey(parsedUrl);
   const localIcon = localIconForUrl(site.url);
   if (!siteIconIndexLoaded || !parsedUrl || !siteKey || (localIcon && !localIconNeedsRemoteBrandColor(siteKey, localIcon))) {
     return;
@@ -974,7 +989,7 @@ function refreshRemoteBrandIcon(icon, site) {
       !iconDataUrl
       || !icon.isConnected
       || icon.dataset.remoteBrandIconRequest !== requestToken
-      || siteGroupKey(safeUrl(icon.dataset.siteUrl)) !== siteKey
+      || siteIconRouteKey(icon.dataset.siteUrl) !== siteKey
     ) {
       return;
     }
@@ -1038,14 +1053,14 @@ function applyRemoteBrandIcon(icon, site, iconDataUrl) {
 
 function localIconForUrl(url) {
   const parsedUrl = safeUrl(url);
-  const siteKey = siteGroupKey(parsedUrl);
+  const siteKey = siteIconRouteKey(parsedUrl);
   const iconPath = siteIconPathForSiteKey(siteKey);
   return siteIconSourceLooksLikeSvg(iconPath) ? iconPath : "";
 }
 
 function localFaviconForUrl(url) {
   const parsedUrl = safeUrl(url);
-  const siteKey = siteGroupKey(parsedUrl);
+  const siteKey = siteIconRouteKey(parsedUrl);
   const iconPath = siteIconPathForSiteKey(siteKey);
   return iconPath && !siteIconSourceLooksLikeSvg(iconPath) ? iconPath : "";
 }
@@ -1141,7 +1156,7 @@ function refreshRenderedSiteIcons() {
         }
         return;
       }
-      const siteKey = icon.dataset.siteKey || siteGroupKey(safeUrl(site.url));
+      const siteKey = icon.dataset.siteKey || siteIconRouteKey(site.url);
       icon.dataset.iconSource = localIcon;
       icon.dataset.iconCandidate = localIcon;
       // Fast path: recompute the full render (tile + glyph) synchronously from cached raw
@@ -1177,7 +1192,7 @@ function refreshRenderedSiteIcons() {
         if (
           !icon.isConnected
           || icon.dataset.iconSource !== localIcon
-          || siteGroupKey(safeUrl(icon.dataset.siteUrl)) !== siteKey
+          || siteIconRouteKey(icon.dataset.siteUrl) !== siteKey
         ) {
           return;
         }
@@ -1206,8 +1221,9 @@ function refreshRenderedSiteIcons() {
 
 async function discoverFavoriteSiteIcon(url) {
   const parsedUrl = safeUrl(url);
+  const siteKey = siteIconRouteKey(parsedUrl);
   const localIcon = localIconForUrl(url);
-  if (!siteIconIndexLoaded || !siteGroupKey(parsedUrl) || (localIcon && !localIconNeedsRemoteBrandColor(siteGroupKey(parsedUrl), localIcon))) {
+  if (!siteIconIndexLoaded || !siteKey || (localIcon && !localIconNeedsRemoteBrandColor(siteKey, localIcon))) {
     return "";
   }
   return discoverSiteIconDataUrl(url);
@@ -1319,7 +1335,7 @@ async function discoverSiteIconDataUrl(url, options = {}) {
   if (!parsedUrl) {
     return "";
   }
-  const siteKey = siteGroupKey(parsedUrl);
+  const siteKey = siteIconRouteKey(parsedUrl);
   if (siteKey && !options.skipStoredCache) {
     const cachedIcon = await loadCachedSiteIcon(siteKey);
     if (cachedIcon) {
@@ -1378,7 +1394,7 @@ async function fetchBestSiteIconDataUrl(parsedUrl) {
 
 async function discoverRemoteBrandIconDataUrl(url, options = {}) {
   const parsedUrl = safeUrl(url);
-  const siteKey = siteGroupKey(parsedUrl);
+  const siteKey = siteIconRouteKey(parsedUrl);
   const localIcon = localIconForUrl(parsedUrl.href);
   if (!siteIconIndexLoaded || !siteKey || (localIcon && !localIconNeedsRemoteBrandColor(siteKey, localIcon))) {
     return "";
@@ -1447,7 +1463,7 @@ function remoteBrandSvgCacheStrategy(icon) {
 
 async function fetchRemoteBrandIconDataUrl(parsedUrl) {
   const candidates = remoteBrandIconSlugCandidates(parsedUrl);
-  const siteKey = siteGroupKey(parsedUrl);
+  const siteKey = siteIconRouteKey(parsedUrl);
   let transientFailure = false;
   for (const candidate of candidates) {
     for (const provider of REMOTE_BRAND_ICON_PROVIDERS) {
@@ -2607,7 +2623,8 @@ function decodeSvgDataUrl(value) {
 }
 
 function remoteBrandIconSlugCandidates(parsedUrl) {
-  const siteKey = siteGroupKey(parsedUrl);
+  const siteKey = siteIconRouteKey(parsedUrl);
+  const groupedKey = siteGroupKey(parsedUrl);
   const candidates = [];
   const addCandidate = (value, score, source) => {
     const slug = remoteBrandIconSlug(value);
@@ -2619,6 +2636,12 @@ function remoteBrandIconSlugCandidates(parsedUrl) {
   (REMOTE_BRAND_ICON_SLUGS_BY_SITE_KEY[siteKey] || []).forEach((slug, index) => {
     addCandidate(slug, index === 0 ? 100 : 88, "alias");
   });
+  if (groupedKey && siteKey !== groupedKey && siteKey.endsWith(`.${groupedKey}`)) {
+    const serviceLabels = siteKey.slice(0, -groupedKey.length - 1).split(".").filter(Boolean);
+    const brandLabels = remoteBrandIconRegistrableLabels(groupedKey.split(".").filter(Boolean));
+    addCandidate([...brandLabels, ...serviceLabels].join(""), 96, "service-brand");
+    addCandidate(serviceLabels.join(""), 86, "service");
+  }
   const host = normalizeHostname(siteKey);
   const labels = host.split(".").filter(Boolean);
   if (labels.length) {
@@ -3188,6 +3211,7 @@ function preventNativeSiteIconDrag(event) {
 function computeSiteIconTile(site, iconPath = "") {
   const parsedUrl = safeUrl(site.url);
   const siteKey = siteGroupKey(parsedUrl);
+  const routeKey = siteIconRouteKey(parsedUrl);
   const tileColor = siteIconBrandColor(siteKey, iconPath);
   const svgRenderMode = primarySvgIconRenderMode(iconPath);
   const tileMode = iconPath ? "brand" : "plain";
@@ -3196,7 +3220,7 @@ function computeSiteIconTile(site, iconPath = "") {
   if (iconPath && (tileColor || primarySvgRenderModeUsesCarrier(svgRenderMode))) {
     tileColors = brandIconTileColors(tileColor, siteKey, iconPath);
   }
-  return { siteKey: siteKey || "", tileMode, tileColors, isLocalIconSource };
+  return { siteKey: routeKey || "", tileMode, tileColors, isLocalIconSource };
 }
 
 function applySiteIconTile(icon, site, iconPath = "") {

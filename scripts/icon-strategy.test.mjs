@@ -102,7 +102,7 @@ const ORIGINAL_ARTWORK_BRAND_TILE_SITE_KEYS_FOR_TEST = new Set([
   "jd.com"
 ]);
 const REMOTE_BRAND_ICON_DIRECT_FETCH_SCORE_MIN = 90;
-const REMOTE_BRAND_ICON_PROVIDER_VERSION = 3;
+const REMOTE_BRAND_ICON_PROVIDER_VERSION = 4;
 
 assert.match(
   source,
@@ -365,7 +365,7 @@ function remoteBrandIconRankedCandidates(candidates) {
   return [...bestBySlug.values()].sort((a, b) => b.score - a.score || a.slug.localeCompare(b.slug));
 }
 
-function remoteBrandIconSlugCandidatesForTest(siteKey, siteName = "", aliases = []) {
+function remoteBrandIconSlugCandidatesForTest(siteKey, siteName = "", aliases = [], groupedKey = siteKey) {
   const candidates = [];
   const addCandidate = (value, score, source) => {
     const slug = remoteBrandIconSlug(value);
@@ -375,6 +375,12 @@ function remoteBrandIconSlugCandidatesForTest(siteKey, siteName = "", aliases = 
     candidates.push({ slug, score, source });
   };
   aliases.forEach((slug, index) => addCandidate(slug, index === 0 ? 100 : 88, "alias"));
+  if (groupedKey && siteKey !== groupedKey && siteKey.endsWith(`.${groupedKey}`)) {
+    const serviceLabels = siteKey.slice(0, -groupedKey.length - 1).split(".").filter(Boolean);
+    const brandLabels = groupedKey.split(".").filter(Boolean).slice(0, 1);
+    addCandidate([...brandLabels, ...serviceLabels].join(""), 96, "service-brand");
+    addCandidate(serviceLabels.join(""), 86, "service");
+  }
   const labels = siteKey.split(".").filter(Boolean);
   if (labels.length) {
     const registrableLabels = labels.length <= 2 ? labels.slice(0, 1) : labels.slice(0, -1);
@@ -4965,9 +4971,9 @@ assert.equal(remoteBrandSvgBrandColor('<svg viewBox="0 0 24 24"><path fill="#fff
 assert.equal(remoteBrandSvgResponseMayContainSvg("image/svg+xml; charset=utf-8", "https://cdn.example/icon"), true, "Explicit SVG content types should be accepted.");
 assert.equal(remoteBrandSvgResponseMayContainSvg("text/html", "https://cdn.example/icon.svg"), false, "Explicit HTML provider responses should be rejected even when the URL ends in .svg.");
 assert.equal(remoteBrandSvgResponseMayContainSvg("application/octet-stream", "https://cdn.example/icon.svg"), true, "Generic binary content may be accepted when the provider URL is an SVG.");
-assert.equal(remoteBrandIconMissCacheIsFresh({ missing: true, source: "remote-brand", providerVersion: 3, updatedAt: 1_000 }, 500, 1_400), true, "Fresh provider misses from the current provider contract should suppress repeated fetches.");
-assert.equal(remoteBrandIconMissCacheIsFresh({ missing: true, source: "remote-brand", providerVersion: 3, updatedAt: 1_000 }, 500, 1_600), false, "Expired provider misses should allow provider retry.");
-assert.equal(remoteBrandIconMissCacheIsFresh({ missing: true, source: "remote-brand", providerVersion: 2, updatedAt: 1_000 }, 500, 1_400), false, "Misses cached before stable failure classification must be retried.");
+assert.equal(remoteBrandIconMissCacheIsFresh({ missing: true, source: "remote-brand", providerVersion: 4, updatedAt: 1_000 }, 500, 1_400), true, "Fresh provider misses from the current provider contract should suppress repeated fetches.");
+assert.equal(remoteBrandIconMissCacheIsFresh({ missing: true, source: "remote-brand", providerVersion: 4, updatedAt: 1_000 }, 500, 1_600), false, "Expired provider misses should allow provider retry.");
+assert.equal(remoteBrandIconMissCacheIsFresh({ missing: true, source: "remote-brand", providerVersion: 3, updatedAt: 1_000 }, 500, 1_400), false, "Misses cached before service-subdomain routing must be retried.");
 assert.equal(remoteBrandIconMissCacheIsFresh({ missing: true, source: "remote-brand", updatedAt: 1_000 }, 500, 1_400), false, "Misses from an older provider URL contract must retry immediately.");
 assert.equal(remoteBrandIconMissCacheIsFresh({ missing: true, source: "site-icon", updatedAt: 1_000 }, 500, 1_400), false, "Non-provider misses should not suppress remote provider retries.");
 
@@ -5076,6 +5082,14 @@ assert.equal(remoteProviderCanRunForSiteKeyForTest("midjourney.com"), true, "Mid
 assert.equal(remoteProviderCanRunForSiteKeyForTest("shadcn.com"), true, "shadcn remains eligible for remote provider discovery before favicon fallback.");
 assert.equal(remoteBrandIconSlugCandidatesForTest("shadcn.com", "Shadcn")[0].slug, "shadcn", "shadcn should produce a deterministic provider slug before falling back.");
 assert.equal(remoteBrandSvgResponseMayContainSvg("text/html", "https://ui.shadcn.com"), false, "A shadcn-style non-SVG provider/fetch response must not be cached as a remote SVG.");
+
+assert.deepEqual(
+  remoteBrandIconSlugCandidatesForTest("translate.google.com", "", [], "google.com").slice(0, 3).map(({ slug }) => slug),
+  ["googletranslate", "translategoogle", "translate"],
+  "Google service subdomains should try the provider's brand-first SVG slug before the generic Google icon."
+);
+assert.match(source, /function siteIconRouteKey[\s\S]*registrableDomain\(host\) === groupedKey[\s\S]*\? host[\s\S]*: groupedKey;/, "Primary icon routing should preserve meaningful service subdomains without changing content grouping.");
+assert.match(source, /function localIconForUrl\(url\) \{[\s\S]*siteIconRouteKey\(parsedUrl\)/, "Local SVG routing should not let a generic registrable-domain asset intercept a specific service subdomain.");
 
 for (const [siteKey, providerSlug] of [
   ["analytics.google.com", "googleanalytics"],

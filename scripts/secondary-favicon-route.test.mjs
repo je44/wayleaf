@@ -56,6 +56,10 @@ const context = {
     }
   },
   siteGroupKey: (parsedUrl) => parsedUrl?.hostname.replace(/^www\./, "") || "",
+  siteIconRouteKey: (value) => {
+    const parsedUrl = value instanceof URL ? value : context.safeUrl(value);
+    return context.siteGroupKey(parsedUrl);
+  },
   localFaviconForUrl: (value) => new URL(value).hostname === "local.example"
     ? "icons/sites/local.ico"
     : "",
