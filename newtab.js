@@ -3394,7 +3394,6 @@ async function init() {
   });
   surfaceBackdrop?.addEventListener("click", () => {
     if (isFavoriteFormActive()) {
-      hideFavoriteForm();
       return;
     }
     setActiveSurfacePanel("");
@@ -7497,7 +7496,7 @@ function syncFavoriteFormSurfaceState(active) {
   }
   if (active) {
     surfaceBackdrop.hidden = false;
-    surfaceBackdrop.removeAttribute("tabindex");
+    surfaceBackdrop.tabIndex = -1;
     surfaceBackdrop.getBoundingClientRect();
     return;
   }
