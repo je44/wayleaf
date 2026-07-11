@@ -124,13 +124,37 @@ assert.match(
   "Bookmark delete buttons should switch from tdesign delete to delete-filled for hover/focus without changing the icon renderer."
 );
 
+assert.match(
+  source,
+  /function portalSurfaceIcon\(\) \{[\s\S]*tdesignIcon\("bookmark-double"\)[\s\S]*tdesignIcon\("bookmark-double-filled"\)/,
+  "The top-left bookmark launcher should use the TDesign outline icon at rest and the filled icon for interaction states."
+);
+
+assert.match(
+  styles,
+  /#portalSurfaceButton:hover \.portal-surface-icon-fill,[\s\S]*#portalSurfaceButton:active \.portal-surface-icon-fill,[\s\S]*#portalSurfaceButton\[aria-expanded="true"\] \.portal-surface-icon-fill\s*\{[\s\S]*clip-path:\s*inset\(0\);/,
+  "Hovering, pressing, or opening the bookmark hub should reveal the filled bookmark icon."
+);
+
 assert.doesNotMatch(html, /smartPortalTab|smartPortalView|data\/recommendedSites\.js/, "The navigation hub should expose bookmarks only.");
 assert.doesNotMatch(html, /id="chooseBookmarkFolderButton"/, "The bookmark header should not duplicate the folder lane with a second folder icon.");
 assert.match(html, /id="bookmarkSearchInput"/, "The bookmark hub should provide in-folder search.");
 assert.match(html, /id="bookmarkFolderLane"/, "The bookmark hub should provide one-click folder switching.");
+assert.doesNotMatch(html, /id="bookmarkSortSelect"|<select[^>]*bookmark-sort/, "Bookmark sorting should not use the browser or operating system native select menu.");
+assert.match(html, /id="bookmarkSortTrigger"[\s\S]*aria-haspopup="listbox"[\s\S]*id="bookmarkSortList"[\s\S]*role="listbox"[\s\S]*class="bookmark-sort-option"[\s\S]*role="option"/, "Bookmark sorting should expose one Wayleaf-styled accessible listbox.");
 assert.match(source, /function renderBookmarkFolderLane\(/, "Bookmark folders should render through one shared quick-switch lane.");
 assert.match(source, /activeButton\?\.scrollIntoView\(\{ block: "nearest", inline: "nearest" \}\);/, "Overflowing bookmark folder chips should keep the active folder visible.");
 assert.match(source, /function renderVisibleBookmarkSites\(/, "Bookmark search and sorting should share one rendering path.");
+assert.match(source, /function setBookmarkSort\(value, options = \{\}\) \{[\s\S]*option\.setAttribute\("aria-selected", String\(isSelected\)\);[\s\S]*renderVisibleBookmarkSites\(\)/, "The custom sort picker should update its accessible selected state before rerendering bookmarks.");
+assert.match(source, /function handleBookmarkSortOptionClick\(event\) \{[\s\S]*selectBookmarkSortOption\(option, event\.detail === 0\);/, "Pointer selection should close without restoring a visible focus frame while keyboard selection restores focus.");
+assert.match(styles, /\.bookmark-sort-trigger:hover,[\s\S]*\.bookmark-sort-trigger\[aria-expanded="true"\]\s*\{[\s\S]*outline:\s*0;[\s\S]*box-shadow:\s*none;/, "The custom sort trigger should never draw a selection frame.");
+assert.match(styles, /\.bookmark-sort-list\s*\{[\s\S]*background:\s*var\(--panel\);[\s\S]*\.bookmark-sort-option\[aria-selected="true"\]\s*\{[\s\S]*background:\s*var\(--accent-wash\);[\s\S]*box-shadow:\s*none;/, "The custom sort menu should use Wayleaf panel and selected-option styling without a native checkmark or frame.");
+assert.match(source, /if \(sortByTitle\) \{\s*groupBookmarkSitesByInitial\(visibleSites\)\.forEach\(\(group\) => \{\s*fragment\.appendChild\(createBookmarkInitialSection\(group, context\)\);/, "A-Z sorting should restore bookmark-name initial sections.");
+assert.match(source, /else \{\s*groupBookmarkSitesByDate\(visibleSites\)\.forEach\(\(group\) => \{\s*fragment\.appendChild\(createBookmarkDateSection\(group, context\)\);/, "Recently added sorting should group bookmark rows by their added date.");
+assert.match(source, /function groupBookmarkSitesByDate\(sites\) \{[\s\S]*formatBookmarkAddedDate\(site\.dateAdded\)[\s\S]*items: items\.sort\(compareRecentBookmarkSites\)/, "Date groups should preserve newest-first ordering within each day.");
+assert.match(source, /function formatBookmarkAddedDate\(timestamp\) \{[\s\S]*padStart\(2, "0"\)[\s\S]*return `\$\{date\.getFullYear\(\)\}\/\$\{month\}\/\$\{day\}`;/, "Bookmark date headings should use YYYY/MM/DD without a time component.");
+assert.match(styles, /\.bookmark-letter-section,\s*\.bookmark-date-section,/, "Date groups should reuse the same visual section layout as A-Z groups.");
+assert.match(styles, /\.bookmark-letter-section \.bookmark-letter-title,\s*\.bookmark-date-section \.bookmark-letter-title\s*\{\s*font-weight:\s*300;/, "A-Z and date group headings should share the requested light font weight.");
 assert.match(source, /function prepareBookmarkRouteFragment[\s\S]*trackBookmarkRouteIconCache\(staging, iconSelector\);[\s\S]*ready\.append\(\.\.\.staging\.childNodes\);/, "Bookmark folder switches should track icon cache without blocking the grid swap.");
 assert.doesNotMatch(source, /await waitForBookmarkRouteIcons/, "Bookmark folder switches must not wait for every icon route before showing the folder.");
 assert.match(source, /const bookmarkFolderViewCache = new Map\(\);/, "Loaded bookmark folder DOM should be reusable when switching back.");
@@ -152,7 +176,7 @@ assert.match(styles, /\.bookmark-folder-lane\s*\{[\s\S]*overflow-x:\s*auto;/, "B
 assert.match(styles, /\.bookmark-folder-view:not\(\[hidden\]\)\s*\{[\s\S]*display:\s*contents;/, "The active connected bookmark view should preserve the existing grid layout.");
 assert.match(styles, /\.bookmark-folder-view\[hidden\]\s*\{[\s\S]*display:\s*none;/, "Inactive connected bookmark views should remain non-visible.");
 assert.match(styles, /\.portal-panel \.panel-header\s*\{[\s\S]*margin-right:\s*0;/, "The bookmark refresh action should align to the header edge instead of reserving space for the removed folder icon.");
-assert.match(styles, /\.bookmark-main-section \.bookmark-letter-grid\s*\{[\s\S]*grid-template-columns:\s*repeat\(2, minmax\(0, 1fr\)\);/, "The selected folder should use the chosen dense two-column layout.");
+assert.match(styles, /\.bookmark-main-section \.bookmark-letter-grid\s*\{[\s\S]*grid-template-columns:\s*minmax\(0, 1fr\);/, "The selected folder should use a single-column bookmark layout.");
 
 const activateBookmarkFolderViewSource = source.match(/function activateBookmarkFolderView\(view\) \{[\s\S]*?\n\}/)?.[0] || "";
 assert.ok(activateBookmarkFolderViewSource, "Bookmark folder view activation helper should remain testable.");

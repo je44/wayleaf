@@ -2943,12 +2943,16 @@ html.theme-transitioning .search-workbench[data-ai-exiting] .favorite-icon {
 }
 
 #portalSurfaceButton:hover,
-#portalSurfaceButton:focus-visible {
+#portalSurfaceButton:focus-visible,
+#portalSurfaceButton:active,
+#portalSurfaceButton[aria-expanded="true"] {
   color: var(--faint);
 }
 
 #portalSurfaceButton:hover .portal-surface-icon-fill,
-#portalSurfaceButton:focus-visible .portal-surface-icon-fill {
+#portalSurfaceButton:focus-visible .portal-surface-icon-fill,
+#portalSurfaceButton:active .portal-surface-icon-fill,
+#portalSurfaceButton[aria-expanded="true"] .portal-surface-icon-fill {
   clip-path: inset(0);
 }
 
@@ -5251,6 +5255,7 @@ select:focus-visible {
 }
 
 .bookmark-letter-section,
+.bookmark-date-section,
 .bookmark-recent-section {
   display: grid;
   grid-column: 1 / -1;
@@ -5260,6 +5265,7 @@ select:focus-visible {
 }
 
 .bookmark-letter-section + .bookmark-letter-section,
+.bookmark-date-section + .bookmark-date-section,
 .bookmark-recent-section + .bookmark-letter-section {
   margin-top: 4px;
 }
@@ -5280,6 +5286,11 @@ select:focus-visible {
   font-weight: 700;
   line-height: 1;
   letter-spacing: 0;
+}
+
+.bookmark-letter-section .bookmark-letter-title,
+.bookmark-date-section .bookmark-letter-title {
+  font-weight: 300;
 }
 
 .bookmark-letter-line {
@@ -6022,6 +6033,7 @@ select:focus-visible {
 
 .bookmark-portal-view {
   gap: 0;
+  overflow: visible;
 }
 
 .bookmark-search {
@@ -6119,22 +6131,111 @@ select:focus-visible {
 }
 
 #bookmarkMainToolbar {
+  position: relative;
+  z-index: 6;
   flex-basis: 34px;
   height: 34px;
   margin: 0 0 8px;
   padding: 0;
+  overflow: visible;
 }
 
-.bookmark-sort select {
+.bookmark-sort {
+  position: relative;
+  display: inline-grid;
+}
+
+.bookmark-sort-trigger {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 16px;
+  gap: 8px;
+  align-items: center;
   min-height: 30px;
-  padding: 0 24px 0 8px;
+  padding: 0 8px;
   border: 0;
+  border-radius: 0;
   background: transparent;
   color: var(--accent-strong);
   cursor: pointer;
   font: inherit;
   font-size: 11px;
   font-weight: 660;
+  text-align: left;
+}
+
+.bookmark-sort-trigger:hover,
+.bookmark-sort-trigger:focus,
+.bookmark-sort-trigger:focus-visible,
+.bookmark-sort-trigger[aria-expanded="true"] {
+  background: transparent;
+  color: var(--accent-strong);
+  outline: 0;
+  box-shadow: none;
+}
+
+.bookmark-sort-trigger-icon {
+  display: inline-grid;
+  width: 16px;
+  height: 16px;
+  place-items: center;
+  color: currentColor;
+  transition: transform 160ms ease;
+}
+
+.bookmark-sort-trigger-icon svg {
+  width: 14px;
+  height: 14px;
+}
+
+.bookmark-sort.open .bookmark-sort-trigger-icon {
+  transform: rotate(180deg);
+}
+
+.bookmark-sort-list {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 12;
+  display: grid;
+  width: 144px;
+  gap: 3px;
+  padding: 5px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel);
+  box-shadow: none;
+}
+
+.bookmark-sort-list[hidden] {
+  display: none;
+}
+
+.bookmark-sort-option {
+  min-height: 32px;
+  padding: 0 9px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 560;
+  text-align: left;
+}
+
+.bookmark-sort-option:hover,
+.bookmark-sort-option:focus-visible {
+  background: var(--hover-bg);
+  color: var(--ink);
+  outline: 0;
+}
+
+.bookmark-sort-option[aria-selected="true"] {
+  background: var(--accent-wash);
+  color: var(--accent-strong);
+  outline: 0;
+  box-shadow: none;
 }
 
 #bookmarkGrid {
@@ -6156,8 +6257,8 @@ select:focus-visible {
 }
 
 .bookmark-main-section .bookmark-letter-grid {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 4px 18px;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 4px;
 }
 
 .bookmark-recent-section .bookmark-letter-grid {

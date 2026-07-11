@@ -149,13 +149,17 @@
               <button class="icon-button subtle-action" id="bookmarkFavoriteAddButton" type="button" aria-label="Add favorite site" aria-hidden="true" hidden>
                 <span class="button-icon" aria-hidden="true"></span>
               </button>
-              <label class="bookmark-sort" for="bookmarkSortSelect">
+              <div class="bookmark-sort" id="bookmarkSortPicker">
                 <span class="visually-hidden" id="bookmarkSortLabel">Sort bookmarks</span>
-                <select id="bookmarkSortSelect" aria-labelledby="bookmarkSortLabel">
-                  <option value="recent">Recently added</option>
-                  <option value="title">A–Z</option>
-                </select>
-              </label>
+                <button class="bookmark-sort-trigger" id="bookmarkSortTrigger" type="button" data-value="recent" aria-haspopup="listbox" aria-expanded="false" aria-labelledby="bookmarkSortLabel bookmarkSortCurrent">
+                  <span id="bookmarkSortCurrent">Recently added</span>
+                  <span class="bookmark-sort-trigger-icon" aria-hidden="true"></span>
+                </button>
+                <div class="bookmark-sort-list" id="bookmarkSortList" role="listbox" aria-labelledby="bookmarkSortLabel" hidden>
+                  <button class="bookmark-sort-option" id="bookmarkSortOption-recent" type="button" role="option" data-bookmark-sort="recent" aria-selected="true">Recently added</button>
+                  <button class="bookmark-sort-option" id="bookmarkSortOption-title" type="button" role="option" data-bookmark-sort="title" aria-selected="false" tabindex="-1">A–Z</button>
+                </div>
+              </div>
             </div>
           </div>
           <div class="bookmark-toolbar bookmark-picker-toolbar" id="bookmarkPickerToolbar" hidden>

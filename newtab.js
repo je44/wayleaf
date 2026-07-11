@@ -95,7 +95,6 @@ const MAX_PORTAL_FEATURED_ITEMS = 6;
 const MAX_BOOKMARK_PORTAL_ITEMS = 120;
 const MAX_BOOKMARK_HISTORY_ITEMS = 180;
 const BOOKMARK_HISTORY_LOOKBACK_DAYS = 45;
-const RECENT_BOOKMARK_LOOKBACK_MS = 3 * 24 * 60 * 60 * 1000;
 const BOOKMARK_FOLDER_VIEW_CACHE_LIMIT = 8;
 const BOOKMARK_ICON_RENDER_QUIET_MS = 120;
 const BOOKMARK_ICON_RENDER_SETTLE_TIMEOUT_MS = 2200;
@@ -2481,7 +2480,10 @@ const bookmarkSearch = document.querySelector(".bookmark-search");
 const bookmarkSearchInput = document.querySelector("#bookmarkSearchInput");
 const bookmarkSearchLabel = document.querySelector("#bookmarkSearchLabel");
 const bookmarkFolderLane = document.querySelector("#bookmarkFolderLane");
-const bookmarkSortSelect = document.querySelector("#bookmarkSortSelect");
+const bookmarkSortPicker = document.querySelector("#bookmarkSortPicker");
+const bookmarkSortTrigger = document.querySelector("#bookmarkSortTrigger");
+const bookmarkSortCurrent = document.querySelector("#bookmarkSortCurrent");
+const bookmarkSortList = document.querySelector("#bookmarkSortList");
 const bookmarkSortLabel = document.querySelector("#bookmarkSortLabel");
 const bookmarkPicker = document.querySelector("#bookmarkPicker");
 const bookmarkPickerToolbar = document.querySelector("#bookmarkPickerToolbar");
@@ -2562,7 +2564,6 @@ const portalFormError = document.querySelector("#portalFormError");
 const cancelPortalButton = document.querySelector("#cancelPortalButton");
 const mobileSectionTabs = [...document.querySelectorAll(".mobile-section-tab")];
 let bookmarkRefreshTimer = 0;
-let recentBookmarkExpiryTimer = 0;
 let bookmarkRenderRequestId = 0;
 let latestBookmarkFolder = null;
 let latestBookmarkSites = [];
@@ -2987,8 +2988,7 @@ function applyLocale() {
   bookmarkSearchLabel.textContent = t("bookmarkSearchPlaceholder");
   bookmarkFolderLane.setAttribute("aria-label", t("bookmarkFolders"));
   bookmarkSortLabel.textContent = t("bookmarkSortLabel");
-  bookmarkSortSelect.options[0].textContent = t("bookmarkSortRecent");
-  bookmarkSortSelect.options[1].textContent = t("bookmarkSortTitle");
+  syncBookmarkSortPickerLocale();
   applySettingsLocale();
   quickSearchInput.placeholder = t("quickSearchPlaceholder");
   quickSearchInput.setAttribute("aria-label", t("quickSearchPlaceholder"));
@@ -3056,6 +3056,7 @@ function setStaticButtonIcons() {
     button.querySelector(".button-icon").innerHTML = arrowLeftIcon();
   });
   document.querySelector(".bookmark-search-icon").innerHTML = searchEngineSearchIcon();
+  bookmarkSortTrigger.querySelector(".bookmark-sort-trigger-icon").innerHTML = chevronDownIcon();
   refreshBookmarkFolderButton.querySelector(".button-icon").innerHTML = refreshIcon();
   bookmarkFavoriteAddButton.querySelector(".button-icon").innerHTML = plusIcon();
   closeBookmarkPickerButton.querySelector(".button-icon").innerHTML = arrowLeftIcon();
@@ -3368,7 +3369,10 @@ async function init() {
   });
   bookmarkFavoriteAddButton?.addEventListener("click", toggleFavoriteForm);
   bookmarkSearchInput.addEventListener("input", () => void renderVisibleBookmarkSites());
-  bookmarkSortSelect.addEventListener("change", () => void renderVisibleBookmarkSites());
+  bookmarkSortTrigger.addEventListener("click", toggleBookmarkSortPicker);
+  bookmarkSortTrigger.addEventListener("keydown", handleBookmarkSortTriggerKeydown);
+  bookmarkSortList.addEventListener("click", handleBookmarkSortOptionClick);
+  bookmarkSortList.addEventListener("keydown", handleBookmarkSortListKeydown);
   closeBookmarkPickerButton.addEventListener("click", closeBookmarkPicker);
   recentFoldersPreviousButton?.addEventListener("click", (event) => {
     showRecentFolderPage(recentFolderPageIndex - 1, "previous");
@@ -3450,6 +3454,7 @@ async function init() {
   document.addEventListener("pointerdown", handleBookmarkDeleteDismiss, true);
   document.addEventListener("pointerdown", handleFavoriteDeleteDismiss, true);
   document.addEventListener("pointerdown", handleSurfacePanelDismiss, true);
+  document.addEventListener("pointerdown", handleBookmarkSortPickerDismiss, true);
   document.addEventListener("pointerdown", handlePortalCategoryPickerDismiss, true);
   document.addEventListener("pointerdown", handleSearchSuggestionDismiss, true);
   document.addEventListener("pointerdown", handleSettingsPanelDismiss, true);
@@ -4090,6 +4095,11 @@ function handleGlobalEscape(event) {
   if (portalCategoryPicker?.classList.contains("open")) {
     event.preventDefault();
     closePortalCategoryPicker({ restoreFocus: true });
+    return;
+  }
+  if (bookmarkSortPicker?.classList.contains("open")) {
+    event.preventDefault();
+    closeBookmarkSortPicker({ restoreFocus: true });
     return;
   }
   if (onboardingGuide && !onboardingGuide.hidden) {
@@ -7729,11 +7739,128 @@ async function removeCustomPortal(id) {
   }
 }
 
+function bookmarkSortValue() {
+  return bookmarkSortTrigger?.dataset.value === "title" ? "title" : "recent";
+}
+
+function bookmarkSortText(value) {
+  return t(value === "title" ? "bookmarkSortTitle" : "bookmarkSortRecent");
+}
+
+function syncBookmarkSortPickerLocale() {
+  const value = bookmarkSortValue();
+  bookmarkSortList.querySelectorAll(".bookmark-sort-option").forEach((option) => {
+    option.textContent = bookmarkSortText(option.dataset.bookmarkSort);
+  });
+  setBookmarkSort(value, { render: false });
+}
+
+function setBookmarkSort(value, options = {}) {
+  const nextValue = value === "title" ? "title" : "recent";
+  const changed = bookmarkSortValue() !== nextValue;
+  bookmarkSortTrigger.dataset.value = nextValue;
+  bookmarkSortCurrent.textContent = bookmarkSortText(nextValue);
+  bookmarkSortList.querySelectorAll(".bookmark-sort-option").forEach((option) => {
+    const isSelected = option.dataset.bookmarkSort === nextValue;
+    option.setAttribute("aria-selected", String(isSelected));
+    option.tabIndex = isSelected ? 0 : -1;
+  });
+  bookmarkSortTrigger.setAttribute("aria-activedescendant", `bookmarkSortOption-${nextValue}`);
+  if (changed && options.render !== false) {
+    void renderVisibleBookmarkSites();
+  }
+}
+
+function toggleBookmarkSortPicker() {
+  if (bookmarkSortPicker.classList.contains("open")) {
+    closeBookmarkSortPicker();
+  } else {
+    openBookmarkSortPicker();
+  }
+}
+
+function openBookmarkSortPicker() {
+  bookmarkSortPicker.classList.add("open");
+  bookmarkSortTrigger.setAttribute("aria-expanded", "true");
+  bookmarkSortList.hidden = false;
+  bookmarkSortList.querySelector('[aria-selected="true"]')?.focus({ preventScroll: true });
+}
+
+function closeBookmarkSortPicker(options = {}) {
+  bookmarkSortPicker.classList.remove("open");
+  bookmarkSortTrigger.setAttribute("aria-expanded", "false");
+  bookmarkSortList.hidden = true;
+  if (options.restoreFocus) {
+    bookmarkSortTrigger.focus({ preventScroll: true });
+  } else if (document.activeElement instanceof HTMLElement && bookmarkSortPicker.contains(document.activeElement)) {
+    document.activeElement.blur();
+  }
+}
+
+function selectBookmarkSortOption(option, restoreFocus) {
+  if (!option?.dataset.bookmarkSort) {
+    return;
+  }
+  setBookmarkSort(option.dataset.bookmarkSort);
+  closeBookmarkSortPicker({ restoreFocus });
+}
+
+function handleBookmarkSortOptionClick(event) {
+  const option = event.target.closest?.(".bookmark-sort-option");
+  selectBookmarkSortOption(option, event.detail === 0);
+}
+
+function handleBookmarkSortTriggerKeydown(event) {
+  if (!["ArrowDown", "ArrowUp"].includes(event.key)) {
+    return;
+  }
+  event.preventDefault();
+  openBookmarkSortPicker();
+}
+
+function handleBookmarkSortListKeydown(event) {
+  const options = [...bookmarkSortList.querySelectorAll(".bookmark-sort-option")];
+  const currentIndex = options.findIndex((option) => option === document.activeElement);
+  if (event.key === "Escape") {
+    event.preventDefault();
+    closeBookmarkSortPicker({ restoreFocus: true });
+    return;
+  }
+  if (event.key === "Enter" || event.key === " ") {
+    event.preventDefault();
+    selectBookmarkSortOption(options[currentIndex], true);
+    return;
+  }
+  if (!["ArrowDown", "ArrowUp", "Home", "End"].includes(event.key)) {
+    return;
+  }
+  event.preventDefault();
+  const lastIndex = options.length - 1;
+  const nextIndex = event.key === "Home"
+    ? 0
+    : event.key === "End"
+      ? lastIndex
+      : event.key === "ArrowUp"
+        ? Math.max(0, currentIndex - 1)
+        : Math.min(lastIndex, currentIndex + 1);
+  options[nextIndex]?.focus({ preventScroll: true });
+}
+
+function handleBookmarkSortPickerDismiss(event) {
+  if (!bookmarkSortPicker?.classList.contains("open")) {
+    return;
+  }
+  const target = event.target;
+  if (target instanceof Element && bookmarkSortPicker.contains(target)) {
+    return;
+  }
+  closeBookmarkSortPicker();
+}
+
 async function renderSelectedBookmarkFolder(selectedFolderId) {
   const renderRequestId = ++bookmarkRenderRequestId;
   try {
     clearBookmarkDeleteMode();
-    clearRecentBookmarkExpiryTimer();
     const folderId = typeof selectedFolderId === "undefined"
       ? await loadSelectedBookmarkFolderId()
       : selectedFolderId;
@@ -7845,7 +7972,6 @@ async function renderVisibleBookmarkSites(renderRequestId = ++bookmarkRenderRequ
     return;
   }
   clearBookmarkDeleteMode();
-  clearRecentBookmarkExpiryTimer();
   const query = normalizeText(bookmarkSearchInput.value).toLocaleLowerCase(LOCALE);
   const filteredSites = latestBookmarkSites.filter((site) => {
     if (!query) {
@@ -7874,22 +8000,20 @@ async function renderVisibleBookmarkSites(renderRequestId = ++bookmarkRenderRequ
     return;
   }
 
-  const visibleSites = filteredSites.slice().sort(bookmarkSortSelect.value === "title"
+  const sortByTitle = bookmarkSortValue() === "title";
+  const visibleSites = filteredSites.slice().sort(sortByTitle
     ? compareBookmarkSites
     : compareRecentBookmarkSites);
-  const { recentSites } = partitionRecentBookmarkSites(filteredSites);
   const fragment = document.createDocumentFragment();
-  if (!query && recentSites.length) {
-    fragment.appendChild(createRecentBookmarkSection(recentSites.slice(0, 3), context));
-    scheduleRecentBookmarkExpiry(recentSites);
+  if (sortByTitle) {
+    groupBookmarkSitesByInitial(visibleSites).forEach((group) => {
+      fragment.appendChild(createBookmarkInitialSection(group, context));
+    });
+  } else {
+    groupBookmarkSitesByDate(visibleSites).forEach((group) => {
+      fragment.appendChild(createBookmarkDateSection(group, context));
+    });
   }
-  fragment.appendChild(createBookmarkSection({
-    className: "bookmark-main-section",
-    title: folder.title || t("unnamedFolder"),
-    meta: t("bookmarkCount", { count: filteredSites.length }),
-    items: visibleSites,
-    ...context
-  }));
   const prepared = await prepareBookmarkRouteFragment(fragment);
   if (renderRequestId === bookmarkRenderRequestId) {
     latestBookmarkRenderContext = { ...context, iconRenders: readFirstPaintCache().iconRenders };
@@ -7900,14 +8024,14 @@ async function renderVisibleBookmarkSites(renderRequestId = ++bookmarkRenderRequ
 }
 
 function bookmarkFolderViewCacheKey(folder, query) {
-  return query ? "" : `${folder.id || ""}:${bookmarkSortSelect.value}:${LOCALE}`;
+  return query ? "" : `${folder.id || ""}:${bookmarkSortValue()}:${LOCALE}`;
 }
 
 function activateCachedBookmarkFolderView(folderId) {
   if (!folderId || normalizeText(bookmarkSearchInput.value)) {
     return false;
   }
-  const key = `${folderId}:${bookmarkSortSelect.value}:${LOCALE}`;
+  const key = `${folderId}:${bookmarkSortValue()}:${LOCALE}`;
   const cachedView = bookmarkFolderViewCache.get(key);
   if (!cachedView) {
     return false;
@@ -8067,38 +8191,9 @@ function cacheBookmarkRouteIconWhenSettled(icon) {
 }
 
 function renderBookmarkEmptyState(message) {
-  clearRecentBookmarkExpiryTimer();
   bookmarkFolderMeta.textContent = "";
   const view = createBookmarkFolderView(emptyState(message));
   activateBookmarkFolderView(view);
-}
-
-function partitionRecentBookmarkSites(sites) {
-  const recentCutoff = Date.now() - RECENT_BOOKMARK_LOOKBACK_MS;
-  return sites.reduce((groups, site) => {
-    if (isRecentBookmarkSite(site, recentCutoff)) {
-      groups.recentSites.push(site);
-    } else {
-      groups.groupedSites.push(site);
-    }
-    return groups;
-  }, { recentSites: [], groupedSites: [] });
-}
-
-function isRecentBookmarkSite(site, recentCutoff) {
-  return Number.isFinite(site.dateAdded)
-    && site.dateAdded > recentCutoff
-    && site.dateAdded <= Date.now();
-}
-
-function createRecentBookmarkSection(sites, options = {}) {
-  return createBookmarkSection({
-    className: "bookmark-recent-section",
-    title: t("bookmarkRecentTitle"),
-    meta: t("bookmarkRecentMeta"),
-    items: sites.slice().sort(compareRecentBookmarkSites),
-    ...options
-  });
 }
 
 function compareRecentBookmarkSites(siteA, siteB) {
@@ -8106,29 +8201,19 @@ function compareRecentBookmarkSites(siteA, siteB) {
     || compareBookmarkSites(siteA, siteB);
 }
 
-function scheduleRecentBookmarkExpiry(recentSites) {
-  clearRecentBookmarkExpiryTimer();
-  const nextExpiry = recentSites.reduce((earliest, site) => {
-    const expiresAt = Number(site.dateAdded || 0) + RECENT_BOOKMARK_LOOKBACK_MS;
-    if (!Number.isFinite(expiresAt) || expiresAt <= Date.now()) {
-      return earliest;
+function groupBookmarkSitesByDate(sites) {
+  const groups = new Map();
+  sites.forEach((site) => {
+    const date = formatBookmarkAddedDate(site.dateAdded);
+    if (!groups.has(date)) {
+      groups.set(date, []);
     }
-    return Math.min(earliest, expiresAt);
-  }, Number.POSITIVE_INFINITY);
-  if (!Number.isFinite(nextExpiry)) {
-    return;
-  }
-  recentBookmarkExpiryTimer = window.setTimeout(() => {
-    renderSelectedBookmarkFolder();
-  }, Math.max(1000, nextExpiry - Date.now() + 250));
-}
-
-function clearRecentBookmarkExpiryTimer() {
-  if (!recentBookmarkExpiryTimer) {
-    return;
-  }
-  clearTimeout(recentBookmarkExpiryTimer);
-  recentBookmarkExpiryTimer = 0;
+    groups.get(date).push(site);
+  });
+  return [...groups.entries()].map(([date, items]) => ({
+    date,
+    items: items.sort(compareRecentBookmarkSites)
+  }));
 }
 
 function groupBookmarkSitesByInitial(sites) {
@@ -8228,6 +8313,15 @@ function createBookmarkInitialSection(group, options = {}) {
     className: "bookmark-letter-section",
     initial: group.initial,
     title: group.initial,
+    items: group.items,
+    ...options
+  });
+}
+
+function createBookmarkDateSection(group, options = {}) {
+  return createBookmarkSection({
+    className: "bookmark-date-section",
+    title: group.date,
     items: group.items,
     ...options
   });
@@ -9496,6 +9590,17 @@ function formatHistoryFullTime(timestamp) {
   }).format(new Date(time));
 }
 
+function formatBookmarkAddedDate(timestamp) {
+  const time = Number(timestamp);
+  if (!Number.isFinite(time) || time <= 0) {
+    return "—";
+  }
+  const date = new Date(time);
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${date.getFullYear()}/${month}/${day}`;
+}
+
 function formatHistoryTimestamp(timestamp) {
   return formatHistoryFullTime(timestamp);
 }
@@ -9545,6 +9650,7 @@ const TDESIGN_ICON_MARKUP = Object.freeze({
   "arrow-left": '<path fill="none" stroke="currentColor" stroke-linecap="square" stroke-width="2" d="M11 6.5L5.5 12l5.5 5.5M6.75 12h13"/>',
   "bookmark-add": '<path fill="none" stroke="currentColor" stroke-linecap="square" stroke-width="2" d="M12 4H5v17l7-5l7 5V11m-3-7h3m0 0h3m-3 0v3m0-3V1"/>',
   "bookmark-add-filled": '<path fill="currentColor" d="M20 3V0h-2v3h-3v2h3v3h2V5h3V3z"/><path fill="currentColor" d="M13.5 4q0-.513.09-1H4v19.943l8-5.714l8 5.714V9.41q-.487.09-1 .091A5.5 5.5 0 0 1 13.5 4"/>',
+  "bookmark-double": '<g fill="none"><path d="M4 5h14v17l-7-5l-7 5z"/><path stroke="currentColor" stroke-linecap="square" stroke-width="2" d="M4 5h14v17l-7-5l-7 5z"/><path stroke="currentColor" stroke-linecap="square" stroke-width="2" d="M11.001 1.002h7.5L22 1.001v14m0 0v1l.001.001z"/></g>',
   "bookmark-double-filled": '<path fill="currentColor" d="M23.003 18.419L23 0L10.001.002v2H21v14.413z"/><path fill="currentColor" d="M19 4H3v19.943l8-5.714l8 5.714z"/>',
   "ai-search": '<g fill="none" stroke="currentColor" stroke-width="2"><path d="m16.75 2.5l.52 1.23l1.23.52l-1.23.52L16.75 6l-.52-1.23L15 4.25l1.23-.52z"/><path stroke-linecap="square" d="m15.803 15.804l5.303 5.303m-5.303-5.303A7.5 7.5 0 1 1 10 3.017m5.803 12.787A7.47 7.47 0 0 0 17.983 11"/></g>',
   "ai-search-filled": '<path fill="currentColor" d="M10.648 2.072a6.5 6.5 0 0 0 8.348 8.348a8.56 8.56 0 0 1-1.822 5.41l5.346 5.346l-1.414 1.414l-5.346-5.347a8.48 8.48 0 0 1-5.26 1.826c-4.635 0-8.5-3.87-8.5-8.5c0-4.238 3.335-7.993 7.584-8.45a8 8 0 0 1 1.064-.047"/><path fill="currentColor" d="M18.032 3.036L21.07 4.32l-3.037 1.283l-1.282 3.037l-1.283-3.037l-3.036-1.283l3.036-1.283L16.75 0z"/>',
@@ -9637,8 +9743,7 @@ function settingsIcon() {
 }
 
 function portalSurfaceIcon() {
-  const icon = tdesignIcon("format-vertical-align-left");
-  return `<span class="portal-surface-icon-base">${icon}</span><span class="portal-surface-icon-fill">${icon}</span>`;
+  return `<span class="portal-surface-icon-base">${tdesignIcon("bookmark-double")}</span><span class="portal-surface-icon-fill">${tdesignIcon("bookmark-double-filled")}</span>`;
 }
 
 function settingsToggleIcon() {
