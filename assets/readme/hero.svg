@@ -1,0 +1,79 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="400" viewBox="0 0 1200 400" role="img" aria-labelledby="title desc">
+  <title id="title">Wayleaf — 安静、实用的 Chrome 新标签页</title>
+  <desc id="desc">Wayleaf 标题与项目界面示意：搜索框、常用网站和最近访问卡片。</desc>
+
+  <rect width="1200" height="400" rx="28" fill="#eceee9"/>
+  <rect x="1" y="1" width="1198" height="398" rx="27" fill="none" stroke="#d7ddd7" stroke-width="2"/>
+
+  <g id="title-block" transform="translate(64 58)">
+    <text x="0" y="0" fill="#26766d" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="16" font-weight="700" letter-spacing="2">CHROME NEW TAB</text>
+    <text x="0" y="80" fill="#202725" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', sans-serif" font-size="76" font-weight="750" letter-spacing="-3">Wayleaf</text>
+    <text x="0" y="130" fill="#35413a" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', sans-serif" font-size="26" font-weight="650">搜索、书签与常用网站，回到一个页面。</text>
+    <text x="0" y="170" fill="#5e6965" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', sans-serif" font-size="19">无需账号 · 本地优先 · 明暗主题 · 多语言</text>
+
+    <g transform="translate(0 226)">
+      <rect width="52" height="8" rx="4" fill="#26766d"/>
+      <rect x="64" width="52" height="8" rx="4" fill="#d89b18"/>
+      <rect x="128" width="52" height="8" rx="4" fill="#d97556"/>
+      <rect x="192" width="52" height="8" rx="4" fill="#527fa3"/>
+      <text x="0" y="48" fill="#78827e" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="14" letter-spacing="1">WAYLEAF · YUZU · PAPAYA · DENIM</text>
+    </g>
+  </g>
+
+  <g id="interface-proof" transform="translate(684 44)">
+    <rect width="452" height="312" rx="24" fill="#f1f2ed" stroke="#d7ddd7" stroke-width="2"/>
+
+    <g transform="translate(34 32)">
+      <rect width="384" height="52" rx="14" fill="#fff" stroke="#d9ddd6"/>
+      <circle cx="24" cy="25" r="7" fill="none" stroke="#7c8780" stroke-width="2.5"/>
+      <path d="M29 30l6 6" stroke="#7c8780" stroke-width="2.5" stroke-linecap="round"/>
+      <text x="48" y="32" fill="#8a928d" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', sans-serif" font-size="16">搜索或输入网址</text>
+    </g>
+
+    <g id="site-carriers" transform="translate(38 110)">
+      <g transform="translate(0 0)">
+        <rect width="52" height="52" rx="14" fill="#181a19"/>
+        <text x="26" y="33" text-anchor="middle" fill="#fff" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="16" font-weight="700">GH</text>
+      </g>
+      <g transform="translate(82 0)">
+        <rect width="52" height="52" rx="14" fill="#f1532b"/>
+        <text x="26" y="34" text-anchor="middle" fill="#fff" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" font-size="22" font-weight="800">F</text>
+      </g>
+      <g transform="translate(164 0)">
+        <rect width="52" height="52" rx="14" fill="#10a37f"/>
+        <circle cx="26" cy="26" r="12" fill="none" stroke="#fff" stroke-width="3"/>
+        <circle cx="26" cy="26" r="4" fill="#fff"/>
+      </g>
+      <g transform="translate(246 0)">
+        <rect width="52" height="52" rx="14" fill="#ff0033"/>
+        <path d="M20 17l20 9-20 9z" fill="#fff"/>
+      </g>
+      <g transform="translate(328 0)">
+        <rect width="52" height="52" rx="14" fill="#26766d"/>
+        <path d="M17 34c10-1 17-8 19-18 3 14-4 24-19 24z" fill="#dcece5"/>
+      </g>
+    </g>
+
+    <text x="38" y="201" fill="#68716b" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', sans-serif" font-size="14" font-weight="650">最近访问</text>
+    <g id="recent-cards" transform="translate(38 218)">
+      <g>
+        <rect width="116" height="58" rx="12" fill="#f3f4ef" stroke="#e0e3dd"/>
+        <circle cx="20" cy="20" r="8" fill="#181a19"/>
+        <rect x="36" y="14" width="52" height="7" rx="3.5" fill="#343b37"/>
+        <rect x="14" y="40" width="68" height="5" rx="2.5" fill="#a5aca7"/>
+      </g>
+      <g transform="translate(134 0)">
+        <rect width="116" height="58" rx="12" fill="#f3f4ef" stroke="#e0e3dd"/>
+        <circle cx="20" cy="20" r="8" fill="#f1532b"/>
+        <rect x="36" y="14" width="46" height="7" rx="3.5" fill="#343b37"/>
+        <rect x="14" y="40" width="76" height="5" rx="2.5" fill="#a5aca7"/>
+      </g>
+      <g transform="translate(268 0)">
+        <rect width="116" height="58" rx="12" fill="#f3f4ef" stroke="#e0e3dd"/>
+        <circle cx="20" cy="20" r="8" fill="#10a37f"/>
+        <rect x="36" y="14" width="50" height="7" rx="3.5" fill="#343b37"/>
+        <rect x="14" y="40" width="62" height="5" rx="2.5" fill="#a5aca7"/>
+      </g>
+    </g>
+  </g>
+</svg>
