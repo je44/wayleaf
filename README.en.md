@@ -2,11 +2,11 @@
   <img src="icons/wayleaf-flat-128.png" width="96" height="96" alt="Wayleaf icon">
 </p>
 
-<h1 align="center">Wayleaf Chrome Extension</h1>
+<h1 align="center">Wayleaf</h1>
 
 <p align="center">
-  <strong>Turn Chrome's new tab page into a local-first workspace.</strong><br>
-  Search, shortcuts, selected bookmarks, most visited sites, and AI commands live on one screen.
+  <strong>A Chrome new tab extension</strong><br>
+  Search, shortcuts, bookmarks, and most visited sites.
 </p>
 
 <p align="center">
@@ -21,178 +21,155 @@
 | --- | --- |
 | ![Wayleaf light mode](docs/previews/wayleaf-light.png) | ![Wayleaf dark mode](docs/previews/wayleaf-dark.png) |
 
-## Why Wayleaf
+## Features
 
-Most new-tab sessions start with the same small set of actions: open a frequent site, recover a page you just visited, search something, jump into a bookmark folder, or send a question to an AI assistant. Chrome's default new tab page does not put those actions together, and a traditional bookmark page can become another system to maintain.
+### Search
 
-`Wayleaf` makes a few deliberate tradeoffs:
+- Search by keyword or open a full URL directly.
+- Match local Chrome history and bookmarks from the same search box.
+- Use Google, Baidu, Bing, or open Google and Bing together.
+- Enter prefixes such as `*yt`, `*xhs`, or `*bili` to search supported platforms.
 
-- **One screen for the next action**: shortcuts, bookmarks, history, search, and AI commands share one workspace.
-- **Local-first by default**: no backend account. Preferences, custom shortcuts, and bookmark choices stay in Chrome extension storage.
-- **Dense but controlled**: built-in categories are ready to use, while selected bookmarks and up to 48 custom shortcuts keep the page personal.
-- **Directly loadable**: Manifest V3, no build step, and release packages that can be unzipped and loaded as a Chrome extension.
+### Shortcuts
 
-## Core Experience
+- Browse built-in groups of commonly used websites.
+- Add up to 48 custom sites and assign a category.
+- Add sites from a Chrome bookmark folder without duplicating the same URL.
 
-| What you want to do | How Wayleaf handles it |
-| --- | --- |
-| Search or open a site | The search box supports local history/bookmarks, full URLs, Google, Baidu, Bing, aggregate Google+Bing search, and immediate platform activators such as `*yt` or `*xhs`. |
-| Manage frequent destinations | Built-in categories cover search, social, shopping, developer, productivity, media, design, and AI sites; custom shortcuts are supported. |
-| Organize most visited | Frequently visited URLs are grouped by site. |
-| Show a bookmark folder | Pick one Chrome bookmark folder; Wayleaf highlights sites added in the last 3 days and groups the rest by title initial. |
-| Collect high-frequency sites | Favorite sites are deduplicated, and sites from the active bookmark folder can be added directly to favorites. |
-| Send a prompt to AI | Use `/gpt`, `/claude`, `/gemini`, `/grok`, `/deepseek`, `/doubao`, `/kimi`, or `/glm` to open the matching AI site and try to fill the prompt. |
-| Tune appearance and sync | System/light/dark themes, preset color pairs, custom light/dark primary and secondary colors, manual sync, and once-daily auto sync while enabled are supported. |
+### Bookmarks
 
-The interface follows the browser language for Chinese, English, Japanese, Korean, Spanish, French, or German.
+- Select and switch between Chrome bookmark folders.
+- Search the current folder and sort by recent additions or title A–Z.
+- Mark bookmarks added within the last three days.
+- Refresh folder contents or remove bookmarks from the extension.
 
-## Quick Install
+### Most visited
+
+- Rank frequently visited sites from local Chrome history.
+- Keep one main entry per site and show related pages from the same site.
+- Remove unwanted history entries.
+
+### Appearance, language, and sync
+
+- Follow the system theme or use light and dark modes.
+- Set separate primary and secondary colors for light and dark modes.
+- Use Chinese, English, Japanese, Korean, Spanish, French, or German.
+- Sync settings manually or once per day, and import or export a configuration.
+
+### Video mini-player
+
+Enable it under Laboratory, click the Wayleaf icon in the Chrome toolbar, choose Video mini-player, then select a playable video on the page. It works on pages that support standard HTML5 video and Picture-in-Picture.
+
+### AI page shortcuts (optional)
+
+Commands such as `/gpt` and `/claude` open the matching website and try to fill the question. Supported services, commands, and URLs are listed in Search Settings. Sign-in, generated content, and data handling are controlled by the selected service.
+
+## Install
 
 Current version: `1.0.1`
 
-1. Download [wayleaf-v1.0.1.zip](https://github.com/je44/wayleaf/releases/download/v1.0/wayleaf-v1.0.1.zip) and unzip it.
-2. Open `chrome://extensions/` in Chrome.
+1. Download and unzip [wayleaf-v1.0.1.zip](https://github.com/je44/wayleaf/releases/download/v1.0/wayleaf-v1.0.1.zip).
+2. Open `chrome://extensions/`.
 3. Turn on Developer mode.
 4. Click Load unpacked.
-5. Select the unzipped folder that contains `manifest.json`, not the repository root.
-6. Open a new tab and confirm that it shows `Wayleaf`.
+5. Select the unzipped folder that contains `manifest.json`.
 
-> Chrome does not load the zip file directly. Unzip it first, then load the unzipped folder.
+> Chrome cannot load the ZIP file directly.
 
-## Usage Cheatsheet
+## Common actions
 
 | Action | Result |
 | --- | --- |
 | Type a keyword and press Enter | Search with the current engine. |
 | Type a full URL and press Enter | Open the URL directly. |
-| Type a complete `*` platform abbreviation or name, such as `*yt` or `*youtube` | Switch immediately without entering a space or query first, then type the query and press Enter. After the first or second letter, an inline hint shows an activator you can complete. |
-| Choose the default engine in Settings | Change the search provider used for regular keyword searches. |
-| Pick a local search result | Open a matching history item or bookmark. |
-| Find a bookmark in the navigation hub | Switch folders, search the current folder, or sort by recent additions and title. |
-| Click `+` in Bookmarks | Select a Chrome folder that contains website bookmarks. |
+| Enter a `*platform prefix` | Switch to the matching platform search. |
+| Choose a local search result | Open a matching history item or bookmark. |
+| Open the top-left navigation hub | Manage shortcuts and bookmark folders. |
+| Open Settings in the top-right | Change language, theme, sync, and search settings. |
 
-AI command examples:
+Platform search supports YouTube, X, Xiaohongshu/RedNote, Instagram, Threads, Douyin, Zhihu, Bilibili, and TikTok. Search Settings lists every available prefix.
 
-```text
-/gpt Summarize this text
-/claude Write a short email
-/gemini Give me three travel plans
-/grok Explain this news
-/deepseek Analyze this code
-/doubao Write a RedNote title
-/kimi Summarize this long document
-/glm Create a study plan
-```
+## Permissions and privacy
 
-If you are already signed in to the selected AI site, `Wayleaf` opens it and tries to fill the prompt. If the site asks you to sign in, loads slowly, or changes its page structure, auto-fill may fail, but the jump and temporary prompt handoff still try to work. Sign in to platforms that require login before first use.
-
-Built-in platform search prefixes:
-
-| Prefix | Platform | Behavior |
-| --- | --- | --- |
-| `*yt` / `*youtube` | YouTube | Opens YouTube search results. |
-| `*x` / `*twitter` | X | Opens X search results; sign in first if required. |
-| `*xhs` / `*rednote` | Xiaohongshu / RedNote | Opens Xiaohongshu search results; sign in first if required. |
-| `*ig` / `*instagram` | Instagram | Uses the Instagram web search entry; if the site limits search, the encoded query remains recoverable. |
-| `*threads` / `*th` | Threads | Uses the Threads web search entry; if the site limits search, the encoded query remains recoverable. |
-| `*dy` / `*douyin` | Douyin | Opens Douyin search results; sign in first if required. |
-| `*zhihu` / `*zh` | Zhihu | Opens Zhihu search results. |
-| `*bili` / `*bilibili` | Bilibili | Opens Bilibili search results. |
-| `*tt` / `*tiktok` | TikTok | Opens TikTok search results; sign in first if required. |
-
-Search Settings shows the built-in AI engines, triggers, search links, and the platform search prefixes with behavior notes.
-
-## Permissions and Privacy
-
-`Wayleaf` has no backend service and does not require an account. History access, bookmark access, and preference storage happen inside the browser extension environment.
+Wayleaf does not require an account and does not operate a backend. History, bookmarks, settings, and caches stay in the browser extension environment.
 
 | Permission | Purpose |
 | --- | --- |
-| `bookmarks` | Read the bookmark folder you choose and support deleting those bookmarks from the extension. |
-| `history` | Read local history, rank most visited sites, and support deleting history entries. |
-| `favicon` | Show site icons through Chrome's favicon support. |
-| `storage` | Save theme, shortcuts, bookmark choice, sync state, and layout preferences. |
-| `alarms` | Trigger once-daily auto sync while the extension is enabled. |
-| `tabs` | Open search results, AI pages, and multiple search targets, and coordinate video Picture-in-Picture state. |
-| `scripting` | Support AI page handoff, prompt fill, and video Picture-in-Picture helpers on video pages. |
-| `http://*/*`, `https://*/*` | Recognize web shortcuts, fetch site icons, assist supported AI pages, and support Picture-in-Picture on standard HTML5 video pages. |
+| `bookmarks` | Read the selected bookmark folder and remove bookmarks after a user action. |
+| `history` | Read local history, rank most visited sites, and remove history after a user action. |
+| `favicon` | Display website icons through Chrome. |
+| `storage` | Save themes, shortcuts, bookmark choices, search settings, and sync state. |
+| `unlimitedStorage` | Provide space for local icon caches and short-lived page handoff data. |
+| `alarms` | Run once-daily automatic settings sync. |
+| `tabs` | Open search results and coordinate video mini-player state. |
+| `scripting` | Support the video mini-player and optional page handoff helpers. |
+| `http://*/*`, `https://*/*` | Discover site icons and support relevant features on pages opened by the user. |
 
-Expected network behavior:
+Network requests occur when:
 
-- Search sends the query to the search engine you choose.
-- AI commands send the prompt to the AI website you choose. Account, privacy, and data rules are controlled by that provider.
-- Site icon discovery may request icon or manifest resources from the target site.
+- A search is sent to the selected search engine or platform.
+- An AI page shortcut sends a question to the selected service.
+- Site icon discovery requests a target site or icon provider.
 
-See [PRIVACY.md](PRIVACY.md) for the full privacy policy.
+See [PRIVACY.md](PRIVACY.md) for the full policy.
 
-## Local Development
+## Local development
 
-This project has no dependency installation step and no build step.
+The project has no dependency installation or build step.
 
 ```sh
 git clone https://github.com/je44/wayleaf.git
 cd wayleaf
 ```
 
-Edit `manifest.json`, `background.js`, `newtab.html`, `newtab.css`, `newtab.js`, or `ai-submit.js`, then click reload on the `Wayleaf` extension card in `chrome://extensions/` and open a new tab.
+After editing, reload the Wayleaf card in `chrome://extensions/` and open a new tab.
 
-To check the real installed size, build the clean loadable directory first, then select `dist/wayleaf-v1.0.1/` in Chrome:
-
-```sh
-./scripts/package-release.sh
-```
-
-The same script also creates `dist/wayleaf-v1.0.1.zip` for Chrome Web Store upload.
-
-You can preview the static page with a local server, but Chrome extension APIs only work fully inside the extension environment:
+Create a loadable directory and release ZIP:
 
 ```sh
-python3 -m http.server 8080
+bash scripts/package-release.sh
 ```
 
-Then open `http://127.0.0.1:8080/newtab.html`.
+Output:
 
-Run at least these checks before committing:
+- `dist/wayleaf-v1.0.1/`
+- `dist/wayleaf-v1.0.1.zip`
+
+Checks to run before committing:
 
 ```sh
 jq empty manifest.json
 node --check background.js
 node --check newtab.js
+node --check popup.js
 node --check ai-submit.js
+node --check video-pip.js
+node --test scripts/*.test.mjs
 ```
 
 <details>
-<summary>Project structure and release checks</summary>
+<summary>Project structure and release check</summary>
 
 ```text
 .
-├── manifest.json        # Extension metadata, permissions, icons, and new tab entry
-├── background.js        # Background schedule for daily auto sync
-├── newtab.html          # New tab page structure
-├── newtab.css           # Layout, theme, responsive rules, and motion
-├── newtab.js            # Chrome API reads, state persistence, rendering, and interaction
-├── ai-submit.js         # Helper script for AI page handoff
-├── icons/               # Extension icons and site icons
-├── vendor/              # Frontend runtime dependencies
-└── docs/                # README preview images
+├── manifest.json        # Extension metadata, permissions, and entry points
+├── background.js        # Background scheduling
+├── newtab.html          # New tab structure
+├── newtab.css           # Layout, themes, and motion
+├── newtab.js            # State, rendering, and interaction
+├── popup.*              # Chrome toolbar menu
+├── ai-submit.js         # Optional page handoff helper
+├── video-pip.js         # Video mini-player
+├── wayleaf-icon.js      # Site icon handling
+├── icons/               # Extension and site icons
+└── docs/                # Documentation and previews
 ```
 
-Verify that the release zip has `manifest.json` at its root:
+Confirm that the ZIP contains `manifest.json` at its root:
 
 ```sh
-./scripts/package-release.sh
 unzip -t dist/wayleaf-v1.0.1.zip
 ```
-
-Release checklist:
-
-1. Update `version` in `manifest.json`.
-2. Update the current package version and download link in the README files.
-3. Run the verification commands.
-4. Confirm that `manifest.json` is at the zip root.
-5. Upload `dist/wayleaf-vX.Y.Z.zip` to the GitHub Release.
-
-The README header uses the current `icons/wayleaf-flat-128.png` primary icon. `manifest.json` points `16/32/48/128` entries at their matching native-size icon files so Chrome does not rescale them at runtime. Release packages include `icons/wayleaf-flat-16.png`, `32.png`, `48.png`, `128.png`, `1024.png`, and the local `icons/sites/` site icon catalog.
 
 </details>
 
@@ -200,22 +177,17 @@ The README header uses the current `icons/wayleaf-flat-128.png` primary icon. `m
 
 ### The new tab page did not change
 
-Make sure the extension is enabled and Chrome's extension page shows no manifest or permission errors. If multiple new tab extensions are installed, Chrome usually uses the currently enabled override page.
+Make sure Wayleaf is enabled and `chrome://extensions/` shows no errors. If another new tab extension is installed, disable it and check again.
 
 ### The bookmark area is empty
 
-Choose a folder with website bookmarks in the Bookmarks view first. A folder with only subfolders and no page URLs will not show sites.
-
-### AI auto-fill failed
-
-The target AI site may be signed out, slow to load, or using a changed page structure. Sign in first, then send the prompt from `Wayleaf` again. If it still fails, paste the prompt manually on the target page.
+Choose a folder that contains website bookmarks. A folder with only subfolders and no page URLs does not display any sites.
 
 ### Settings did not sync to another device
 
-Make sure both devices use the same Chrome/Google account and that Chrome is allowed to sync extension data. If sync is unavailable, settings stay on the current device.
+Make sure both devices use the same Chrome account and Chrome is allowed to sync extension data. If sync is unavailable, settings remain on the current device.
 
-## Support and License
+## Support and license
 
-- Support: open a [GitHub Issue](https://github.com/je44/wayleaf/issues) with your browser version, Wayleaf version, and reproduction steps.
-- Maintenance goal: keep the extension lightweight, local-first, directly loadable, clear about permissions, and stable in the core new tab experience.
-- License status: this repository does not currently include a `LICENSE` file. Confirm licensing before reuse or redistribution.
+- Support: [GitHub Issues](https://github.com/je44/wayleaf/issues)
+- This repository does not currently include a `LICENSE` file. Confirm permission before reuse or redistribution.
