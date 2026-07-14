@@ -164,7 +164,13 @@ async function invokeVideoPipSelection(tabId) {
     target: { tabId, allFrames: true },
     func: async () => {
       const controller = window.__wayleafVideoPipController;
-      if (typeof controller?.startSelection !== "function") {
+      // An extension reload can leave a callable controller from the invalidated context on an open page.
+      // Treat legacy or invalid controllers as unavailable so the current controller is injected again.
+      if (
+        typeof controller?.isReady !== "function" ||
+        controller.isReady() !== true ||
+        typeof controller?.startSelection !== "function"
+      ) {
         return { ready: false, selectionActive: false };
       }
       return {

@@ -56,6 +56,9 @@
   }
 
   const controller = {
+    isReady() {
+      return !disposed && !extensionContextInvalid && hasExtensionContext();
+    },
     async startSelection() {
       if (disposed || extensionContextInvalid) {
         return false;

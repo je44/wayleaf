@@ -218,6 +218,61 @@ assert.match(
 );
 assert.match(
   backgroundSource,
+  /async function invokeVideoPipSelection\(tabId\)[\s\S]*controller\?\.isReady[\s\S]*controller\.isReady\(\) !== true[\s\S]*ready: false/,
+  "A stale controller from an extension reload should be rejected so the current controller can be injected."
+);
+
+function createBackgroundControllerHarness(initialController) {
+  const runtimeStart = backgroundSource.indexOf("async function injectVideoPipController");
+  const runtimeEnd = backgroundSource.indexOf("async function setVideoPipActionState");
+  assert.ok(runtimeStart >= 0 && runtimeEnd > runtimeStart, "The background controller runtime should be readable for behavior coverage.");
+  const context = {
+    window: { __wayleafVideoPipController: initialController },
+    console: { warn() {} },
+    injectionCount: 0
+  };
+  context.chrome = {
+    scripting: {
+      async executeScript(options) {
+        if (options.files) {
+          context.injectionCount += 1;
+          context.window.__wayleafVideoPipController = {
+            isReady: () => true,
+            startSelection: async () => true
+          };
+          return [];
+        }
+        return [{ result: await options.func() }];
+      }
+    }
+  };
+  vm.createContext(context);
+  vm.runInContext(
+    `${backgroundSource.slice(runtimeStart, runtimeEnd)}\nthis.startVideoPipSelection = startVideoPipSelection;`,
+    context
+  );
+  return context;
+}
+
+const staleBackgroundHarness = createBackgroundControllerHarness({
+  startSelection: async () => false
+});
+const staleBackgroundResult = await staleBackgroundHarness.startVideoPipSelection(17);
+assert.equal(staleBackgroundResult.ok, true);
+assert.equal(staleBackgroundResult.selectionActive, true, "A controller left by an extension reload should be replaced before video selection starts.");
+assert.equal(staleBackgroundHarness.injectionCount, 1, "A stale controller should trigger exactly one fresh injection.");
+
+const currentBackgroundHarness = createBackgroundControllerHarness({
+  isReady: () => true,
+  startSelection: async () => true
+});
+const currentBackgroundResult = await currentBackgroundHarness.startVideoPipSelection(17);
+assert.equal(currentBackgroundResult.ok, true);
+assert.equal(currentBackgroundResult.selectionActive, true, "A current controller should start selection without reinjection.");
+assert.equal(currentBackgroundHarness.injectionCount, 0, "A healthy controller should be reused.");
+
+assert.match(
+  backgroundSource,
   /async function handleVideoPipAction\(tab\)[\s\S]*!supportsVideoPip\(tab\.url \|\| ""\)[\s\S]*migrateVideoPipSetting\(\)[\s\S]*startVideoPipSelection\(tab\.id\)/,
   "The popup action handler should gate only by page protocol and the merged Laboratory switch."
 );
@@ -433,6 +488,7 @@ async function settle() {
 }
 
 const genericHarness = createControllerHarness({ languagePreference: "en", url: "https://video.example/watch" });
+assert.equal(genericHarness.controller.isReady(), true, "A controller attached to the current extension context should be reusable.");
 assert.equal(await genericHarness.controller.startSelection(), true, "A generic video page should start selection after the toolbar menu action.");
 assert.equal(genericHarness.appendedElements.at(-2)?.textContent, "Select a video to open in Picture-in-Picture");
 assert.equal(genericHarness.appendedElements.at(-2)?.style.background, "rgb(0 0 0 / 80%)");
@@ -527,5 +583,9 @@ vm.runInContext(controllerSource, reinjectedHarness.context);
 assert.notEqual(reinjectedHarness.context.window.__wayleafVideoPipController, firstController, "Reinjection should replace the previous controller.");
 assert.equal(reinjectedHarness.documentListeners.get("click")?.includes(firstClickListener), false, "Reinjection should remove stale page listeners.");
 assert.equal(reinjectedHarness.documentListeners.get("click")?.length, 1, "Reinjection should leave one click listener.");
+
+const invalidatedHarness = createControllerHarness();
+invalidatedHarness.context.chrome.runtime.id = "";
+assert.equal(invalidatedHarness.controller.isReady(), false, "An invalidated extension context must not block fresh controller injection.");
 
 console.log("Video mini-player checks passed.");
